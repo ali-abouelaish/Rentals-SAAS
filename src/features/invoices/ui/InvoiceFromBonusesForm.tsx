@@ -1,0 +1,85 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+
+type BonusRow = {
+  id: string;
+  landlord_id: string;
+  amount_owed: number;
+  code: string | null;
+  landlords?: { name: string | null; billing_address?: string | null } | null;
+};
+
+export function InvoiceFromBonusesForm({
+  bonuses,
+  billingProfiles,
+  onSubmit
+}: {
+  bonuses: BonusRow[];
+  billingProfiles: { id: string; name: string }[];
+  onSubmit: (formData: FormData) => void;
+}) {
+  const [selected, setSelected] = useState<string[]>([]);
+  const landlordLock = useMemo(() => {
+    const selectedBonus = bonuses.find((bonus) => selected.includes(bonus.id));
+    return selectedBonus?.landlord_id ?? null;
+  }, [bonuses, selected]);
+
+  const toggle = (id: string) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <form
+      action={onSubmit}
+      className="space-y-4 rounded-2xl border border-muted bg-card p-6 shadow-soft"
+    >
+      <div>
+        <label className="text-xs text-gray-500">Billing profile</label>
+        <select name="billing_profile_id" className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm">
+          {billingProfiles.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-2">
+        {bonuses.map((bonus) => {
+          const disabled = landlordLock && bonus.landlord_id !== landlordLock;
+          return (
+            <label
+              key={bonus.id}
+              className={`flex items-center justify-between rounded-xl border border-muted px-3 py-2 text-sm ${
+                disabled ? "opacity-50" : ""
+              }`}
+            >
+              <div>
+                <p className="text-navy">
+                  {bonus.code ?? bonus.id} — {bonus.landlords?.name ?? "Landlord"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {bonus.landlords?.billing_address ?? "Address not set"}
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={selected.includes(bonus.id)}
+                disabled={Boolean(disabled)}
+                onChange={() => toggle(bonus.id)}
+              />
+            </label>
+          );
+        })}
+      </div>
+
+      <input type="hidden" name="bonus_ids" value={JSON.stringify(selected)} />
+      <Button type="submit" disabled={selected.length === 0}>
+        Create invoice from bonuses
+      </Button>
+    </form>
+  );
+}
