@@ -59,11 +59,23 @@ export default async function InvoicesPage() {
                 {formatDate(invoice.due_date)}
               </span>,
               signedUrls[index] ? (
-                <Button key={`${invoice.id}-pdf`} asChild variant="outline" size="sm">
-                  <a href={signedUrls[index] ?? ""} target="_blank" rel="noreferrer">
-                    Download
-                  </a>
-                </Button>
+                <div key={`${invoice.id}-pdf`} className="flex gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <a href={signedUrls[index] ?? ""} target="_blank" rel="noreferrer">
+                      View
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <a
+                      href={signedUrls[index] ?? ""}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                    >
+                      Download
+                    </a>
+                  </Button>
+                </div>
               ) : (
                 <span key={`${invoice.id}-pdf`} className="text-xs text-gray-400">
                   —

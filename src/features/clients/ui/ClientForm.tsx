@@ -24,7 +24,7 @@ export function ClientForm({
     email: initialValues?.email ?? "",
     nationality: initialValues?.nationality ?? "",
     current_address: initialValues?.current_address ?? "",
-    company_name: initialValues?.company_name ?? "",
+    company_or_university_name: initialValues?.company_or_university_name ?? "",
     company_address: initialValues?.company_address ?? "",
     occupation: initialValues?.occupation ?? "",
     status: initialValues?.status ?? "pending",
@@ -53,14 +53,28 @@ export function ClientForm({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3 md:grid-cols-2">
-      <Input placeholder="Full name" {...form.register("full_name")} />
-      <Input placeholder="Phone" {...form.register("phone")} />
-      <Input placeholder="Email" {...form.register("email")} />
-      <Input placeholder="Nationality" {...form.register("nationality")} />
-      <Input placeholder="Current address" {...form.register("current_address")} />
-      <Input placeholder="Company name" {...form.register("company_name")} />
-      <Input placeholder="Company address" {...form.register("company_address")} />
-      <Input placeholder="Occupation" {...form.register("occupation")} />
+      <Input placeholder="Full name" required {...form.register("full_name")} />
+      <Input placeholder="Phone" required {...form.register("phone")} />
+      <Input placeholder="Email" required {...form.register("email")} />
+      <Input
+        type="date"
+        placeholder="Date of birth"
+        required
+        {...form.register("dob")}
+      />
+      <Input placeholder="Nationality" required {...form.register("nationality")} />
+      <Input placeholder="Current address" required {...form.register("current_address")} />
+      <Input
+        placeholder="Company / University name"
+        required
+        {...form.register("company_or_university_name")}
+      />
+      <Input
+        placeholder="Company / University address"
+        required
+        {...form.register("company_address")}
+      />
+      <Input placeholder="Occupation" required {...form.register("occupation")} />
       <Select
         value={form.watch("status")}
         onChange={(value) => form.setValue("status", value as ClientFormValues["status"])}

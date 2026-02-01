@@ -27,6 +27,22 @@ export default async function LandlordDetailPage({
             <p className="text-xs uppercase text-gray-400">Times rented from</p>
             <p>{rentalsCount}</p>
           </div>
+          <div>
+            <p className="text-xs uppercase text-gray-400">Paying</p>
+            <p>
+              {landlord.pays_commission
+                ? `Yes · ${
+                    landlord.commission_term_text?.trim().length
+                      ? landlord.commission_term_text
+                      : `£${Number(landlord.commission_amount_gbp ?? 0).toFixed(2)}`
+                  }`
+                : "No"}
+            </p>
+          </div>
+          <div className="md:col-span-3">
+            <p className="text-xs uppercase text-gray-400">Profile notes</p>
+            <p>{landlord.profile_notes ?? "—"}</p>
+          </div>
         </CardContent>
       </Card>
 

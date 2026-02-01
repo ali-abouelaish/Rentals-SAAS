@@ -18,6 +18,8 @@ export type RentalCode = {
     phone: string;
     nationality?: string | null;
     dob?: string | null;
+    company_or_university_name?: string | null;
+    occupation?: string | null;
   };
   created_at: string;
 };

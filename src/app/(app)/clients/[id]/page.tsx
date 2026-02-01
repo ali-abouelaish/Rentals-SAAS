@@ -32,12 +32,14 @@ export default async function ClientDetailPage({
   const profileText = [
     `Client: ${client.full_name}`,
     `Phone: ${client.phone}`,
-    client.email ? `Email: ${client.email}` : null,
-    client.nationality ? `Nationality: ${client.nationality}` : null,
-    client.current_address ? `Address: ${client.current_address}` : null,
-    client.occupation ? `Occupation: ${client.occupation}` : null
+    `Email: ${client.email}`,
+    `Date of birth: ${client.dob}`,
+    `Nationality: ${client.nationality}`,
+    `Address: ${client.current_address}`,
+    `Company/University: ${client.company_or_university_name}`,
+    `Company/University address: ${client.company_address}`,
+    `Occupation: ${client.occupation}`
   ]
-    .filter(Boolean)
     .join("\n");
 
   return (

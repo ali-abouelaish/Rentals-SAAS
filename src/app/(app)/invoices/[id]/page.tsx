@@ -108,11 +108,23 @@ export default async function InvoiceDetailPage({
               </form>
             ) : null}
             {signedUrl?.data?.signedUrl ? (
-              <Button asChild variant="outline">
-                <a href={signedUrl.data.signedUrl} target="_blank" rel="noreferrer">
-                  Download PDF
-                </a>
-              </Button>
+              <>
+                <Button asChild variant="outline">
+                  <a href={signedUrl.data.signedUrl} target="_blank" rel="noreferrer">
+                    View PDF
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a
+                    href={signedUrl.data.signedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                  >
+                    Download PDF
+                  </a>
+                </Button>
+              </>
             ) : null}
             {isAdmin && ["approved", "sent"].includes(invoice.status) ? (
               <form action={approveAndSendInvoice.bind(null, invoice.id)}>

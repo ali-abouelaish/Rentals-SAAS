@@ -13,13 +13,22 @@ export default async function LandlordsPage() {
       <Card>
         <CardContent>
           <DataTable
-            columns={["Name", "Contact", "Actions"]}
+            columns={["Name", "Contact", "Paying", "Actions"]}
             rows={landlords.map((landlord) => [
               <span key={`${landlord.id}-name`} className="text-sm text-navy">
                 {landlord.name}
               </span>,
               <span key={`${landlord.id}-contact`} className="text-sm text-gray-600">
                 {landlord.contact ?? landlord.email ?? "—"}
+              </span>,
+              <span key={`${landlord.id}-paying`} className="text-sm text-gray-600">
+                {landlord.pays_commission
+                  ? `Yes · ${
+                      landlord.commission_term_text?.trim().length
+                        ? landlord.commission_term_text
+                        : `£${Number(landlord.commission_amount_gbp ?? 0).toFixed(2)}`
+                    }`
+                  : "No"}
               </span>,
               <Link key={`${landlord.id}-link`} href={`/landlords/${landlord.id}`} className="text-navy">
                 View

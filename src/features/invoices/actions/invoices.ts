@@ -4,6 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 import { invoiceFromBonusesSchema, invoiceManualSchema } from "../domain/schemas";
@@ -107,7 +108,7 @@ export async function createInvoiceManual(formData: FormData) {
   if (itemError) throw new Error(itemError.message);
 
   revalidatePath("/invoices");
-  return invoice;
+  redirect(`/invoices/${invoice.id}`);
 }
 
 export async function createInvoiceFromBonuses(formData: FormData) {
@@ -208,7 +209,7 @@ export async function createInvoiceFromBonuses(formData: FormData) {
   if (linkError) throw new Error(linkError.message);
 
   revalidatePath("/invoices");
-  return invoice;
+  redirect(`/invoices/${invoice.id}`);
 }
 
 export async function submitInvoice(invoiceId: string) {

@@ -56,7 +56,9 @@ export async function createRentalCode(values: RentalCodeFormValues) {
         full_name: client.full_name,
         phone: client.phone,
         nationality: client.nationality,
-        dob: client.dob
+        dob: client.dob,
+        company_or_university_name: client.company_or_university_name,
+        occupation: client.occupation
       }
     })
     .select("*")

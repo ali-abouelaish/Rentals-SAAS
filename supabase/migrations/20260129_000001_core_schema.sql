@@ -1,0 +1,2 @@
+-- Placeholder to match remote migration history.
+-- The actual schema is defined in later migrations.
