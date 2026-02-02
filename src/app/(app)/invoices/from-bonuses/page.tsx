@@ -3,11 +3,27 @@ import { getBillingProfiles, getBonusesForInvoice } from "@/features/invoices/da
 import { createInvoiceFromBonuses } from "@/features/invoices/actions/invoices";
 import { InvoiceFromBonusesForm } from "@/features/invoices/ui/InvoiceFromBonusesForm";
 
-export default async function InvoiceFromBonusesPage() {
+export default async function InvoiceFromBonusesPage({
+  searchParams
+}: {
+  searchParams?: { bonus_ids?: string };
+}) {
   const [profiles, bonuses] = await Promise.all([
     getBillingProfiles(),
     getBonusesForInvoice()
   ]);
+
+  let initialSelected: string[] = [];
+  if (searchParams?.bonus_ids) {
+    try {
+      const parsed = JSON.parse(searchParams.bonus_ids);
+      if (Array.isArray(parsed)) {
+        initialSelected = parsed.filter((id) => typeof id === "string");
+      }
+    } catch {
+      initialSelected = [];
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -19,6 +35,8 @@ export default async function InvoiceFromBonusesPage() {
           name: profile.name
         }))}
         onSubmit={createInvoiceFromBonuses}
+        initialSelected={initialSelected}
+        lockSelection={initialSelected.length > 0}
       />
     </div>
   );

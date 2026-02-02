@@ -6,6 +6,7 @@ import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 import { invoiceFromBonusesSchema, invoiceManualSchema } from "../domain/schemas";
 import { InvoicePdf } from "../pdf/InvoicePdf";
@@ -40,6 +41,14 @@ function addDays(date: Date, days: number) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
+}
+
+async function ensureBucketExists(bucketName: string) {
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.storage.getBucket(bucketName);
+  if (error) {
+    await admin.storage.createBucket(bucketName, { public: false });
+  }
 }
 
 export async function createInvoiceManual(formData: FormData) {
@@ -224,6 +233,133 @@ export async function submitInvoice(invoiceId: string) {
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
+export async function updateInvoiceDraft(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+  const invoiceId = String(formData.get("invoice_id") ?? "");
+  const billingProfileId = String(formData.get("billing_profile_id") ?? "");
+  const landlordId = String(formData.get("landlord_id") ?? "");
+  const issueDateRaw = String(formData.get("issue_date") ?? "");
+  const termsRaw = String(formData.get("payment_terms_days") ?? "");
+  const notes = String(formData.get("notes") ?? "");
+
+  if (!invoiceId) throw new Error("Missing invoice id.");
+
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id, status, created_by_user_id")
+    .eq("id", invoiceId)
+    .single();
+  if (invoiceError) throw new Error(invoiceError.message);
+  if (invoice.status !== "draft") {
+    throw new Error("Only draft invoices can be edited.");
+  }
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  if (!isAdmin && invoice.created_by_user_id !== profile.id) {
+    throw new Error("You do not have access to edit this invoice.");
+  }
+
+  const termsDays = Number(termsRaw);
+  const paymentTermsDays = Number.isFinite(termsDays) && termsDays > 0 ? termsDays : 7;
+  const issueDate = issueDateRaw ? new Date(issueDateRaw) : new Date();
+  const dueDate = addDays(issueDate, paymentTermsDays);
+
+  const { error } = await supabase
+    .from("invoices")
+    .update({
+      billing_profile_id: billingProfileId,
+      landlord_id: landlordId,
+      issue_date: issueDate.toISOString().slice(0, 10),
+      payment_terms_days: paymentTermsDays,
+      due_date: dueDate.toISOString().slice(0, 10),
+      notes: notes || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", invoiceId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/invoices/${invoiceId}`);
+}
+
+export async function deleteInvoice(invoiceId: string) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id, status, created_by_user_id")
+    .eq("id", invoiceId)
+    .single();
+  if (invoiceError) throw new Error(invoiceError.message);
+  if (invoice.status !== "draft") {
+    throw new Error("Only draft invoices can be deleted.");
+  }
+
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  if (!isAdmin && invoice.created_by_user_id !== profile.id) {
+    throw new Error("You do not have access to delete this invoice.");
+  }
+
+  await supabase.from("invoice_bonus_links").delete().eq("invoice_id", invoiceId);
+  await supabase.from("invoice_items").delete().eq("invoice_id", invoiceId);
+
+  const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/invoices");
+  redirect("/invoices");
+}
+
+async function deleteInvoicesByIds(invoiceIds: string[]) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+  if (invoiceIds.length === 0) return;
+
+  const { data: invoices, error } = await supabase
+    .from("invoices")
+    .select("id, status, created_by_user_id")
+    .in("id", invoiceIds);
+  if (error) throw new Error(error.message);
+
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  const invalid = (invoices ?? []).filter(
+    (invoice) =>
+      invoice.status !== "draft" ||
+      (!isAdmin && invoice.created_by_user_id !== profile.id)
+  );
+  if (invalid.length > 0) {
+    throw new Error("Only draft invoices you own can be deleted.");
+  }
+
+  await supabase.from("invoice_bonus_links").delete().in("invoice_id", invoiceIds);
+  await supabase.from("invoice_items").delete().in("invoice_id", invoiceIds);
+
+  const { error: deleteError } = await supabase
+    .from("invoices")
+    .delete()
+    .in("id", invoiceIds);
+  if (deleteError) throw new Error(deleteError.message);
+
+  revalidatePath("/invoices");
+}
+
+export async function bulkDeleteInvoicesAction(
+  _prevState: { ok?: boolean; error?: string },
+  formData: FormData
+) {
+  try {
+    const idsRaw = String(formData.get("invoice_ids") ?? "[]");
+    const parsed = JSON.parse(idsRaw);
+    const invoiceIds = Array.isArray(parsed)
+      ? parsed.filter((id) => typeof id === "string")
+      : [];
+    await deleteInvoicesByIds(invoiceIds);
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof Error) return { error: error.message };
+    return { error: "Unable to delete invoices." };
+  }
+}
+
 export async function approveInvoice(invoiceId: string) {
   const supabase = createSupabaseServerClient();
   const profile = await requireRole(["admin"]);
@@ -248,13 +384,18 @@ export async function approveAndSendInvoice(invoiceId: string) {
 
 export async function generateInvoicePdf(invoiceId: string) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  const admin = createSupabaseAdminClient();
+  const profile = await requireUserProfile();
+  const isAdmin = profile.role.toLowerCase() === "admin";
   const { data: invoice } = await supabase
     .from("invoices")
     .select("*, landlords(*), billing_profiles(*), created_by:user_profiles!invoices_created_by_user_id_fkey(display_name)")
     .eq("id", invoiceId)
     .single();
   if (!invoice) throw new Error("Invoice not found.");
+  if (!isAdmin && invoice.created_by_user_id !== profile.id) {
+    throw new Error("You do not have access to this invoice.");
+  }
 
   const { data: items } = await supabase
     .from("invoice_items")
@@ -262,12 +403,23 @@ export async function generateInvoicePdf(invoiceId: string) {
     .eq("invoice_id", invoiceId)
     .order("sort_order", { ascending: true });
 
+  if (invoice.billing_profiles?.logo_url) {
+    const logoPath = invoice.billing_profiles.logo_url;
+    const { data: logoSigned } = await admin.storage
+      .from("billing-logos")
+      .createSignedUrl(logoPath, 3600);
+    if (logoSigned?.signedUrl) {
+      invoice.billing_profiles.logo_url = logoSigned.signedUrl;
+    }
+  }
+
   const pdfBuffer = await renderToBuffer(
     React.createElement(InvoicePdf, { invoice, items: items ?? [] })
   );
 
   const path = `${invoice.tenant_id}/${invoice.id}/${invoice.invoice_number}.pdf`;
-  const { error: uploadError } = await supabase.storage
+  await ensureBucketExists("invoices-pdf");
+  const { error: uploadError } = await admin.storage
     .from("invoices-pdf")
     .upload(path, pdfBuffer, { contentType: "application/pdf", upsert: true });
   if (uploadError) throw new Error(uploadError.message);
@@ -280,6 +432,51 @@ export async function generateInvoicePdf(invoiceId: string) {
 
   revalidatePath(`/invoices/${invoiceId}`);
   return path;
+}
+
+export async function generateInvoicePdfAndRedirect(invoiceId: string) {
+  const admin = createSupabaseAdminClient();
+  const path = await generateInvoicePdf(invoiceId);
+  const { data, error } = await admin.storage
+    .from("invoices-pdf")
+    .createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) {
+    throw new Error(error?.message ?? "Unable to generate PDF link.");
+  }
+  redirect(data.signedUrl);
+}
+
+export async function viewInvoicePdf(invoiceId: string) {
+  const supabase = createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
+  const profile = await requireUserProfile();
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  const { data: invoice, error } = await supabase
+    .from("invoices")
+    .select("id, tenant_id, pdf_storage_path")
+    .eq("id", invoiceId)
+    .single();
+  if (error || !invoice) {
+    throw new Error(error?.message ?? "Invoice not found.");
+  }
+
+  let path = invoice.pdf_storage_path;
+  if (!path) {
+    if (!isAdmin) {
+      path = await generateInvoicePdf(invoiceId);
+    } else {
+      path = await generateInvoicePdf(invoiceId);
+    }
+  }
+
+  const { data, error: signedError } = await admin.storage
+    .from("invoices-pdf")
+    .createSignedUrl(path, 3600);
+  if (signedError || !data?.signedUrl) {
+    throw new Error(signedError?.message ?? "Unable to fetch invoice PDF.");
+  }
+
+  redirect(data.signedUrl);
 }
 
 function applyTemplate(input: string, variables: Record<string, string>) {

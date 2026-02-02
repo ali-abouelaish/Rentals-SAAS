@@ -34,7 +34,7 @@ export default async function BillingProfilesPage() {
               <Input name="bank_account_holder_name" placeholder="Account holder" required />
               <Input name="bank_account_number" placeholder="Account number" required />
               <Input name="bank_sort_code" placeholder="Sort code" required />
-              <Input name="default_payment_terms_days" placeholder="Payment terms (days)" />
+              <Input name="default_payment_terms_days" placeholder="Payment terms (net days)" />
               <Input name="footer_thank_you_text" placeholder="Footer text" />
               <div className="md:col-span-2">
                 <Button type="submit">Create</Button>

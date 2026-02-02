@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +19,10 @@ export function BillingProfilesTable({
   isAdmin: boolean;
   onUpdate: (formData: FormData) => void;
   onDelete: (id: string) => void;
-  onUploadLogo: (formData: FormData) => void;
+  onUploadLogo: (
+    prevState: { ok?: boolean; error?: string },
+    formData: FormData
+  ) => void | Promise<{ ok?: boolean; error?: string }>;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -36,7 +41,7 @@ export function BillingProfilesTable({
           <TableRow key={profile.id}>
             <TableCell>{profile.name}</TableCell>
             <TableCell>{profile.sender_company_name}</TableCell>
-            <TableCell>{profile.default_payment_terms_days} days</TableCell>
+            <TableCell>Net {profile.default_payment_terms_days} days</TableCell>
             <TableCell>
               {isAdmin ? (
                 <div className="flex flex-wrap gap-2">
@@ -94,7 +99,7 @@ export function BillingProfilesTable({
                     <Input
                       name="default_payment_terms_days"
                       defaultValue={profile.default_payment_terms_days}
-                      placeholder="Payment terms (days)"
+                      placeholder="Payment terms (net days)"
                     />
                     <Input
                       name="footer_thank_you_text"
@@ -108,13 +113,10 @@ export function BillingProfilesTable({
                     </div>
                   </form>
 
-                  <form action={onUploadLogo} className="flex flex-wrap items-center gap-2">
-                    <input type="hidden" name="billing_profile_id" value={profile.id} />
-                    <input type="file" name="file" accept="image/*" required />
-                    <Button type="submit" variant="outline" size="sm">
-                      Upload logo
-                    </Button>
-                  </form>
+                  <LogoUploadForm
+                    profileId={profile.id}
+                    onUploadLogo={onUploadLogo}
+                  />
                 </div>
               ) : null}
             </TableCell>
@@ -122,5 +124,47 @@ export function BillingProfilesTable({
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+function SubmitUploadButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      {pending ? "Uploading..." : "Upload logo"}
+    </Button>
+  );
+}
+
+function LogoUploadForm({
+  profileId,
+  onUploadLogo
+}: {
+  profileId: string;
+  onUploadLogo: (
+    prevState: { ok?: boolean; error?: string },
+    formData: FormData
+  ) => void | Promise<{ ok?: boolean; error?: string }>;
+}) {
+  const [state, formAction] = useFormState(onUploadLogo, {});
+
+  useEffect(() => {
+    if (state?.ok) {
+      toast.success("Logo uploaded.");
+    } else if (state?.error) {
+      toast.error(state.error);
+    }
+  }, [state?.ok, state?.error]);
+
+  return (
+    <form
+      action={formAction}
+      encType="multipart/form-data"
+      className="flex flex-wrap items-center gap-2"
+    >
+      <input type="hidden" name="billing_profile_id" value={profileId} />
+      <input type="file" name="file" accept="image/*" required />
+      <SubmitUploadButton />
+    </form>
   );
 }

@@ -1,13 +1,20 @@
 export type Bonus = {
   id: string;
   tenant_id: string;
+  code: string | null;
+  bonus_date: string;
+  client_name: string;
+  property_address: string;
   landlord_id: string;
   amount_owed: number;
   agent_id: string;
   payout_mode: "standard" | "full";
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "sent" | "paid" | "declined";
   invoice_pending: boolean;
   approved_at: string | null;
   approved_by: string | null;
+  notes: string | null;
+  paid_at: string | null;
+  paid_by_user_id: string | null;
   created_at: string;
 };

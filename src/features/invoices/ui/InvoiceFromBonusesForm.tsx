@@ -14,19 +14,24 @@ type BonusRow = {
 export function InvoiceFromBonusesForm({
   bonuses,
   billingProfiles,
-  onSubmit
+  onSubmit,
+  initialSelected,
+  lockSelection
 }: {
   bonuses: BonusRow[];
   billingProfiles: { id: string; name: string }[];
   onSubmit: (formData: FormData) => void;
+  initialSelected?: string[];
+  lockSelection?: boolean;
 }) {
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(initialSelected ?? []);
   const landlordLock = useMemo(() => {
     const selectedBonus = bonuses.find((bonus) => selected.includes(bonus.id));
     return selectedBonus?.landlord_id ?? null;
   }, [bonuses, selected]);
 
   const toggle = (id: string) => {
+    if (lockSelection) return;
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
@@ -49,7 +54,9 @@ export function InvoiceFromBonusesForm({
       </div>
       <div className="space-y-2">
         {bonuses.map((bonus) => {
-          const disabled = landlordLock && bonus.landlord_id !== landlordLock;
+          const disabled = lockSelection
+            ? !selected.includes(bonus.id)
+            : landlordLock && bonus.landlord_id !== landlordLock;
           return (
             <label
               key={bonus.id}

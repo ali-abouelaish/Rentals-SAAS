@@ -8,6 +8,10 @@ import { DocumentUploadForm } from "@/features/documents/ui/DocumentUploadForm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { RentalApprovalPanel } from "@/features/rentals/ui/RentalApprovalPanel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { updateRentalCode, deleteRentalCode } from "@/features/rentals/actions/rentals";
+import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
 
 export default async function RentalDetailPage({
   params
@@ -33,6 +37,15 @@ export default async function RentalDetailPage({
     .select("marketing_fee")
     .eq("user_id", rental.marketing_agent_id)
     .single();
+
+  const { data: agents } = await supabase
+    .from("user_profiles")
+    .select("id, display_name")
+    .eq("tenant_id", rental.tenant_id)
+    .order("display_name", { ascending: true });
+
+  const marketingAgentName =
+    agents?.find((agent) => agent.id === rental.marketing_agent_id)?.display_name ?? "";
 
   const rentalText = [
     `Code: ${rental.code}`,
@@ -60,6 +73,19 @@ export default async function RentalDetailPage({
       <div className="flex items-center gap-3">
         <StatusBadge status={rental.status} />
         <CopyRentalTextButton text={rentalText} />
+        {rental.status === "pending" &&
+        (profile.role.toLowerCase() === "admin" ||
+          rental.assisted_by_agent_id === profile.id) ? (
+          <ConfirmDeleteForm
+            action={deleteRentalCode}
+            message="Delete this rental? This cannot be undone."
+          >
+            <input type="hidden" name="rental_id" value={rental.id} />
+            <Button type="submit" variant="outline" size="sm">
+              Delete
+            </Button>
+          </ConfirmDeleteForm>
+        ) : null}
       </div>
 
       {profile.role.toLowerCase() === "admin" && rental.status === "pending" ? (
@@ -114,6 +140,64 @@ export default async function RentalDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {rental.status === "pending" &&
+      (profile.role.toLowerCase() === "admin" ||
+        rental.assisted_by_agent_id === profile.id) ? (
+        <Card>
+          <CardContent className="space-y-3">
+            <p className="text-sm font-medium text-navy">Edit rental</p>
+            <form action={updateRentalCode} className="grid gap-3 md:grid-cols-2">
+              <input type="hidden" name="rental_id" value={rental.id} />
+              <input type="hidden" name="client_id" value={rental.client_id} />
+              <Input
+                name="consultation_fee_amount"
+                type="number"
+                step="0.01"
+                defaultValue={String(rental.consultation_fee_amount)}
+              />
+              <select
+                name="payment_method"
+                defaultValue={rental.payment_method}
+                className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm shadow-sm"
+              >
+                <option value="cash">Cash</option>
+                <option value="transfer">Transfer</option>
+                <option value="card">Card</option>
+              </select>
+              <Input
+                name="property_address"
+                defaultValue={rental.property_address}
+                placeholder="Property address"
+              />
+              <Input
+                name="licensor_name"
+                defaultValue={rental.licensor_name}
+                placeholder="Licensor name"
+              />
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-500">Marketing agent (optional)</label>
+                <Input
+                  list="marketing-agent-edit-list"
+                  name="marketing_agent_name"
+                  defaultValue={marketingAgentName}
+                  placeholder="Search by name"
+                />
+                <datalist id="marketing-agent-edit-list">
+                  {(agents ?? []).map((agent) => (
+                    <option key={agent.id} value={agent.display_name ?? "Agent"} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="md:col-span-2">
+                <Button type="submit" variant="secondary">
+                  Save changes
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardContent className="space-y-3">

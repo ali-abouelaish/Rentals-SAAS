@@ -4,6 +4,7 @@ export type RentalCode = {
   code: string;
   date: string;
   consultation_fee_amount: number;
+  rental_amount_gbp?: number | null;
   payment_method: "cash" | "transfer" | "card";
   property_address: string;
   licensor_name: string;

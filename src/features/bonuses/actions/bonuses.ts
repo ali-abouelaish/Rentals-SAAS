@@ -9,15 +9,26 @@ export async function submitBonus(values: BonusFormValues) {
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
   const payload = bonusSchema.parse(values);
+  const agentId = payload.agent_id ?? profile.id;
+  const { data: bonusCode, error: bonusCodeError } = await supabase.rpc(
+    "next_bonus_code",
+    { p_tenant_id: profile.tenant_id }
+  );
+  if (bonusCodeError) throw new Error(bonusCodeError.message);
 
   const { data, error } = await supabase
     .from("bonuses")
     .insert({
       tenant_id: profile.tenant_id,
+      code: bonusCode,
       landlord_id: payload.landlord_id,
+      bonus_date: payload.bonus_date,
+      client_name: payload.client_name,
+      property_address: payload.property_address,
       amount_owed: payload.amount_owed,
-      agent_id: profile.id,
+      agent_id: agentId,
       payout_mode: payload.payout_mode,
+      notes: payload.notes ?? null,
       status: "pending",
       invoice_pending: true
     })
@@ -36,6 +47,101 @@ export async function submitBonus(values: BonusFormValues) {
 
   revalidatePath("/bonuses");
   return data;
+}
+
+export async function updateBonus(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+  const bonusId = String(formData.get("bonus_id") ?? "");
+  if (!bonusId) throw new Error("Missing bonus id.");
+
+  const payload = bonusSchema.parse({
+    bonus_date: String(formData.get("bonus_date") ?? ""),
+    client_name: String(formData.get("client_name") ?? ""),
+    property_address: String(formData.get("property_address") ?? ""),
+    landlord_id: String(formData.get("landlord_id") ?? ""),
+    agent_id: formData.get("agent_id") ?? undefined,
+    amount_owed: Number(formData.get("amount_owed") ?? 0),
+    payout_mode: String(formData.get("payout_mode") ?? "standard"),
+    notes: String(formData.get("notes") ?? "")
+  });
+
+  const nextAgentId =
+    profile.role.toLowerCase() === "admin" ? payload.agent_id ?? profile.id : profile.id;
+
+  if (profile.role.toLowerCase() !== "admin") {
+    const { data: bonus } = await supabase
+      .from("bonuses")
+      .select("status, agent_id")
+      .eq("id", bonusId)
+      .single();
+    if (!bonus || bonus.agent_id !== profile.id || bonus.status !== "pending") {
+      throw new Error("You cannot edit this bonus.");
+    }
+  }
+
+  const { error } = await supabase
+    .from("bonuses")
+    .update({
+      bonus_date: payload.bonus_date,
+      client_name: payload.client_name,
+      property_address: payload.property_address,
+      landlord_id: payload.landlord_id,
+      agent_id: nextAgentId,
+      amount_owed: payload.amount_owed,
+      payout_mode: payload.payout_mode,
+      notes: payload.notes ?? null
+    })
+    .eq("id", bonusId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/bonuses");
+}
+
+async function deleteBonusById(bonusId: string) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+
+  if (profile.role.toLowerCase() !== "admin") {
+    const { data: bonus } = await supabase
+      .from("bonuses")
+      .select("status, agent_id")
+      .eq("id", bonusId)
+      .single();
+    if (!bonus || bonus.agent_id !== profile.id || bonus.status !== "pending") {
+      throw new Error("You cannot delete this bonus.");
+    }
+  }
+
+  const { data: links, error: linkError } = await supabase
+    .from("invoice_bonus_links")
+    .select("id")
+    .eq("bonus_id", bonusId)
+    .limit(1);
+  if (linkError) throw new Error(linkError.message);
+  if (links && links.length > 0) {
+    throw new Error("Cannot delete a bonus linked to an invoice.");
+  }
+
+  const { error } = await supabase.from("bonuses").delete().eq("id", bonusId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/bonuses");
+}
+
+export async function deleteBonusAction(
+  _prevState: { ok?: boolean; error?: string },
+  formData: FormData
+) {
+  try {
+    const bonusId = String(formData.get("bonus_id") ?? "");
+    if (!bonusId) return { error: "Missing bonus id." };
+    await deleteBonusById(bonusId);
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof Error) return { error: error.message };
+    return { error: "Unable to delete bonus." };
+  }
 }
 
 export async function approveBonus(bonusId: string) {

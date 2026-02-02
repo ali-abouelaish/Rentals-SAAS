@@ -44,6 +44,7 @@ export async function createRentalCode(values: RentalCodeFormValues) {
       code: codeData,
       date: new Date().toISOString(),
       consultation_fee_amount: payload.consultation_fee_amount,
+      rental_amount_gbp: payload.consultation_fee_amount,
       payment_method: payload.payment_method,
       property_address: payload.property_address,
       licensor_name: payload.licensor_name,
@@ -79,6 +80,97 @@ export async function createRentalCode(values: RentalCodeFormValues) {
   return data;
 }
 
+export async function updateRentalCode(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+  const rentalId = String(formData.get("rental_id") ?? "");
+  if (!rentalId) throw new Error("Missing rental id.");
+
+  const { data: rental, error: rentalError } = await supabase
+    .from("rental_codes")
+    .select("id, status, assisted_by_agent_id, tenant_id")
+    .eq("id", rentalId)
+    .single();
+  if (rentalError) throw new Error(rentalError.message);
+
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
+    throw new Error("You do not have access to edit this rental.");
+  }
+  if (rental.status !== "pending") {
+    throw new Error("Only pending rentals can be edited.");
+  }
+
+  const payload = rentalCodeSchema.parse({
+    client_id: String(formData.get("client_id") ?? ""),
+    consultation_fee_amount: Number(formData.get("consultation_fee_amount") ?? 0),
+    payment_method: String(formData.get("payment_method") ?? "cash"),
+    property_address: String(formData.get("property_address") ?? ""),
+    licensor_name: String(formData.get("licensor_name") ?? ""),
+    marketing_agent_id: String(formData.get("marketing_agent_id") ?? ""),
+    marketing_agent_name: String(formData.get("marketing_agent_name") ?? "")
+  });
+
+  let marketingAgentId =
+    payload.marketing_agent_id && payload.marketing_agent_id.length > 0
+      ? payload.marketing_agent_id
+      : null;
+
+  if (!marketingAgentId && payload.marketing_agent_name) {
+    const { data: agentMatch } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("tenant_id", rental.tenant_id)
+      .ilike("display_name", payload.marketing_agent_name)
+      .limit(1)
+      .single();
+    marketingAgentId = agentMatch?.id ?? null;
+  }
+
+  const { error } = await supabase
+    .from("rental_codes")
+    .update({
+      consultation_fee_amount: payload.consultation_fee_amount,
+      rental_amount_gbp: payload.consultation_fee_amount,
+      payment_method: payload.payment_method,
+      property_address: payload.property_address,
+      licensor_name: payload.licensor_name,
+      marketing_agent_id: marketingAgentId
+    })
+    .eq("id", rentalId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/rentals/${rentalId}`);
+}
+
+export async function deleteRentalCode(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+  const rentalId = String(formData.get("rental_id") ?? "");
+  if (!rentalId) throw new Error("Missing rental id.");
+
+  const { data: rental, error: rentalError } = await supabase
+    .from("rental_codes")
+    .select("id, status, assisted_by_agent_id")
+    .eq("id", rentalId)
+    .single();
+  if (rentalError) throw new Error(rentalError.message);
+
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
+    throw new Error("You do not have access to delete this rental.");
+  }
+  if (rental.status !== "pending") {
+    throw new Error("Only pending rentals can be deleted.");
+  }
+
+  const { error } = await supabase.from("rental_codes").delete().eq("id", rentalId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/rentals");
+  revalidatePath(`/clients`);
+}
+
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
@@ -100,6 +192,33 @@ export async function approveRentalCode(formData: FormData) {
     .eq("id", rentalId)
     .single();
   if (rentalError) throw new Error(rentalError.message);
+
+  const { data: documentSets, error: docsError } = await supabase
+    .from("document_sets")
+    .select("set_type, documents(id)")
+    .eq("rental_code_id", rentalId);
+  if (docsError) throw new Error(docsError.message);
+
+  const counts = (documentSets ?? []).reduce(
+    (acc, set) => {
+      const count = set.documents?.length ?? 0;
+      acc[set.set_type as keyof typeof acc] = count;
+      return acc;
+    },
+    {
+      sourcing_agreement: 0,
+      client_id: 0,
+      payment_proof: 0
+    }
+  );
+
+  const sourcingOk =
+    counts.sourcing_agreement === 1 || counts.sourcing_agreement === 4;
+  if (!sourcingOk || counts.client_id < 1 || counts.payment_proof < 1) {
+    throw new Error(
+      "Missing required documents: sourcing agreement, client ID, and payment proof."
+    );
+  }
 
   const { data: assistedAgent } = await supabase
     .from("agent_profiles")

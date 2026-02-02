@@ -59,7 +59,15 @@ export function LeaderboardTable({
           {row.last_activity ? formatDate(row.last_activity) : "—"}
         </span>,
         <Button key={`${row.agent_id}-action`} asChild variant="outline" size="sm">
-          <Link href={`/agents/${row.agent_id}`}>View</Link>
+          <Link
+            href={
+              showAgencyTotals
+                ? `/admin/agents/${row.agent_id}/commission`
+                : `/agents/${row.agent_id}`
+            }
+          >
+            {showAgencyTotals ? "Commission File" : "View"}
+          </Link>
         </Button>
       ])}
     />

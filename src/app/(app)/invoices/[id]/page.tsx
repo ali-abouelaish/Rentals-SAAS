@@ -6,17 +6,22 @@ import { getInvoiceById } from "@/features/invoices/data/queries";
 import {
   approveAndSendInvoice,
   approveInvoice,
-  generateInvoicePdf,
+  deleteInvoice,
   markInvoiceDeclined,
   markInvoicePaid,
-  submitInvoice
+  updateInvoiceDraft,
+  submitInvoice,
+  viewInvoicePdf
 } from "@/features/invoices/actions/invoices";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
 import { Button } from "@/components/ui/button";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { InvoiceSendForm } from "@/features/invoices/ui/InvoiceSendForm";
 import { getEmailTemplate } from "@/features/invoices/actions/billingProfiles";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
 
 export default async function InvoiceDetailPage({
   params
@@ -26,13 +31,17 @@ export default async function InvoiceDetailPage({
   const profile = await requireUserProfile();
   const { invoice, items } = await getInvoiceById(params.id);
   const isAdmin = profile.role.toLowerCase() === "admin";
+  const canEdit = invoice.status === "draft" && (isAdmin || invoice.created_by_user_id === profile.id);
 
   const supabase = createSupabaseServerClient();
-  const signedUrl = invoice.pdf_storage_path
-    ? await supabase.storage
-        .from("invoices-pdf")
-        .createSignedUrl(invoice.pdf_storage_path, 3600)
-    : null;
+  const { data: billingProfiles } = await supabase
+    .from("billing_profiles")
+    .select("id, name")
+    .order("name", { ascending: true });
+  const { data: landlords } = await supabase
+    .from("landlords")
+    .select("id, name")
+    .order("name", { ascending: true });
 
   const template = await getEmailTemplate();
 
@@ -93,6 +102,16 @@ export default async function InvoiceDetailPage({
                 </Button>
               </form>
             ) : null}
+            {canEdit ? (
+              <ConfirmDeleteForm
+                action={deleteInvoice.bind(null, invoice.id)}
+                message="Delete this draft invoice? This cannot be undone."
+              >
+                <Button type="submit" variant="outline">
+                  Delete draft
+                </Button>
+              </ConfirmDeleteForm>
+            ) : null}
             {isAdmin && invoice.status !== "approved" ? (
               <form action={approveInvoice.bind(null, invoice.id)}>
                 <Button type="submit" variant="outline">
@@ -100,31 +119,12 @@ export default async function InvoiceDetailPage({
                 </Button>
               </form>
             ) : null}
-            {isAdmin && ["approved", "sent"].includes(invoice.status) ? (
-              <form action={generateInvoicePdf.bind(null, invoice.id)}>
+            {invoice.pdf_storage_path || isAdmin ? (
+              <form action={viewInvoicePdf.bind(null, invoice.id)}>
                 <Button type="submit" variant="outline">
-                  Generate PDF
+                  View PDF
                 </Button>
               </form>
-            ) : null}
-            {signedUrl?.data?.signedUrl ? (
-              <>
-                <Button asChild variant="outline">
-                  <a href={signedUrl.data.signedUrl} target="_blank" rel="noreferrer">
-                    View PDF
-                  </a>
-                </Button>
-                <Button asChild variant="outline">
-                  <a
-                    href={signedUrl.data.signedUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    download
-                  >
-                    Download PDF
-                  </a>
-                </Button>
-              </>
             ) : null}
             {isAdmin && ["approved", "sent"].includes(invoice.status) ? (
               <form action={approveAndSendInvoice.bind(null, invoice.id)}>
@@ -155,6 +155,60 @@ export default async function InvoiceDetailPage({
           defaultSubject={template?.subject ?? `Invoice ${invoice.invoice_number}`}
           defaultBody={template?.body ?? "Please find your invoice attached."}
         />
+      ) : null}
+
+      {canEdit ? (
+        <Card>
+          <CardContent className="space-y-3">
+            <p className="text-sm font-medium text-navy">Edit draft invoice</p>
+            <form action={updateInvoiceDraft} className="grid gap-3 md:grid-cols-2">
+              <input type="hidden" name="invoice_id" value={invoice.id} />
+              <div>
+                <label className="text-xs text-gray-500">Billing profile</label>
+                <select
+                  name="billing_profile_id"
+                  defaultValue={invoice.billing_profile_id}
+                  className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm"
+                >
+                  {(billingProfiles ?? []).map((profileItem) => (
+                    <option key={profileItem.id} value={profileItem.id}>
+                      {profileItem.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Landlord</label>
+                <select
+                  name="landlord_id"
+                  defaultValue={invoice.landlord_id}
+                  className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm"
+                >
+                  {(landlords ?? []).map((landlord) => (
+                    <option key={landlord.id} value={landlord.id}>
+                      {landlord.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Input name="issue_date" type="date" defaultValue={invoice.issue_date} />
+              <Input
+                name="payment_terms_days"
+                type="number"
+                defaultValue={invoice.payment_terms_days}
+                placeholder="Payment terms (days)"
+              />
+              <div className="md:col-span-2">
+                <Textarea name="notes" defaultValue={invoice.notes ?? ""} placeholder="Notes" />
+              </div>
+              <div className="md:col-span-2">
+                <Button type="submit" variant="secondary">
+                  Save changes
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       ) : null}
     </div>
   );

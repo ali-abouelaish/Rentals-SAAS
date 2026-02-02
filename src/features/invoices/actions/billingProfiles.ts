@@ -76,28 +76,45 @@ export async function deleteBillingProfile(profileId: string) {
   revalidatePath("/settings/billing-profiles");
 }
 
-export async function uploadBillingLogo(formData: FormData) {
-  const supabase = createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
-  const profile = await requireRole(["admin"]);
-  const billingProfileId = String(formData.get("billing_profile_id") ?? "");
-  const file = formData.get("file") as File | null;
-  if (!billingProfileId || !file) throw new Error("Missing file.");
+export async function uploadBillingLogo(
+  _prevState: { ok?: boolean; error?: string },
+  formData: FormData
+) {
+  try {
+    const supabase = createSupabaseServerClient();
+    const admin = createSupabaseAdminClient();
+    const profile = await requireRole(["admin"]);
+    const billingProfileId = String(formData.get("billing_profile_id") ?? "");
+    const file = formData.get("file") as File | null;
+    if (!billingProfileId || !file) {
+      return { error: "Missing file or profile id." };
+    }
 
-  const path = `${profile.tenant_id}/${billingProfileId}/${file.name}`;
-  const { error: uploadError } = await admin.storage
-    .from("billing-logos")
-    .upload(path, file, { upsert: true });
-  if (uploadError) throw new Error(uploadError.message);
+    const bucketName = "billing-logos";
+    const { error: bucketError } = await admin.storage.getBucket(bucketName);
+    if (bucketError) {
+      await admin.storage.createBucket(bucketName, { public: false });
+    }
 
-  const { error } = await supabase
-    .from("billing_profiles")
-    .update({ logo_url: path })
-    .eq("id", billingProfileId)
-    .eq("tenant_id", profile.tenant_id);
-  if (error) throw new Error(error.message);
+    const path = `${profile.tenant_id}/${billingProfileId}/${file.name}`;
+    const { error: uploadError } = await admin.storage
+      .from(bucketName)
+      .upload(path, file, { upsert: true, contentType: file.type || "image/png" });
+    if (uploadError) return { error: uploadError.message };
 
-  revalidatePath("/settings/billing-profiles");
+    const { error } = await supabase
+      .from("billing_profiles")
+      .update({ logo_url: path })
+      .eq("id", billingProfileId)
+      .eq("tenant_id", profile.tenant_id);
+    if (error) return { error: error.message };
+
+    revalidatePath("/settings/billing-profiles");
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof Error) return { error: error.message };
+    return { error: "Unable to upload logo." };
+  }
 }
 
 export async function getEmailTemplate() {

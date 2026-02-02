@@ -1,11 +1,28 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function getLandlords() {
+export async function getLandlords({
+  search,
+  paying
+}: {
+  search?: string;
+  paying?: string;
+} = {}) {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("landlords")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(
+      `name.ilike.%${search}%,contact.ilike.%${search}%,email.ilike.%${search}%`
+    );
+  }
+  if (paying && paying !== "all") {
+    query = query.eq("pays_commission", paying === "yes");
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
 }

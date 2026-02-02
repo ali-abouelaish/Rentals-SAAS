@@ -49,44 +49,54 @@ type InvoicePdfProps = {
 
 const styles = StyleSheet.create({
   page: {
-    padding: 24,
+    paddingTop: 36,
+    paddingBottom: 36,
+    paddingHorizontal: 32,
     fontSize: 10,
     fontFamily: "Helvetica",
     color: "#333",
-    backgroundColor: "#ffffff"
+    backgroundColor: "#ffffff",
+    lineHeight: 1.35
   },
+
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 20
+    marginBottom: 26
   },
+
+  companyInfo: {
+    flexGrow: 1,
+    marginRight: 18
+  },
+
   companyLogo: {
-    width: 80,
-    height: 80,
+    width: 78,
+    height: 78,
     marginBottom: 10,
     borderRadius: 6,
     objectFit: "contain"
   },
-  companyInfo: {
-    flexGrow: 1,
-    marginRight: 16
-  },
+
   companyTitle: {
     fontSize: 14,
     fontWeight: 700,
-    marginBottom: 6,
+    marginBottom: 8,
     color: "#2c2c2c"
   },
+
   companyLine: {
     fontSize: 9,
-    marginVertical: 1,
+    marginVertical: 2,
     color: "#333"
   },
+
   invoiceDetails: {
-    width: 220,
+    width: 228,
     alignItems: "flex-end"
   },
+
   invoiceTitle: {
     fontSize: 18,
     fontWeight: 700,
@@ -94,158 +104,201 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 6
   },
+
   invoiceNumber: {
     fontSize: 10,
     fontWeight: 700,
-    marginBottom: 8
+    marginBottom: 10
   },
+
   invoiceMeta: {
-    backgroundColor: "#f5f5f5",
-    padding: 10,
-    borderRadius: 6,
+    backgroundColor: "#f6f6f6",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
-    width: "100%"
+    borderColor: "#e1e1e1",
+    width: "100%",
+    marginBottom: 10
   },
+
   invoiceMetaRow: {
     fontSize: 9,
-    marginVertical: 2
+    marginVertical: 3
   },
-  balanceDueBox: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    backgroundColor: "#f0f0f0",
+
+  statusRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%"
+    justifyContent: "flex-end",
+    width: "100%",
+    marginBottom: 10
   },
-  balanceDueText: {
-    fontSize: 10,
-    fontWeight: 700,
-    color: "#2c2c2c"
-  },
-  billingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20
-  },
-  billingColumn: {
-    flex: 1,
-    marginRight: 12
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    color: "#2c2c2c"
-  },
-  clientLine: {
-    fontSize: 9,
-    marginVertical: 1
-  },
+
   statusBadge: {
-    alignSelf: "flex-start",
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
     fontSize: 8,
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: 0.5
   },
+
   statusDraft: { backgroundColor: "#f3f4f6", color: "#374151" },
   statusSent: { backgroundColor: "#dbeafe", color: "#1e40af" },
   statusPaid: { backgroundColor: "#d1fae5", color: "#065f46" },
   statusOverdue: { backgroundColor: "#fee2e2", color: "#991b1b" },
   statusCancelled: { backgroundColor: "#f3f4f6", color: "#374151" },
+
+  balanceDueBox: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#d6d6d6",
+    backgroundColor: "#f1f1f1",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%"
+  },
+
+  balanceDueText: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: "#2c2c2c"
+  },
+
+  billingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 22
+  },
+
+  billingColumn: {
+    flex: 1,
+    marginRight: 12
+  },
+
+  infoCard: {
+    borderWidth: 1,
+    borderColor: "#e3e3e3",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12
+  },
+
+  sectionTitle: {
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    color: "#2c2c2c"
+  },
+
+  clientLine: {
+    fontSize: 9,
+    marginVertical: 2
+  },
+
   itemsTable: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 6,
+    borderColor: "#e2e2e2",
+    borderRadius: 8,
     overflow: "hidden",
-    marginBottom: 16
+    marginBottom: 18
   },
+
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#2c2c2c",
     color: "#ffffff",
-    paddingVertical: 8,
-    paddingHorizontal: 10
+    paddingVertical: 11,
+    paddingHorizontal: 12
   },
+
   headerCell: {
     fontSize: 9,
     fontWeight: 700
   },
+
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0"
   },
+
   rowAlt: {
-    backgroundColor: "#f9f9f9"
+    backgroundColor: "#fafafa"
   },
+
   colItem: { width: "50%" },
   colQty: { width: "15%", textAlign: "center" },
   colRate: { width: "17.5%", textAlign: "right" },
   colAmount: { width: "17.5%", textAlign: "right" },
+
   totalsSection: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginBottom: 16
+    marginBottom: 18
   },
+
   totalsTable: {
-    width: 220,
+    width: 228,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 6,
+    borderColor: "#e2e2e2",
+    borderRadius: 8,
     overflow: "hidden"
   },
+
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
     fontSize: 9
   },
+
   totalsRowFinal: {
     backgroundColor: "#2c2c2c",
     color: "#ffffff",
     fontWeight: 700
   },
+
   notesSection: {
     marginTop: 16,
-    paddingTop: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd"
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e2e2"
   },
+
   notesTitle: {
     fontSize: 10,
     fontWeight: 700,
-    marginBottom: 6,
+    marginBottom: 7,
     color: "#2c2c2c"
   },
+
   notesText: {
     fontSize: 9,
-    color: "#666"
+    color: "#666",
+    lineHeight: 1.45
   },
+
   footer: {
-    marginTop: 16,
+    marginTop: 22,
     textAlign: "center",
-    paddingTop: 10,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#ddd",
+    borderTopColor: "#e2e2e2",
     color: "#999",
-    fontSize: 9
+    fontSize: 9,
+    lineHeight: 1.35
   }
 });
 
@@ -260,6 +313,7 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
     hour: "2-digit",
     minute: "2-digit"
   });
+
   const statusKey = invoice.status?.toLowerCase() ?? "draft";
   const statusStyle =
     statusKey === "sent"
@@ -280,9 +334,11 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
             {sender?.logo_url ? (
               <Image src={sender.logo_url} style={styles.companyLogo} />
             ) : null}
+
             <Text style={styles.companyTitle}>
               {sender?.sender_company_name ?? ""}
             </Text>
+
             <Text style={styles.companyLine}>
               <Text style={{ fontWeight: 700 }}>Business Banking</Text>
             </Text>
@@ -303,6 +359,7 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
           <View style={styles.invoiceDetails}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
             <Text style={styles.invoiceNumber}># {invoice.invoice_number}</Text>
+
             <View style={styles.invoiceMeta}>
               <Text style={styles.invoiceMetaRow}>
                 <Text style={{ fontWeight: 700 }}>Date:</Text>{" "}
@@ -310,16 +367,20 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
               </Text>
               <Text style={styles.invoiceMetaRow}>
                 <Text style={{ fontWeight: 700 }}>Payment Terms:</Text>{" "}
-                {invoice.payment_terms_days} days
+                Net {invoice.payment_terms_days} days
               </Text>
               <Text style={styles.invoiceMetaRow}>
                 <Text style={{ fontWeight: 700 }}>Due Date:</Text>{" "}
                 {formatDate(invoice.due_date)}
               </Text>
-            <Text style={[styles.statusBadge, statusStyle]}>
-              {invoice.status}
-            </Text>
             </View>
+
+            <View style={styles.statusRow}>
+              <Text style={[styles.statusBadge, statusStyle]}>
+                {invoice.status}
+              </Text>
+            </View>
+
             <View style={styles.balanceDueBox}>
               <Text style={styles.balanceDueText}>Balance Due:</Text>
               <Text style={styles.balanceDueText}>
@@ -330,20 +391,22 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
         </View>
 
         <View style={styles.billingRow}>
-          <View style={styles.billingColumn}>
-            <Text style={styles.sectionTitle}>Receiver's Details:</Text>
+          <View style={[styles.billingColumn, styles.infoCard]}>
+            <Text style={styles.sectionTitle}>Receiver's Details</Text>
             <Text style={styles.clientLine}>
               <Text style={{ fontWeight: 700 }}>{receiver?.name ?? ""}</Text>
             </Text>
+
             {receiver?.billing_address ? (
               <Text style={styles.clientLine}>{receiver.billing_address}</Text>
             ) : null}
+
             {receiver?.email ? (
               <Text style={styles.clientLine}>
-                <Text style={{ fontWeight: 700 }}>Email:</Text>{" "}
-                {receiver.email}
+                <Text style={{ fontWeight: 700 }}>Email:</Text> {receiver.email}
               </Text>
             ) : null}
+
             {receiver?.contact ? (
               <Text style={styles.clientLine}>
                 <Text style={{ fontWeight: 700 }}>Phone:</Text>{" "}
@@ -352,14 +415,12 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
             ) : null}
           </View>
 
-          {generatedBy ? (
-            <View style={styles.billingColumn}>
-              <Text style={styles.sectionTitle}>Generated by:</Text>
-              <Text style={styles.clientLine}>
-                <Text style={{ fontWeight: 700 }}>{generatedBy}</Text>
-              </Text>
-            </View>
-          ) : null}
+          <View style={[styles.billingColumn, styles.infoCard, { marginRight: 0 }]}>
+            <Text style={styles.sectionTitle}>Generated by</Text>
+            <Text style={styles.clientLine}>
+              <Text style={{ fontWeight: 700 }}>{generatedBy}</Text>
+            </Text>
+          </View>
         </View>
 
         <View style={styles.itemsTable}>
@@ -369,10 +430,11 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
             <Text style={[styles.colRate, styles.headerCell]}>Rate</Text>
             <Text style={[styles.colAmount, styles.headerCell]}>Amount</Text>
           </View>
+
           {items.map((item, index) => (
             <View
               key={`item-${index}`}
-              style={[styles.tableRow, index % 2 === 1 ? styles.rowAlt : null]}
+              style={index % 2 === 1 ? [styles.tableRow, styles.rowAlt] : styles.tableRow}
             >
               <Text style={styles.colItem}>{item.description}</Text>
               <Text style={styles.colQty}>{item.quantity}</Text>
@@ -397,13 +459,15 @@ export function InvoicePdf({ invoice, items }: InvoicePdfProps) {
 
         {invoice.notes ? (
           <View style={styles.notesSection}>
-            <Text style={styles.notesTitle}>Notes:</Text>
+            <Text style={styles.notesTitle}>Notes</Text>
             <Text style={styles.notesText}>{invoice.notes}</Text>
           </View>
         ) : null}
 
         <View style={styles.footer}>
-          <Text>{sender?.footer_thank_you_text ?? "Thank you for your business!"}</Text>
+          <Text>
+            {sender?.footer_thank_you_text ?? "Thank you for your business!"}
+          </Text>
           <Text>Generated on {generatedAt}</Text>
         </View>
       </Page>

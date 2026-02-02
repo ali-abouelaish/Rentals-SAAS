@@ -13,12 +13,31 @@ export async function getBillingProfiles() {
   return data ?? [];
 }
 
-export async function getInvoices() {
+export async function getInvoices({
+  search,
+  status
+}: {
+  search?: string;
+  status?: string;
+} = {}) {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("invoices")
-    .select("*, landlords(name), created_by:user_profiles!invoices_created_by_user_id_fkey(display_name), approved_by:user_profiles!invoices_approved_by_user_id_fkey(display_name)")
+    .select(
+      "*, landlords(name), created_by:user_profiles!invoices_created_by_user_id_fkey(display_name), approved_by:user_profiles!invoices_approved_by_user_id_fkey(display_name)"
+    )
     .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(
+      `invoice_number.ilike.%${search}%,landlords.name.ilike.%${search}%`
+    );
+  }
+  if (status && status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
 }
@@ -53,12 +72,18 @@ export async function getInvoiceById(id: string) {
 export async function getBonusesForInvoice() {
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
-  const { data, error } = await supabase
+  let query = supabase
     .from("bonuses")
     .select("id, landlord_id, amount_owed, code, status, landlords(name, billing_address)")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["approved", "pending"])
     .order("created_at", { ascending: false });
+
+  if (profile.role.toLowerCase() !== "admin") {
+    query = query.eq("agent_id", profile.id);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
 }
