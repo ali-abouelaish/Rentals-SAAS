@@ -1,8 +1,7 @@
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, StatCard } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { EarningsFilters } from "@/features/earnings/ui/EarningsFilters";
-import { EarningsStatCards } from "@/features/earnings/ui/EarningsStatCards";
 import { EarningsTrendChart } from "@/features/earnings/ui/EarningsTrendChart";
 import { LeaderboardTable } from "@/features/earnings/ui/LeaderboardTable";
 import { ExportButton } from "@/features/earnings/ui/ExportButton";
@@ -14,6 +13,8 @@ import {
   getEarningsTrendForAgent
 } from "@/features/earnings/data/queries";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { FilterBar, FilterRow } from "@/components/ui/filter-bar";
+import { Users, TrendingUp, Receipt, Calculator } from "lucide-react";
 
 function getDefaultRange() {
   const to = new Date();
@@ -49,35 +50,66 @@ export default async function EarningsPage({
     const filteredRows = leaderboard.slice(0, 10);
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <PageHeader
           title={isAdmin ? "Agent Earnings" : "My Earnings"}
           subtitle={isAdmin ? "Track earnings across your tenant" : "Your earnings summary"}
           action={<ExportButton />}
         />
 
-        <Card>
-          <CardContent>
-            <EarningsFilters from={filters.from} to={filters.to} />
-          </CardContent>
-        </Card>
+        {/* Date Filters */}
+        <FilterBar>
+          <EarningsFilters from={filters.from} to={filters.to} />
+        </FilterBar>
 
-        <EarningsStatCards stats={stats} />
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Total Agents"
+            value={stats.totalAgents ?? 0}
+            icon={<Users className="h-5 w-5" />}
+          />
+          <StatCard
+            label="Total Earnings"
+            value={`£${(stats.totalEarnings ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`}
+            icon={<TrendingUp className="h-5 w-5" />}
+          />
+          <StatCard
+            label="Transactions"
+            value={stats.totalTransactions ?? 0}
+            icon={<Receipt className="h-5 w-5" />}
+          />
+          <StatCard
+            label="Avg Per Agent"
+            value={`£${(stats.avgPerAgent ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`}
+            icon={<Calculator className="h-5 w-5" />}
+          />
+        </div>
 
+        {/* Trend Chart */}
         <Card>
-          <CardContent className="space-y-4">
-            <p className="text-sm font-medium text-navy">Earnings trend</p>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-brand flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Earnings Trend
+              </h3>
+            </div>
             <EarningsTrendChart data={trend} />
           </CardContent>
         </Card>
 
+        {/* Leaderboard */}
         <Card>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-navy">Top agents</p>
-              {!isAdmin ? (
-                <p className="text-xs text-gray-500">Showing top 10 within tenant</p>
-              ) : null}
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-brand flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Top Agents
+              </h3>
+              {!isAdmin && (
+                <span className="text-xs text-slate-500">Showing top 10</span>
+              )}
             </div>
             <LeaderboardTable rows={filteredRows} showAgencyTotals={isAdmin} />
           </CardContent>

@@ -10,6 +10,8 @@ import { RentalsTable } from "@/features/commission-file/ui/RentalsTable";
 import { BonusesTable } from "@/features/commission-file/ui/BonusesTable";
 import { PayoutsTable } from "@/features/commission-file/ui/PayoutsTable";
 import { getCommissionFileData } from "@/features/commission-file/data/queries";
+import { formatGBP } from "@/lib/utils/formatters";
+import { ClipboardList, Gift, CreditCard, AlertTriangle, TrendingUp, Building } from "lucide-react";
 
 function getDefaultDateRange(searchParams?: { from?: string; to?: string }) {
   const today = new Date();
@@ -43,8 +45,14 @@ export default async function AgentCommissionPage({
 
   if (!agent) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-sm text-gray-500">Agent not found.</p>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Card className="p-8 text-center">
+          <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-slate-400" />
+          </div>
+          <p className="text-slate-600 font-medium">Agent not found</p>
+          <p className="text-sm text-slate-400 mt-1">Please check the agent ID and try again</p>
+        </Card>
       </div>
     );
   }
@@ -92,64 +100,177 @@ export default async function AgentCommissionPage({
       (bonus) => new Date(bonus.created_at) < overdueCutoff && bonus.agent_earning > 0
     ).length;
   const overdueAmount = totalOwed > totalPayouts && overdueCount > 0 ? totalOwed - totalPayouts : 0;
+  const balance = totalOwed - totalPayouts;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Agent Commission File"
-        subtitle={`Commission summary for ${agent.display_name ?? "Agent"}`}
-      />
-
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <AvatarCircle
-              name={agent.display_name ?? "Agent"}
-              url={agent.agent_profiles?.avatar_url ?? null}
-            />
-            <div>
-              <p className="text-sm font-medium text-navy">{agent.display_name ?? "Agent"}</p>
-              <p className="text-xs text-gray-500">{agent.role}</p>
+      {/* Hero Section with Agent Profile */}
+      <div className="hero-gradient">
+        <div className="hero-pattern" />
+        <div className="relative z-10">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <AvatarCircle
+                name={agent.display_name ?? "Agent"}
+                url={Array.isArray(agent.agent_profiles) ? agent.agent_profiles[0]?.avatar_url : null}
+                size="lg"
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-white">{agent.display_name ?? "Agent"}</h1>
+                <p className="text-white/70 text-sm capitalize">{agent.role?.replace("_", " ") ?? "Agent"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right hidden sm:block">
+                <p className="text-white/60 text-xs uppercase tracking-wide">Balance</p>
+                <p className={`text-2xl font-bold ${balance >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                  {formatGBP(balance)}
+                </p>
+              </div>
+              <DateRangePicker defaultFrom={from} defaultTo={to} />
             </div>
           </div>
-          <DateRangePicker defaultFrom={from} defaultTo={to} />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <CommissionSummaryCards
-        rentalsCount={rentalRows.length}
-        agentEarnings={rentalTotals.agent_earning}
-        bonusesEarnings={bonusesEarnings}
-        totalPayouts={totalPayouts}
-        overdueAmount={overdueAmount}
-        overdueCount={overdueCount}
-        agencyNet={rentalTotals.base_amount}
-      />
+      {/* Summary Stats Grid */}
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        <Card className="stat-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-brand-50">
+                <ClipboardList className="h-4 w-4 text-brand" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Rentals</p>
+                <p className="text-xl font-bold text-brand">{rentalRows.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        <Card className="stat-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-100">
+                <TrendingUp className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Owed</p>
+                <p className="text-xl font-bold text-emerald-600">{formatGBP(totalOwed)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-100">
+                <Gift className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Bonuses</p>
+                <p className="text-xl font-bold text-amber-600">{formatGBP(bonusesEarnings)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-100">
+                <CreditCard className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Paid</p>
+                <p className="text-xl font-bold text-blue-600">{formatGBP(totalPayouts)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`stat-card ${overdueAmount > 0 ? 'border-red-200 bg-red-50/30' : ''}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${overdueAmount > 0 ? 'bg-red-100' : 'bg-slate-100'}`}>
+                <AlertTriangle className={`h-4 w-4 ${overdueAmount > 0 ? 'text-red-600' : 'text-slate-400'}`} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Overdue</p>
+                <p className={`text-xl font-bold ${overdueAmount > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                  {formatGBP(overdueAmount)}
+                </p>
+                {overdueCount > 0 && (
+                  <p className="text-xs text-red-500">{overdueCount} items &gt; 7 days</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-100">
+                <Building className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Agency Net</p>
+                <p className="text-xl font-bold text-purple-600">{formatGBP(rentalTotals.base_amount)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabbed Content */}
       <Tabs defaultValue="rentals">
-        <TabsList>
-          <TabsTrigger value="rentals">Rentals (Approved)</TabsTrigger>
-          <TabsTrigger value="bonuses">Bonuses</TabsTrigger>
-          <TabsTrigger value="payouts">Payouts</TabsTrigger>
+        <TabsList className="mb-4">
+          <TabsTrigger value="rentals">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Rentals ({rentalRows.length})
+          </TabsTrigger>
+          <TabsTrigger value="bonuses">
+            <Gift className="h-4 w-4 mr-2" />
+            Bonuses ({bonusRows.length})
+          </TabsTrigger>
+          <TabsTrigger value="payouts">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Payouts ({payoutRows.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="rentals">
-          <RentalsTable
-            rentals={rentalRows}
-            totals={rentalTotals}
-            agentId={params.id}
-            from={from}
-            to={to}
-            includeAllStatuses={includeAllStatuses}
-          />
+          <Card>
+            <CardContent className="p-0">
+              <RentalsTable
+                rentals={rentalRows}
+                totals={rentalTotals}
+                agentId={params.id}
+                from={from}
+                to={to}
+                includeAllStatuses={includeAllStatuses}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="bonuses">
-          <BonusesTable bonuses={bonusRows} />
+          <Card>
+            <CardContent className="p-0">
+              <BonusesTable bonuses={bonusRows} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="payouts">
-          <PayoutsTable payouts={payoutRows} agentId={params.id} />
+          <Card>
+            <CardContent className="p-0">
+              <PayoutsTable payouts={payoutRows} agentId={params.id} />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

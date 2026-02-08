@@ -34,7 +34,7 @@ export default async function AgentDetailPage({
 
       <Card>
         <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-navy">Admin-only updates</p>
+          <p className="text-sm font-medium text-brand">Admin-only updates</p>
           <AgentCommissionForm
             userId={agent.user_id}
             commission_percent={agent.commission_percent}

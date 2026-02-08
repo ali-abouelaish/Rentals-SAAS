@@ -53,7 +53,7 @@ export function BonusesInvoiceSelector({ bonuses }: { bonuses: BonusRow[] }) {
             checked={selected.includes(bonus.id)}
             onChange={() => toggle(bonus.id, bonus.landlord_id)}
           />,
-          <span key={`${bonus.id}-code`} className="text-sm text-navy">
+          <span key={`${bonus.id}-code`} className="text-sm text-brand">
             {bonus.code ?? bonus.id}
           </span>,
           <span key={`${bonus.id}-landlord`} className="text-sm text-gray-600">

@@ -27,15 +27,15 @@ export function EarningsTrendChart({ data }: { data: EarningsTrendPoint[] }) {
           <Area
             type="monotone"
             dataKey="total_earnings"
-            stroke="var(--navy)"
-            fill="var(--navy)"
+            stroke="#14213d"
+            fill="#14213d"
             fillOpacity={0.1}
           />
           <Area
             type="monotone"
             dataKey="agent_earnings"
-            stroke="var(--gold)"
-            fill="var(--gold)"
+            stroke="#E2B808"
+            fill="#E2B808"
             fillOpacity={0.15}
           />
         </AreaChart>

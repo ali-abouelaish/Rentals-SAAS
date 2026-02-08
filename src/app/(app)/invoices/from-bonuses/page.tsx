@@ -29,7 +29,10 @@ export default async function InvoiceFromBonusesPage({
     <div className="space-y-6">
       <PageHeader title="Generate Invoice" subtitle="Create from landlord bonuses" />
       <InvoiceFromBonusesForm
-        bonuses={bonuses}
+        bonuses={bonuses.map((b) => ({
+          ...b,
+          landlords: Array.isArray(b.landlords) ? b.landlords[0] : b.landlords
+        }))}
         billingProfiles={profiles.map((profile) => ({
           id: profile.id,
           name: profile.name

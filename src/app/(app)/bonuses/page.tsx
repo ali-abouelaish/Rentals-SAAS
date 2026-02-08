@@ -1,13 +1,15 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FilterBar, FilterRow, FilterGroup, FilterActions } from "@/components/ui/filter-bar";
 import { getBonuses } from "@/features/bonuses/data/bonuses";
 import { BonusForm } from "@/features/bonuses/ui/BonusForm";
 import { BonusesTableWithInvoice } from "@/features/bonuses/ui/BonusesTableWithInvoice";
-import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import { Input } from "@/components/ui/input";
+import { Plus, FileText, Gift } from "lucide-react";
 
 export default async function BonusesPage({
   searchParams
@@ -34,88 +36,136 @@ export default async function BonusesPage({
     .eq("tenant_id", profile.tenant_id)
     .order("display_name", { ascending: true });
 
+  const statusOptions = [
+    { value: "all", label: "All Status" },
+    { value: "pending", label: "Pending" },
+    { value: "approved", label: "Approved" },
+    { value: "sent", label: "Sent" },
+    { value: "paid", label: "Paid" },
+    { value: "declined", label: "Declined" }
+  ];
+
   return (
-    <div className="space-y-6">
-      <PageHeader title="Bonuses" subtitle="Landlord bonus submissions" />
-      <Card>
-        <CardContent>
-          <form className="flex flex-wrap items-end gap-2" method="get">
-            <div>
-              <label className="text-xs text-gray-500">Search</label>
+    <div className="space-y-5">
+      <PageHeader
+        title="Bonuses"
+        subtitle="Landlord bonus submissions"
+        action={
+          <Link href="/invoices/from-bonuses">
+            <Button variant="outline" size="sm">
+              <FileText className="h-4 w-4 mr-1" />
+              Create Invoice
+            </Button>
+          </Link>
+        }
+      />
+
+      {/* Filter Bar */}
+      <FilterBar>
+        <form method="get">
+          <FilterRow>
+            <FilterGroup label="Search">
               <Input
                 name="q"
-                placeholder="Code, client, property, landlord"
+                placeholder="Code, client, property..."
                 defaultValue={search}
+                className="w-56"
               />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Status</label>
+            </FilterGroup>
+            <FilterGroup label="Status">
               <select
                 name="status"
                 defaultValue={status}
-                className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm shadow-sm"
+                className="flex h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm border-slate-200 text-slate-700"
               >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="sent">Sent</option>
-                <option value="paid">Paid</option>
-                <option value="declined">Declined</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Landlord</label>
-              <select
-                name="landlord"
-                defaultValue={landlord}
-                className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm shadow-sm"
-              >
-                <option value="all">All</option>
-                {(landlords ?? []).map((landlordRow) => (
-                  <option key={landlordRow.id} value={landlordRow.id}>
-                    {landlordRow.name}
+                {statusOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
+            </FilterGroup>
+            <FilterGroup label="Landlord">
+              <select
+                name="landlord"
+                defaultValue={landlord}
+                className="flex h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm border-slate-200 text-slate-700"
+              >
+                <option value="all">All Landlords</option>
+                {(landlords ?? []).map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </FilterGroup>
+            <FilterActions>
+              <Button type="submit" variant="outline" size="sm">
+                Apply
+              </Button>
+            </FilterActions>
+          </FilterRow>
+        </form>
+      </FilterBar>
+
+      {/* Two Column Layout */}
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* Submit Bonus Form */}
+        <Card accent="left" accentColor="gold">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-lg bg-amber-100">
+                <Plus className="h-4 w-4 text-amber-600" />
+              </div>
+              <h3 className="font-semibold text-brand">Submit Bonus</h3>
             </div>
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      <div className="flex items-center gap-2">
-        <Link href="/invoices/from-bonuses" className={buttonVariants({ variant: "outline" })}>
-          Create invoice from bonuses
-        </Link>
+            <BonusForm
+              landlords={(landlords ?? []).map((l) => ({
+                id: l.id,
+                name: l.name
+              }))}
+              agents={(agents ?? []).map((agent) => ({
+                id: agent.id,
+                name: agent.display_name ?? "Agent"
+              }))}
+              isAdmin={isAdmin}
+              currentAgentId={profile.id}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Bonuses for Invoice */}
+        <Card className="lg:col-span-2">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-brand-50">
+                  <Gift className="h-4 w-4 text-brand" />
+                </div>
+                <h3 className="font-semibold text-brand">Eligible for Invoicing</h3>
+              </div>
+              <span className="text-xs text-slate-500">
+                {invoiceEligible.length} bonus{invoiceEligible.length !== 1 ? "es" : ""}
+              </span>
+            </div>
+            {invoiceEligible.length === 0 ? (
+              <div className="text-center py-8">
+                <Gift className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">No bonuses available for invoicing</p>
+              </div>
+            ) : (
+              <BonusesTableWithInvoice bonuses={invoiceEligible} />
+            )}
+          </CardContent>
+        </Card>
       </div>
-      <Card>
-        <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-navy">Submit bonus</p>
-          <BonusForm
-            landlords={(landlords ?? []).map((landlord) => ({
-              id: landlord.id,
-              name: landlord.name
-            }))}
-            agents={(agents ?? []).map((agent) => ({
-              id: agent.id,
-              name: agent.display_name ?? "Agent"
-            }))}
-            isAdmin={isAdmin}
-            currentAgentId={profile.id}
-          />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-navy">Create invoice from bonuses</p>
-          {invoiceEligible.length === 0 ? (
-            <p className="text-sm text-gray-500">No bonuses available for invoicing.</p>
-          ) : (
-            <BonusesTableWithInvoice bonuses={invoiceEligible} />
-          )}
-        </CardContent>
-      </Card>
+
+      {/* Results count */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500">
+          Showing <span className="font-medium text-slate-700">{bonuses.length}</span> total bonuses
+        </p>
+      </div>
     </div>
   );
 }

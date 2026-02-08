@@ -22,7 +22,7 @@ export function BillingProfilesTable({
   onUploadLogo: (
     prevState: { ok?: boolean; error?: string },
     formData: FormData
-  ) => void | Promise<{ ok?: boolean; error?: string }>;
+  ) => Promise<{ ok?: boolean; error?: string }>;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -144,9 +144,9 @@ function LogoUploadForm({
   onUploadLogo: (
     prevState: { ok?: boolean; error?: string },
     formData: FormData
-  ) => void | Promise<{ ok?: boolean; error?: string }>;
+  ) => Promise<{ ok?: boolean; error?: string }>;
 }) {
-  const [state, formAction] = useFormState(onUploadLogo, {});
+  const [state, formAction] = useFormState(onUploadLogo, { ok: false });
 
   useEffect(() => {
     if (state?.ok) {

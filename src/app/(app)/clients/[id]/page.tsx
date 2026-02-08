@@ -58,7 +58,7 @@ export default async function ClientDetailPage({
           </div>
           <div>
             <p className="text-xs uppercase text-gray-500">Created</p>
-            <p className="text-sm text-navy">{formatDate(client.created_at)}</p>
+            <p className="text-sm text-brand">{formatDate(client.created_at)}</p>
           </div>
         </CardContent>
       </Card>
@@ -69,14 +69,14 @@ export default async function ClientDetailPage({
 
       <Card>
         <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-navy">Edit client</p>
+          <p className="text-sm font-medium text-brand">Edit client</p>
           <ClientForm clientId={client.id} initialValues={client} />
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="space-y-4">
-          <p className="text-sm font-medium text-navy">Create rental code</p>
+          <p className="text-sm font-medium text-brand">Create rental code</p>
           <RentalCodeForm
             clientId={client.id}
             agents={(agents ?? []).map((agent) => ({
@@ -93,7 +93,7 @@ export default async function ClientDetailPage({
           <DataTable
             columns={["Code", "Status", "Date"]}
             rows={(rentals ?? []).map((rental) => [
-              <Link key={`${rental.id}-code`} href={`/rentals/${rental.id}`} className="text-navy">
+              <Link key={`${rental.id}-code`} href={`/rentals/${rental.id}`} className="text-brand">
                 {rental.code}
               </Link>,
               <StatusBadge key={`${rental.id}-status`} status={rental.status} />,

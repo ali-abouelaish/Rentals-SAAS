@@ -93,11 +93,11 @@ export async function getCommissionFileData({
   const rentalIds = (rentals ?? []).map((rental) => rental.id);
   const { data: ledgerRows } = rentalIds.length
     ? await supabase
-        .from("ledger_entries")
-        .select("reference_id, type, amount_gbp, agent_earning_gbp, agent_id")
-        .eq("reference_type", "rental_code")
-        .in("reference_id", rentalIds)
-        .in("type", ["rental_net", "agent_earning", "marketing_fee"])
+      .from("ledger_entries")
+      .select("reference_id, type, amount_gbp, agent_earning_gbp, agent_id")
+      .eq("reference_type", "rental_code")
+      .in("reference_id", rentalIds)
+      .in("type", ["rental_net", "agent_earning", "marketing_fee"])
     : { data: [] as LedgerRow[] };
 
   const rentalNetById = new Map<string, number>();
@@ -124,9 +124,9 @@ export async function getCommissionFileData({
 
   const { data: marketingAgents } = marketingAgentIds.length
     ? await supabase
-        .from("user_profiles")
-        .select("id, display_name")
-        .in("id", marketingAgentIds)
+      .from("user_profiles")
+      .select("id, display_name")
+      .in("id", marketingAgentIds)
     : { data: [] as { id: string; display_name: string | null }[] };
 
   const marketingAgentMap = new Map(
@@ -148,8 +148,8 @@ export async function getCommissionFileData({
       : "—";
     const marketingFeeDeducted =
       rental.assisted_by_agent_id === agentId &&
-      rental.marketing_agent_id &&
-      rental.marketing_agent_id !== agentId
+        rental.marketing_agent_id &&
+        rental.marketing_agent_id !== agentId
         ? marketingFee
         : 0;
 
@@ -186,7 +186,10 @@ export async function getCommissionFileData({
   const bonusRows: CommissionBonusRow[] = (bonuses ?? []).map((bonus) => ({
     id: bonus.id,
     code: bonus.code ?? bonus.id,
-    landlord_name: bonus.landlords?.name ?? "Landlord",
+    landlord_name:
+      (Array.isArray(bonus.landlords)
+        ? bonus.landlords[0]?.name
+        : (bonus.landlords as any)?.name) ?? "Landlord",
     amount_owed: Number(bonus.amount_owed ?? 0),
     payout_mode: bonus.payout_mode,
     agent_earning:

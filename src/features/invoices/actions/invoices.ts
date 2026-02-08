@@ -23,7 +23,7 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function computeTotals(items: InvoiceItemInput[]) {
+function computeTotals<T extends InvoiceItemInput>(items: T[]) {
   const normalized = items.map((item) => ({
     ...item,
     amount: roundMoney(item.quantity * item.rate)
@@ -81,7 +81,12 @@ export async function createInvoiceManual(formData: FormData) {
   );
   if (numberError) throw new Error(numberError.message);
 
-  const totals = computeTotals(input.items);
+  const totals = computeTotals(
+    input.items.map((item) => ({
+      ...item,
+      amount: item.amount ?? item.quantity * item.rate
+    }))
+  );
 
   const { data: invoice, error } = await supabase
     .from("invoices")
@@ -164,9 +169,13 @@ export async function createInvoiceFromBonuses(formData: FormData) {
   if (numberError) throw new Error(numberError.message);
 
   const items = bonuses.map((bonus, index) => ({
-    description: `Landlord Bonus - ${bonus.code ?? bonus.id} - Landlord: ${
-      bonus.landlords?.name ?? "Landlord"
-    } (${bonus.landlords?.billing_address ?? "Address"}) - Client: Unknown`,
+    description: `Landlord Bonus - ${bonus.code ?? bonus.id} - Landlord: ${Array.isArray(bonus.landlords)
+      ? bonus.landlords[0]?.name
+      : (bonus.landlords as any)?.name ?? "Landlord"
+      } (${Array.isArray(bonus.landlords)
+        ? bonus.landlords[0]?.billing_address
+        : (bonus.landlords as any)?.billing_address ?? "Address"
+      }) - Client: Unknown`,
     quantity: 1,
     rate: Number(bonus.amount_owed ?? 0),
     amount: Number(bonus.amount_owed ?? 0),
@@ -414,7 +423,7 @@ export async function generateInvoicePdf(invoiceId: string) {
   }
 
   const pdfBuffer = await renderToBuffer(
-    React.createElement(InvoicePdf, { invoice, items: items ?? [] })
+    React.createElement(InvoicePdf, { invoice, items: items ?? [] }) as any
   );
 
   const path = `${invoice.tenant_id}/${invoice.id}/${invoice.invoice_number}.pdf`;

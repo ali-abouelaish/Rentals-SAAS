@@ -16,7 +16,7 @@ export function createSupabaseMiddlewareClient(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
           cookiesToSet.forEach((cookie) => {
             response.cookies.set(cookie.name, cookie.value, cookie.options);
           });

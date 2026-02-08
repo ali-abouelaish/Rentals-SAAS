@@ -19,7 +19,7 @@ export function BonusesTable({ bonuses }: { bonuses: CommissionBonusRow[] }) {
         "Actions"
       ]}
       rows={bonuses.map((bonus) => [
-        <span key={`${bonus.id}-code`} className="text-sm text-navy">
+        <span key={`${bonus.id}-code`} className="text-sm text-brand">
           {bonus.code ?? "—"}
         </span>,
         <span key={`${bonus.id}-landlord`} className="text-sm text-gray-600">

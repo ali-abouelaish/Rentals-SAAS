@@ -160,7 +160,7 @@ export default async function InvoiceDetailPage({
       {canEdit ? (
         <Card>
           <CardContent className="space-y-3">
-            <p className="text-sm font-medium text-navy">Edit draft invoice</p>
+            <p className="text-sm font-medium text-brand">Edit draft invoice</p>
             <form action={updateInvoiceDraft} className="grid gap-3 md:grid-cols-2">
               <input type="hidden" name="invoice_id" value={invoice.id} />
               <div>

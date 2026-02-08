@@ -7,12 +7,13 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const profile = await requireUserProfile();
 
   return (
-    <div className="min-h-screen">
-      <TopNav profileName={profile.display_name ?? "Agent"} role={profile.role} />
-      <div className="mx-auto flex max-w-7xl gap-6 px-6 py-6">
-        <SideNav role={profile.role} />
-        <main className="flex-1 space-y-6">{children}</main>
-      </div>
+    <div className="flex h-screen overflow-hidden bg-background">
+      <SideNav profile={profile} />
+      <main className="flex-1 overflow-y-auto p-8">
+        <div className="mx-auto max-w-6xl space-y-8">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

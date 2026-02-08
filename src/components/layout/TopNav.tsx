@@ -7,7 +7,7 @@ export function TopNav({ profileName, role }: { profileName: string; role: strin
     <header className="border-b border-muted bg-card">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <div>
-          <p className="text-heading text-lg font-semibold text-navy">
+          <p className="text-heading text-lg font-semibold text-brand">
             Rental Agency SaaS
           </p>
           <p className="text-xs text-gray-500">Premium multi-tenant workspace</p>
@@ -23,7 +23,7 @@ export function TopNav({ profileName, role }: { profileName: string; role: strin
             </Button>
           </form>
           <div className="text-right">
-            <p className="text-sm font-medium text-navy">{profileName}</p>
+            <p className="text-sm font-medium text-brand">{profileName}</p>
             <p className="text-xs text-gray-500">{role.replace("_", " ")}</p>
           </div>
         </div>

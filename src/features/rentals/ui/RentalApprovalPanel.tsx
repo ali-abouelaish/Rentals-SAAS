@@ -60,7 +60,12 @@ export function RentalApprovalPanel({
   const canApprove = !invalidOverride && !invalidNet;
 
   return (
-    <form action={approveRentalCode} className="space-y-4">
+    <form
+      action={async (formData) => {
+        await approveRentalCode(formData);
+      }}
+      className="space-y-4"
+    >
       <input type="hidden" name="rental_id" value={rentalId} />
       {overrideFee ? (
         <input type="hidden" name="marketing_fee_override_gbp" value={overrideFee} />
@@ -99,12 +104,12 @@ export function RentalApprovalPanel({
       </div>
 
       {needsOverride ? (
-        <div className="space-y-3 rounded-2xl border border-gold/40 bg-gold/10 p-4">
+        <div className="space-y-3 rounded-2xl border border-accent/40 bg-accent/10 p-4">
           <div className="flex items-center gap-2 text-sm text-navy">
             <AlertTriangle size={16} />
             <span>Marketing fee exceeds 45% of base. Add a custom amount.</span>
           </div>
-          <Badge className="border-gold text-gold">Override required</Badge>
+          <Badge className="border-accent text-accent-dark">Override required</Badge>
           <div className="grid gap-3 md:grid-cols-2">
             <Input
               type="number"

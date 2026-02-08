@@ -42,7 +42,7 @@ export function RentalCodeForm({
       <Input placeholder="Consultation fee" type="number" {...form.register("consultation_fee_amount")} />
       <Select
         value={form.watch("payment_method")}
-        onChange={(value) => form.setValue("payment_method", value as RentalCodeFormValues["payment_method"])}
+        onChange={(value: string) => form.setValue("payment_method", value as RentalCodeFormValues["payment_method"])}
         options={[
           { label: "Cash", value: "cash" },
           { label: "Transfer", value: "transfer" },

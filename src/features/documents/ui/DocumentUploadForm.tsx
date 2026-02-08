@@ -9,12 +9,17 @@ export function DocumentUploadForm({ rentalCodeId }: { rentalCodeId: string }) {
   const [setType, setSetType] = useState("sourcing_agreement");
 
   return (
-    <form action={uploadDocuments} className="grid gap-3 md:grid-cols-2">
+    <form
+      action={async (formData) => {
+        await uploadDocuments(formData);
+      }}
+      className="grid gap-3 md:grid-cols-2"
+    >
       <input type="hidden" name="rental_code_id" value={rentalCodeId} />
       <input type="hidden" name="document_set_type" value={setType} />
       <Select
         value={setType}
-        onChange={(value) => setSetType(value)}
+        onChange={(value: string) => setSetType(value)}
         options={[
           { label: "Sourcing Agreement (4 images)", value: "sourcing_agreement" },
           { label: "Client ID (1+)", value: "client_id" },

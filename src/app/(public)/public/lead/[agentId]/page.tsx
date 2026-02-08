@@ -26,7 +26,11 @@ export default async function PublicLeadPage({
       <PublicLeadForm
         agentId={agent.user_id}
         tenantId={agent.tenant_id}
-        agentName={agent.user_profiles?.display_name ?? "Agent"}
+        agentName={
+          Array.isArray(agent.user_profiles)
+            ? agent.user_profiles[0]?.display_name
+            : (agent.user_profiles as any)?.display_name ?? "Agent"
+        }
       />
     </div>
   );

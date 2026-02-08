@@ -59,7 +59,7 @@ export function BonusForm({
         {isAdmin ? (
           <Select
             value={form.watch("agent_id") ?? ""}
-            onChange={(value) => form.setValue("agent_id", value)}
+            onChange={(value: string) => form.setValue("agent_id", value)}
             options={agents.map((agent) => ({ label: agent.name, value: agent.id }))}
           />
         ) : (
@@ -73,7 +73,7 @@ export function BonusForm({
         <p className="text-xs text-gray-500">Landlord *</p>
         <Select
           value={form.watch("landlord_id")}
-          onChange={(value) => form.setValue("landlord_id", value)}
+          onChange={(value: string) => form.setValue("landlord_id", value)}
           options={landlords.map((landlord) => ({ label: landlord.name, value: landlord.id }))}
         />
       </div>
@@ -99,7 +99,7 @@ export function BonusForm({
         <p className="text-xs text-gray-500">Bonus Split *</p>
         <Select
           value={form.watch("payout_mode")}
-          onChange={(value) => form.setValue("payout_mode", value as BonusFormValues["payout_mode"])}
+          onChange={(value: string) => form.setValue("payout_mode", value as BonusFormValues["payout_mode"])}
           options={[
             { label: "Standard Split (agent commission bonus)", value: "standard" },
             { label: "Full payout (100%)", value: "full" }

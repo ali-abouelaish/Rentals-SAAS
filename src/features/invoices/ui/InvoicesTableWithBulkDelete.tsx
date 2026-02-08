@@ -34,7 +34,7 @@ export function InvoicesTableWithBulkDelete({
   onViewPdf: (invoiceId: string) => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
-  const [state, action] = useFormState(bulkDeleteInvoicesAction, {});
+  const [state, action] = useFormState(bulkDeleteInvoicesAction, { ok: false });
 
   const selectableIds = useMemo(
     () =>

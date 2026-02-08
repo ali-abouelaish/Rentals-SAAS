@@ -24,7 +24,7 @@ export default async function BillingProfilesPage() {
       {isAdmin ? (
         <Card>
           <CardContent className="space-y-3">
-            <p className="text-sm font-medium text-navy">Create profile</p>
+            <p className="text-sm font-medium text-brand">Create profile</p>
             <form action={createBillingProfile} className="grid gap-3 md:grid-cols-2">
               <Input name="name" placeholder="Profile name" required />
               <Input name="sender_company_name" placeholder="Company name" required />

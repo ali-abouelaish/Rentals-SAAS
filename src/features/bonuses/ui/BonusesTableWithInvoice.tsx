@@ -37,7 +37,7 @@ export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deleteState, deleteAction] = useFormState(deleteBonusAction, {});
+  const [deleteState, deleteAction] = useFormState(deleteBonusAction, { ok: false });
 
   const selectedLandlord = useMemo(() => {
     const first = bonuses.find((bonus) => selected.includes(bonus.id));
@@ -99,7 +99,7 @@ export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
             onChange={() => toggle(bonus)}
             disabled={!["approved", "pending"].includes(bonus.status)}
           />,
-          <span key={`${bonus.id}-code`} className="text-sm text-navy">
+          <span key={`${bonus.id}-code`} className="text-sm text-brand">
             {formatBonusCode(bonus.code, bonus.id)}
           </span>,
           <span key={`${bonus.id}-date`} className="text-sm text-gray-500">

@@ -45,11 +45,10 @@ export default async function LandlordDetailPage({
             <p className="text-xs uppercase text-gray-400">Paying</p>
             <p>
               {landlord.pays_commission
-                ? `Yes · ${
-                    landlord.commission_term_text?.trim().length
-                      ? landlord.commission_term_text
-                      : `£${Number(landlord.commission_amount_gbp ?? 0).toFixed(2)}`
-                  }`
+                ? `Yes · ${landlord.commission_term_text?.trim().length
+                  ? landlord.commission_term_text
+                  : `£${Number(landlord.commission_amount_gbp ?? 0).toFixed(2)}`
+                }`
                 : "No"}
             </p>
           </div>
@@ -62,7 +61,7 @@ export default async function LandlordDetailPage({
 
       <Card>
         <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-navy">Edit landlord</p>
+          <p className="text-sm font-medium text-brand">Edit landlord</p>
           <form action={updateLandlord} className="grid gap-3 md:grid-cols-2">
             <input type="hidden" name="landlord_id" value={landlord.id} />
             <Input name="name" defaultValue={landlord.name} placeholder="Name" required />
@@ -145,7 +144,7 @@ export default async function LandlordDetailPage({
 
       <Card>
         <CardContent className="space-y-4">
-          <p className="text-sm font-medium text-navy">Invoices</p>
+          <p className="text-sm font-medium text-brand">Invoices</p>
           <DataTable
             columns={["Invoice", "Status", "Total", "Due", "Actions"]}
             rows={(invoices ?? []).map((invoice) => [

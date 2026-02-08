@@ -74,8 +74,8 @@ export default async function RentalDetailPage({
         <StatusBadge status={rental.status} />
         <CopyRentalTextButton text={rentalText} />
         {rental.status === "pending" &&
-        (profile.role.toLowerCase() === "admin" ||
-          rental.assisted_by_agent_id === profile.id) ? (
+          (profile.role.toLowerCase() === "admin" ||
+            rental.assisted_by_agent_id === profile.id) ? (
           <ConfirmDeleteForm
             action={deleteRentalCode}
             message="Delete this rental? This cannot be undone."
@@ -142,11 +142,11 @@ export default async function RentalDetailPage({
       </Card>
 
       {rental.status === "pending" &&
-      (profile.role.toLowerCase() === "admin" ||
-        rental.assisted_by_agent_id === profile.id) ? (
+        (profile.role.toLowerCase() === "admin" ||
+          rental.assisted_by_agent_id === profile.id) ? (
         <Card>
           <CardContent className="space-y-3">
-            <p className="text-sm font-medium text-navy">Edit rental</p>
+            <p className="text-sm font-medium text-brand">Edit rental</p>
             <form action={updateRentalCode} className="grid gap-3 md:grid-cols-2">
               <input type="hidden" name="rental_id" value={rental.id} />
               <input type="hidden" name="client_id" value={rental.client_id} />
@@ -201,12 +201,12 @@ export default async function RentalDetailPage({
 
       <Card>
         <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-navy">Upload documents</p>
+          <p className="text-sm font-medium text-brand">Upload documents</p>
           <DocumentUploadForm rentalCodeId={rental.id} />
           <div className="space-y-2 text-sm text-gray-600">
             {documentSets?.map((set) => (
               <div key={set.id}>
-                <p className="font-medium text-navy">{set.set_type.replace("_", " ")}</p>
+                <p className="font-medium text-brand">{set.set_type.replace("_", " ")}</p>
                 <p>{set.documents?.length ?? 0} documents</p>
               </div>
             ))}

@@ -254,13 +254,17 @@ export async function getEarningsLeaderboard(
     const existing = rows.get(agentId) ?? {
       agent_id: agentId,
       agent_name: agent?.display_name ?? "Agent",
-      avatar_url: agent?.agent_profiles?.avatar_url ?? null,
+      avatar_url: Array.isArray(agent?.agent_profiles)
+        ? agent.agent_profiles[0]?.avatar_url
+        : (agent?.agent_profiles as any)?.avatar_url ?? null,
       transactions_count: 0,
       agent_earnings: 0,
       agency_earnings: 0,
       total_earnings: 0,
       last_activity: activityMap.get(agentId) ?? null,
-      commission_percent: agent?.agent_profiles?.commission_percent ?? null,
+      commission_percent: Array.isArray(agent?.agent_profiles)
+        ? agent.agent_profiles[0]?.commission_percent
+        : (agent?.agent_profiles as any)?.commission_percent ?? null,
       rank: 0
     };
     if (entry.type === "rental_net" && entry.amount_gbp > 0) {

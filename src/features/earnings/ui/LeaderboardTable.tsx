@@ -9,7 +9,7 @@ import type { EarningsLeaderboardRow } from "../domain/types";
 import { Button } from "@/components/ui/button";
 
 function rankClass(rank: number) {
-  if (rank === 1) return "border border-gold bg-gold/10";
+  if (rank === 1) return "border border-accent bg-accent/10";
   if (rank === 2) return "border border-muted bg-muted/60";
   if (rank === 3) return "border border-amber-200 bg-amber-50";
   return "";
@@ -39,12 +39,12 @@ export function LeaderboardTable({
         >
           <AvatarCircle name={row.agent_name} url={row.avatar_url} />
           <div>
-            <p className="text-sm font-medium text-navy">{row.agent_name}</p>
+            <p className="text-sm font-medium text-brand">{row.agent_name}</p>
             <Badge className="border-muted text-gray-600">#{row.rank}</Badge>
           </div>
         </div>,
         <div key={`${row.agent_id}-earnings`} className="text-sm">
-          <p className="font-medium text-navy">{formatGBP(row.agent_earnings)}</p>
+          <p className="font-medium text-brand">{formatGBP(row.agent_earnings)}</p>
           <p className="text-xs text-gray-500">
             {row.commission_percent ? `${row.commission_percent}% commission` : "No commission"}
           </p>

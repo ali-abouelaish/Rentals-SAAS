@@ -19,7 +19,7 @@ export default async function NewInvoicePage() {
         <PageHeader title="New Invoice" subtitle="Create a manual invoice" />
         <Card>
           <CardContent className="space-y-2 text-sm text-gray-600">
-            <p className="text-sm font-medium text-navy">Missing setup</p>
+            <p className="text-sm font-medium text-brand">Missing setup</p>
             {profiles.length === 0 ? (
               <p>Create at least one billing profile before invoicing.</p>
             ) : null}
