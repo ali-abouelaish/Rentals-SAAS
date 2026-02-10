@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { PageHero } from "@/components/layout/PageHeader";
-import { Card, CardContent, StatCard } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { formatDate, formatCurrency } from "@/lib/utils/formatters";
+import { formatDate } from "@/lib/utils/formatters";
 import {
     Users,
     Building2,
@@ -13,7 +12,9 @@ import {
     ArrowRight,
     TrendingUp,
     Clock,
-    CheckCircle
+    CheckCircle,
+    Gift,
+    BarChart3,
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -21,13 +22,12 @@ export default async function DashboardPage() {
     const supabase = createSupabaseServerClient();
     const isAdmin = profile.role.toLowerCase() === "admin";
 
-    // Fetch dashboard stats
     const [
         { count: clientCount },
         { count: rentalCount },
         { count: invoiceCount },
         { data: recentRentals },
-        { data: pendingApprovals }
+        { data: pendingApprovals },
     ] = await Promise.all([
         supabase.from("clients").select("*", { count: "exact", head: true }),
         supabase.from("rental_codes").select("*", { count: "exact", head: true }),
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
             .select("id, code, created_at, clients(full_name)")
             .eq("status", "pending")
             .order("created_at", { ascending: false })
-            .limit(5)
+            .limit(5),
     ]);
 
     const quickActions = [
@@ -51,188 +51,214 @@ export default async function DashboardPage() {
             description: "Manage leads & profiles",
             href: "/clients",
             icon: Users,
-            color: "text-blue-600",
-            bgColor: "bg-blue-100"
+            gradient: "from-blue-500/10 to-blue-600/5",
+            iconColor: "text-blue-600",
         },
         {
             title: "Rentals",
             description: "View rental codes",
             href: "/rentals",
             icon: Building2,
-            color: "text-emerald-600",
-            bgColor: "bg-emerald-100"
+            gradient: "from-emerald-500/10 to-emerald-600/5",
+            iconColor: "text-emerald-600",
         },
         {
             title: "Invoices",
             description: "Generate & track",
             href: "/invoices",
             icon: FileText,
-            color: "text-purple-600",
-            bgColor: "bg-purple-100"
+            gradient: "from-violet-500/10 to-violet-600/5",
+            iconColor: "text-violet-600",
         },
         {
             title: "Earnings",
             description: "View payouts",
             href: "/earnings",
             icon: DollarSign,
-            color: "text-amber-600",
-            bgColor: "bg-amber-100"
-        }
+            gradient: "from-amber-500/10 to-amber-600/5",
+            iconColor: "text-amber-600",
+        },
     ];
+
+    const today = new Date().toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+    });
 
     return (
         <div className="space-y-6">
-            {/* Hero Section */}
-            <PageHero
-                title={`Welcome back, ${profile.display_name || "User"}`}
-                subtitle="Here's an overview of your rental agency"
-                badge="Dashboard"
-            />
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    label="Total Clients"
-                    value={clientCount ?? 0}
-                    icon={<Users className="h-5 w-5" />}
-                />
-                <StatCard
-                    label="Active Rentals"
-                    value={rentalCount ?? 0}
-                    icon={<Building2 className="h-5 w-5" />}
-                />
-                <StatCard
-                    label="Invoices"
-                    value={invoiceCount ?? 0}
-                    icon={<FileText className="h-5 w-5" />}
-                />
-                <StatCard
-                    label="Pending"
-                    value={pendingApprovals?.length ?? 0}
-                    icon={<Clock className="h-5 w-5" />}
-                />
+            {/* ── Greeting Bar ─────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                <div>
+                    <p className="text-foreground-secondary text-sm">{today}</p>
+                    <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">
+                        Welcome back, {profile.display_name || "User"}
+                    </h1>
+                </div>
+                <p className="text-[13px] text-foreground-muted">Here&apos;s your overview</p>
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {quickActions.map((action) => (
-                    <Link key={action.href} href={action.href}>
-                        <Card variant="interactive" className="h-full">
-                            <CardContent className="p-4">
-                                <div className="flex items-start justify-between">
-                                    <div className={`p-2.5 rounded-lg ${action.bgColor}`}>
-                                        <action.icon className={`h-5 w-5 ${action.color}`} />
-                                    </div>
-                                    <ArrowRight className="h-4 w-4 text-slate-400" />
-                                </div>
-                                <h3 className="font-semibold text-brand mt-3">{action.title}</h3>
-                                <p className="text-sm text-slate-500">{action.description}</p>
-                            </CardContent>
-                        </Card>
-                    </Link>
+            {/* ── Stat Tiles — Bento Row 1 ─────────── */}
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-[var(--gap-bento)]">
+                {[
+                    { label: "Total Clients", value: clientCount ?? 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+                    { label: "Active Rentals", value: rentalCount ?? 0, icon: Building2, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    { label: "Invoices", value: invoiceCount ?? 0, icon: FileText, color: "text-violet-600", bg: "bg-violet-50" },
+                    { label: "Pending", value: pendingApprovals?.length ?? 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+                ].map((stat) => (
+                    <div
+                        key={stat.label}
+                        className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">
+                                    {stat.label}
+                                </p>
+                                <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">
+                                    {stat.value}
+                                </p>
+                            </div>
+                            <div className={`p-3 rounded-xl ${stat.bg}`}>
+                                <stat.icon className={`h-5 w-5 ${stat.color}`} strokeWidth={1.8} />
+                            </div>
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            {/* Two Column Layout */}
-            <div className="grid lg:grid-cols-2 gap-6">
-                {/* Recent Rentals */}
-                <Card>
-                    <CardContent className="p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-brand flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4" />
-                                Recent Rentals
-                            </h3>
-                            <Link href="/rentals" className="text-sm text-brand hover:underline">
-                                View all
-                            </Link>
+            {/* ── Bento Row 2: Activity + Quick Actions ─── */}
+            <div className="grid lg:grid-cols-5 gap-[var(--gap-bento)]">
+                {/* Recent Activity — spans 3 cols */}
+                <div className="lg:col-span-3 rounded-bento bg-surface-card shadow-bento p-6">
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-brand-subtle">
+                                <TrendingUp className="h-4 w-4 text-brand" strokeWidth={2} />
+                            </div>
+                            <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
                         </div>
-                        {recentRentals && recentRentals.length > 0 ? (
-                            <div className="space-y-3">
-                                {recentRentals.map((rental) => (
-                                    <Link
-                                        key={rental.id}
-                                        href={`/rentals/${rental.id}`}
-                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 rounded-lg bg-brand-50">
-                                                <Building2 className="h-4 w-4 text-brand" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-brand text-sm">{rental.code}</p>
-                                                <p className="text-xs text-slate-500">
-                                                    {Array.isArray(rental.clients)
-                                                        ? rental.clients[0]?.full_name
-                                                        : (rental.clients as { full_name?: string })?.full_name ?? "—"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <StatusBadge status={rental.status} size="sm" />
-                                            <span className="text-xs text-slate-400">
-                                                {formatDate(rental.created_at)}
-                                            </span>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-500 text-center py-8">No recent rentals</p>
-                        )}
-                    </CardContent>
-                </Card>
+                        <Link
+                            href="/rentals"
+                            className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
+                        >
+                            View all <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                    </div>
 
-                {/* Pending Approvals */}
-                {isAdmin && (
-                    <Card accent="left" accentColor="gold">
-                        <CardContent className="p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-brand flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
-                                    Pending Approvals
-                                </h3>
-                                <Link href="/rentals?status=pending" className="text-sm text-brand hover:underline">
-                                    View all
+                    {recentRentals && recentRentals.length > 0 ? (
+                        <div className="space-y-1">
+                            {recentRentals.map((rental) => (
+                                <Link
+                                    key={rental.id}
+                                    href={`/rentals/${rental.id}`}
+                                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-inset transition-colors duration-base group/item"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-9 w-9 rounded-lg bg-surface-inset flex items-center justify-center group-hover/item:bg-brand-subtle transition-colors">
+                                            <Building2 className="h-4 w-4 text-foreground-muted group-hover/item:text-brand transition-colors" strokeWidth={1.8} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">{rental.code}</p>
+                                            <p className="text-xs text-foreground-muted">
+                                                {Array.isArray(rental.clients)
+                                                    ? rental.clients[0]?.full_name
+                                                    : (rental.clients as { full_name?: string })?.full_name ?? "—"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <StatusBadge status={rental.status} size="sm" />
+                                        <span className="text-xs text-foreground-muted hidden sm:block">
+                                            {formatDate(rental.created_at)}
+                                        </span>
+                                    </div>
                                 </Link>
-                            </div>
-                            {pendingApprovals && pendingApprovals.length > 0 ? (
-                                <div className="space-y-3">
-                                    {pendingApprovals.map((rental) => (
-                                        <Link
-                                            key={rental.id}
-                                            href={`/rentals/${rental.id}`}
-                                            className="flex items-center justify-between p-3 rounded-lg hover:bg-amber-50/50 transition-colors border border-transparent hover:border-amber-200/50"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-amber-100">
-                                                    <Clock className="h-4 w-4 text-amber-600" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-brand text-sm">{rental.code}</p>
-                                                    <p className="text-xs text-slate-500">
-                                                        {Array.isArray(rental.clients)
-                                                            ? rental.clients[0]?.full_name
-                                                            : (rental.clients as { full_name?: string })?.full_name ?? "—"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <span className="text-xs text-slate-400">
-                                                {formatDate(rental.created_at)}
-                                            </span>
-                                        </Link>
-                                    ))}
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <BarChart3 className="h-10 w-10 text-foreground-muted mb-3" strokeWidth={1.5} />
+                            <p className="text-sm text-foreground-secondary">No recent activity</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Quick Actions — spans 2 cols */}
+                <div className="lg:col-span-2 rounded-bento bg-surface-card shadow-bento p-6">
+                    <h2 className="text-base font-semibold text-foreground mb-5">Quick Actions</h2>
+                    <div className="grid grid-cols-2 gap-3">
+                        {quickActions.map((action) => (
+                            <Link key={action.href} href={action.href}>
+                                <div className={`group rounded-xl bg-gradient-to-br ${action.gradient} p-4 h-full transition-all duration-base hover:shadow-md hover:-translate-y-0.5`}>
+                                    <action.icon className={`h-6 w-6 ${action.iconColor} mb-3`} strokeWidth={1.8} />
+                                    <h3 className="text-sm font-semibold text-foreground">{action.title}</h3>
+                                    <p className="text-xs text-foreground-secondary mt-0.5">{action.description}</p>
                                 </div>
-                            ) : (
-                                <div className="text-center py-8">
-                                    <CheckCircle className="h-10 w-10 text-emerald-300 mx-auto mb-2" />
-                                    <p className="text-sm text-slate-500">All caught up!</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
+                            </Link>
+                        ))}
+                    </div>
+                </div>
             </div>
+
+            {/* ── Bento Row 3: Pending Approvals (Admin) ─── */}
+            {isAdmin && (
+                <div className="rounded-bento bg-surface-card shadow-bento p-6">
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-warning-bg">
+                                <Clock className="h-4 w-4 text-warning" strokeWidth={2} />
+                            </div>
+                            <h2 className="text-base font-semibold text-foreground">Pending Approvals</h2>
+                            {(pendingApprovals?.length ?? 0) > 0 && (
+                                <span className="text-xs font-medium text-warning bg-warning-bg px-2 py-0.5 rounded-full">
+                                    {pendingApprovals?.length}
+                                </span>
+                            )}
+                        </div>
+                        <Link
+                            href="/rentals?status=pending"
+                            className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
+                        >
+                            View all <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                    </div>
+
+                    {pendingApprovals && pendingApprovals.length > 0 ? (
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {pendingApprovals.map((rental) => (
+                                <Link
+                                    key={rental.id}
+                                    href={`/rentals/${rental.id}`}
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset hover:bg-warning-bg/50 transition-colors border border-transparent hover:border-warning-border group"
+                                >
+                                    <div className="p-2 rounded-lg bg-warning-bg">
+                                        <Clock className="h-4 w-4 text-warning" strokeWidth={1.8} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-foreground truncate">{rental.code}</p>
+                                        <p className="text-xs text-foreground-muted truncate">
+                                            {Array.isArray(rental.clients)
+                                                ? rental.clients[0]?.full_name
+                                                : (rental.clients as { full_name?: string })?.full_name ?? "—"}
+                                        </p>
+                                    </div>
+                                    <ArrowRight className="h-4 w-4 text-foreground-muted group-hover:text-warning shrink-0 transition-colors" />
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-4 p-4 rounded-xl bg-success-bg/50">
+                            <CheckCircle className="h-8 w-8 text-success" strokeWidth={1.5} />
+                            <div>
+                                <p className="text-sm font-medium text-foreground">All caught up!</p>
+                                <p className="text-xs text-foreground-secondary">No pending approvals right now</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

@@ -27,11 +27,11 @@ export function DateRangePicker({
   return (
     <div className="flex flex-wrap items-end gap-2">
       <div>
-        <p className="text-xs text-gray-500">From</p>
+        <p className="text-xs text-foreground-secondary">From</p>
         <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
       </div>
       <div>
-        <p className="text-xs text-gray-500">To</p>
+        <p className="text-xs text-foreground-secondary">To</p>
         <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
       <Button type="button" variant="outline" onClick={applyRange}>

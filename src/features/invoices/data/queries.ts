@@ -15,16 +15,23 @@ export async function getBillingProfiles() {
 
 export async function getInvoices({
   search,
-  status
+  status,
+  page = 1
 }: {
   search?: string;
   status?: string;
+  page?: number;
 } = {}) {
   const supabase = createSupabaseServerClient();
+  const pageSize = 10;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = supabase
     .from("invoices")
     .select(
-      "*, landlords(name), created_by:user_profiles!invoices_created_by_user_id_fkey(display_name), approved_by:user_profiles!invoices_approved_by_user_id_fkey(display_name)"
+      "*, landlords(name), created_by:user_profiles!invoices_created_by_user_id_fkey(display_name), approved_by:user_profiles!invoices_approved_by_user_id_fkey(display_name)",
+      { count: "exact" }
     )
     .order("created_at", { ascending: false });
 
@@ -37,9 +44,19 @@ export async function getInvoices({
     query = query.eq("status", status);
   }
 
-  const { data, error } = await query;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const total = count ?? 0;
+  return {
+    invoices: data ?? [],
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize)
+  };
 }
 
 export async function getInvoiceById(id: string) {

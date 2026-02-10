@@ -42,13 +42,13 @@ export function PublicLeadForm({
   return (
     <form
       action={formAction}
-      className="w-full max-w-lg space-y-4 rounded-2xl border border-muted bg-card p-8 shadow-soft"
+      className="w-full max-w-lg space-y-4 rounded-2xl border border-border-muted bg-surface-card p-8 shadow-card"
     >
       <div>
-        <h1 className="text-heading text-2xl font-semibold text-navy">
+        <h1 className="font-heading text-2xl font-semibold text-navy">
           Client Lead Form
         </h1>
-        <p className="text-sm text-gray-500">Assigned to {agentName}</p>
+        <p className="text-sm text-foreground-secondary">Assigned to {agentName}</p>
       </div>
       <input type="hidden" name="agent_id" value={agentId} />
       <input type="hidden" name="tenant_id" value={tenantId} />

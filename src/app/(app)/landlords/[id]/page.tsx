@@ -28,21 +28,21 @@ export default async function LandlordDetailPage({
     <div className="space-y-6">
       <PageHeader title={landlord.name} subtitle="Landlord detail" />
       <Card>
-        <CardContent className="grid gap-3 md:grid-cols-3 text-sm text-gray-600">
+        <CardContent className="grid gap-3 md:grid-cols-3 text-sm text-foreground-secondary">
           <div>
-            <p className="text-xs uppercase text-gray-400">Contact</p>
+            <p className="text-xs uppercase text-foreground-muted">Contact</p>
             <p>{landlord.contact ?? "—"}</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-400">Email</p>
+            <p className="text-xs uppercase text-foreground-muted">Email</p>
             <p>{landlord.email ?? "—"}</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-400">Times rented from</p>
+            <p className="text-xs uppercase text-foreground-muted">Times rented from</p>
             <p>{rentalsCount}</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-400">Paying</p>
+            <p className="text-xs uppercase text-foreground-muted">Paying</p>
             <p>
               {landlord.pays_commission
                 ? `Yes · ${landlord.commission_term_text?.trim().length
@@ -53,7 +53,7 @@ export default async function LandlordDetailPage({
             </p>
           </div>
           <div className="md:col-span-3">
-            <p className="text-xs uppercase text-gray-400">Profile notes</p>
+            <p className="text-xs uppercase text-foreground-muted">Profile notes</p>
             <p>{landlord.profile_notes ?? "—"}</p>
           </div>
         </CardContent>
@@ -78,11 +78,11 @@ export default async function LandlordDetailPage({
               placeholder="Spareroom profile URL"
             />
             <div>
-              <label className="text-xs text-gray-500">Pays commission</label>
+              <label className="text-xs text-foreground-secondary">Pays commission</label>
               <select
                 name="pays_commission"
                 defaultValue={landlord.pays_commission ? "yes" : "no"}
-                className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm shadow-sm"
+                className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
               >
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -101,11 +101,11 @@ export default async function LandlordDetailPage({
               placeholder="Commission term text (e.g. 1 week)"
             />
             <div>
-              <label className="text-xs text-gray-500">We do viewing</label>
+              <label className="text-xs text-foreground-secondary">We do viewing</label>
               <select
                 name="we_do_viewing"
                 defaultValue={landlord.we_do_viewing ? "yes" : "no"}
-                className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm shadow-sm"
+                className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
               >
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
@@ -152,10 +152,10 @@ export default async function LandlordDetailPage({
                 {invoice.invoice_number}
               </span>,
               <InvoiceStatusBadge key={`${invoice.id}-status`} status={invoice.status} />,
-              <span key={`${invoice.id}-total`} className="text-sm text-gray-600">
+              <span key={`${invoice.id}-total`} className="text-sm text-foreground-secondary">
                 {formatGBP(Number(invoice.total))}
               </span>,
-              <span key={`${invoice.id}-due`} className="text-sm text-gray-600">
+              <span key={`${invoice.id}-due`} className="text-sm text-foreground-secondary">
                 {formatDate(invoice.due_date)}
               </span>,
               <Link key={`${invoice.id}-action`} href={`/invoices/${invoice.id}`} className="text-navy">

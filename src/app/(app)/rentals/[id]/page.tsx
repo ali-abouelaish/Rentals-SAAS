@@ -106,7 +106,7 @@ export default async function RentalDetailPage({
       ) : null}
 
       <Card>
-        <CardContent className="space-y-2 text-sm text-gray-600">
+        <CardContent className="space-y-2 text-sm text-foreground-secondary">
           <p className="text-sm font-medium text-navy">Rental template preview</p>
           <div className="space-y-1">
             <p>
@@ -159,7 +159,7 @@ export default async function RentalDetailPage({
               <select
                 name="payment_method"
                 defaultValue={rental.payment_method}
-                className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm shadow-sm"
+                className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
               >
                 <option value="cash">Cash</option>
                 <option value="transfer">Transfer</option>
@@ -176,7 +176,7 @@ export default async function RentalDetailPage({
                 placeholder="Licensor name"
               />
               <div className="md:col-span-2">
-                <label className="text-xs text-gray-500">Marketing agent (optional)</label>
+                <label className="text-xs text-foreground-secondary">Marketing agent (optional)</label>
                 <Input
                   list="marketing-agent-edit-list"
                   name="marketing_agent_name"
@@ -203,7 +203,7 @@ export default async function RentalDetailPage({
         <CardContent className="space-y-3">
           <p className="text-sm font-medium text-brand">Upload documents</p>
           <DocumentUploadForm rentalCodeId={rental.id} />
-          <div className="space-y-2 text-sm text-gray-600">
+          <div className="space-y-2 text-sm text-foreground-secondary">
             {documentSets?.map((set) => (
               <div key={set.id}>
                 <p className="font-medium text-brand">{set.set_type.replace("_", " ")}</p>

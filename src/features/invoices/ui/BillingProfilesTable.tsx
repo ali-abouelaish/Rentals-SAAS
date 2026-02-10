@@ -62,10 +62,10 @@ export function BillingProfilesTable({
                   </form>
                 </div>
               ) : (
-                <span className="text-xs text-gray-400">Read only</span>
+                <span className="text-xs text-foreground-muted">Read only</span>
               )}
               {isAdmin && editingId === profile.id ? (
-                <div className="mt-3 space-y-2 rounded-xl border border-muted p-3">
+                <div className="mt-3 space-y-2 rounded-xl border border-border-muted p-3">
                   <form action={onUpdate} className="grid gap-2 md:grid-cols-2">
                     <input type="hidden" name="billing_profile_id" value={profile.id} />
                     <Input name="name" defaultValue={profile.name} placeholder="Profile name" required />

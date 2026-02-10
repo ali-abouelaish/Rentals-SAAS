@@ -1,14 +1,22 @@
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
+/* ─── Table Container ───────────────────────── */
+
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="w-full overflow-hidden rounded-xl border border-slate-200/60 shadow-card">
-      <table ref={ref} className={cn("w-full text-sm", className)} {...props} />
+    <div className="overflow-hidden rounded-xl border border-border">
+      <table
+        ref={ref}
+        className={cn("w-full text-sm", className)}
+        {...props}
+      />
     </div>
   )
 );
 Table.displayName = "Table";
+
+/* ─── Table Header ──────────────────────────── */
 
 const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
@@ -16,14 +24,30 @@ const TableHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <thead
     ref={ref}
+    className={cn("bg-brand text-brand-fg", className)}
+    {...props}
+  />
+));
+TableHeader.displayName = "TableHeader";
+
+/* ─── Table Head Cell ───────────────────────── */
+
+const TableHead = React.forwardRef<
+  HTMLTableCellElement,
+  React.ThHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <th
+    ref={ref}
     className={cn(
-      "bg-gradient-to-r from-brand via-brand to-brand-900 text-white",
+      "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-fg",
       className
     )}
     {...props}
   />
 ));
-TableHeader.displayName = "TableHeader";
+TableHead.displayName = "TableHead";
+
+/* ─── Table Body ────────────────────────────── */
 
 const TableBody = React.forwardRef<
   HTMLTableSectionElement,
@@ -31,99 +55,41 @@ const TableBody = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tbody
     ref={ref}
-    className={cn("bg-white divide-y divide-slate-100", className)}
+    className={cn("bg-surface-card divide-y divide-border-border-muted", className)}
     {...props}
   />
 ));
 TableBody.displayName = "TableBody";
 
-const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
-  ({ className, ...props }, ref) => (
-    <tr
-      ref={ref}
-      className={cn(
-        "transition-colors duration-150",
-        "even:bg-slate-50/60",
-        "hover:bg-brand-50/50",
-        "data-[state=selected]:bg-accent/10",
-        className
-      )}
-      {...props}
-    />
-  )
-);
-TableRow.displayName = "TableRow";
+/* ─── Table Row ─────────────────────────────── */
 
-const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => (
-    <th
-      ref={ref}
-      className={cn(
-        "h-11 px-4 text-left align-middle",
-        "text-xs font-semibold uppercase tracking-wide text-white/90",
-        "[&:has([role=checkbox])]:pr-0",
-        className
-      )}
-      {...props}
-    />
-  )
-);
-TableHead.displayName = "TableHead";
-
-const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => (
-    <td
-      ref={ref}
-      className={cn(
-        "px-4 py-3 align-middle text-slate-700",
-        "[&:has([role=checkbox])]:pr-0",
-        className
-      )}
-      {...props}
-    />
-  )
-);
-TableCell.displayName = "TableCell";
-
-// New: Compact variant for high-density tables
-const TableCellCompact = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...props }, ref) => (
-    <td
-      ref={ref}
-      className={cn(
-        "px-4 py-2.5 align-middle text-slate-700",
-        "[&:has([role=checkbox])]:pr-0",
-        className
-      )}
-      {...props}
-    />
-  )
-);
-TableCellCompact.displayName = "TableCellCompact";
-
-// Table footer for pagination
-const TableFooter = React.forwardRef<
-  HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
+const TableRow = React.forwardRef<
+  HTMLTableRowElement,
+  React.HTMLAttributes<HTMLTableRowElement>
 >(({ className, ...props }, ref) => (
-  <tfoot
+  <tr
     ref={ref}
     className={cn(
-      "border-t border-slate-200 bg-slate-50/50",
+      "transition-colors duration-base even:bg-surface-inset/50 hover:bg-brand-subtle/50",
       className
     )}
     {...props}
   />
 ));
-TableFooter.displayName = "TableFooter";
+TableRow.displayName = "TableRow";
 
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCellCompact,
-  TableFooter
-};
+/* ─── Table Cell ────────────────────────────── */
+
+const TableCell = React.forwardRef<
+  HTMLTableCellElement,
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <td
+    ref={ref}
+    className={cn("px-4 py-3 text-foreground-secondary", className)}
+    {...props}
+  />
+));
+TableCell.displayName = "TableCell";
+
+export { Table, TableHeader, TableHead, TableBody, TableRow, TableCell };

@@ -49,15 +49,15 @@ export default async function ClientDetailPage({
       <Card>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <div>
-            <p className="text-xs uppercase text-gray-500">Status</p>
+            <p className="text-xs uppercase text-foreground-secondary">Status</p>
             <StatusBadge status={client.status} />
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-500">Phone</p>
+            <p className="text-xs uppercase text-foreground-secondary">Phone</p>
             <p className="text-sm text-navy">{client.phone}</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-500">Created</p>
+            <p className="text-xs uppercase text-foreground-secondary">Created</p>
             <p className="text-sm text-brand">{formatDate(client.created_at)}</p>
           </div>
         </CardContent>
@@ -97,7 +97,7 @@ export default async function ClientDetailPage({
                 {rental.code}
               </Link>,
               <StatusBadge key={`${rental.id}-status`} status={rental.status} />,
-              <span key={`${rental.id}-date`} className="text-sm text-gray-500">
+              <span key={`${rental.id}-date`} className="text-sm text-foreground-secondary">
                 {formatDate(rental.created_at)}
               </span>
             ])}

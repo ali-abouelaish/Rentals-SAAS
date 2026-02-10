@@ -56,21 +56,21 @@ export default async function InvoiceDetailPage({
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
             <InvoiceStatusBadge status={invoice.status} />
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-foreground-secondary">
               Due {formatDate(invoice.due_date)}
             </span>
           </div>
-          <div className="grid gap-3 md:grid-cols-3 text-sm text-gray-600">
+          <div className="grid gap-3 md:grid-cols-3 text-sm text-foreground-secondary">
             <div>
-              <p className="text-xs uppercase text-gray-400">Landlord</p>
+              <p className="text-xs uppercase text-foreground-muted">Landlord</p>
               <p>{invoice.landlords?.name ?? "Landlord"}</p>
             </div>
             <div>
-              <p className="text-xs uppercase text-gray-400">Total</p>
+              <p className="text-xs uppercase text-foreground-muted">Total</p>
               <p>{formatGBP(Number(invoice.total))}</p>
             </div>
             <div>
-              <p className="text-xs uppercase text-gray-400">Balance due</p>
+              <p className="text-xs uppercase text-foreground-muted">Balance due</p>
               <p>{formatGBP(Number(invoice.balance_due))}</p>
             </div>
           </div>
@@ -164,11 +164,11 @@ export default async function InvoiceDetailPage({
             <form action={updateInvoiceDraft} className="grid gap-3 md:grid-cols-2">
               <input type="hidden" name="invoice_id" value={invoice.id} />
               <div>
-                <label className="text-xs text-gray-500">Billing profile</label>
+                <label className="text-xs text-foreground-secondary">Billing profile</label>
                 <select
                   name="billing_profile_id"
                   defaultValue={invoice.billing_profile_id}
-                  className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm"
                 >
                   {(billingProfiles ?? []).map((profileItem) => (
                     <option key={profileItem.id} value={profileItem.id}>
@@ -178,11 +178,11 @@ export default async function InvoiceDetailPage({
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-500">Landlord</label>
+                <label className="text-xs text-foreground-secondary">Landlord</label>
                 <select
                   name="landlord_id"
                   defaultValue={invoice.landlord_id}
-                  className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm"
+                  className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm"
                 >
                   {(landlords ?? []).map((landlord) => (
                     <option key={landlord.id} value={landlord.id}>

@@ -8,7 +8,7 @@ function Skeleton({
     return (
         <div
             className={cn(
-                "animate-pulse rounded-xl bg-gray-200",
+                "animate-pulse rounded-xl bg-border",
                 className
             )}
             {...props}
@@ -40,7 +40,7 @@ function SkeletonText({
 
 function SkeletonCard({ className }: { className?: string }) {
     return (
-        <div className={cn("rounded-2xl border border-surface-300 bg-white p-6", className)}>
+        <div className={cn("rounded-2xl border border-border bg-surface-card p-6", className)}>
             <Skeleton className="h-6 w-1/3 mb-4" />
             <SkeletonText lines={2} />
         </div>

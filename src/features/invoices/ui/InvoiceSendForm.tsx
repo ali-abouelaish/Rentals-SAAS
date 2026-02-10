@@ -19,7 +19,7 @@ export function InvoiceSendForm({
   const [body, setBody] = useState(defaultBody);
 
   return (
-    <form action={sendInvoice} className="space-y-3 rounded-2xl border border-muted p-4">
+    <form action={sendInvoice} className="space-y-3 rounded-2xl border border-border-muted p-4">
       <input type="hidden" name="invoice_id" value={invoiceId} />
       <Input
         name="subject"

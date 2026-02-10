@@ -1,34 +1,34 @@
 import Link from "next/link";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-import { FilterBar, FilterRow, FilterGroup, FilterPills, FilterPill, FilterActions } from "@/components/ui/filter-bar";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { getClients } from "@/features/clients/data/clients";
 import { AgentQrCard } from "@/features/clients/ui/AgentQrCard";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { CreateClientDialog } from "@/features/clients/ui/CreateClientDialog";
-import { Plus, Users, Phone, ExternalLink } from "lucide-react";
+import {
+  Users,
+  Phone,
+  ArrowRight,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 export default async function ClientsPage({
   searchParams
 }: {
-  searchParams?: { q?: string; status?: string };
+  searchParams?: { q?: string; status?: string; page?: string };
 }) {
   const profile = await requireUserProfile();
   const activeStatus = searchParams?.status ?? "all";
-  const clients = await getClients({
+  const currentPage = Math.max(1, parseInt(searchParams?.page ?? "1", 10) || 1);
+
+  const { clients, total, page, totalPages } = await getClients({
     search: searchParams?.q,
-    status: activeStatus
+    status: activeStatus,
+    page: currentPage,
   });
 
   const baseUrl =
@@ -38,110 +38,192 @@ export default async function ClientsPage({
 
   const statusFilters = ["all", "pending", "on_hold", "solved"];
 
+  const statusLabel = (s: string) =>
+    s === "all"
+      ? "All"
+      : s === "on_hold"
+        ? "On Hold"
+        : s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Build pagination URL preserving existing search params
+  const buildPageUrl = (p: number) => {
+    const params = new URLSearchParams();
+    if (searchParams?.q) params.set("q", searchParams.q);
+    if (searchParams?.status) params.set("status", searchParams.status);
+    params.set("page", String(p));
+    return `/clients?${params.toString()}`;
+  };
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Clients"
-        subtitle="Manage client leads and profiles"
-        action={<CreateClientDialog />}
-      />
+    <div className="space-y-6">
+      {/* ── Header ─────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <p className="text-foreground-secondary text-sm flex items-center gap-1.5">
+            <Users className="h-4 w-4" />
+            Client Management
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">
+            Clients
+          </h1>
+        </div>
+        <CreateClientDialog />
+      </div>
 
-      {/* QR Code Card */}
-      <AgentQrCard url={leadUrl} />
+      {/* ── Bento Row: QR Card + Search & Filters ──── */}
+      <div className="grid lg:grid-cols-5 gap-[var(--gap-bento)]">
+        {/* QR Code — compact bento card */}
+        <div className="lg:col-span-2 rounded-bento bg-surface-card shadow-bento p-5">
+          <AgentQrCard url={leadUrl} />
+        </div>
 
-      {/* Filter Bar */}
-      <FilterBar>
-        <FilterRow>
-          <FilterGroup>
-            <form className="flex gap-2">
+        {/* Search + Status Filters */}
+        <div className="lg:col-span-3 rounded-bento bg-surface-card shadow-bento p-5">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="p-2 rounded-lg bg-brand-subtle">
+              <Filter className="h-4 w-4 text-brand" strokeWidth={2} />
+            </div>
+            <h2 className="text-sm font-semibold text-foreground">Search & Filter</h2>
+          </div>
+
+          <form className="flex gap-2 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
               <Input
                 name="q"
                 placeholder="Search name or phone..."
                 defaultValue={searchParams?.q}
-                className="w-64"
+                className="pl-9"
               />
-              <Button type="submit" variant="outline" size="sm">
-                Search
-              </Button>
-            </form>
-          </FilterGroup>
-        </FilterRow>
-        <div className="mt-3">
-          <FilterPills>
+            </div>
+            <Button type="submit" variant="outline" size="sm">
+              Search
+            </Button>
+          </form>
+
+          <div className="flex flex-wrap gap-2">
             {statusFilters.map((status) => (
-              <FilterPill
+              <Link
                 key={status}
                 href={`/clients?status=${status}`}
-                active={activeStatus === status}
+                className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-base ${activeStatus === status
+                    ? "bg-brand text-brand-fg shadow-sm"
+                    : "bg-surface-inset text-foreground-secondary hover:bg-surface-highlight hover:text-foreground"
+                  }`}
               >
-                {status === "all" ? "All" : status === "on_hold" ? "On Hold" : status.charAt(0).toUpperCase() + status.slice(1)}
-              </FilterPill>
+                {statusLabel(status)}
+              </Link>
             ))}
-          </FilterPills>
+          </div>
         </div>
-      </FilterBar>
-
-      {/* Results count */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          Showing <span className="font-medium text-slate-700">{clients.length}</span> clients
-        </p>
       </div>
 
-      {/* Clients Table */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {clients.map((client) => (
-            <TableRow key={client.id}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-brand-50 flex items-center justify-center">
-                    <span className="text-brand font-medium text-sm">
+      {/* ── Results Count ─────────────────── */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-foreground-secondary">
+          Showing <span className="font-semibold text-foreground">{clients.length}</span> of{" "}
+          <span className="font-semibold text-foreground">{total}</span> clients
+        </p>
+        {totalPages > 1 && (
+          <p className="text-xs text-foreground-muted">
+            Page {page} of {totalPages}
+          </p>
+        )}
+      </div>
+
+      {/* ── Client Cards ─────────────────── */}
+      {clients.length > 0 ? (
+        <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
+          <div className="divide-y divide-border">
+            {clients.map((client) => (
+              <Link
+                key={client.id}
+                href={`/clients/${client.id}`}
+                className="flex items-center justify-between px-6 py-4 hover:bg-surface-inset transition-colors duration-base group"
+              >
+                <div className="flex items-center gap-4">
+                  {/* Avatar */}
+                  <div className="h-10 w-10 rounded-xl bg-brand-subtle flex items-center justify-center group-hover:bg-brand group-hover:text-brand-fg transition-colors">
+                    <span className="text-brand font-semibold text-sm group-hover:text-brand-fg">
                       {client.full_name?.charAt(0)?.toUpperCase() ?? "?"}
                     </span>
                   </div>
-                  <Link href={`/clients/${client.id}`} className="font-medium text-brand hover:underline">
-                    {client.full_name}
-                  </Link>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Phone className="h-3.5 w-3.5 text-slate-400" />
-                  {client.phone}
-                </div>
-              </TableCell>
-              <TableCell>
-                <StatusBadge status={client.status} />
-              </TableCell>
-              <TableCell className="text-right">
-                <Link href={`/clients/${client.id}`}>
-                  <Button variant="ghost" size="xs">
-                    View
-                    <ExternalLink className="h-3 w-3 ml-1" />
-                  </Button>
-                </Link>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
 
-      {clients.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">No clients found</p>
-          </CardContent>
-        </Card>
+                  {/* Info */}
+                  <div>
+                    <p className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
+                      {client.full_name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Phone className="h-3 w-3 text-foreground-muted" />
+                      <span className="text-xs text-foreground-muted">{client.phone}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <StatusBadge status={client.status} size="sm" />
+                  <ArrowRight className="h-4 w-4 text-foreground-muted group-hover:text-brand transition-colors" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-bento bg-surface-card shadow-bento py-16 text-center">
+          <Users className="h-12 w-12 text-foreground-muted mx-auto mb-4" strokeWidth={1.5} />
+          <p className="text-lg font-semibold text-foreground mb-1">No clients found</p>
+          <p className="text-sm text-foreground-secondary">
+            Try adjusting your search or filters
+          </p>
+        </div>
+      )}
+
+      {/* ── Pagination ──────────────────────── */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          {/* Previous */}
+          {page > 1 ? (
+            <Link
+              href={buildPageUrl(page - 1)}
+              className="h-9 w-9 rounded-xl bg-surface-card shadow-bento flex items-center justify-center hover:bg-surface-inset transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4 text-foreground-secondary" />
+            </Link>
+          ) : (
+            <span className="h-9 w-9 rounded-xl bg-surface-inset flex items-center justify-center opacity-40 cursor-not-allowed">
+              <ChevronLeft className="h-4 w-4 text-foreground-muted" />
+            </span>
+          )}
+
+          {/* Page numbers */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <Link
+              key={p}
+              href={buildPageUrl(p)}
+              className={`h-9 w-9 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-base ${p === page
+                  ? "bg-brand text-brand-fg shadow-sm"
+                  : "bg-surface-card shadow-bento text-foreground-secondary hover:bg-surface-inset"
+                }`}
+            >
+              {p}
+            </Link>
+          ))}
+
+          {/* Next */}
+          {page < totalPages ? (
+            <Link
+              href={buildPageUrl(page + 1)}
+              className="h-9 w-9 rounded-xl bg-surface-card shadow-bento flex items-center justify-center hover:bg-surface-inset transition-colors"
+            >
+              <ChevronRight className="h-4 w-4 text-foreground-secondary" />
+            </Link>
+          ) : (
+            <span className="h-9 w-9 rounded-xl bg-surface-inset flex items-center justify-center opacity-40 cursor-not-allowed">
+              <ChevronRight className="h-4 w-4 text-foreground-muted" />
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

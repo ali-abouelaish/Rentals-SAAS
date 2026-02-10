@@ -80,7 +80,7 @@ export function Pagination({
                             key={`ellipsis-${index}`}
                             className="flex h-9 w-9 items-center justify-center"
                         >
-                            <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                            <MoreHorizontal className="h-4 w-4 text-foreground-muted" />
                         </span>
                     ) : (
                         <button
@@ -89,8 +89,8 @@ export function Pagination({
                             className={cn(
                                 "flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all",
                                 currentPage === page
-                                    ? "bg-brand text-white shadow-sm"
-                                    : "text-gray-600 hover:bg-surface-100 hover:text-brand"
+                                    ? "bg-brand text-brand-fg shadow-sm"
+                                    : "text-foreground-secondary hover:bg-surface-100 hover:text-brand"
                             )}
                         >
                             {page}
@@ -129,7 +129,7 @@ export function PaginationInfo({
     const end = Math.min(currentPage * pageSize, totalItems);
 
     return (
-        <p className={cn("text-sm text-gray-500", className)}>
+        <p className={cn("text-sm text-foreground-secondary", className)}>
             Showing <span className="font-medium text-brand">{start}</span> to{" "}
             <span className="font-medium text-brand">{end}</span> of{" "}
             <span className="font-medium text-brand">{totalItems}</span> results

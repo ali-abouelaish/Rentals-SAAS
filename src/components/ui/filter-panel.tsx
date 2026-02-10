@@ -9,7 +9,7 @@ export function FilterPanel({ children, className, ...props }: FilterPanelProps)
     return (
         <div
             className={cn(
-                "bg-gradient-to-r from-slate-50/80 to-blue-50/30 rounded-xl p-4 border border-slate-200/60",
+                "bg-gradient-to-r from-slate-50/80 to-blue-50/30 rounded-xl p-4 border border-border/60",
                 "shadow-sm",
                 className
             )}
@@ -43,7 +43,7 @@ export function FilterGroup({
     return (
         <div className={cn("flex flex-col gap-1.5", className)}>
             {label && (
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <label className="text-xs font-medium text-foreground-secondary uppercase tracking-wide">
                     {label}
                 </label>
             )}

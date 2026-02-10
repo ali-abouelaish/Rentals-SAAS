@@ -21,10 +21,10 @@ export function EmptyState({
       "flex flex-col items-center justify-center py-16 text-center",
       className
     )}>
-      {icon || <AlertCircle className="h-14 w-14 text-slate-300 mb-4" />}
-      <h3 className="text-lg font-semibold text-slate-700 mb-1">{title}</h3>
+      {icon || <AlertCircle className="h-14 w-14 text-foreground-muted mb-4" />}
+      <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
       {description && (
-        <p className="text-sm text-slate-500 max-w-sm">{description}</p>
+        <p className="text-sm text-foreground-secondary max-w-sm">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>

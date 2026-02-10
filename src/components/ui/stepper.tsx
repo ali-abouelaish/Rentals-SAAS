@@ -32,8 +32,8 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                                     className={cn(
                                         "relative flex h-10 w-10 items-center justify-center rounded-full border-2 font-semibold text-sm transition-all duration-300",
                                         isCompleted && "border-accent bg-accent text-brand-950",
-                                        isCurrent && "border-accent bg-white text-accent scale-110 shadow-glow",
-                                        isUpcoming && "border-gray-300 bg-white text-gray-400"
+                                        isCurrent && "border-accent bg-surface-card text-accent scale-110 shadow-glow",
+                                        isUpcoming && "border-gray-300 bg-surface-card text-foreground-muted"
                                     )}
                                 >
                                     {isCompleted ? (
@@ -49,14 +49,14 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                                         className={cn(
                                             "text-sm font-medium transition-colors",
                                             isCurrent && "text-brand",
-                                            isCompleted && "text-gray-700",
-                                            isUpcoming && "text-gray-400"
+                                            isCompleted && "text-foreground",
+                                            isUpcoming && "text-foreground-muted"
                                         )}
                                     >
                                         {step.label}
                                     </p>
                                     {step.description && (
-                                        <p className="text-xs text-gray-500 mt-0.5">
+                                        <p className="text-xs text-foreground-secondary mt-0.5">
                                             {step.description}
                                         </p>
                                     )}
@@ -128,7 +128,7 @@ export function WizardNavigation({
                     <button
                         type="button"
                         onClick={onBack}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-brand transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-foreground hover:text-brand transition-colors"
                         disabled={isLoading}
                     >
                         ← {backLabel}
@@ -138,7 +138,7 @@ export function WizardNavigation({
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-foreground-secondary hover:text-foreground transition-colors"
                         disabled={isLoading}
                     >
                         Cancel
@@ -153,7 +153,7 @@ export function WizardNavigation({
                     disabled={isNextDisabled || isLoading}
                     className={cn(
                         "inline-flex items-center justify-center rounded-xl px-6 py-2.5 text-sm font-medium transition-all",
-                        "bg-brand text-white hover:bg-brand-light disabled:opacity-50 disabled:cursor-not-allowed",
+                        "bg-brand text-brand-fg hover:bg-brand-light disabled:opacity-50 disabled:cursor-not-allowed",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                         isLastStep && "bg-accent text-brand-950 hover:bg-accent/90"
                     )}

@@ -1,16 +1,20 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const PAGE_SIZE = 10;
+
 export async function getLandlords({
   search,
-  paying
+  paying,
+  page = 1
 }: {
   search?: string;
   paying?: string;
+  page?: number;
 } = {}) {
   const supabase = createSupabaseServerClient();
   let query = supabase
     .from("landlords")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -22,9 +26,19 @@ export async function getLandlords({
     query = query.eq("pays_commission", paying === "yes");
   }
 
-  const { data, error } = await query;
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return {
+    landlords: data ?? [],
+    total: count ?? 0,
+    page,
+    pageSize: PAGE_SIZE,
+    totalPages: Math.ceil((count ?? 0) / PAGE_SIZE),
+  };
 }
 
 export async function getLandlordById(id: string) {

@@ -4,17 +4,17 @@ import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6">
+    <div className="flex min-h-screen items-center justify-center bg-surface-app px-6">
       <form
         action={async (formData) => {
           "use server";
           await signInWithEmail(formData);
         }}
-        className="w-full max-w-md space-y-4 rounded-2xl border border-muted bg-card p-8 shadow-soft"
+        className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-surface-card p-8 shadow-lg"
       >
         <div>
-          <h1 className="text-heading text-2xl font-semibold text-brand">Login</h1>
-          <p className="text-sm text-gray-500">Access your agency workspace</p>
+          <h1 className="font-heading text-2xl font-semibold text-foreground">Login</h1>
+          <p className="text-sm text-foreground-secondary">Access your agency workspace</p>
         </div>
         <Input name="email" type="email" placeholder="Email" required />
         <Input name="password" type="password" placeholder="Password" required />

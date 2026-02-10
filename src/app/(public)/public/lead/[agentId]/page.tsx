@@ -16,13 +16,13 @@ export default async function PublicLeadPage({
   if (!agent) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-sm text-gray-500">Agent not found.</p>
+        <p className="text-sm text-foreground-secondary">Agent not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6">
+    <div className="flex min-h-screen items-center justify-center bg-surface-app px-6">
       <PublicLeadForm
         agentId={agent.user_id}
         tenantId={agent.tenant_id}

@@ -9,7 +9,7 @@ import { formatCurrency } from "@/lib/utils/formatters";
 
 export default async function PendingBonusesPage() {
   await requireRole(["admin"]);
-  const bonuses = await getBonuses({ status: "pending" });
+  const { bonuses } = await getBonuses({ status: "pending" });
 
   return (
     <div className="space-y-6">

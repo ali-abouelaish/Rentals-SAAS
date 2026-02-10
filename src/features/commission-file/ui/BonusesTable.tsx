@@ -22,20 +22,20 @@ export function BonusesTable({ bonuses }: { bonuses: CommissionBonusRow[] }) {
         <span key={`${bonus.id}-code`} className="text-sm text-brand">
           {bonus.code ?? "—"}
         </span>,
-        <span key={`${bonus.id}-landlord`} className="text-sm text-gray-600">
+        <span key={`${bonus.id}-landlord`} className="text-sm text-foreground-secondary">
           {bonus.landlord_name}
         </span>,
-        <span key={`${bonus.id}-amount`} className="text-sm text-gray-600">
+        <span key={`${bonus.id}-amount`} className="text-sm text-foreground-secondary">
           {formatGBP(bonus.amount_owed)}
         </span>,
-        <span key={`${bonus.id}-mode`} className="text-sm text-gray-600">
+        <span key={`${bonus.id}-mode`} className="text-sm text-foreground-secondary">
           {bonus.payout_mode}
         </span>,
         <span key={`${bonus.id}-earning`} className="text-sm font-medium text-navy">
           {formatGBP(bonus.agent_earning)}
         </span>,
         <StatusBadge key={`${bonus.id}-status`} status={bonus.status} />,
-        <span key={`${bonus.id}-created`} className="text-sm text-gray-500">
+        <span key={`${bonus.id}-created`} className="text-sm text-foreground-secondary">
           {formatDate(bonus.created_at)}
         </span>,
         ["approved", "sent"].includes(bonus.status) ? (
@@ -45,7 +45,7 @@ export function BonusesTable({ bonuses }: { bonuses: CommissionBonusRow[] }) {
             </Button>
           </form>
         ) : (
-          <span key={`${bonus.id}-action`} className="text-xs text-gray-400">
+          <span key={`${bonus.id}-action`} className="text-xs text-foreground-muted">
             —
           </span>
         )

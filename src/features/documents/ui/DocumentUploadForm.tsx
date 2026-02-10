@@ -27,7 +27,7 @@ export function DocumentUploadForm({ rentalCodeId }: { rentalCodeId: string }) {
         ]}
       />
       <input
-        className="rounded-xl border border-muted bg-card px-3 py-2 text-sm"
+        className="rounded-xl border border-border-muted bg-surface-card px-3 py-2 text-sm"
         type="file"
         name="files"
         accept="image/*,application/pdf"

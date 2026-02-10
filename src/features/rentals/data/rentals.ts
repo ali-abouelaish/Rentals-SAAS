@@ -2,15 +2,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function getRentalCodes({
   search,
-  status
+  status,
+  page = 1
 }: {
   search?: string;
   status?: string;
+  page?: number;
 }) {
   const supabase = createSupabaseServerClient();
+  const pageSize = 10;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let query = supabase
     .from("rental_codes")
-    .select("id, code, status, created_at, payment_method, consultation_fee_amount, client_snapshot, clients(full_name, phone)")
+    .select("id, code, status, created_at, payment_method, consultation_fee_amount, client_snapshot, clients(full_name, phone)", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -20,9 +26,19 @@ export async function getRentalCodes({
     query = query.eq("status", status);
   }
 
-  const { data, error } = await query;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const total = count ?? 0;
+  return {
+    rentals: data ?? [],
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize)
+  };
 }
 
 export async function getRentalCodeById(id: string) {

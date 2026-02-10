@@ -74,30 +74,30 @@ export function RentalApprovalPanel({
         <input type="hidden" name="marketing_fee_override_reason" value={overrideReason} />
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 text-sm text-gray-600">
+      <div className="grid gap-3 md:grid-cols-2 text-sm text-foreground-secondary">
         <div>
-          <p className="text-xs uppercase text-gray-500">Rental amount</p>
+          <p className="text-xs uppercase text-foreground-secondary">Rental amount</p>
           <p className="text-sm text-navy">{formatGBP(rentalAmount)}</p>
         </div>
         <div>
-          <p className="text-xs uppercase text-gray-500">Payment fee</p>
+          <p className="text-xs uppercase text-foreground-secondary">Payment fee</p>
           <p className="text-sm text-navy">{paymentFee * 100}%</p>
         </div>
         <div>
-          <p className="text-xs uppercase text-gray-500">Base after fee</p>
+          <p className="text-xs uppercase text-foreground-secondary">Base after fee</p>
           <p className="text-sm text-navy">{formatGBP(base)}</p>
         </div>
         <div>
-          <p className="text-xs uppercase text-gray-500">Assisted gross</p>
+          <p className="text-xs uppercase text-foreground-secondary">Assisted gross</p>
           <p className="text-sm text-navy">{formatGBP(assistedGross)}</p>
         </div>
         <div>
-          <p className="text-xs uppercase text-gray-500">Default marketing fee</p>
+          <p className="text-xs uppercase text-foreground-secondary">Default marketing fee</p>
           <p className="text-sm text-navy">{formatGBP(marketingFeeDefault)}</p>
         </div>
         <div>
-          <p className="text-xs uppercase text-gray-500">Assisted net</p>
-          <p className={`text-sm ${invalidNet ? "text-red-600" : "text-navy"}`}>
+          <p className="text-xs uppercase text-foreground-secondary">Assisted net</p>
+          <p className={`text-sm ${invalidNet ? "text-error" : "text-navy"}`}>
             {formatGBP(assistedNet)}
           </p>
         </div>
@@ -127,7 +127,7 @@ export function RentalApprovalPanel({
             />
           </div>
           {invalidOverride ? (
-            <p className="text-xs text-red-600">
+            <p className="text-xs text-error">
               Override cannot exceed the default marketing fee.
             </p>
           ) : null}
@@ -135,7 +135,7 @@ export function RentalApprovalPanel({
       ) : null}
 
       {invalidNet ? (
-        <p className="text-sm text-red-600">
+        <p className="text-sm text-error">
           Marketing fee exceeds agent earnings. Enter a lower custom amount.
         </p>
       ) : null}

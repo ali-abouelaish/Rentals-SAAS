@@ -5,17 +5,19 @@ import { cn } from "@/lib/utils/cn";
 import { Loader2 } from "lucide-react";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none",
+  "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all duration-base ease-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-ring/40 focus-visible:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none",
   {
     variants: {
       variant: {
-        default: "bg-brand text-white hover:bg-brand-800 shadow-sm",
-        secondary: "bg-accent text-brand-950 hover:bg-accent/90 shadow-sm",
-        outline: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300",
-        ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-        link: "text-brand underline-offset-4 hover:underline p-0 h-auto",
-        success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+        default: "bg-brand text-brand-fg hover:bg-brand-hover shadow-sm",
+        secondary: "bg-accent text-accent-fg hover:bg-accent-hover shadow-sm",
+        outline:
+          "border border-border bg-surface-card text-foreground-secondary hover:bg-surface-inset hover:text-foreground hover:border-border-strong",
+        ghost:
+          "text-foreground-secondary hover:bg-surface-inset hover:text-foreground",
+        destructive: "bg-error text-brand-fg hover:bg-error/90 shadow-sm",
+        link: "text-foreground-link underline-offset-4 hover:underline p-0 h-auto",
+        success: "bg-success text-brand-fg hover:bg-success/90 shadow-sm",
       },
       size: {
         xs: "h-7 px-2 text-xs",
@@ -23,13 +25,13 @@ const buttonVariants = cva(
         md: "h-9 px-4",
         lg: "h-10 px-5",
         xl: "h-11 px-6 text-base",
-        icon: "h-9 w-9 p-0"
-      }
+        icon: "h-9 w-9 p-0",
+      },
     },
     defaultVariants: {
       variant: "default",
-      size: "md"
-    }
+      size: "md",
+    },
   }
 );
 
@@ -41,7 +43,19 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, loading = false, children, disabled, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      loading = false,
+      children,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
     const Comp = asChild ? Slot : "button";
     return (
       <Comp

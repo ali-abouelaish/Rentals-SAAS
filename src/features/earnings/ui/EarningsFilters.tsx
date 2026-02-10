@@ -3,8 +3,7 @@
 import { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { CalendarDays, ArrowRight } from "lucide-react";
 
 export function EarningsFilters({
   from,
@@ -21,32 +20,38 @@ export function EarningsFilters({
   }, [from, to]);
 
   return (
-    <form className="flex flex-wrap items-end gap-3">
-      <div className="space-y-1">
-        <label className="text-xs text-gray-500">From</label>
-        <Input type="date" name="from" defaultValue={from} />
+    <form className="flex items-center gap-3">
+      {/* Date inputs inline */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="relative flex-1 max-w-[180px]">
+          <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted pointer-events-none" />
+          <Input
+            type="date"
+            name="from"
+            defaultValue={from}
+            className="pl-9 text-[13px]"
+          />
+        </div>
+
+        <ArrowRight className="h-4 w-4 text-foreground-muted shrink-0" />
+
+        <div className="relative flex-1 max-w-[180px]">
+          <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted pointer-events-none" />
+          <Input
+            type="date"
+            name="to"
+            defaultValue={to}
+            className="pl-9 text-[13px]"
+          />
+        </div>
       </div>
-      <div className="space-y-1">
-        <label className="text-xs text-gray-500">To</label>
-        <Input type="date" name="to" defaultValue={to} />
-      </div>
-      <div className="space-y-1">
-        <label className="text-xs text-gray-500">Payment method</label>
-        <Select
-          value="all"
-          onChange={() => {}}
-          options={[
-            { label: "All methods", value: "all" },
-            { label: "Cash", value: "cash" },
-            { label: "Transfer", value: "transfer" },
-            { label: "Card", value: "card" }
-          ]}
-          className="opacity-60"
-          disabled
-        />
-      </div>
-      <Badge className="border-muted text-gray-500">{days} days</Badge>
-      <Button type="submit" variant="outline">
+
+      {/* Days badge + Apply */}
+      <span className="text-xs font-medium text-foreground-muted bg-surface-inset px-3 py-1.5 rounded-full shrink-0">
+        {days}d
+      </span>
+
+      <Button type="submit" size="sm">
         Apply
       </Button>
     </form>

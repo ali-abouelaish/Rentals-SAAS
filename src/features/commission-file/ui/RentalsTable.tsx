@@ -66,7 +66,7 @@ export function RentalsTable({
         ]}
         rows={[
           ...rentals.map((rental) => [
-            <span key={`${rental.id}-date`} className="text-sm text-gray-500">
+            <span key={`${rental.id}-date`} className="text-sm text-foreground-secondary">
               {formatDate(rental.created_at)}
             </span>,
             <span key={`${rental.id}-code`} className="text-sm text-navy">
@@ -74,30 +74,30 @@ export function RentalsTable({
             </span>,
             <div key={`${rental.id}-client`} className="text-sm">
               <p className="text-navy">{rental.client_name}</p>
-              <p className="text-xs text-gray-500">{rental.client_phone}</p>
+              <p className="text-xs text-foreground-secondary">{rental.client_phone}</p>
             </div>,
-            <span key={`${rental.id}-property`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-property`} className="text-sm text-foreground-secondary">
               {rental.property_address}
             </span>,
-            <span key={`${rental.id}-payment`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-payment`} className="text-sm text-foreground-secondary">
               {rental.payment_method}
             </span>,
-            <span key={`${rental.id}-amount`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-amount`} className="text-sm text-foreground-secondary">
               {formatGBP(rental.rental_amount)}
             </span>,
-            <span key={`${rental.id}-fee`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-fee`} className="text-sm text-foreground-secondary">
               {formatGBP(rental.payment_fee)}
             </span>,
-            <span key={`${rental.id}-base`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-base`} className="text-sm text-foreground-secondary">
               {formatGBP(rental.base_amount)}
             </span>,
-            <span key={`${rental.id}-commission`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-commission`} className="text-sm text-foreground-secondary">
               {rental.commission_percent}%
             </span>,
-            <span key={`${rental.id}-marketing`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-marketing`} className="text-sm text-foreground-secondary">
               {rental.marketing_agent_name}
             </span>,
-            <span key={`${rental.id}-marketing-fee`} className="text-sm text-gray-600">
+            <span key={`${rental.id}-marketing-fee`} className="text-sm text-foreground-secondary">
               {formatGBP(rental.marketing_fee_deducted)}
             </span>,
             <span key={`${rental.id}-earning`} className="text-sm font-medium text-navy">

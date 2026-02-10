@@ -37,14 +37,14 @@ export function RecentActivityList({ activity }: { activity: any[] }) {
                         <li key={item.id} className="flex items-start justify-between gap-4 border-b border-surface-100 pb-3 last:border-0 last:pb-0">
                             <div className="flex flex-col">
                                 <span className="text-sm font-medium text-brand capitalize">{item.action.replace("_", " ")}</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-xs text-foreground-muted">
                                     {formatDate(item.created_at)}
                                 </span>
                             </div>
                         </li>
                     ))
                 ) : (
-                    <p className="text-sm text-muted-foreground py-4 text-center">No activity found matching the filter.</p>
+                    <p className="text-sm text-foreground-muted py-4 text-center">No activity found matching the filter.</p>
                 )}
             </ul>
         </div>

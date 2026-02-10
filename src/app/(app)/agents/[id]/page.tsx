@@ -16,17 +16,17 @@ export default async function AgentDetailPage({
     <div className="space-y-6">
       <PageHeader title={agent.user_profiles?.display_name ?? "Agent"} subtitle="Agent profile" />
       <Card>
-        <CardContent className="grid gap-3 md:grid-cols-3 text-sm text-gray-600">
+        <CardContent className="grid gap-3 md:grid-cols-3 text-sm text-foreground-secondary">
           <div>
-            <p className="text-xs uppercase text-gray-400">Role</p>
+            <p className="text-xs uppercase text-foreground-muted">Role</p>
             <p>{agent.user_profiles?.role ?? "agent"}</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-400">Commission</p>
+            <p className="text-xs uppercase text-foreground-muted">Commission</p>
             <p>{agent.commission_percent}%</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-gray-400">Marketing fee</p>
+            <p className="text-xs uppercase text-foreground-muted">Marketing fee</p>
             <p>£{agent.marketing_fee}</p>
           </div>
         </CardContent>

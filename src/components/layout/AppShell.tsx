@@ -1,16 +1,18 @@
 import type { ReactNode } from "react";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import { TopNav } from "./TopNav";
 import { SideNav } from "./SideNav";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const profile = await requireUserProfile();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="h-screen bg-surface-ground p-2 md:p-3 flex gap-3 overflow-hidden">
+      {/* Sidebar */}
       <SideNav profile={profile} />
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="mx-auto max-w-6xl space-y-8">
+
+      {/* Main content — white rounded container */}
+      <main className="flex-1 overflow-y-auto bg-surface-card rounded-bento shadow-bento">
+        <div className="px-6 py-8 lg:px-10 lg:py-10">
           {children}
         </div>
       </main>

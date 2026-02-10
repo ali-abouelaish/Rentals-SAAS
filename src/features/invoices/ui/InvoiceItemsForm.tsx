@@ -53,12 +53,12 @@ export function InvoiceItemsForm({
           toast("Add a description for each item.");
         }
       }}
-      className="space-y-4 rounded-2xl border border-muted bg-card p-6 shadow-soft"
+      className="space-y-4 rounded-2xl border border-border-muted bg-surface-card p-6 shadow-card"
     >
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <label className="text-xs text-gray-500">Billing profile</label>
-          <select name="billing_profile_id" className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm">
+          <label className="text-xs text-foreground-secondary">Billing profile</label>
+          <select name="billing_profile_id" className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm">
             {billingProfiles.map((profile) => (
               <option key={profile.id} value={profile.id}>
                 {profile.name}
@@ -67,8 +67,8 @@ export function InvoiceItemsForm({
           </select>
         </div>
         <div>
-          <label className="text-xs text-gray-500">Landlord</label>
-          <select name="landlord_id" className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm">
+          <label className="text-xs text-foreground-secondary">Landlord</label>
+          <select name="landlord_id" className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm">
             {landlords.map((landlord) => (
               <option key={landlord.id} value={landlord.id}>
                 {landlord.name}
@@ -121,7 +121,7 @@ export function InvoiceItemsForm({
 
       <input type="hidden" name="items" value={JSON.stringify(items)} />
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">Subtotal</p>
+        <p className="text-sm text-foreground-secondary">Subtotal</p>
         <p className="text-sm text-navy">£{totals.toFixed(2)}</p>
       </div>
       <Button type="submit">Create invoice</Button>

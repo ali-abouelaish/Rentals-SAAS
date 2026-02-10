@@ -8,7 +8,7 @@ import {
   Send,
   FileText,
   DollarSign,
-  type LucideIcon
+  type LucideIcon,
 } from "lucide-react";
 
 type StatusConfig = {
@@ -18,75 +18,70 @@ type StatusConfig = {
 };
 
 const statusConfig: Record<string, StatusConfig> = {
-  // Workflow statuses
   pending: {
-    className: "bg-slate-100 text-slate-700 border-slate-200",
+    className: "bg-pending-bg text-pending-fg border-pending-border",
     icon: Clock,
-    label: "Pending"
+    label: "Pending",
   },
   draft: {
-    className: "bg-slate-100 text-slate-600 border-slate-200",
+    className: "bg-surface-inset text-foreground-secondary border-border",
     icon: FileText,
-    label: "Draft"
+    label: "Draft",
   },
   submitted: {
-    className: "bg-blue-100 text-blue-700 border-blue-200",
+    className: "bg-info-bg text-info-fg border-info-border",
     icon: Send,
-    label: "Submitted"
+    label: "Submitted",
   },
   approved: {
-    className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    className: "bg-success-bg text-success-fg border-success-border",
     icon: CheckCircle2,
-    label: "Approved"
+    label: "Approved",
   },
   sent: {
-    className: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    className: "bg-pending-bg text-pending-fg border-pending-border",
     icon: Send,
-    label: "Sent"
+    label: "Sent",
   },
   paid: {
-    className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    className: "bg-success-bg text-success-fg border-success-border",
     icon: DollarSign,
-    label: "Paid"
+    label: "Paid",
   },
   declined: {
-    className: "bg-red-100 text-red-700 border-red-200",
+    className: "bg-error-bg text-error-fg border-error-border",
     icon: XCircle,
-    label: "Declined"
+    label: "Declined",
   },
   refunded: {
-    className: "bg-amber-100 text-amber-700 border-amber-200",
+    className: "bg-warning-bg text-warning-fg border-warning-border",
     icon: AlertCircle,
-    label: "Refunded"
+    label: "Refunded",
   },
   void: {
-    className: "bg-slate-100 text-slate-500 border-slate-200",
+    className: "bg-surface-inset text-foreground-muted border-border",
     icon: XCircle,
-    label: "Void"
+    label: "Void",
   },
-
-  // Client/Lead statuses
   on_hold: {
-    className: "bg-amber-100 text-amber-700 border-amber-200",
+    className: "bg-warning-bg text-warning-fg border-warning-border",
     icon: Pause,
-    label: "On Hold"
+    label: "On Hold",
   },
   solved: {
-    className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    className: "bg-success-bg text-success-fg border-success-border",
     icon: CheckCircle2,
-    label: "Solved"
+    label: "Solved",
   },
-
-  // Generic
   active: {
-    className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    className: "bg-success-bg text-success-fg border-success-border",
     icon: CheckCircle2,
-    label: "Active"
+    label: "Active",
   },
   inactive: {
-    className: "bg-slate-100 text-slate-500 border-slate-200",
-    label: "Inactive"
-  }
+    className: "bg-surface-inset text-foreground-muted border-border",
+    label: "Inactive",
+  },
 };
 
 interface StatusBadgeProps {
@@ -95,19 +90,15 @@ interface StatusBadgeProps {
   size?: "sm" | "md";
 }
 
-export function StatusBadge({
-  status,
-  showIcon = true,
-  size = "md"
-}: StatusBadgeProps) {
+export function StatusBadge({ status, showIcon = true, size = "md" }: StatusBadgeProps) {
   const config = statusConfig[status.toLowerCase()] ?? {
-    className: "bg-slate-100 text-slate-600 border-slate-200"
+    className: "bg-surface-inset text-foreground-secondary border-border",
   };
   const Icon = config.icon;
 
   const sizeClasses = {
     sm: "px-2 py-0.5 text-[11px] gap-1",
-    md: "px-2.5 py-1 text-xs gap-1.5"
+    md: "px-2.5 py-1 text-xs gap-1.5",
   };
 
   return (
@@ -118,7 +109,9 @@ export function StatusBadge({
         config.className
       )}
     >
-      {showIcon && Icon && <Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />}
+      {showIcon && Icon && (
+        <Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />
+      )}
       {config.label ?? status.replace("_", " ")}
     </span>
   );

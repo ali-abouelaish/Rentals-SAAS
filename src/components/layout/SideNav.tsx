@@ -11,10 +11,14 @@ import {
   Building2,
   Home,
   Settings,
-  LogOut
+  LogOut,
+  FileText,
+  Gift,
+  Menu,
+  X,
 } from "lucide-react";
 import { signOut } from "@/features/auth/actions/auth";
-import { motion } from "framer-motion";
+import { useState } from "react";
 
 interface SideNavProps {
   profile: {
@@ -29,46 +33,64 @@ const navItems = [
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/rentals", label: "Rentals", icon: ClipboardList },
   { href: "/landlords", label: "Landlords", icon: Building2 },
-  { href: "/bonuses", label: "Bonuses", icon: BadgePercent },
-  { href: "/invoices", label: "Invoices", icon: BadgePercent },
+  { href: "/bonuses", label: "Bonuses", icon: Gift },
+  { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/agents", label: "Agents", icon: Home, adminOnly: true },
-  { href: "/settings/billing-profiles", label: "Billing Profiles", icon: Settings, adminOnly: true }
+  { href: "/settings/billing-profiles", label: "Billing", icon: Settings, adminOnly: true },
 ];
 
 export function SideNav({ profile }: SideNavProps) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  return (
-    <motion.aside
-      initial={{ x: -100, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-text md:flex"
-    >
-      <div className="flex h-16 items-center px-6">
-        <span className="text-xl font-bold tracking-tight text-white">Rental Agency</span>
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
+
+  const navContent = (
+    <>
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-5 pt-6 pb-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow">
+          R
+        </div>
+        <div className="flex flex-col">
+          <span className="text-sm font-bold tracking-tight text-white">
+            Rental Agency
+          </span>
+          <span className="text-[11px] text-sidebar-text">Management</span>
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-4 py-4">
+      {/* Divider */}
+      <div className="mx-5 h-px bg-white/[0.06] mb-2" />
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
         {navItems.map((item) => {
           if (item.adminOnly && profile.role !== "super_admin") return null;
-          const isActive = pathname === item.href;
+          const active = isActive(item.href);
+
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setMobileOpen(false)}
               className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-gradient-accent text-brand-950 font-bold shadow-glow"
-                  : "hover:bg-sidebar-hover text-sidebar-text hover:text-sidebar-textActive"
+                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium",
+                "transition-all duration-base ease-default",
+                active
+                  ? "bg-accent text-accent-fg shadow-glow"
+                  : "text-sidebar-text hover:bg-white/[0.06] hover:text-white"
               )}
             >
               <item.icon
-                size={20}
+                size={18}
+                strokeWidth={active ? 2.2 : 1.8}
                 className={cn(
-                  "transition-colors",
-                  isActive ? "text-brand-950" : "text-sidebar-text group-hover:text-sidebar-textActive"
+                  "shrink-0 transition-colors",
+                  active
+                    ? "text-accent-fg"
+                    : "text-sidebar-text group-hover:text-white"
                 )}
               />
               {item.label}
@@ -77,26 +99,79 @@ export function SideNav({ profile }: SideNavProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-2 mb-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-brand-950 font-bold shadow-glow">
-            {profile.display_name?.[0] ?? "A"}
+      {/* User Area */}
+      <div className="p-4">
+        <div className="mx-1 h-px bg-white/[0.06] mb-4" />
+        <div className="flex items-center gap-3 px-2 mb-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white text-sm font-semibold ring-1 ring-white/[0.08]">
+            {profile.display_name?.[0]?.toUpperCase() ?? "A"}
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-white">
-              {profile.display_name ?? "Admin User"}
+          <div className="flex flex-col min-w-0">
+            <span className="text-[13px] font-medium text-white truncate">
+              {profile.display_name ?? "User"}
             </span>
-            <span className="text-xs text-sidebar-text capitalize">{profile.role?.replace("_", " ")}</span>
+            <span className="text-[11px] text-sidebar-text capitalize">
+              {profile.role?.replace("_", " ")}
+            </span>
           </div>
         </div>
 
         <form action={signOut}>
-          <button className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-sidebar-text transition-colors hover:text-red-400 hover:bg-white/5">
-            <LogOut size={16} />
+          <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text transition-colors duration-base hover:text-red-400 hover:bg-white/[0.04]">
+            <LogOut size={15} />
             Sign out
           </button>
         </form>
       </div>
-    </motion.aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Hamburger */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed top-3 left-3 z-50 flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-fg shadow-bento md:hidden"
+        aria-label="Open menu"
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Mobile Overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile Drawer */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col md:hidden",
+          "rounded-r-bento backdrop-blur-xl",
+          "transition-transform duration-slow ease-default",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+        style={{ backgroundColor: "var(--sidebar-glass-bg)" }}
+      >
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="absolute top-5 right-4 text-sidebar-text hover:text-white transition-colors"
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
+        {navContent}
+      </aside>
+
+      {/* Desktop Sidebar — Glassmorphism */}
+      <aside
+        className="hidden w-[260px] shrink-0 flex-col md:flex rounded-bento backdrop-blur-xl overflow-hidden"
+        style={{ backgroundColor: "var(--sidebar-glass-bg)" }}
+      >
+        {navContent}
+      </aside>
+    </>
   );
 }

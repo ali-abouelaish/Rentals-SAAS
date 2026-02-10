@@ -9,7 +9,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
 import { FilterBar, FilterRow, FilterGroup, FilterActions } from "@/components/ui/filter-bar";
 import { getAgents } from "@/features/agents/data/agents";
@@ -17,7 +17,7 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { Users, ExternalLink, Percent } from "lucide-react";
 
 export default async function AgentsPage({
-  searchParams
+  searchParams,
 }: {
   searchParams?: { q?: string; role?: string };
 }) {
@@ -31,17 +31,13 @@ export default async function AgentsPage({
     { value: "admin", label: "Admin" },
     { value: "agent", label: "Agent" },
     { value: "marketing_only", label: "Marketing Only" },
-    { value: "agent_and_marketing", label: "Agent + Marketing" }
+    { value: "agent_and_marketing", label: "Agent + Marketing" },
   ];
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Agents"
-        subtitle="Agent profiles & commissions"
-      />
+      <PageHeader title="Agents" subtitle="Agent profiles & commissions" />
 
-      {/* Filter Bar */}
       <FilterBar>
         <form method="get">
           <FilterRow>
@@ -57,7 +53,7 @@ export default async function AgentsPage({
               <select
                 name="role"
                 defaultValue={role}
-                className="flex h-10 w-full rounded-lg border bg-white px-3 py-2 text-sm border-slate-200 text-slate-700"
+                className="flex h-10 w-full rounded-lg border bg-surface-card px-3 py-2 text-sm border-border text-foreground-secondary"
               >
                 {roleOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -75,14 +71,12 @@ export default async function AgentsPage({
         </form>
       </FilterBar>
 
-      {/* Results count */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          Showing <span className="font-medium text-slate-700">{agents.length}</span> agents
+        <p className="text-sm text-foreground-secondary">
+          Showing <span className="font-medium text-foreground">{agents.length}</span> agents
         </p>
       </div>
 
-      {/* Agents Table */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -97,23 +91,23 @@ export default async function AgentsPage({
             <TableRow key={agent.user_id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-brand-50 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-full bg-brand-subtle flex items-center justify-center">
                     <span className="text-brand font-medium text-sm">
                       {agent.user_profiles?.display_name?.charAt(0)?.toUpperCase() ?? "A"}
                     </span>
                   </div>
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-foreground">
                     {agent.user_profiles?.display_name ?? agent.user_id}
                   </span>
                 </div>
               </TableCell>
               <TableCell>
-                <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium capitalize">
+                <span className="px-2 py-1 rounded-md bg-surface-inset text-foreground-secondary text-xs font-medium capitalize">
                   {agent.user_profiles?.role ?? "agent"}
                 </span>
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                <div className="flex items-center gap-1.5 text-success font-medium">
                   <Percent className="h-3.5 w-3.5" />
                   {agent.commission_percent}%
                 </div>
@@ -134,8 +128,8 @@ export default async function AgentsPage({
       {agents.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">No agents found</p>
+            <Users className="h-12 w-12 text-foreground-muted mx-auto mb-3" />
+            <p className="text-foreground-secondary">No agents found</p>
           </CardContent>
         </Card>
       )}

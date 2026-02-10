@@ -9,8 +9,8 @@ const FilterBar = React.forwardRef<HTMLDivElement, FilterBarProps>(
         <div
             ref={ref}
             className={cn(
-                "bg-gradient-to-r from-slate-50 to-blue-50/30",
-                "rounded-xl p-4 border border-slate-200/60",
+                "bg-surface-inset",
+                "rounded-xl p-4 border border-border",
                 className
             )}
             {...props}
@@ -44,7 +44,7 @@ const FilterGroup = React.forwardRef<HTMLDivElement, FilterGroupProps>(
     ({ className, label, children, ...props }, ref) => (
         <div ref={ref} className={cn("flex flex-col gap-1.5", className)} {...props}>
             {label && (
-                <label className="text-xs font-medium text-slate-500">{label}</label>
+                <label className="text-xs font-medium text-foreground-muted">{label}</label>
             )}
             {children}
         </div>
@@ -60,16 +60,16 @@ const FilterSearch = React.forwardRef<HTMLInputElement, FilterSearchProps>(
     ({ className, label, ...props }, ref) => (
         <div className="flex flex-col gap-1.5">
             {label && (
-                <label className="text-xs font-medium text-slate-500">{label}</label>
+                <label className="text-xs font-medium text-foreground-muted">{label}</label>
             )}
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
                 <input
                     ref={ref}
                     className={cn(
-                        "h-10 w-full rounded-lg border bg-white pl-9 pr-3 text-sm",
-                        "border-slate-200 text-slate-700 placeholder:text-slate-400",
-                        "focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20",
+                        "h-10 w-full rounded-lg border bg-surface-card pl-9 pr-3 text-sm",
+                        "border-border text-foreground placeholder:text-foreground-muted",
+                        "focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20",
                         className
                     )}
                     {...props}
@@ -104,8 +104,8 @@ const FilterPill = React.forwardRef<HTMLAnchorElement, FilterPillProps>(
                 "px-3 py-1.5 text-sm font-medium rounded-full border cursor-pointer",
                 "transition-all duration-150",
                 active
-                    ? "bg-brand text-white border-brand"
-                    : "border-slate-200 text-slate-600 bg-white hover:border-brand/30 hover:text-brand hover:bg-brand-50/50",
+                    ? "bg-brand text-brand-fg border-brand"
+                    : "border-border text-foreground-secondary bg-surface-card hover:border-brand/30 hover:text-brand hover:bg-brand-subtle/50",
                 className
             )}
             {...props}

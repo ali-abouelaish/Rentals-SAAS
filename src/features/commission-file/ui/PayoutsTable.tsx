@@ -29,13 +29,13 @@ export function PayoutsTable({
       <DataTable
         columns={["Date", "Amount", "Notes"]}
         rows={payouts.map((payout) => [
-          <span key={`${payout.id}-date`} className="text-sm text-gray-600">
+          <span key={`${payout.id}-date`} className="text-sm text-foreground-secondary">
             {formatDate(payout.payout_date)}
           </span>,
           <span key={`${payout.id}-amount`} className="text-sm font-medium text-navy">
             {formatGBP(payout.amount_gbp)}
           </span>,
-          <span key={`${payout.id}-notes`} className="text-sm text-gray-500">
+          <span key={`${payout.id}-notes`} className="text-sm text-foreground-secondary">
             {payout.notes ?? "—"}
           </span>
         ])}

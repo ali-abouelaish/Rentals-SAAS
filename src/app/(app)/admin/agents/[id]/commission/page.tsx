@@ -47,11 +47,11 @@ export default async function AgentCommissionPage({
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Card className="p-8 text-center">
-          <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-8 w-8 text-slate-400" />
+          <div className="h-16 w-16 rounded-full bg-surface-inset flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-foreground-muted" />
           </div>
-          <p className="text-slate-600 font-medium">Agent not found</p>
-          <p className="text-sm text-slate-400 mt-1">Please check the agent ID and try again</p>
+          <p className="text-foreground-secondary font-medium">Agent not found</p>
+          <p className="text-sm text-foreground-muted mt-1">Please check the agent ID and try again</p>
         </Card>
       </div>
     );
@@ -116,14 +116,14 @@ export default async function AgentCommissionPage({
                 size="lg"
               />
               <div>
-                <h1 className="text-2xl font-bold text-white">{agent.display_name ?? "Agent"}</h1>
-                <p className="text-white/70 text-sm capitalize">{agent.role?.replace("_", " ") ?? "Agent"}</p>
+                <h1 className="text-2xl font-bold text-brand-fg">{agent.display_name ?? "Agent"}</h1>
+                <p className="text-brand-fg/70 text-sm capitalize">{agent.role?.replace("_", " ") ?? "Agent"}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
-                <p className="text-white/60 text-xs uppercase tracking-wide">Balance</p>
-                <p className={`text-2xl font-bold ${balance >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                <p className="text-brand-fg/60 text-xs uppercase tracking-wide">Balance</p>
+                <p className={`text-2xl font-bold ${balance >= 0 ? 'text-success' : 'text-error'}`}>
                   {formatGBP(balance)}
                 </p>
               </div>
@@ -138,11 +138,11 @@ export default async function AgentCommissionPage({
         <Card className="stat-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-brand-50">
+              <div className="p-2 rounded-lg bg-brand-subtle">
                 <ClipboardList className="h-4 w-4 text-brand" />
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Rentals</p>
+                <p className="text-xs font-medium text-foreground-secondary uppercase tracking-wide">Rentals</p>
                 <p className="text-xl font-bold text-brand">{rentalRows.length}</p>
               </div>
             </div>
@@ -152,12 +152,12 @@ export default async function AgentCommissionPage({
         <Card className="stat-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-100">
-                <TrendingUp className="h-4 w-4 text-emerald-600" />
+              <div className="p-2 rounded-lg bg-success-bg">
+                <TrendingUp className="h-4 w-4 text-success" />
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Owed</p>
-                <p className="text-xl font-bold text-emerald-600">{formatGBP(totalOwed)}</p>
+                <p className="text-xs font-medium text-foreground-secondary uppercase tracking-wide">Owed</p>
+                <p className="text-xl font-bold text-success">{formatGBP(totalOwed)}</p>
               </div>
             </div>
           </CardContent>
@@ -166,12 +166,12 @@ export default async function AgentCommissionPage({
         <Card className="stat-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-100">
-                <Gift className="h-4 w-4 text-amber-600" />
+              <div className="p-2 rounded-lg bg-warning-bg">
+                <Gift className="h-4 w-4 text-warning" />
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Bonuses</p>
-                <p className="text-xl font-bold text-amber-600">{formatGBP(bonusesEarnings)}</p>
+                <p className="text-xs font-medium text-foreground-secondary uppercase tracking-wide">Bonuses</p>
+                <p className="text-xl font-bold text-warning">{formatGBP(bonusesEarnings)}</p>
               </div>
             </div>
           </CardContent>
@@ -180,30 +180,30 @@ export default async function AgentCommissionPage({
         <Card className="stat-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100">
-                <CreditCard className="h-4 w-4 text-blue-600" />
+              <div className="p-2 rounded-lg bg-info-bg">
+                <CreditCard className="h-4 w-4 text-info" />
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Paid</p>
-                <p className="text-xl font-bold text-blue-600">{formatGBP(totalPayouts)}</p>
+                <p className="text-xs font-medium text-foreground-secondary uppercase tracking-wide">Paid</p>
+                <p className="text-xl font-bold text-info">{formatGBP(totalPayouts)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className={`stat-card ${overdueAmount > 0 ? 'border-red-200 bg-red-50/30' : ''}`}>
+        <Card className={`stat-card ${overdueAmount > 0 ? 'border-error-border bg-error-bg/30' : ''}`}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${overdueAmount > 0 ? 'bg-red-100' : 'bg-slate-100'}`}>
-                <AlertTriangle className={`h-4 w-4 ${overdueAmount > 0 ? 'text-red-600' : 'text-slate-400'}`} />
+              <div className={`p-2 rounded-lg ${overdueAmount > 0 ? 'bg-error-bg' : 'bg-surface-inset'}`}>
+                <AlertTriangle className={`h-4 w-4 ${overdueAmount > 0 ? 'text-error' : 'text-foreground-muted'}`} />
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Overdue</p>
-                <p className={`text-xl font-bold ${overdueAmount > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                <p className="text-xs font-medium text-foreground-secondary uppercase tracking-wide">Overdue</p>
+                <p className={`text-xl font-bold ${overdueAmount > 0 ? 'text-error' : 'text-foreground-muted'}`}>
                   {formatGBP(overdueAmount)}
                 </p>
                 {overdueCount > 0 && (
-                  <p className="text-xs text-red-500">{overdueCount} items &gt; 7 days</p>
+                  <p className="text-xs text-error">{overdueCount} items &gt; 7 days</p>
                 )}
               </div>
             </div>
@@ -213,12 +213,12 @@ export default async function AgentCommissionPage({
         <Card className="stat-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-100">
-                <Building className="h-4 w-4 text-purple-600" />
+              <div className="p-2 rounded-lg bg-brand-subtle">
+                <Building className="h-4 w-4 text-brand" />
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Agency Net</p>
-                <p className="text-xl font-bold text-purple-600">{formatGBP(rentalTotals.base_amount)}</p>
+                <p className="text-xs font-medium text-foreground-secondary uppercase tracking-wide">Agency Net</p>
+                <p className="text-xl font-bold text-brand">{formatGBP(rentalTotals.base_amount)}</p>
               </div>
             </div>
           </CardContent>

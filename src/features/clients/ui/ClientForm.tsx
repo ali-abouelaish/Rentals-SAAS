@@ -98,7 +98,7 @@ export function ClientForm({
 
       {/* Status */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">Status</label>
+        <label className="text-sm font-medium text-foreground">Status</label>
         <Select
           value={form.watch("status")}
           onChange={(value: string) => form.setValue("status", value as ClientFormValues["status"])}

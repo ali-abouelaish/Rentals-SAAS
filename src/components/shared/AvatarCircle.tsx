@@ -1,15 +1,23 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
 
+const sizeMap = {
+  sm: 24,
+  md: 32,
+  lg: 48,
+  xl: 64,
+};
+
 export function AvatarCircle({
   name,
   url,
-  size = 32
+  size = "md",
 }: {
   name: string;
   url?: string | null;
-  size?: number;
+  size?: keyof typeof sizeMap | number;
 }) {
+  const px = typeof size === "number" ? size : sizeMap[size];
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -20,12 +28,12 @@ export function AvatarCircle({
   return (
     <div
       className={cn(
-        "flex items-center justify-center rounded-full bg-muted text-xs font-semibold text-navy"
+        "flex items-center justify-center rounded-full bg-brand-subtle text-brand text-xs font-semibold"
       )}
-      style={{ width: size, height: size }}
+      style={{ width: px, height: px }}
     >
       {url ? (
-        <Image src={url} alt={name} width={size} height={size} className="rounded-full" />
+        <Image src={url} alt={name} width={px} height={px} className="rounded-full" />
       ) : (
         <span>{initials}</span>
       )}

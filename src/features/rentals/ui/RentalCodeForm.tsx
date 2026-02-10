@@ -52,7 +52,7 @@ export function RentalCodeForm({
       <Input placeholder="Property address" {...form.register("property_address")} />
       <Input placeholder="Licensor name" {...form.register("licensor_name")} />
       <div className="md:col-span-2">
-        <label className="text-xs text-gray-500">Marketing agent (optional)</label>
+        <label className="text-xs text-foreground-secondary">Marketing agent (optional)</label>
         <Input
           list="marketing-agent-list"
           placeholder="Search by name"
@@ -63,7 +63,7 @@ export function RentalCodeForm({
             <option key={agent.id} value={agent.name} />
           ))}
         </datalist>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-foreground-muted">
           Leave blank if not applicable.
         </p>
       </div>

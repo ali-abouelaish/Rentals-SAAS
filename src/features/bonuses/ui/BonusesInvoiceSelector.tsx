@@ -56,10 +56,10 @@ export function BonusesInvoiceSelector({ bonuses }: { bonuses: BonusRow[] }) {
           <span key={`${bonus.id}-code`} className="text-sm text-brand">
             {bonus.code ?? bonus.id}
           </span>,
-          <span key={`${bonus.id}-landlord`} className="text-sm text-gray-600">
+          <span key={`${bonus.id}-landlord`} className="text-sm text-foreground-secondary">
             {bonus.landlords?.name ?? "Landlord"}
           </span>,
-          <span key={`${bonus.id}-amount`} className="text-sm text-gray-600">
+          <span key={`${bonus.id}-amount`} className="text-sm text-foreground-secondary">
             {formatCurrency(bonus.amount_owed)}
           </span>,
           <StatusBadge key={`${bonus.id}-status`} status={bonus.status} />

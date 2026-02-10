@@ -40,11 +40,11 @@ export function InvoiceFromBonusesForm({
   return (
     <form
       action={onSubmit}
-      className="space-y-4 rounded-2xl border border-muted bg-card p-6 shadow-soft"
+      className="space-y-4 rounded-2xl border border-border-muted bg-surface-card p-6 shadow-card"
     >
       <div>
-        <label className="text-xs text-gray-500">Billing profile</label>
-        <select name="billing_profile_id" className="h-10 w-full rounded-xl border border-muted bg-card px-3 text-sm">
+        <label className="text-xs text-foreground-secondary">Billing profile</label>
+        <select name="billing_profile_id" className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm">
           {billingProfiles.map((profile) => (
             <option key={profile.id} value={profile.id}>
               {profile.name}
@@ -60,7 +60,7 @@ export function InvoiceFromBonusesForm({
           return (
             <label
               key={bonus.id}
-              className={`flex items-center justify-between rounded-xl border border-muted px-3 py-2 text-sm ${
+              className={`flex items-center justify-between rounded-xl border border-border-muted px-3 py-2 text-sm ${
                 disabled ? "opacity-50" : ""
               }`}
             >
@@ -68,7 +68,7 @@ export function InvoiceFromBonusesForm({
                 <p className="text-navy">
                   {bonus.code ?? bonus.id} — {bonus.landlords?.name ?? "Landlord"}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-foreground-secondary">
                   {bonus.landlords?.billing_address ?? "Address not set"}
                 </p>
               </div>

@@ -13,7 +13,7 @@ const TabsContext = React.createContext<TabsContextValue | undefined>(undefined)
 function Tabs({
   defaultValue,
   children,
-  className
+  className,
 }: {
   defaultValue: string;
   children: React.ReactNode;
@@ -29,7 +29,12 @@ function Tabs({
 
 function TabsList({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("inline-flex rounded-xl border border-slate-200/60 bg-slate-50 p-1 shadow-sm", className)}>
+    <div
+      className={cn(
+        "inline-flex rounded-xl border border-border bg-surface-inset p-1 shadow-xs",
+        className
+      )}
+    >
       {children}
     </div>
   );
@@ -38,7 +43,7 @@ function TabsList({ children, className }: { children: React.ReactNode; classNam
 function TabsTrigger({
   value,
   children,
-  className
+  className,
 }: {
   value: string;
   children: React.ReactNode;
@@ -52,10 +57,10 @@ function TabsTrigger({
       type="button"
       onClick={() => ctx.setValue(value)}
       className={cn(
-        "flex items-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
+        "flex items-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-base",
         active
-          ? "bg-brand text-white shadow-md"
-          : "text-slate-600 hover:bg-white hover:text-brand hover:shadow-sm",
+          ? "bg-brand text-brand-fg shadow-md"
+          : "text-foreground-secondary hover:bg-surface-card hover:text-foreground hover:shadow-sm",
         className
       )}
     >
@@ -66,7 +71,7 @@ function TabsTrigger({
 
 function TabsContent({
   value,
-  children
+  children,
 }: {
   value: string;
   children: React.ReactNode;
