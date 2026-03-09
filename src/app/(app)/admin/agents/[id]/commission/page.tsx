@@ -29,6 +29,15 @@ function toIsoRange(from: string, to: string) {
   return { fromIso, toIso };
 }
 
+function getAgentAvatarUrl(
+  agentProfiles: { avatar_url: string | null } | { avatar_url: string | null }[] | null
+) {
+  if (Array.isArray(agentProfiles)) {
+    return agentProfiles[0]?.avatar_url ?? null;
+  }
+  return agentProfiles?.avatar_url ?? null;
+}
+
 export default async function AgentCommissionPage({
   params,
   searchParams
@@ -60,6 +69,9 @@ export default async function AgentCommissionPage({
 
   const { from, to } = getDefaultDateRange(searchParams);
   const { fromIso, toIso } = toIsoRange(from, to);
+  const avatarUrl = getAgentAvatarUrl(
+    agent.agent_profiles as { avatar_url: string | null } | { avatar_url: string | null }[] | null
+  );
   const includeAllStatuses = searchParams?.status === "all";
   const statuses = includeAllStatuses ? ["approved", "paid", "refunded"] : ["approved"];
 
@@ -113,7 +125,7 @@ export default async function AgentCommissionPage({
             <div className="flex items-center gap-4">
               <AvatarCircle
                 name={agent.display_name ?? "Agent"}
-                url={Array.isArray(agent.agent_profiles) ? agent.agent_profiles[0]?.avatar_url : null}
+                url={avatarUrl}
                 size="lg"
               />
               <div>
