@@ -15,6 +15,9 @@ export async function createClient(values: ClientFormValues) {
     .from("clients")
     .insert({
       ...payload,
+      agency_name: payload.agency_name?.trim() || null,
+      contact_number: payload.contact_number?.trim() || null,
+      share_code: payload.share_code?.trim() || null,
       assigned_agent_id: assigned,
       tenant_id: profile.tenant_id
     })
@@ -43,7 +46,12 @@ export async function updateClient(id: string, values: ClientFormValues) {
 
   const { data, error } = await supabase
     .from("clients")
-    .update(payload)
+    .update({
+      ...payload,
+      agency_name: payload.agency_name?.trim() || null,
+      contact_number: payload.contact_number?.trim() || null,
+      share_code: payload.share_code?.trim() || null
+    })
     .eq("id", id)
     .select("*")
     .single();
@@ -60,5 +68,28 @@ export async function updateClient(id: string, values: ClientFormValues) {
   });
 
   revalidatePath(`/clients/${id}`);
+  return data;
+}
+
+const CLIENT_STATUSES = ["pending", "on_hold", "solved", "registered"] as const;
+
+export async function updateClientStatus(clientId: string, status: string) {
+  const supabase = createSupabaseServerClient();
+  await requireUserProfile();
+  if (!CLIENT_STATUSES.includes(status as (typeof CLIENT_STATUSES)[number])) {
+    throw new Error("Invalid status");
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .update({ status })
+    .eq("id", clientId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/clients");
   return data;
 }

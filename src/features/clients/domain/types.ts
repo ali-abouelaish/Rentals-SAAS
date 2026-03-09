@@ -10,7 +10,7 @@ export type Client = {
   company_or_university_name: string;
   company_address: string;
   occupation: string;
-  status: "pending" | "on_hold" | "solved";
+  status: "pending" | "on_hold" | "solved" | "registered";
   assigned_agent_id: string | null;
   created_at: string;
 };

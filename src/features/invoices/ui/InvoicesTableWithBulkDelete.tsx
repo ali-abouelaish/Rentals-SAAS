@@ -186,7 +186,7 @@ export function InvoicesTableWithBulkDelete({
 
               {/* Actions */}
               <div className="flex items-center gap-2 shrink-0">
-                {(invoice.pdf_storage_path || isAdmin) && (
+                {(invoice.pdf_storage_path || isAdmin || (invoice.created_by_user_id === currentUserId && invoice.status !== "draft")) && (
                   <form action={onViewPdf.bind(null, invoice.id)}>
                     <Button
                       type="submit"

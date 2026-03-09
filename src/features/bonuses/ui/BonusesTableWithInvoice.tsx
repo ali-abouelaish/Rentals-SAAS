@@ -10,7 +10,8 @@ import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { toast } from "sonner";
 import { updateBonus, deleteBonusAction } from "@/features/bonuses/actions/bonuses";
 import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
-import { Gift, Pencil, X } from "lucide-react";
+import Link from "next/link";
+import { Gift, Pencil, X, Eye } from "lucide-react";
 
 type BonusRow = {
   id: string;
@@ -156,12 +157,21 @@ export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
                   </div>
 
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Link
+                      href={`/bonuses/${bonus.id}`}
+                      className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-foreground-muted hover:bg-surface-highlight hover:text-foreground transition-colors"
+                      title="View and edit bonus"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      View
+                    </Link>
                     <button
                       type="button"
                       onClick={() =>
                         setEditingId((prev) => (prev === bonus.id ? null : bonus.id))
                       }
                       className="h-7 w-7 rounded-lg flex items-center justify-center text-foreground-muted hover:bg-surface-highlight hover:text-foreground transition-colors"
+                      title="Edit inline"
                     >
                       {editingId === bonus.id ? (
                         <X className="h-3.5 w-3.5" />

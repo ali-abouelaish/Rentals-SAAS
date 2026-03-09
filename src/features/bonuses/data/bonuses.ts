@@ -48,3 +48,34 @@ export async function getBonuses({
     totalPages: Math.ceil((count ?? 0) / PAGE_SIZE),
   };
 }
+
+/** Single bonus by id for view/edit page. */
+export async function getBonusById(id: string) {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("bonuses")
+    .select(
+      "id, code, bonus_date, client_name, property_address, amount_owed, payout_mode, status, landlord_id, agent_id, notes, invoice_pending, created_at, landlords:landlords!bonuses_landlord_id_fkey(name), agent:user_profiles!bonuses_agent_id_fkey(display_name)"
+    )
+    .eq("id", id)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Bonuses for a single agent (e.g. /me). */
+export async function getBonusesForAgent(
+  agentId: string,
+  filters: { from: string; to: string }
+) {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("bonuses")
+    .select("id, bonus_date, client_name, amount_owed, status, created_at")
+    .eq("agent_id", agentId)
+    .gte("bonus_date", filters.from)
+    .lte("bonus_date", filters.to)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}

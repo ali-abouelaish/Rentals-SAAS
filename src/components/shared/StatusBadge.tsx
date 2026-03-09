@@ -73,6 +73,11 @@ const statusConfig: Record<string, StatusConfig> = {
     icon: CheckCircle2,
     label: "Solved",
   },
+  registered: {
+    className: "bg-info-bg text-info-fg border-info-border",
+    icon: CheckCircle2,
+    label: "Registered",
+  },
   active: {
     className: "bg-success-bg text-success-fg border-success-border",
     icon: CheckCircle2,

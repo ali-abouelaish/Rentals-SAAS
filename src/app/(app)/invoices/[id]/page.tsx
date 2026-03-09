@@ -28,22 +28,22 @@ export default async function InvoiceDetailPage({
 }: {
   params: { id: string };
 }) {
-  const profile = await requireUserProfile();
-  const { invoice, items } = await getInvoiceById(params.id);
+  const [profile, invoiceResult] = await Promise.all([
+    requireUserProfile(),
+    getInvoiceById(params.id)
+  ]);
+  const { invoice, items } = invoiceResult;
   const isAdmin = profile.role.toLowerCase() === "admin";
   const canEdit = invoice.status === "draft" && (isAdmin || invoice.created_by_user_id === profile.id);
 
   const supabase = createSupabaseServerClient();
-  const { data: billingProfiles } = await supabase
-    .from("billing_profiles")
-    .select("id, name")
-    .order("name", { ascending: true });
-  const { data: landlords } = await supabase
-    .from("landlords")
-    .select("id, name")
-    .order("name", { ascending: true });
-
-  const template = await getEmailTemplate();
+  const [billingResult, landlordsResult, template] = await Promise.all([
+    supabase.from("billing_profiles").select("id, name").order("name", { ascending: true }),
+    supabase.from("landlords").select("id, name").order("name", { ascending: true }),
+    getEmailTemplate()
+  ]);
+  const { data: billingProfiles } = billingResult;
+  const { data: landlords } = landlordsResult;
 
   return (
     <div className="space-y-6">
@@ -119,7 +119,7 @@ export default async function InvoiceDetailPage({
                 </Button>
               </form>
             ) : null}
-            {invoice.pdf_storage_path || isAdmin ? (
+            {(invoice.pdf_storage_path || isAdmin || (invoice.created_by_user_id === profile.id && invoice.status !== "draft")) ? (
               <form action={viewInvoicePdf.bind(null, invoice.id)}>
                 <Button type="submit" variant="outline">
                   View PDF

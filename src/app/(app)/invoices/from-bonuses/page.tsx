@@ -18,7 +18,14 @@ export default async function InvoiceFromBonusesPage({
     try {
       const parsed = JSON.parse(searchParams.bonus_ids);
       if (Array.isArray(parsed)) {
-        initialSelected = parsed.filter((id) => typeof id === "string");
+        const ids = parsed.filter((id) => typeof id === "string");
+        const selectedBonuses = bonuses.filter((b) => ids.includes(b.id));
+        if (selectedBonuses.length > 0) {
+          const firstLandlordId = selectedBonuses[0].landlord_id;
+          initialSelected = selectedBonuses
+            .filter((b) => b.landlord_id === firstLandlordId)
+            .map((b) => b.id);
+        }
       }
     } catch {
       initialSelected = [];

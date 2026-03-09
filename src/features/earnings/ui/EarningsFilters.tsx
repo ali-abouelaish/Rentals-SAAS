@@ -20,7 +20,7 @@ export function EarningsFilters({
   }, [from, to]);
 
   return (
-    <form className="flex items-center gap-3">
+    <form method="get" action="/earnings" className="flex items-center gap-3">
       {/* Date inputs inline */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className="relative flex-1 max-w-[180px]">

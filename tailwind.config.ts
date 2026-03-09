@@ -95,6 +95,17 @@ const config: Config = {
           bg: "var(--status-pending-bg)",
           border: "var(--status-pending-border)",
         },
+
+        /* Harbor landing page palette */
+        harbor: {
+          navy: "#103E73",
+          "navy-deep": "#0B2F59",
+          "light-blue": "#6EC1E4",
+          "sky-blue": "#8ED3F4",
+          "bg-gray": "#F5F7FA",
+          white: "#FFFFFF",
+          "text-neutral": "#334155",
+        },
       },
 
       /* ── Border Radius ────────────────────────── */

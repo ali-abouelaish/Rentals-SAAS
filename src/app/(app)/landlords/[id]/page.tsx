@@ -6,29 +6,33 @@ import { getLandlordById } from "@/features/landlords/data/landlords";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { InvoiceStatusBadge } from "@/features/invoices/ui/InvoiceStatusBadge";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { updateLandlord } from "@/features/landlords/actions/landlords";
+import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
 
 export default async function LandlordDetailPage({
   params
 }: {
   params: { id: string };
 }) {
-  const { landlord, rentalsCount, listings } = await getLandlordById(params.id);
   const supabase = createSupabaseServerClient();
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("id, invoice_number, status, total, due_date")
-    .eq("landlord_id", params.id)
-    .order("created_at", { ascending: false });
+  const [landlordResult, { data: invoices }] = await Promise.all([
+    getLandlordById(params.id),
+    supabase
+      .from("invoices")
+      .select("id, invoice_number, status, total, due_date")
+      .eq("landlord_id", params.id)
+      .order("created_at", { ascending: false })
+  ]);
+  const { landlord, rentalsCount, listings, scrapedListings } = landlordResult;
 
   return (
     <div className="space-y-6">
       <PageHeader title={landlord.name} subtitle="Landlord detail" />
       <Card>
         <CardContent className="grid gap-3 md:grid-cols-3 text-sm text-foreground-secondary">
+          <div>
+            <p className="text-xs uppercase text-foreground-muted">Name</p>
+            <p className="font-medium text-foreground">{landlord.name}</p>
+          </div>
           <div>
             <p className="text-xs uppercase text-foreground-muted">Contact</p>
             <p>{landlord.contact ?? "—"}</p>
@@ -37,110 +41,96 @@ export default async function LandlordDetailPage({
             <p className="text-xs uppercase text-foreground-muted">Email</p>
             <p>{landlord.email ?? "—"}</p>
           </div>
+          <div className="md:col-span-3">
+            <p className="text-xs uppercase text-foreground-muted">Billing address</p>
+            <p className="whitespace-pre-wrap">{landlord.billing_address ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-foreground-muted">SpareRoom profile</p>
+            <p>
+              {landlord.spareroom_profile_url ? (
+                <a href={landlord.spareroom_profile_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline break-all">
+                  {landlord.spareroom_profile_url}
+                </a>
+              ) : (
+                "—"
+              )}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-foreground-muted">Paying commission</p>
+            <p>
+              {landlord.pays_commission
+                ? `Yes${landlord.commission_term_text?.trim() ? ` · ${landlord.commission_term_text}` : landlord.commission_amount_gbp != null ? ` · ${formatGBP(Number(landlord.commission_amount_gbp))}` : ""}`
+                : "No"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-foreground-muted">We do viewing</p>
+            <p>{landlord.we_do_viewing ? "Yes" : "No"}</p>
+          </div>
           <div>
             <p className="text-xs uppercase text-foreground-muted">Times rented from</p>
             <p>{rentalsCount}</p>
           </div>
           <div>
-            <p className="text-xs uppercase text-foreground-muted">Paying</p>
-            <p>
-              {landlord.pays_commission
-                ? `Yes · ${landlord.commission_term_text?.trim().length
-                  ? landlord.commission_term_text
-                  : `£${Number(landlord.commission_amount_gbp ?? 0).toFixed(2)}`
-                }`
-                : "No"}
-            </p>
+            <p className="text-xs uppercase text-foreground-muted">Created</p>
+            <p>{landlord.created_at ? formatDate(landlord.created_at) : "—"}</p>
           </div>
           <div className="md:col-span-3">
             <p className="text-xs uppercase text-foreground-muted">Profile notes</p>
-            <p>{landlord.profile_notes ?? "—"}</p>
+            <p className="whitespace-pre-wrap">{landlord.profile_notes ?? "—"}</p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-brand">Edit landlord</p>
-          <form action={updateLandlord} className="grid gap-3 md:grid-cols-2">
-            <input type="hidden" name="landlord_id" value={landlord.id} />
-            <Input name="name" defaultValue={landlord.name} placeholder="Name" required />
-            <Input name="contact" defaultValue={landlord.contact ?? ""} placeholder="Contact" />
-            <Input
-              name="billing_address"
-              defaultValue={landlord.billing_address ?? ""}
-              placeholder="Billing address"
-            />
-            <Input name="email" defaultValue={landlord.email ?? ""} placeholder="Email" />
-            <Input
-              name="spareroom_profile_url"
-              defaultValue={landlord.spareroom_profile_url ?? ""}
-              placeholder="Spareroom profile URL"
-            />
-            <div>
-              <label className="text-xs text-foreground-secondary">Pays commission</label>
-              <select
-                name="pays_commission"
-                defaultValue={landlord.pays_commission ? "yes" : "no"}
-                className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
-              >
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-            <Input
-              name="commission_amount_gbp"
-              type="number"
-              step="0.01"
-              defaultValue={String(landlord.commission_amount_gbp ?? 0)}
-              placeholder="Commission amount (£)"
-            />
-            <Input
-              name="commission_term_text"
-              defaultValue={landlord.commission_term_text ?? ""}
-              placeholder="Commission term text (e.g. 1 week)"
-            />
-            <div>
-              <label className="text-xs text-foreground-secondary">We do viewing</label>
-              <select
-                name="we_do_viewing"
-                defaultValue={landlord.we_do_viewing ? "yes" : "no"}
-                className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
-              >
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <Textarea
-                name="profile_notes"
-                defaultValue={landlord.profile_notes ?? ""}
-                placeholder="Profile notes"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Button type="submit" variant="secondary">
-                Save changes
-              </Button>
-            </div>
-          </form>
+        <CardContent>
+          <EditLandlordForm landlord={landlord} />
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="text-sm font-medium text-navy">Scraped listings</p>
-          <DataTable
-            columns={["Title", "Price", "Postcode", "Active"]}
-            rows={listings.map((listing) => [
-              <span key={`${listing.id}-title`}>{listing.title}</span>,
-              <span key={`${listing.id}-price`}>£{listing.price}</span>,
-              <span key={`${listing.id}-postcode`}>{listing.postcode}</span>,
-              <span key={`${listing.id}-active`}>{listing.is_active ? "Yes" : "No"}</span>
-            ])}
-          />
-        </CardContent>
-      </Card>
+      {(scrapedListings.length > 0 || listings.length > 0) && (
+        <Card>
+          <CardContent className="space-y-4">
+            <p className="text-sm font-medium text-navy">
+              Listings {scrapedListings.length > 0 ? `(${scrapedListings.length} from scraper)` : ""}
+            </p>
+            {scrapedListings.length > 0 ? (
+              <DataTable
+                columns={["Title", "Location", "Price", "Status", "Rooms", "Available", "Link"]}
+                rows={scrapedListings.map((row) => [
+                  <span key={`${row.id}-title`} className="max-w-[200px] truncate block" title={row.title ?? undefined}>
+                    {row.title ?? "—"}
+                  </span>,
+                  <span key={`${row.id}-loc`} className="text-foreground-secondary">{row.location ?? "—"}</span>,
+                  <span key={`${row.id}-price`}>{row.price != null ? formatGBP(Number(row.price)) : "—"}</span>,
+                  <span key={`${row.id}-status`}>{row.status ?? "—"}</span>,
+                  <span key={`${row.id}-rooms`}>{row.room_count ?? row.total_rooms ?? "—"}</span>,
+                  <span key={`${row.id}-avail`}>{row.available_date ? formatDate(row.available_date) : "—"}</span>,
+                  row.url ? (
+                    <a key={`${row.id}-link`} href={row.url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+                      View
+                    </a>
+                  ) : (
+                    <span key={`${row.id}-link`}>—</span>
+                  ),
+                ])}
+              />
+            ) : (
+              <DataTable
+                columns={["Title", "Price", "Postcode", "Active"]}
+                rows={listings.map((listing) => [
+                  <span key={`${listing.id}-title`}>{listing.title}</span>,
+                  <span key={`${listing.id}-price`}>£{listing.price}</span>,
+                  <span key={`${listing.id}-postcode`}>{listing.postcode}</span>,
+                  <span key={`${listing.id}-active`}>{listing.is_active ? "Yes" : "No"}</span>
+                ])}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-4">

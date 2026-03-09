@@ -7,14 +7,15 @@ import {
   deleteBillingProfile,
   uploadBillingLogo
 } from "@/features/invoices/actions/billingProfiles";
-import { requireUserProfile } from "@/lib/auth/requireRole";
+import { requireRole } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BillingProfilesTable } from "@/features/invoices/ui/BillingProfilesTable";
 
 export default async function BillingProfilesPage() {
-  const profile = await requireUserProfile();
-  const isAdmin = profile.role.toLowerCase() === "admin";
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const isAdmin = true; // page is admin-only
   const profiles = await getBillingProfiles();
 
   return (

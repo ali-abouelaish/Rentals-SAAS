@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,40 +5,94 @@ import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { FilterBar, FilterRow, FilterGroup, FilterActions } from "@/components/ui/filter-bar";
 import { getAgents } from "@/features/agents/data/agents";
+import { getEarningsLeaderboardAll } from "@/features/earnings/data/queries";
 import { requireRole } from "@/lib/auth/requireRole";
-import { Users, ExternalLink, Percent } from "lucide-react";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { Users, Percent } from "lucide-react";
+import { AgentTableRow } from "@/features/agents/ui/AgentTableRow";
+
+function getDefaultRange() {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(to.getDate() - 30);
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: to.toISOString().slice(0, 10),
+    payment_method: "all" as const
+  };
+}
 
 export default async function AgentsPage({
-  searchParams,
+  searchParams
 }: {
-  searchParams?: { q?: string; role?: string };
+  searchParams?: { q?: string; role?: string; sort?: string };
 }) {
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
   const search = searchParams?.q ?? "";
   const role = searchParams?.role ?? "all";
-  const agents = await getAgents({ search, role });
+  const sort = searchParams?.sort ?? "earnings";
+
+  const [agents, leaderboard] = await Promise.all([
+    getAgents({ search, role }),
+    getEarningsLeaderboardAll(getDefaultRange())
+  ]);
+
+  const leaderboardByAgentId = new Map(
+    leaderboard.map((r) => [r.agent_id, r])
+  );
+
+  type Row = {
+    user_id: string;
+    display_name: string;
+    role: string;
+    commission_percent: number | null;
+    avatar_url: string | null;
+    rank: number;
+    rentals: number;
+    earnings: number;
+    last_activity: string | null;
+  };
+
+  const rows: Row[] = agents.map((agent) => {
+    const lb = leaderboardByAgentId.get(agent.user_id);
+    return {
+      user_id: agent.user_id,
+      display_name: agent.user_profiles?.display_name ?? "Agent",
+      role: agent.user_profiles?.role ?? "agent",
+      commission_percent: agent.commission_percent ?? null,
+      avatar_url: agent.avatar_url ?? null,
+      rank: lb?.rank ?? 0,
+      rentals: lb?.transactions_count ?? 0,
+      earnings: lb?.agent_earnings ?? 0,
+      last_activity: lb?.last_activity ?? null
+    };
+  });
+
+  const sorted =
+    sort === "rentals"
+      ? [...rows].sort((a, b) => b.rentals - a.rentals)
+      : [...rows].sort((a, b) => b.earnings - a.earnings);
 
   const roleOptions = [
     { value: "all", label: "All Roles" },
     { value: "admin", label: "Admin" },
     { value: "agent", label: "Agent" },
     { value: "marketing_only", label: "Marketing Only" },
-    { value: "agent_and_marketing", label: "Agent + Marketing" },
+    { value: "agent_and_marketing", label: "Agent + Marketing" }
   ];
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Agents" subtitle="Agent profiles & commissions" />
+      <PageHeader title="Agents" subtitle="Agent profiles & earnings" />
 
       <FilterBar>
-        <form method="get">
+        <form method="get" className="flex flex-wrap items-end gap-3">
           <FilterRow>
             <FilterGroup label="Search">
               <Input
@@ -62,6 +115,16 @@ export default async function AgentsPage({
                 ))}
               </select>
             </FilterGroup>
+            <FilterGroup label="Sort by">
+              <select
+                name="sort"
+                defaultValue={sort}
+                className="flex h-10 w-full rounded-lg border bg-surface-card px-3 py-2 text-sm border-border text-foreground-secondary"
+              >
+                <option value="earnings">Earnings</option>
+                <option value="rentals">Rentals</option>
+              </select>
+            </FilterGroup>
             <FilterActions>
               <Button type="submit" variant="outline" size="sm">
                 Apply
@@ -73,59 +136,32 @@ export default async function AgentsPage({
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-foreground-secondary">
-          Showing <span className="font-medium text-foreground">{agents.length}</span> agents
+          Showing <span className="font-medium text-foreground">{sorted.length}</span> agents
         </p>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Commission</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {agents.map((agent) => (
-            <TableRow key={agent.user_id}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-brand-subtle flex items-center justify-center">
-                    <span className="text-brand font-medium text-sm">
-                      {agent.user_profiles?.display_name?.charAt(0)?.toUpperCase() ?? "A"}
-                    </span>
-                  </div>
-                  <span className="font-medium text-foreground">
-                    {agent.user_profiles?.display_name ?? agent.user_id}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <span className="px-2 py-1 rounded-md bg-surface-inset text-foreground-secondary text-xs font-medium capitalize">
-                  {agent.user_profiles?.role ?? "agent"}
-                </span>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-1.5 text-success font-medium">
-                  <Percent className="h-3.5 w-3.5" />
-                  {agent.commission_percent}%
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <Link href={`/agents/${agent.user_id}`}>
-                  <Button variant="ghost" size="xs">
-                    View
-                    <ExternalLink className="h-3 w-3 ml-1" />
-                  </Button>
-                </Link>
-              </TableCell>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-14">Rank</TableHead>
+              <TableHead>Agent</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead className="text-right tabular-nums">Rentals</TableHead>
+              <TableHead className="text-right tabular-nums">Earnings</TableHead>
+              <TableHead className="text-right tabular-nums">Commission</TableHead>
+              <TableHead className="text-right">Last Active</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {sorted.map((row) => (
+              <AgentTableRow key={row.user_id} row={row} />
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
 
-      {agents.length === 0 && (
+      {sorted.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Users className="h-12 w-12 text-foreground-muted mx-auto mb-3" />

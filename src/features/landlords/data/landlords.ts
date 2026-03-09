@@ -55,15 +55,22 @@ export async function getLandlordById(id: string) {
     .select("id")
     .eq("landlord_id", id);
 
-  const { data: listings } = await supabase
+  const { data: listingsScraped } = await supabase
     .from("listings_scraped")
     .select("*")
     .eq("landlord_id", id)
     .order("last_seen_at", { ascending: false });
 
+  const { data: scrapedListings } = await supabase
+    .from("scraped_listings")
+    .select("*")
+    .eq("landlord_id", id)
+    .order("updated_at", { ascending: false });
+
   return {
     landlord,
     rentalsCount: rentals?.length ?? 0,
-    listings: listings ?? []
+    listings: listingsScraped ?? [],
+    scrapedListings: scrapedListings ?? [],
   };
 }

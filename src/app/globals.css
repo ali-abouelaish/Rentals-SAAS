@@ -321,3 +321,69 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Nav progress bar — instant feedback when switching tabs */
+@keyframes nav-loading-shimmer {
+  0%, 100% { transform: translateX(-100%); }
+  50% { transform: translateX(350%); }
+}
+.nav-loading-bar-inner {
+  animation: nav-loading-shimmer 1.2s ease-in-out infinite;
+}
+
+/* ── Landing: Futuristic Harbor Layer ───────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+}
+
+.harbor-futuristic-bg {
+  background:
+    radial-gradient(70% 45% at 78% 12%, rgba(79, 209, 255, 0.18), transparent 70%),
+    radial-gradient(45% 40% at 18% 8%, rgba(16, 62, 115, 0.22), transparent 70%),
+    linear-gradient(180deg, #f7faff 0%, #f3f8ff 48%, #f8fbff 100%);
+}
+
+.harbor-grid-overlay {
+  background-image:
+    linear-gradient(to right, rgba(16, 62, 115, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 62, 115, 0.08) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
+}
+
+.glass-panel {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.82), rgba(245, 252, 255, 0.58));
+  border: 1px solid rgba(142, 223, 255, 0.42);
+  box-shadow: 0 14px 46px rgba(11, 47, 89, 0.12), 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+  backdrop-filter: blur(20px);
+}
+
+.glass-panel-strong {
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.9), rgba(241, 250, 255, 0.72));
+  border: 1px solid rgba(79, 209, 255, 0.35);
+  box-shadow:
+    0 24px 80px rgba(11, 47, 89, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+    0 0 44px rgba(79, 209, 255, 0.2);
+  backdrop-filter: blur(22px);
+}
+
+.harbor-glow-ring {
+  box-shadow: 0 0 0 1px rgba(79, 209, 255, 0.36), 0 0 40px rgba(79, 209, 255, 0.28);
+}
+
+.harbor-divider {
+  position: relative;
+}
+
+.harbor-divider::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  transform: translateX(-50%);
+  width: min(80vw, 780px);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(16, 62, 115, 0), rgba(79, 209, 255, 0.65), rgba(16, 62, 115, 0));
+}

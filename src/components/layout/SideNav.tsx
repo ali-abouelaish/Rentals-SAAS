@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard,
   BadgePercent,
+  Sparkles,
   Users,
   ClipboardList,
   Building2,
@@ -16,9 +17,12 @@ import {
   Gift,
   Menu,
   X,
+  CreditCard,
+  User,
 } from "lucide-react";
+import { ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SideNavProps {
   profile: {
@@ -27,21 +31,35 @@ interface SideNavProps {
   };
 }
 
-const navItems = [
+const navItems: Array<{
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  allowedRoles?: readonly string[];
+}> = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/earnings", label: "Earnings", icon: BadgePercent },
+  { href: "/me", label: "My Profile", icon: User, allowedRoles: ["agent"] },
+  { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/rentals", label: "Rentals", icon: ClipboardList },
   { href: "/landlords", label: "Landlords", icon: Building2 },
   { href: "/bonuses", label: "Bonuses", icon: Gift },
   { href: "/invoices", label: "Invoices", icon: FileText },
-  { href: "/agents", label: "Agents", icon: Home, adminOnly: true },
-  { href: "/settings/billing-profiles", label: "Billing", icon: Settings, adminOnly: true },
+  { href: "/room-enhancer", label: "Room Enhancer", icon: Sparkles },
+  { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
 ];
 
 export function SideNav({ profile }: SideNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+
+  // Clear navigating state when the route has changed
+  useEffect(() => {
+    setNavigatingTo(null);
+  }, [pathname]);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
@@ -67,20 +85,25 @@ export function SideNav({ profile }: SideNavProps) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
         {navItems.map((item) => {
-          if (item.adminOnly && profile.role !== "super_admin") return null;
+          if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
           const active = isActive(item.href);
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => setMobileOpen(false)}
+              prefetch={false}
+              onClick={() => {
+                setMobileOpen(false);
+                setNavigatingTo(item.href);
+              }}
               className={cn(
                 "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium",
                 "transition-all duration-base ease-default",
                 active
                   ? "bg-accent text-accent-fg shadow-glow"
-                  : "text-sidebar-text hover:bg-white/[0.06] hover:text-white"
+                  : "text-sidebar-text hover:bg-white/[0.06] hover:text-white",
+                navigatingTo === item.href && "opacity-80"
               )}
             >
               <item.icon
@@ -128,6 +151,17 @@ export function SideNav({ profile }: SideNavProps) {
 
   return (
     <>
+      {/* Global progress bar — shows immediately on nav click */}
+      {navigatingTo && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[100] h-0.5 bg-brand overflow-hidden"
+          role="progressbar"
+          aria-label="Loading"
+        >
+          <div className="nav-loading-bar-inner h-full w-1/3 bg-brand-fg/30" />
+        </div>
+      )}
+
       {/* Mobile Hamburger */}
       <button
         onClick={() => setMobileOpen(true)}

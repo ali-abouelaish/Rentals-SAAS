@@ -24,7 +24,16 @@ export function InvoiceFromBonusesForm({
   initialSelected?: string[];
   lockSelection?: boolean;
 }) {
-  const [selected, setSelected] = useState<string[]>(initialSelected ?? []);
+  const [selected, setSelected] = useState<string[]>(() => {
+    const raw = initialSelected ?? [];
+    if (raw.length === 0) return [];
+    const first = bonuses.find((b) => raw.includes(b.id));
+    if (!first) return raw;
+    return raw.filter((id) => {
+      const b = bonuses.find((x) => x.id === id);
+      return b && b.landlord_id === first.landlord_id;
+    });
+  });
   const landlordLock = useMemo(() => {
     const selectedBonus = bonuses.find((bonus) => selected.includes(bonus.id));
     return selectedBonus?.landlord_id ?? null;
@@ -32,6 +41,9 @@ export function InvoiceFromBonusesForm({
 
   const toggle = (id: string) => {
     if (lockSelection) return;
+    const bonus = bonuses.find((b) => b.id === id);
+    if (!bonus) return;
+    if (landlordLock && bonus.landlord_id !== landlordLock) return;
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
@@ -52,6 +64,9 @@ export function InvoiceFromBonusesForm({
           ))}
         </select>
       </div>
+      <p className="text-xs text-foreground-muted">
+        Only bonuses from the same landlord can be included in one invoice.
+      </p>
       <div className="space-y-2">
         {bonuses.map((bonus) => {
           const disabled = lockSelection

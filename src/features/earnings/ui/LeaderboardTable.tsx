@@ -47,9 +47,7 @@ function PodiumCard({
     },
   }[place];
 
-  const href = showAgencyTotals
-    ? `/admin/agents/${row.agent_id}/commission`
-    : `/agents/${row.agent_id}`;
+  const href = `/agents/${row.agent_id}`;
 
   return (
     <Link
@@ -60,7 +58,7 @@ function PodiumCard({
       <div className="mb-2">{config.icon}</div>
 
       {/* Avatar */}
-      <div className={`${config.avatarSize} mb-3`}>
+      <div className={`${config.avatarSize} mb-3 flex items-center justify-center`}>
         <AvatarCircle name={row.agent_name} url={row.avatar_url} />
       </div>
 
@@ -95,9 +93,7 @@ function RunnerUpRow({
   row: EarningsLeaderboardRow;
   showAgencyTotals: boolean;
 }) {
-  const href = showAgencyTotals
-    ? `/admin/agents/${row.agent_id}/commission`
-    : `/agents/${row.agent_id}`;
+  const href = `/agents/${row.agent_id}`;
 
   return (
     <Link

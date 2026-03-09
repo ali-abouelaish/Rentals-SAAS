@@ -72,13 +72,15 @@ function TabsTrigger({
 function TabsContent({
   value,
   children,
+  className,
 }: {
   value: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const ctx = React.useContext(TabsContext);
   if (!ctx || ctx.value !== value) return null;
-  return <div>{children}</div>;
+  return <div className={className}>{children}</div>;
 }
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };

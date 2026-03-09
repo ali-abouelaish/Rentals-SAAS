@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/auth/requireRole";
+import { requireUserProfile } from "@/lib/auth/requireRole";
 
 export async function updateLandlord(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireUserProfile();
   const landlordId = String(formData.get("landlord_id") ?? "");
   if (!landlordId) throw new Error("Missing landlord id.");
 

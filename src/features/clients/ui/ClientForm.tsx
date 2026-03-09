@@ -31,7 +31,10 @@ export function ClientForm({
     company_address: initialValues?.company_address ?? "",
     occupation: initialValues?.occupation ?? "",
     status: initialValues?.status ?? "pending",
-    assigned_agent_id: initialValues?.assigned_agent_id
+    assigned_agent_id: initialValues?.assigned_agent_id,
+    agency_name: initialValues?.agency_name ?? "",
+    contact_number: initialValues?.contact_number ?? "",
+    share_code: initialValues?.share_code ?? ""
   };
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
@@ -96,6 +99,31 @@ export function ClientForm({
         </div>
       </div>
 
+      {/* Agency & contact */}
+      <div className="space-y-4">
+        <h4 className="text-sm font-semibold text-brand">Agency & contact</h4>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Input placeholder="Agency name" {...form.register("agency_name")} />
+          <Input placeholder="Contact number" {...form.register("contact_number")} />
+        </div>
+      </div>
+
+      {/* Share code */}
+      <div className="space-y-4">
+        <h4 className="text-sm font-semibold text-brand">Share code</h4>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Input
+            placeholder="Share code (optional, alphanumeric)"
+            {...form.register("share_code")}
+          />
+          {form.formState.errors.share_code && (
+            <p className="text-xs text-red-500 md:col-span-2">
+              {form.formState.errors.share_code.message}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Status */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Status</label>
@@ -105,7 +133,8 @@ export function ClientForm({
           options={[
             { label: "Pending", value: "pending" },
             { label: "On hold", value: "on_hold" },
-            { label: "Solved", value: "solved" }
+            { label: "Solved", value: "solved" },
+            { label: "Registered", value: "registered" }
           ]}
         />
       </div>

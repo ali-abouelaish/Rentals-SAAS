@@ -96,6 +96,7 @@ export async function updateBonus(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/bonuses");
+  revalidatePath(`/bonuses/${bonusId}`);
 }
 
 async function deleteBonusById(bonusId: string) {

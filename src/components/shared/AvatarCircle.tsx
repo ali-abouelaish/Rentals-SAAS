@@ -1,4 +1,6 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
 const sizeMap = {
@@ -17,6 +19,7 @@ export function AvatarCircle({
   url?: string | null;
   size?: keyof typeof sizeMap | number;
 }) {
+  const [failed, setFailed] = useState(false);
   const px = typeof size === "number" ? size : sizeMap[size];
   const initials = name
     .split(" ")
@@ -25,15 +28,24 @@ export function AvatarCircle({
     .slice(0, 2)
     .toUpperCase();
 
+  const showImage = url && !failed;
+
   return (
     <div
       className={cn(
-        "flex items-center justify-center rounded-full bg-brand-subtle text-brand text-xs font-semibold"
+        "flex items-center justify-center rounded-full bg-brand-subtle text-brand text-xs font-semibold overflow-hidden"
       )}
       style={{ width: px, height: px }}
     >
-      {url ? (
-        <Image src={url} alt={name} width={px} height={px} className="rounded-full" />
+      {showImage ? (
+        <img
+          src={url}
+          alt={name}
+          width={px}
+          height={px}
+          className="rounded-full w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
       ) : (
         <span>{initials}</span>
       )}

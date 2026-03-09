@@ -1,8 +1,9 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "../supabase/server";
 import { ensureTenantSetup } from "@/features/tenants/actions/tenants";
 
-export async function requireUserProfile() {
+export const requireUserProfile = cache(async () => {
   const supabase = createSupabaseServerClient();
   const {
     data: { user }
@@ -23,13 +24,24 @@ export async function requireUserProfile() {
   }
 
   return profile;
-}
+});
 
 export async function requireRole(roles: string[]) {
   const profile = await requireUserProfile();
-  const allowed = roles.map((role) => role.toLowerCase());
-  if (!allowed.includes(profile.role.toLowerCase())) {
+  const allowed = roles.map((r) => r.toLowerCase());
+  const userRole = (profile.role ?? "").toLowerCase();
+  if (!allowed.includes(userRole)) {
     redirect("/dashboard");
+  }
+  return profile;
+}
+
+/** For /me: only agents. Admins and others redirect to /earnings. */
+export async function requireAgentOnly() {
+  const profile = await requireUserProfile();
+  const role = (profile.role ?? "").toLowerCase();
+  if (role !== "agent") {
+    redirect("/earnings");
   }
   return profile;
 }

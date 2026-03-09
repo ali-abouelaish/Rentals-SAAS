@@ -74,32 +74,51 @@ export function RentalApprovalPanel({
         <input type="hidden" name="marketing_fee_override_reason" value={overrideReason} />
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 text-sm text-foreground-secondary">
-        <div>
-          <p className="text-xs uppercase text-foreground-secondary">Rental amount</p>
-          <p className="text-sm text-navy">{formatGBP(rentalAmount)}</p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-border bg-surface-inset p-4">
+          <p className="mb-3 text-sm font-semibold text-navy">Calculation</p>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-foreground-secondary">Payment method</span>
+              <span className="font-semibold text-navy capitalize">{paymentMethod}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-foreground-secondary">Rental amount</span>
+              <span className="font-semibold text-navy">{formatGBP(rentalAmount)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-foreground-secondary">Payment fee</span>
+              <span className="font-semibold text-navy">{(paymentFee * 100).toFixed(2)}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-foreground-secondary">Base after fee</span>
+              <span className="font-semibold text-navy">{formatGBP(base)}</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="text-xs uppercase text-foreground-secondary">Payment fee</p>
-          <p className="text-sm text-navy">{paymentFee * 100}%</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase text-foreground-secondary">Base after fee</p>
-          <p className="text-sm text-navy">{formatGBP(base)}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase text-foreground-secondary">Assisted gross</p>
-          <p className="text-sm text-navy">{formatGBP(assistedGross)}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase text-foreground-secondary">Default marketing fee</p>
-          <p className="text-sm text-navy">{formatGBP(marketingFeeDefault)}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase text-foreground-secondary">Assisted net</p>
-          <p className={`text-sm ${invalidNet ? "text-error" : "text-navy"}`}>
-            {formatGBP(assistedNet)}
-          </p>
+
+        <div className="rounded-xl border border-border bg-surface-inset p-4">
+          <p className="mb-3 text-sm font-semibold text-navy">Payout summary</p>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-foreground-secondary">Assisted gross</span>
+              <span className="font-semibold text-navy">{formatGBP(assistedGross)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-foreground-secondary">Default marketing fee</span>
+              <span className="font-semibold text-navy">{formatGBP(marketingFeeDefault)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-foreground-secondary">Applied marketing fee</span>
+              <span className="font-semibold text-navy">{formatGBP(marketingFeeValue)}</span>
+            </div>
+            <div className="mt-2 border-t border-border pt-2 flex items-center justify-between">
+              <span className="font-medium text-foreground">Assisted net</span>
+              <span className={`text-base font-bold ${invalidNet ? "text-error" : "text-navy"}`}>
+                {formatGBP(assistedNet)}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -111,20 +130,30 @@ export function RentalApprovalPanel({
           </div>
           <Badge className="border-accent text-accent-dark">Override required</Badge>
           <div className="grid gap-3 md:grid-cols-2">
-            <Input
-              type="number"
-              min={0}
-              max={marketingFeeDefault}
-              step="0.01"
-              placeholder={`Max ${formatGBP(marketingFeeDefault)}`}
-              value={overrideFee}
-              onChange={(event) => setOverrideFee(event.target.value)}
-            />
-            <Input
-              placeholder="Reason (optional)"
-              value={overrideReason}
-              onChange={(event) => setOverrideReason(event.target.value)}
-            />
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground-secondary">
+                Custom marketing fee (GBP)
+              </label>
+              <Input
+                type="number"
+                min={0}
+                max={marketingFeeDefault}
+                step="0.01"
+                placeholder={`Max ${formatGBP(marketingFeeDefault)}`}
+                value={overrideFee}
+                onChange={(event) => setOverrideFee(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground-secondary">
+                Override reason (optional)
+              </label>
+              <Input
+                placeholder="Why is this fee different?"
+                value={overrideReason}
+                onChange={(event) => setOverrideReason(event.target.value)}
+              />
+            </div>
           </div>
           {invalidOverride ? (
             <p className="text-xs text-error">

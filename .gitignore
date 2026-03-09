@@ -1,3 +1,9 @@
 node_modules
 .next
 .env.local
+# Google service account (scraper)
+credentials/
+**/google-credentials.json
+**/service_account.json
+
+/src/generated/prisma

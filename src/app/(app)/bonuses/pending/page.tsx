@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { getBonuses } from "@/features/bonuses/data/bonuses";
 import { approveBonus } from "@/features/bonuses/actions/bonuses";
 import { requireRole } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { formatCurrency } from "@/lib/utils/formatters";
 
 export default async function PendingBonusesPage() {
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
   const { bonuses } = await getBonuses({ status: "pending" });
 
   return (

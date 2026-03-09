@@ -1,22 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { getBonuses } from "@/features/bonuses/data/bonuses";
 import { SubmitBonusDialog } from "@/features/bonuses/ui/SubmitBonusDialog";
 import { BonusesTableWithInvoice } from "@/features/bonuses/ui/BonusesTableWithInvoice";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import {
-
-  FileText,
-  Gift,
-  Search,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils/formatters";
+import { FileText, Gift, Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default async function BonusesPage({
   searchParams
@@ -31,26 +21,25 @@ export default async function BonusesPage({
   const landlordFilter = searchParams?.landlord ?? "all";
   const currentPage = Math.max(1, parseInt(searchParams?.page ?? "1", 10) || 1);
 
-  const { bonuses, total, page, totalPages } = await getBonuses({
-    search,
-    status: activeStatus,
-    landlordId: landlordFilter,
-    page: currentPage,
-  });
+  const [bonusesResult, { data: landlords }, { data: agents }] = await Promise.all([
+    getBonuses({
+      search,
+      status: activeStatus,
+      landlordId: landlordFilter,
+      page: currentPage,
+    }),
+    supabase.from("landlords").select("id, name").order("name", { ascending: true }),
+    supabase
+      .from("user_profiles")
+      .select("id, display_name")
+      .eq("tenant_id", profile.tenant_id)
+      .order("display_name", { ascending: true })
+  ]);
 
+  const { bonuses, total, page, totalPages } = bonusesResult;
   const invoiceEligible = bonuses.filter((bonus) =>
     ["approved", "pending"].includes(bonus.status)
   );
-
-  const { data: landlords } = await supabase
-    .from("landlords")
-    .select("id, name")
-    .order("name", { ascending: true });
-  const { data: agents } = await supabase
-    .from("user_profiles")
-    .select("id, display_name")
-    .eq("tenant_id", profile.tenant_id)
-    .order("display_name", { ascending: true });
 
   const statusFilters = ["all", "pending", "approved", "sent", "paid", "declined"];
 
@@ -190,65 +179,6 @@ export default async function BonusesPage({
           </p>
         )}
       </div>
-
-      {/* ── All Bonuses — card-based list ───── */}
-      {bonuses.length > 0 ? (
-        <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
-          <div className="divide-y divide-border">
-            {bonuses.map((bonus) => (
-              <div
-                key={bonus.id}
-                className="flex items-center justify-between px-6 py-4 hover:bg-surface-inset transition-colors duration-base group"
-              >
-                <div className="flex items-center gap-4">
-                  {/* Icon */}
-                  <div className="h-10 w-10 rounded-xl bg-brand-subtle flex items-center justify-center">
-                    <Gift className="h-4 w-4 text-brand" />
-                  </div>
-
-                  {/* Info */}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">
-                        {bonus.code ? (bonus.code.startsWith("LC") ? bonus.code : `LC${bonus.code}`) : bonus.id.slice(0, 8)}
-                      </p>
-                      <StatusBadge status={bonus.status} size="sm" />
-                    </div>
-                    <p className="text-xs text-foreground-muted mt-0.5">
-                      {bonus.client_name} · {bonus.property_address}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-6">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-semibold text-foreground tabular-nums">
-                      {formatCurrency(bonus.amount_owed)}
-                    </p>
-                    <p className="text-xs text-foreground-muted">
-                      {formatDate(bonus.bonus_date)}
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold text-foreground tabular-nums sm:hidden">
-                    {formatCurrency(bonus.amount_owed)}
-                  </p>
-                  <span className="text-xs text-foreground-muted hidden lg:block">
-                    {(bonus as any).landlords?.[0]?.name ?? "—"}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-bento bg-surface-card shadow-bento py-16 text-center">
-          <Gift className="h-12 w-12 text-foreground-muted mx-auto mb-4" strokeWidth={1.5} />
-          <p className="text-lg font-semibold text-foreground mb-1">No bonuses found</p>
-          <p className="text-sm text-foreground-secondary">
-            Try adjusting your search or filters
-          </p>
-        </div>
-      )}
 
       {/* ── Pagination ──────────────────────── */}
       {totalPages > 1 && (

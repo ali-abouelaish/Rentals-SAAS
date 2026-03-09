@@ -104,3 +104,35 @@ export async function getBonusesForInvoice() {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+/** Invoices with status "submitted" (need admin approval). For admin dashboard. */
+export async function getInvoicesNeedingApproval() {
+  const supabase = createSupabaseServerClient();
+  await requireUserProfile();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, invoice_number, total, submitted_at, landlords(name)")
+    .eq("status", "submitted")
+    .order("submitted_at", { ascending: false })
+    .limit(20);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/** Invoices with status "sent" and sent_at ≥ 7 days ago (payment reminder / mark received). For admin dashboard. */
+export async function getInvoicesSentOverSevenDaysAgo() {
+  const supabase = createSupabaseServerClient();
+  await requireUserProfile();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, invoice_number, total, sent_at, landlords(name)")
+    .eq("status", "sent")
+    .lte("sent_at", sevenDaysAgoISO)
+    .order("sent_at", { ascending: true })
+    .limit(20);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}

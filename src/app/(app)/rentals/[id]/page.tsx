@@ -9,43 +9,81 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { RentalApprovalPanel } from "@/features/rentals/ui/RentalApprovalPanel";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { updateRentalCode, deleteRentalCode } from "@/features/rentals/actions/rentals";
+import { deleteRentalCode } from "@/features/rentals/actions/rentals";
 import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
+import { RentalEditPanel } from "@/features/rentals/ui/RentalEditPanel";
+import { RentalDocumentsViewer } from "@/features/rentals/ui/RentalDocumentsViewer";
+import { RentalPayoutSummary } from "@/features/rentals/ui/RentalPayoutSummary";
 
 export default async function RentalDetailPage({
   params
 }: {
   params: { id: string };
 }) {
-  const rental = await getRentalCodeById(params.id);
-  const profile = await requireUserProfile();
+  const [rental, profile] = await Promise.all([
+    getRentalCodeById(params.id),
+    requireUserProfile()
+  ]);
   const supabase = createSupabaseServerClient();
-  const { data: documentSets } = await supabase
-    .from("document_sets")
-    .select("id, set_type, documents(id, file_name)")
-    .eq("rental_code_id", params.id);
 
-  const { data: assistedAgent } = await supabase
-    .from("agent_profiles")
-    .select("commission_percent")
-    .eq("user_id", rental.assisted_by_agent_id)
-    .single();
+  const [{ data: documentSets }, { data: assistedAgent }, { data: marketingAgent }, { data: agents }] =
+    await Promise.all([
+      supabase
+        .from("document_sets")
+        .select("id, set_type, documents(id, file_name, file_path)")
+        .eq("rental_code_id", params.id),
+      supabase
+        .from("agent_profiles")
+        .select("commission_percent")
+        .eq("user_id", rental.assisted_by_agent_id)
+        .single(),
+      supabase
+        .from("agent_profiles")
+        .select("marketing_fee")
+        .eq("user_id", rental.marketing_agent_id)
+        .single(),
+      supabase
+        .from("user_profiles")
+        .select("id, display_name")
+        .eq("tenant_id", rental.tenant_id)
+        .order("display_name", { ascending: true })
+    ]);
 
-  const { data: marketingAgent } = await supabase
-    .from("agent_profiles")
-    .select("marketing_fee")
-    .eq("user_id", rental.marketing_agent_id)
-    .single();
+  const allDocumentPaths =
+    documentSets?.flatMap((set) =>
+      (set.documents ?? [])
+        .map((doc) => doc.file_path)
+        .filter((path): path is string => Boolean(path))
+    ) ?? [];
 
-  const { data: agents } = await supabase
-    .from("user_profiles")
-    .select("id, display_name")
-    .eq("tenant_id", rental.tenant_id)
-    .order("display_name", { ascending: true });
+  const signedUrlMap = new Map<string, string>();
+  if (allDocumentPaths.length > 0) {
+    const { data: signedUrls } = await supabase.storage
+      .from("rental_docs")
+      .createSignedUrls(allDocumentPaths, 60 * 60);
+    signedUrls?.forEach((entry, index) => {
+      const path = allDocumentPaths[index];
+      if (path && entry?.signedUrl) {
+        signedUrlMap.set(path, entry.signedUrl);
+      }
+    });
+  }
+
+  const documentSetsForViewer =
+    documentSets?.map((set) => ({
+      id: set.id,
+      set_type: set.set_type,
+      documents:
+        set.documents?.map((doc) => ({
+          id: doc.id,
+          file_name: doc.file_name,
+          url: doc.file_path ? signedUrlMap.get(doc.file_path) ?? "" : "",
+        })) ?? [],
+    })) ?? [];
 
   const marketingAgentName =
     agents?.find((agent) => agent.id === rental.marketing_agent_id)?.display_name ?? "";
+  const marketingAgentLabel = marketingAgentName || rental.marketing_agent_id || "—";
 
   const rentalText = [
     `Code: ${rental.code}`,
@@ -61,7 +99,7 @@ export default async function RentalDetailPage({
     rental.client_snapshot?.dob ? `DOB: ${rental.client_snapshot.dob}` : null,
     "",
     `Assisted by: ${rental.user_profiles?.display_name ?? rental.assisted_by_agent_id}`,
-    rental.marketing_agent_id ? `Marketing agent: ${rental.marketing_agent_id}` : null
+    rental.marketing_agent_id ? `Marketing agent: ${marketingAgentLabel}` : null
   ]
     .filter(Boolean)
     .join("\n");
@@ -105,6 +143,23 @@ export default async function RentalDetailPage({
         </Card>
       ) : null}
 
+      {rental.assisted_by_agent_id === profile.id &&
+      !(profile.role.toLowerCase() === "admin" && rental.status === "pending") ? (
+        <Card>
+          <CardContent className="space-y-4">
+            <p className="text-sm font-medium text-navy">Your payout summary</p>
+            <RentalPayoutSummary
+              rentalAmount={rental.consultation_fee_amount}
+              paymentMethod={rental.payment_method}
+              commissionPercent={assistedAgent?.commission_percent ?? 0}
+              marketingFeeDefault={marketingAgent?.marketing_fee ?? 0}
+              assistedAgentId={rental.assisted_by_agent_id}
+              marketingAgentId={rental.marketing_agent_id}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardContent className="space-y-2 text-sm text-foreground-secondary">
           <p className="text-sm font-medium text-navy">Rental template preview</p>
@@ -135,7 +190,7 @@ export default async function RentalDetailPage({
             <div className="pt-2">
               <p className="font-medium text-navy">Agents</p>
               <p>Assisted by: {rental.user_profiles?.display_name ?? rental.assisted_by_agent_id}</p>
-              <p>Marketing agent: {rental.marketing_agent_id ?? "—"}</p>
+              <p>Marketing agent: {marketingAgentLabel}</p>
             </div>
           </div>
         </CardContent>
@@ -146,55 +201,16 @@ export default async function RentalDetailPage({
           rental.assisted_by_agent_id === profile.id) ? (
         <Card>
           <CardContent className="space-y-3">
-            <p className="text-sm font-medium text-brand">Edit rental</p>
-            <form action={updateRentalCode} className="grid gap-3 md:grid-cols-2">
-              <input type="hidden" name="rental_id" value={rental.id} />
-              <input type="hidden" name="client_id" value={rental.client_id} />
-              <Input
-                name="consultation_fee_amount"
-                type="number"
-                step="0.01"
-                defaultValue={String(rental.consultation_fee_amount)}
-              />
-              <select
-                name="payment_method"
-                defaultValue={rental.payment_method}
-                className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
-              >
-                <option value="cash">Cash</option>
-                <option value="transfer">Transfer</option>
-                <option value="card">Card</option>
-              </select>
-              <Input
-                name="property_address"
-                defaultValue={rental.property_address}
-                placeholder="Property address"
-              />
-              <Input
-                name="licensor_name"
-                defaultValue={rental.licensor_name}
-                placeholder="Licensor name"
-              />
-              <div className="md:col-span-2">
-                <label className="text-xs text-foreground-secondary">Marketing agent (optional)</label>
-                <Input
-                  list="marketing-agent-edit-list"
-                  name="marketing_agent_name"
-                  defaultValue={marketingAgentName}
-                  placeholder="Search by name"
-                />
-                <datalist id="marketing-agent-edit-list">
-                  {(agents ?? []).map((agent) => (
-                    <option key={agent.id} value={agent.display_name ?? "Agent"} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="md:col-span-2">
-                <Button type="submit" variant="secondary">
-                  Save changes
-                </Button>
-              </div>
-            </form>
+            <RentalEditPanel
+              rentalId={rental.id}
+              clientId={rental.client_id}
+              consultationFeeAmount={rental.consultation_fee_amount}
+              paymentMethod={rental.payment_method}
+              propertyAddress={rental.property_address}
+              licensorName={rental.licensor_name}
+              marketingAgentName={marketingAgentName}
+              agents={agents ?? []}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -203,14 +219,7 @@ export default async function RentalDetailPage({
         <CardContent className="space-y-3">
           <p className="text-sm font-medium text-brand">Upload documents</p>
           <DocumentUploadForm rentalCodeId={rental.id} />
-          <div className="space-y-2 text-sm text-foreground-secondary">
-            {documentSets?.map((set) => (
-              <div key={set.id}>
-                <p className="font-medium text-brand">{set.set_type.replace("_", " ")}</p>
-                <p>{set.documents?.length ?? 0} documents</p>
-              </div>
-            ))}
-          </div>
+          <RentalDocumentsViewer sets={documentSetsForViewer} />
         </CardContent>
       </Card>
     </div>

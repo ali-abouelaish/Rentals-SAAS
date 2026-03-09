@@ -36,7 +36,7 @@ export default async function ClientsPage({
     `https://${process.env.VERCEL_URL ?? "localhost:3000"}`;
   const leadUrl = `${baseUrl}/public/lead/${profile.id}`;
 
-  const statusFilters = ["all", "pending", "on_hold", "solved"];
+  const statusFilters = ["all", "pending", "on_hold", "solved", "registered"];
 
   const statusLabel = (s: string) =>
     s === "all"

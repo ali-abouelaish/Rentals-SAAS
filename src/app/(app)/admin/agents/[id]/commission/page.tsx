@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,7 +36,7 @@ export default async function AgentCommissionPage({
   params: { id: string };
   searchParams?: { from?: string; to?: string; status?: string };
 }) {
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
   const { data: agent } = await supabase
     .from("user_profiles")
