@@ -3,12 +3,19 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getTenantFromHost } from "@/lib/tenant";
 
 export async function signInWithEmail(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
   const supabase = createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
+  const headersList = headers();
+  const host = headersList.get("host") ?? "";
+  const currentTenantFromHost = host ? getTenantFromHost(host) : null;
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password
@@ -21,12 +28,40 @@ export async function signInWithEmail(formData: FormData) {
   if (userId) {
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("role")
+      .select("role, tenant_id")
       .eq("id", userId)
       .single();
 
-    if ((profile?.role ?? "").toLowerCase() === "super_admin") {
+    const role = (profile?.role ?? "").toLowerCase();
+    const tenantId = profile?.tenant_id as string | undefined;
+
+    if (role === "super_admin") {
       redirect("/admin");
+    }
+
+    if (tenantId) {
+      const { data: tenant } = await admin
+        .from("tenants")
+        .select("slug")
+        .eq("id", tenantId)
+        .maybeSingle();
+
+      const slug = tenant?.slug as string | undefined;
+      const portalDomainEnv = process.env.APP_PORTAL_DOMAIN;
+
+      if (slug && portalDomainEnv) {
+        const baseDomain = portalDomainEnv.replace(/^https?:\/\//, "").replace(/\/$/, "");
+        const targetHost = `${slug}.${baseDomain}`;
+
+        // If we're already on the correct tenant subdomain, just send them to dashboard.
+        if (currentTenantFromHost === slug) {
+          redirect("/dashboard");
+        }
+
+        const targetUrl = new URL(`https://${targetHost}`);
+        targetUrl.pathname = "/dashboard";
+        redirect(targetUrl.toString());
+      }
     }
   }
 
