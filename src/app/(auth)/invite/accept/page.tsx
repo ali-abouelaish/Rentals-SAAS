@@ -1,9 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-export default function InviteAcceptPage() {
+export const dynamic = "force-dynamic";
+
+function InviteAcceptContent() {
   const searchParams = useSearchParams();
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") || "invite";
@@ -56,6 +59,20 @@ export default function InviteAcceptPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function InviteAcceptPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+          <p className="text-gray-600 text-sm">Loading invitation…</p>
+        </div>
+      }
+    >
+      <InviteAcceptContent />
+    </Suspense>
   );
 }
 

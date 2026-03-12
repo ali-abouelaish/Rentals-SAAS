@@ -3,10 +3,22 @@ import OpenAI from "openai";
 
 export const runtime = "nodejs";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_BASE_URL,
-});
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI() {
+  if (!openaiClient) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not set on the server.");
+    }
+
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_API_BASE_URL,
+    });
+  }
+
+  return openaiClient;
+}
 
 type Mode = "generate" | "edit";
 
@@ -31,6 +43,8 @@ export async function POST(request: NextRequest) {
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
     }
+
+    const openai = getOpenAI();
 
     if (mode === "generate") {
       const result = await openai.images.generate({
