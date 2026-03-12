@@ -377,7 +377,7 @@ export async function resendInviteForUserAction(input: {
     process.env.NEXT_PUBLIC_VERCEL_URL ??
     "http://localhost:3000";
 
-  let redirectTo = `${appUrl}/auth/callback?next=/invite/accept`;
+  let redirectTo = `${appUrl}/invite/accept`;
   const redirectBaseDomain = getInviteRedirectBaseDomain();
   if (redirectBaseDomain) {
     const { data: tenant } = await admin
@@ -387,7 +387,7 @@ export async function resendInviteForUserAction(input: {
       .maybeSingle();
 
     if (tenant?.slug) {
-      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/auth/callback?next=/invite/accept`;
+      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/invite/accept`;
     }
   }
 
@@ -426,7 +426,7 @@ export async function inviteSuperAdminAction(input: {
     process.env.NEXT_PUBLIC_VERCEL_URL ??
     "http://localhost:3000";
 
-  let redirectTo = `${appUrl}/auth/callback?next=/invite/accept`;
+  let redirectTo = `${appUrl}/invite/accept`;
   const redirectBaseDomain = getInviteRedirectBaseDomain();
   if (redirectBaseDomain) {
     const { data: tenant } = await admin
@@ -436,7 +436,7 @@ export async function inviteSuperAdminAction(input: {
       .maybeSingle();
 
     if (tenant?.slug) {
-      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/auth/callback?next=/invite/accept`;
+      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/invite/accept`;
     }
   }
 

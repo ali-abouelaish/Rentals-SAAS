@@ -74,12 +74,12 @@ export async function createAgent(
       .maybeSingle();
 
     if (tenant?.slug) {
-      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/auth/callback?next=/invite/accept`;
+      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/invite/accept`;
     }
   }
 
   if (!redirectTo && appUrl) {
-    redirectTo = `${appUrl}/auth/callback?next=/invite/accept`;
+    redirectTo = `${appUrl}/invite/accept`;
   }
 
   const { data: createdUser, error: userError } = await admin.auth.admin.inviteUserByEmail(
