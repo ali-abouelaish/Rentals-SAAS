@@ -6,7 +6,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getTenantFromHost } from "@/lib/tenant";
 
-export async function signInWithEmail(formData: FormData) {
+export async function signInWithEmail(
+  _prevState: { error?: string } | undefined,
+  formData: FormData
+) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
@@ -21,7 +24,7 @@ export async function signInWithEmail(formData: FormData) {
     password
   });
   if (error) {
-    return { error: error.message };
+    return { error: error.message || "Invalid email or password." };
   }
 
   const userId = data.user?.id;
