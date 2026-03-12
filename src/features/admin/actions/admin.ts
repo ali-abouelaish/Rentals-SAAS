@@ -4,6 +4,24 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/auth/requireRole";
 
+function getInviteRedirectBaseDomain(): string | null {
+  const envDomain = process.env.APP_PORTAL_DOMAIN;
+  if (envDomain) {
+    return envDomain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) return null;
+
+  try {
+    const host = new URL(appUrl).host;
+    if (host.includes("localhost")) return null;
+    return host;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeSlug(value: string): string {
   return value
     .trim()
@@ -359,8 +377,22 @@ export async function resendInviteForUserAction(input: {
     process.env.NEXT_PUBLIC_VERCEL_URL ??
     "http://localhost:3000";
 
+  let redirectTo = `${appUrl}/auth/callback?next=/invite/accept`;
+  const redirectBaseDomain = getInviteRedirectBaseDomain();
+  if (redirectBaseDomain) {
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("slug")
+      .eq("id", input.tenantId)
+      .maybeSingle();
+
+    if (tenant?.slug) {
+      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/auth/callback?next=/invite/accept`;
+    }
+  }
+
   const { error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${appUrl}/auth/callback?next=/invite/accept`
+    redirectTo
   });
   if (error) return { ok: false, error: error.message };
 
@@ -394,8 +426,22 @@ export async function inviteSuperAdminAction(input: {
     process.env.NEXT_PUBLIC_VERCEL_URL ??
     "http://localhost:3000";
 
+  let redirectTo = `${appUrl}/auth/callback?next=/invite/accept`;
+  const redirectBaseDomain = getInviteRedirectBaseDomain();
+  if (redirectBaseDomain) {
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("slug")
+      .eq("id", actor.tenant_id)
+      .maybeSingle();
+
+    if (tenant?.slug) {
+      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/auth/callback?next=/invite/accept`;
+    }
+  }
+
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${appUrl}/auth/callback?next=/invite/accept`
+    redirectTo
   });
   if (inviteError || !invited?.user?.id) {
     const message = inviteError?.message ?? "Unable to send invite.";

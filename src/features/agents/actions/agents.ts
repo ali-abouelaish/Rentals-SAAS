@@ -12,6 +12,24 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+function getInviteRedirectBaseDomain(): string | null {
+  const envDomain = process.env.APP_PORTAL_DOMAIN;
+  if (envDomain) {
+    return envDomain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) return null;
+
+  try {
+    const host = new URL(appUrl).host;
+    if (host.includes("localhost")) return null;
+    return host;
+  } catch {
+    return null;
+  }
+}
+
 export async function updateAgentCommission(userId: string, values: AgentUpdateValues) {
   const supabase = createSupabaseServerClient();
   const profile = await requireRole(["admin"]);
@@ -45,9 +63,28 @@ export async function createAgent(
     process.env.NEXT_PUBLIC_VERCEL_URL ??
     undefined;
 
+  let redirectTo: string | undefined;
+
+  const redirectBaseDomain = getInviteRedirectBaseDomain();
+  if (redirectBaseDomain) {
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("slug")
+      .eq("id", profile.tenant_id)
+      .maybeSingle();
+
+    if (tenant?.slug) {
+      redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/auth/callback?next=/invite/accept`;
+    }
+  }
+
+  if (!redirectTo && appUrl) {
+    redirectTo = `${appUrl}/auth/callback?next=/invite/accept`;
+  }
+
   const { data: createdUser, error: userError } = await admin.auth.admin.inviteUserByEmail(
     payload.email,
-    appUrl ? { redirectTo: `${appUrl}/auth/callback?next=/invite/accept` } : undefined
+    redirectTo ? { redirectTo } : undefined
   );
   if (userError || !createdUser?.user) {
     const message = userError?.message ?? "Unable to create user.";
