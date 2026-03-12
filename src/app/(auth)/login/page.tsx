@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signInWithEmail } from "@/features/auth/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,11 @@ export default function LoginPage() {
         </div>
         <Input name="email" type="email" placeholder="Email" required />
         <Input name="password" type="password" placeholder="Password" required />
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-xs text-brand hover:underline">
+            Forgot password?
+          </Link>
+        </div>
         <Button type="submit" className="w-full">
           Sign In
         </Button>

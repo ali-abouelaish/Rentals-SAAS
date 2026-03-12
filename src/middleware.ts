@@ -1,17 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseMiddlewareClient } from "./lib/supabase/middleware";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/public"];
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/public"];
+
+function getTenantFromHost(host: string | null): string | null {
+  if (!host) return null;
+  const hostname = host.split(":")[0].toLowerCase();
+  const parts = hostname.split(".");
+
+  // e.g. truehold.harborops.co.uk -> ["truehold","harborops","co","uk"]
+  if (parts.length > 2) {
+    return parts[0] || null;
+  }
+
+  return null;
+}
 
 export async function middleware(request: NextRequest) {
+  const host = request.headers.get("host");
+  const tenantSlug = getTenantFromHost(host);
+
   const { supabase, response } = createSupabaseMiddlewareClient(request);
   const {
     data: { user }
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((path) =>
-    pathname === path || pathname.startsWith(`${path}/`)
+  const isPublic = PUBLIC_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
   const isApiRoute = pathname.startsWith("/api/");
 
@@ -19,6 +35,11 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // Attach tenant slug so server components / API routes can read it via headers().get("x-tenant")
+  if (tenantSlug) {
+    response.headers.set("x-tenant", tenantSlug);
   }
 
   return response;

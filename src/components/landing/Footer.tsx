@@ -15,7 +15,7 @@ export function Footer() {
             >
               <span className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-harbor-light-blue to-harbor-navy shadow-sm">
                 <Image
-                  src="/harbor-logo.png"
+                  src="/logo.png"
                   alt=""
                   fill
                   className="object-contain p-0.5"

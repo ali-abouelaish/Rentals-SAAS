@@ -2,16 +2,36 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createSupabaseBrowserClient();
   const next = searchParams.get("next") ?? "/me";
+  const code = searchParams.get("code");
 
   useEffect(() => {
-    // Supabase has set the session from the hash; redirect to app
-    router.replace(next);
-  }, [router, next]);
+    let mounted = true;
+
+    const run = async () => {
+      // Handle PKCE/code flow links if present.
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code);
+      } else {
+        // This also initializes hash-based recovery links if used.
+        await supabase.auth.getSession();
+      }
+      if (mounted) {
+        router.replace(next);
+      }
+    };
+
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [router, next, code, supabase]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-app">

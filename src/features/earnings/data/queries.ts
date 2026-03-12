@@ -31,7 +31,8 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
     supabase
       .from("agent_profiles")
       .select("user_id", { count: "exact", head: true })
-      .eq("tenant_id", profile.tenant_id),
+      .eq("tenant_id", profile.tenant_id)
+      .eq("is_disabled", false),
     supabase
       .from("ledger_entries")
       .select("amount_gbp, agent_earning_gbp, type, created_at")

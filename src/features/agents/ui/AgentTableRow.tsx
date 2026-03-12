@@ -17,6 +17,15 @@ export type AgentTableRowData = {
   last_activity: string | null;
 };
 
+function formatRoleLabel(role: string): string {
+  const r = role.toLowerCase();
+  if (r === "agent_and_marketing") return "Agent + Marketing";
+  if (r === "marketing_only") return "Marketing only";
+  if (r === "super_admin") return "Admin";
+  if (!r) return "Unknown";
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
+
 export function AgentTableRow({ row }: { row: AgentTableRowData }) {
   const router = useRouter();
   const href = `/agents/${row.user_id}`;
@@ -49,7 +58,7 @@ export function AgentTableRow({ row }: { row: AgentTableRowData }) {
       </TableCell>
       <TableCell>
         <span className="px-2 py-1 rounded-md bg-surface-inset text-foreground-secondary text-xs font-medium capitalize">
-          {row.role}
+          {formatRoleLabel(row.role)}
         </span>
       </TableCell>
       <TableCell className="text-right tabular-nums">{row.rentals}</TableCell>

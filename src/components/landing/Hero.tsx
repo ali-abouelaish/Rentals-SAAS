@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { SUBDOMAIN_EXAMPLES } from "@/lib/landing-config";
 import { cn } from "@/lib/utils/cn";
@@ -28,6 +29,22 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
           >
+            <div className="flex items-center gap-3 mb-6">
+              <span className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-harbor-light-blue to-harbor-navy shadow-lg flex items-center justify-center">
+                <Image
+                  src="/logo.png"
+                  alt="Harbor"
+                  width={48}
+                  height={48}
+                  className="object-contain p-1"
+                  unoptimized
+                  priority
+                />
+              </span>
+              <span className="text-2xl font-heading font-semibold tracking-tight text-harbor-navy-deep">
+                Harbor
+              </span>
+            </div>
             <p className="inline-flex items-center gap-2 rounded-full border border-harbor-light-blue/45 bg-white/55 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-harbor-navy backdrop-blur-xl">
               <span className="h-1.5 w-1.5 rounded-full bg-[#4FD1FF] shadow-[0_0_16px_rgba(79,209,255,0.8)]" />
               Harbor OS

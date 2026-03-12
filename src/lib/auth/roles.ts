@@ -4,10 +4,17 @@
  */
 export const ADMIN_ROLES = ["admin", "super_admin"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
+export const SUPER_ADMIN_ROLES = ["super_admin"] as const;
+export type SuperAdminRole = (typeof SUPER_ADMIN_ROLES)[number];
 
 export function isAdminRole(role: string | null | undefined): boolean {
   if (!role) return false;
   return ADMIN_ROLES.includes(role.toLowerCase() as AdminRole);
+}
+
+export function isSuperAdminRole(role: string | null | undefined): boolean {
+  if (!role) return false;
+  return SUPER_ADMIN_ROLES.includes(role.toLowerCase() as SuperAdminRole);
 }
 
 export function canAccessRoute(userRole: string | null | undefined, allowedRoles: readonly string[]): boolean {

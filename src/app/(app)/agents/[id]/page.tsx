@@ -17,6 +17,7 @@ import { formatGBP, formatDate } from "@/lib/utils/formatters";
 import { ArrowLeft, TrendingUp, ClipboardList } from "lucide-react";
 import { AgentProfileCharts } from "@/features/earnings/ui/AgentProfileCharts";
 import { AgentTransactionsTable } from "@/features/earnings/ui/AgentTransactionsTable";
+import { AgentDisableToggle } from "@/features/agents/ui/AgentDisableToggle";
 
 function getDefaultRange() {
   const to = new Date();
@@ -98,8 +99,14 @@ export default async function AgentProfilePage({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">{displayName}</h2>
-              <p className="text-sm text-foreground-muted capitalize">
-                {agent.user_profiles?.role ?? "agent"}
+              <p className="text-sm text-foreground-muted">
+                {(() => {
+                  const role = (agent.user_profiles?.role ?? "agent").toLowerCase();
+                  if (role === "agent_and_marketing") return "Agent + Marketing";
+                  if (role === "marketing_only") return "Marketing only";
+                  if (role === "super_admin") return "Admin";
+                  return role.charAt(0).toUpperCase() + role.slice(1);
+                })()}
               </p>
             </div>
           </div>
@@ -146,7 +153,15 @@ export default async function AgentProfilePage({
             <CardContent className="grid gap-3 md:grid-cols-3 text-sm text-foreground-secondary pt-6">
               <div>
                 <p className="text-xs uppercase text-foreground-muted">Role</p>
-                <p>{agent.user_profiles?.role ?? "agent"}</p>
+                <p>
+                  {(() => {
+                    const role = (agent.user_profiles?.role ?? "agent").toLowerCase();
+                    if (role === "agent_and_marketing") return "Agent + Marketing";
+                    if (role === "marketing_only") return "Marketing only";
+                    if (role === "super_admin") return "Admin";
+                    return role.charAt(0).toUpperCase() + role.slice(1);
+                  })()}
+                </p>
               </div>
               <div>
                 <p className="text-xs uppercase text-foreground-muted">Commission</p>
@@ -155,6 +170,13 @@ export default async function AgentProfilePage({
               <div>
                 <p className="text-xs uppercase text-foreground-muted">Marketing fee</p>
                 <p>£{agent.marketing_fee}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-foreground-muted">Status</p>
+                <p className="mb-2">
+                  {agent.is_disabled ? "Disabled" : "Active"}
+                </p>
+                <AgentDisableToggle userId={agent.user_id} isDisabled={Boolean(agent.is_disabled)} />
               </div>
             </CardContent>
           </Card>

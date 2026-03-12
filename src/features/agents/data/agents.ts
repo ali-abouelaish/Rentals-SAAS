@@ -11,6 +11,7 @@ export async function getAgents({
   let query = supabase
     .from("agent_profiles")
     .select("*, user_profiles(display_name, role)")
+    .eq("is_disabled", false)
     .order("created_at", { ascending: false });
 
   if (search) {

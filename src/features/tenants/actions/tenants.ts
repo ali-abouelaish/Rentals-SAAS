@@ -16,7 +16,12 @@ export async function ensureTenantSetup(userId: string, email?: string) {
   const admin = createSupabaseAdminClient();
   const { data: tenant, error: tenantError } = await admin
     .from("tenants")
-    .insert({ name: "Demo Agency" })
+    .insert({
+      name: "Demo Agency",
+      // In dev, use a fixed slug so the NOT NULL / UNIQUE constraint is satisfied.
+      // For multi-tenant production setups this can be replaced with a real slug.
+      slug: "demo-agency"
+    })
     .select("*")
     .single();
   if (tenantError) throw new Error(tenantError.message);

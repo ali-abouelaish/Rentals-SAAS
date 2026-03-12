@@ -14,8 +14,9 @@ import { getAgents } from "@/features/agents/data/agents";
 import { getEarningsLeaderboardAll } from "@/features/earnings/data/queries";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { Users, Percent } from "lucide-react";
+import { Users } from "lucide-react";
 import { AgentTableRow } from "@/features/agents/ui/AgentTableRow";
+import { CreateAgentDialog } from "@/features/agents/ui/CreateAgentDialog";
 
 function getDefaultRange() {
   const to = new Date();
@@ -138,6 +139,7 @@ export default async function AgentsPage({
         <p className="text-sm text-foreground-secondary">
           Showing <span className="font-medium text-foreground">{sorted.length}</span> agents
         </p>
+        <CreateAgentDialog />
       </div>
 
       <Card>

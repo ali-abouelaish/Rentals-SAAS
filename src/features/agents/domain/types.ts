@@ -8,4 +8,5 @@ export type AgentProfile = {
     is_agent: boolean;
     is_marketing: boolean;
   };
+  is_disabled?: boolean;
 };

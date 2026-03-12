@@ -19,8 +19,9 @@ import {
   X,
   CreditCard,
   User,
+  Shield,
 } from "lucide-react";
-import { ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
+import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
 import { useState, useEffect } from "react";
 
@@ -47,6 +48,7 @@ const navItems: Array<{
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/room-enhancer", label: "Room Enhancer", icon: Sparkles },
   { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES },
+  { href: "/admin", label: "Super Admin", icon: Shield, allowedRoles: SUPER_ADMIN_ROLES },
   { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
 ];
@@ -55,6 +57,7 @@ export function SideNav({ profile }: SideNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const isSuperAdminOnly = (profile.role ?? "").toLowerCase() === "super_admin";
 
   // Clear navigating state when the route has changed
   useEffect(() => {
@@ -84,7 +87,10 @@ export function SideNav({ profile }: SideNavProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
-        {navItems.map((item) => {
+        {(isSuperAdminOnly
+          ? navItems.filter((item) => item.href === "/admin")
+          : navItems.filter((item) => item.href !== "/admin")
+        ).map((item) => {
           if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
           const active = isActive(item.href);
 

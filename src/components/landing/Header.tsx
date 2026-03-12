@@ -39,7 +39,7 @@ export function Header() {
           <span className="relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-harbor-light-blue to-harbor-navy shadow-md flex items-center justify-center">
             {!logoError ? (
               <Image
-                src="/harbor-logo.png"
+                src="/logo.png"
                 alt="Harbor"
                 fill
                 className="object-contain p-0.5"

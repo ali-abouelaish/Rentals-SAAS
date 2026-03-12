@@ -17,7 +17,11 @@ const poppins = Poppins({
 
 export const metadata = {
   title: "Rental Agency SaaS",
-  description: "Multi-tenant rental agency platform"
+  description: "Multi-tenant rental agency platform",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png"
+  }
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

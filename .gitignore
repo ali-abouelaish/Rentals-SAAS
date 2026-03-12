@@ -5,5 +5,3 @@ node_modules
 credentials/
 **/google-credentials.json
 **/service_account.json
-
-/src/generated/prisma

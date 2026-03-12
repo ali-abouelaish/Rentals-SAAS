@@ -1,9 +1,22 @@
-import { Prisma } from "@/generated/prisma/client";
-import type { EmailOutbox } from "@/generated/prisma/client";
-import { prisma } from "@/lib/prisma";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-/** Backoff delays in minutes: 1m, 5m, 15m, 60m, 6h */
-const BACKOFF_MINUTES = [1, 5, 15, 60, 360];
+/** Backoff delays in minutes: 1m, 5m, 15m, 60m, 6h (used in DB function) */
+
+export type EmailOutboxRow = {
+  id: string;
+  tenant_id: string | null;
+  to: string;
+  subject: string;
+  html: string;
+  text: string | null;
+  status: "queued" | "sending" | "sent" | "failed";
+  attempts: number;
+  last_error: string | null;
+  provider_message_id: string | null;
+  send_after: string;
+  created_at: string;
+  updated_at: string;
+};
 
 export type EnqueueEmailParams = {
   tenantId?: string | null;
@@ -23,55 +36,38 @@ export async function enqueueEmail({
   html,
   text,
 }: EnqueueEmailParams): Promise<{ id: string }> {
-  const row = await prisma.emailOutbox.create({
-    data: {
-      tenantId: tenantId ?? undefined,
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("email_outbox")
+    .insert({
+      tenant_id: tenantId ?? null,
       to,
       subject,
       html,
-      text: text ?? undefined,
+      text: text ?? null,
       status: "queued",
-    },
-    select: { id: true },
-  });
-  return { id: row.id };
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  if (!data?.id) throw new Error("Insert did not return id");
+  return { id: data.id };
 }
 
 /**
  * Atomically claim up to `limit` queued rows (sendAfter <= now, attempts < 5),
- * marking them as sending. Returns the claimed rows. Uses FOR UPDATE SKIP LOCKED.
+ * marking them as sending. Returns the claimed rows. Uses FOR UPDATE SKIP LOCKED in DB.
  */
 export async function claimNextBatch(
   limit = 10
-): Promise<EmailOutbox[]> {
-  const rows = await prisma.$transaction(async (tx) => {
-    const claimedIds = await tx.$queryRaw<{ id: string }[]>(
-      Prisma.sql`
-        WITH to_claim AS (
-          SELECT id FROM email_outbox
-          WHERE status = 'queued'
-            AND send_after <= now()
-            AND attempts < 5
-          ORDER BY send_after ASC
-          LIMIT ${limit}
-          FOR UPDATE SKIP LOCKED
-        )
-        UPDATE email_outbox
-        SET status = 'sending', updated_at = now()
-        FROM to_claim
-        WHERE email_outbox.id = to_claim.id
-        RETURNING id
-      `
-    );
-    if (claimedIds.length === 0) {
-      return [];
-    }
-    const ids = claimedIds.map((r) => r.id);
-    return tx.emailOutbox.findMany({
-      where: { id: { in: ids } },
-    });
+): Promise<EmailOutboxRow[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase.rpc("claim_email_outbox_batch", {
+    lim: limit,
   });
-  return rows as EmailOutbox[];
+  if (error) throw error;
+  return (data ?? []) as EmailOutboxRow[];
 }
 
 /**
@@ -81,41 +77,29 @@ export async function markSent(
   id: string,
   messageId: string
 ): Promise<void> {
-  await prisma.emailOutbox.update({
-    where: { id },
-    data: {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("email_outbox")
+    .update({
       status: "sent",
-      providerMessageId: messageId,
-      lastError: null,
-    },
-  });
+      provider_message_id: messageId,
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 /**
  * Mark a claimed row as failed: increment attempts, set lastError.
  * If attempts < 5: set status back to queued and sendAfter = now + backoff.
- * If attempts >= 5: set status to failed.
+ * If attempts >= 5: set status to failed. Implemented in DB RPC.
  */
-export async function markFailed(id: string, error: string): Promise<void> {
-  const row = await prisma.emailOutbox.findUnique({
-    where: { id },
-    select: { attempts: true },
+export async function markFailed(id: string, errorMessage: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.rpc("mark_email_outbox_failed", {
+    p_id: id,
+    p_error: errorMessage,
   });
-  if (!row) return;
-
-  const nextAttempts = row.attempts + 1;
-  const isFinalFailure = nextAttempts >= 5;
-
-  const backoffMinutes = BACKOFF_MINUTES[Math.min(row.attempts, BACKOFF_MINUTES.length - 1)];
-  const sendAfter = new Date(Date.now() + backoffMinutes * 60 * 1000);
-
-  await prisma.emailOutbox.update({
-    where: { id },
-    data: {
-      attempts: nextAttempts,
-      lastError: error,
-      status: isFinalFailure ? "failed" : "queued",
-      ...(isFinalFailure ? {} : { sendAfter }),
-    },
-  });
+  if (error) throw error;
 }

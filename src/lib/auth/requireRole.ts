@@ -36,6 +36,10 @@ export async function requireRole(roles: string[]) {
   return profile;
 }
 
+export async function requireSuperAdmin() {
+  return requireRole(["super_admin"]);
+}
+
 /** For /me: only agents. Admins and others redirect to /earnings. */
 export async function requireAgentOnly() {
   const profile = await requireUserProfile();
