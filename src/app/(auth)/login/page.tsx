@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { signInWithEmail } from "@/features/auth/actions/auth";
