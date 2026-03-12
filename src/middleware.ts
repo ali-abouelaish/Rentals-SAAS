@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseMiddlewareClient } from "./lib/supabase/middleware";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/invite", "/public"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/auth",
+  "/invite",
+  "/public",
+  "/invite/accept",
+  "/invite/set-password",
+  "/api/invite/complete",
+  "/auth/error"
+];
 
 function getTenantFromHost(host: string | null): string | null {
   if (!host) return null;
