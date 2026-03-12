@@ -10,16 +10,25 @@ function CallbackContent() {
   const supabase = createSupabaseBrowserClient();
   const next = searchParams.get("next") ?? "/me";
   const code = searchParams.get("code");
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type");
 
   useEffect(() => {
     let mounted = true;
 
     const run = async () => {
-      // Handle PKCE/code flow links if present.
       if (code) {
         await supabase.auth.exchangeCodeForSession(code);
+      } else if (tokenHash && type === "invite") {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "invite",
+        });
+        if (error && mounted) {
+          router.replace(`/invite/accept?error=${encodeURIComponent(error.message)}`);
+          return;
+        }
       } else {
-        // This also initializes hash-based recovery links if used.
         await supabase.auth.getSession();
       }
       if (mounted) {
@@ -31,7 +40,7 @@ function CallbackContent() {
     return () => {
       mounted = false;
     };
-  }, [router, next, code, supabase]);
+  }, [router, next, code, tokenHash, type, supabase]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-app">
