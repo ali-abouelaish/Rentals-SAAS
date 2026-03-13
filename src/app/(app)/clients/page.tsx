@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
 import { getClients } from "@/features/clients/data/clients";
@@ -29,9 +30,10 @@ export default async function ClientsPage({
     page: currentPage,
   });
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    `https://${process.env.VERCEL_URL ?? "localhost:3000"}`;
+  // Build tenant-aware public lead URL using the current host (includes tenant slug on subdomains)
+  const host = headers().get("host") ?? process.env.VERCEL_URL ?? "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const baseUrl = `${protocol}://${host}`;
   const leadUrl = `${baseUrl}/public/lead/${profile.id}`;
 
   const statusFilters = ["all", "pending", "on_hold", "solved", "registered"];

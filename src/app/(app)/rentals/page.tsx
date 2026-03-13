@@ -191,7 +191,7 @@ export default async function RentalsPage({
                       <input type="hidden" name="status" value="paid" />
                       <Button type="submit" variant="success" size="xs">
                         <DollarSign className="h-3 w-3 mr-0.5" />
-                        Paid
+                        Mark as paid
                       </Button>
                     </form>
                   )}
