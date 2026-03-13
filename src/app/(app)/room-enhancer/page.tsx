@@ -29,6 +29,9 @@ type EditHistoryEntry = {
   resultDataUrls: string[];
 };
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_IMAGE_DIMENSION = 4096; // px
+
 const IMAGE_COUNT_OPTIONS = [
   { value: "1", label: "1 image" },
   { value: "2", label: "2 images" },
@@ -255,6 +258,27 @@ export default function RoomEnhancerPage() {
     setError(null);
 
     try {
+      if (mode === "edit") {
+        if (!imageFile) {
+          throw new Error("Please upload an image first.");
+        }
+
+        if (imageFile.size > MAX_IMAGE_BYTES) {
+          const mb = (MAX_IMAGE_BYTES / (1024 * 1024)).toFixed(0);
+          throw new Error(`Image file is too large. Please upload an image under ${mb} MB.`);
+        }
+
+        if (
+          originalImageSize &&
+          (originalImageSize.width > MAX_IMAGE_DIMENSION ||
+            originalImageSize.height > MAX_IMAGE_DIMENSION)
+        ) {
+          throw new Error(
+            `Image dimensions are too large. Max supported size is ${MAX_IMAGE_DIMENSION}×${MAX_IMAGE_DIMENSION}px.`
+          );
+        }
+      }
+
       const form = new FormData();
       form.append("mode", mode);
       form.append("prompt", prompt.trim());
@@ -275,9 +299,28 @@ export default function RoomEnhancerPage() {
         body: form,
       });
 
-      const payload = await res.json();
+      let payload: any = null;
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        payload = await res.json();
+      } else {
+        const text = await res.text();
+        const snippet = text.slice(0, 120).replace(/\s+/g, " ").trim();
+        throw new Error(
+          res.ok
+            ? "Unexpected response from Room Enhancer. Please try again."
+            : `Room Enhancer request failed (${res.status}).`
+        );
+      }
+
       if (!res.ok) {
-        throw new Error(payload?.error || "Failed to generate image.");
+        const apiMessage = typeof payload?.error === "string" ? payload.error : "";
+        if (res.status === 413 || apiMessage.toLowerCase().includes("too large")) {
+          throw new Error(
+            "The uploaded image is too large for processing. Please try a smaller image."
+          );
+        }
+        throw new Error(apiMessage || "Failed to generate image.");
       }
 
       const apiImages = (payload.images || []) as ApiImage[];

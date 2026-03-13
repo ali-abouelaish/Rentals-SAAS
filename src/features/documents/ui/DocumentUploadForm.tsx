@@ -21,9 +21,9 @@ export function DocumentUploadForm({ rentalCodeId }: { rentalCodeId: string }) {
         value={setType}
         onChange={(value: string) => setSetType(value)}
         options={[
-          { label: "Sourcing Agreement (4 images)", value: "sourcing_agreement" },
-          { label: "Client ID (1+)", value: "client_id" },
-          { label: "Payment Proof (1+)", value: "payment_proof" }
+          { label: "Sourcing Agreement", value: "sourcing_agreement" },
+          { label: "Client ID", value: "client_id" },
+          { label: "Payment Proof", value: "payment_proof" }
         ]}
       />
       <input

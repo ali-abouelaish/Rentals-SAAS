@@ -5,12 +5,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import type { DocumentSetType } from "../domain/types";
 
-const REQUIRED_COUNTS: Record<DocumentSetType, number> = {
-  sourcing_agreement: 4,
-  client_id: 1,
-  payment_proof: 1
-};
-
 export async function uploadDocuments(formData: FormData) {
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
@@ -22,8 +16,8 @@ export async function uploadDocuments(formData: FormData) {
     throw new Error("Missing rental code or document set type.");
   }
 
-  const minCount = REQUIRED_COUNTS[setType];
-  if (files.length < minCount) {
+  // Require at least one document for any set type, but do not enforce an exact count.
+  if (files.length < 1) {
     throw new Error("Please upload at least one document.");
   }
 

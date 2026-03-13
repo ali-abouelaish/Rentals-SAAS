@@ -30,22 +30,43 @@ export default async function ClientDetailPage({
       .order("display_name", { ascending: true })
   ]);
 
-  const profileText = [
-    `Client: ${client.full_name}`,
-    `Phone: ${client.phone}`,
-    client.contact_number ? `Contact number: ${client.contact_number}` : null,
-    `Email: ${client.email}`,
-    `Date of birth: ${client.dob}`,
-    `Nationality: ${client.nationality}`,
-    `Address: ${client.current_address}`,
-    `Company/University: ${client.company_or_university_name}`,
-    `Company/University address: ${client.company_address}`,
-    `Occupation: ${client.occupation}`,
-    client.agency_name ? `Agency: ${client.agency_name}` : null,
-    client.share_code ? `Share code: ${client.share_code}` : null
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const profileSections = [
+    // Header
+    `CLIENT PROFILE: ${client.full_name}`,
+    "----------------------------------------",
+    "",
+    // Contact section
+    "Contact",
+    "-------",
+    `- Full name: ${client.full_name}`,
+    `- Phone: ${client.phone}`,
+    client.contact_number ? `- Alt phone: ${client.contact_number}` : null,
+    client.email ? `- Email: ${client.email}` : null,
+    "",
+    // Personal details
+    "Personal details",
+    "----------------",
+    client.dob ? `- Date of birth: ${client.dob}` : null,
+    client.nationality ? `- Nationality: ${client.nationality}` : null,
+    client.current_address ? `- Current address: ${client.current_address}` : null,
+    client.occupation ? `- Occupation: ${client.occupation}` : null,
+    "",
+    // Company / university
+    (client.company_or_university_name || client.company_address) ? "Company / University" : null,
+    (client.company_or_university_name || client.company_address) ? "--------------------" : null,
+    client.company_or_university_name
+      ? `- Name: ${client.company_or_university_name}`
+      : null,
+    client.company_address ? `- Address: ${client.company_address}` : null,
+    client.agency_name || client.share_code ? "" : null,
+    // Other
+    client.agency_name || client.share_code ? "Other" : null,
+    client.agency_name || client.share_code ? "-----" : null,
+    client.agency_name ? `- Agency: ${client.agency_name}` : null,
+    client.share_code ? `- Share code: ${client.share_code}` : null
+  ].filter(Boolean) as string[];
+
+  const profileText = profileSections.join("\n");
 
   return (
     <div className="space-y-6">

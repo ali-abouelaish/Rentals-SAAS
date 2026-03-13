@@ -369,12 +369,17 @@ export async function approveRentalCode(formData: FormData) {
     }
   );
 
-  const sourcingOk =
-    counts.sourcing_agreement === 1 || counts.sourcing_agreement === 4;
-  if (!sourcingOk || counts.client_id < 1 || counts.payment_proof < 1) {
-    throw new Error(
-      "Missing required documents: sourcing agreement, client ID, and payment proof."
-    );
+  // Require at least 1 document in each set; allow any count >= 1 for sourcing agreements.
+  const missing: string[] = [];
+  if (counts.sourcing_agreement < 1) missing.push("sourcing agreement");
+  if (counts.client_id < 1) missing.push("client ID");
+  if (counts.payment_proof < 1) missing.push("payment proof");
+  if (missing.length > 0) {
+    const list =
+      missing.length === 1
+        ? missing[0]
+        : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+    throw new Error(`Missing required documents: ${list}.`);
   }
 
   const { data: assistedAgent } = await supabase
