@@ -94,7 +94,7 @@ export default async function ClientDetailPage({
         <CardContent className="space-y-4">
           <p className="text-sm font-medium text-navy">Rental codes</p>
           <DataTable
-            columns={["Code", "Status", "Date"]}
+            columns={["Code", "Status", "Date", "Actions"]}
             rows={(rentals ?? []).map((rental) => [
               <Link key={`${rental.id}-code`} href={`/rentals/${rental.id}`} className="text-brand">
                 {rental.code}
@@ -102,7 +102,14 @@ export default async function ClientDetailPage({
               <StatusBadge key={`${rental.id}-status`} status={rental.status} />,
               <span key={`${rental.id}-date`} className="text-sm text-foreground-secondary">
                 {formatDate(rental.created_at)}
-              </span>
+              </span>,
+              <Link
+                key={`${rental.id}-edit`}
+                href={`/rentals/${rental.id}`}
+                className="text-xs text-brand hover:underline"
+              >
+                Edit rental
+              </Link>
             ])}
           />
         </CardContent>

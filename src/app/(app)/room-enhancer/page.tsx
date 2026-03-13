@@ -59,6 +59,7 @@ export default function RoomEnhancerPage() {
   );
   const [userId, setUserId] = useState<string | null>(null);
   const [editHistory, setEditHistory] = useState<EditHistoryEntry[]>([]);
+  const [usage, setUsage] = useState<any | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const visualFeedbackCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -256,6 +257,7 @@ export default function RoomEnhancerPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+     setUsage(null);
 
     try {
       if (mode === "edit") {
@@ -325,6 +327,7 @@ export default function RoomEnhancerPage() {
 
       const apiImages = (payload.images || []) as ApiImage[];
       setResults(apiImages);
+      setUsage(payload?.usage ?? null);
 
       if (mode === "edit" && userId) {
         const savedUrls = apiImages.map(
@@ -554,6 +557,14 @@ export default function RoomEnhancerPage() {
             <CardDescription>Generated room outputs appear here.</CardDescription>
           </CardHeader>
           <CardContent>
+            {process.env.NODE_ENV === "development" && usage && (
+              <div className="mb-4 rounded-lg border border-border bg-surface-inset p-3 text-xs text-foreground-secondary">
+                <p className="mb-1 text-xs font-semibold text-foreground">OpenAI usage (dev only)</p>
+                <pre className="whitespace-pre-wrap break-words text-[11px]">
+                  {JSON.stringify(usage, null, 2)}
+                </pre>
+              </div>
+            )}
             {resultDataUrls.length === 0 ? (
               <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-border text-foreground-muted">
                 <div className="text-center">

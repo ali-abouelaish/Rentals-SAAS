@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PublicLeadForm } from "@/features/clients/ui/PublicLeadForm";
 
 export default async function PublicLeadPage({
@@ -6,7 +6,8 @@ export default async function PublicLeadPage({
 }: {
   params: { agentId: string };
 }) {
-  const supabase = createSupabaseServerClient();
+  // Use admin client so public lead links work without authentication and still respect tenant scoping.
+  const supabase = createSupabaseAdminClient();
   const { data: agent } = await supabase
     .from("agent_profiles")
     .select("user_id, tenant_id, user_profiles(display_name)")
