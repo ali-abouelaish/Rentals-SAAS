@@ -1,14 +1,47 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { saveTenantBrandingAction } from "../actions/admin";
+import { saveTenantBrandingAction, uploadTenantLogoAction } from "../actions/admin";
 import type { TenantBrandingSettings } from "../domain/types";
+
+function ColorRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  const hex = value.startsWith("#") ? value : "#" + value;
+  const safeHex = /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#0B2F59";
+  return (
+    <div className="space-y-1.5">
+      <label className="text-sm font-medium text-foreground">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={safeHex}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-border p-0.5 bg-surface-inset"
+          aria-label={`${label} color picker`}
+        />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#0B2F59"
+          className="font-mono text-sm"
+        />
+      </div>
+    </div>
+  );
+}
 
 export function TenantBrandingForm({
   tenantId,
@@ -21,6 +54,8 @@ export function TenantBrandingForm({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [brandName, setBrandName] = useState(initial?.brand_name ?? tenantName);
   const [logoUrl, setLogoUrl] = useState(initial?.logo_url ?? "");
   const [primaryColor, setPrimaryColor] = useState(initial?.primary_color ?? "#0B2F59");
@@ -58,6 +93,24 @@ export function TenantBrandingForm({
     });
   };
 
+  const onLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    const formData = new FormData();
+    formData.set("file", file);
+    const result = await uploadTenantLogoAction(tenantId, formData);
+    setUploadingLogo(false);
+    if (result.ok && result.url) {
+      setLogoUrl(result.url);
+      toast.success("Logo uploaded");
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Upload failed");
+    }
+    e.target.value = "";
+  };
+
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <Card>
@@ -67,26 +120,36 @@ export function TenantBrandingForm({
             <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Logo URL</label>
+            <label className="text-sm font-medium text-foreground">Tenant Logo</label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+                onChange={onLogoUpload}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploadingLogo}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {uploadingLogo ? "Uploading…" : "Upload logo"}
+              </Button>
+              <span className="text-xs text-foreground-muted">or paste URL below</span>
+            </div>
             <Input
               value={logoUrl}
               onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://example.com/logo.png"
+              placeholder="https://… or upload above"
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Primary</label>
-              <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Secondary</label>
-              <Input value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Accent</label>
-              <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <ColorRow label="Primary" value={primaryColor} onChange={setPrimaryColor} />
+            <ColorRow label="Secondary" value={secondaryColor} onChange={setSecondaryColor} />
+            <ColorRow label="Accent" value={accentColor} onChange={setAccentColor} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Select

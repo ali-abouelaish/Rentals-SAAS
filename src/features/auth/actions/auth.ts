@@ -42,7 +42,8 @@ export async function signInWithEmail(
       redirect("/admin");
     }
 
-    if (tenantId) {
+    // Only perform cross-domain slug redirect outside of development.
+    if (process.env.NODE_ENV !== "development" && tenantId) {
       const { data: tenant } = await admin
         .from("tenants")
         .select("slug")

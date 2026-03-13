@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { AvatarCircle } from "@/components/shared/AvatarCircle";
+import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
 import { getRentalCodes } from "@/features/rentals/data/rentals";
 import { formatDate, formatCurrency } from "@/lib/utils/formatters";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { updateRentalStatus } from "@/features/rentals/actions/rentals";
 import {
   Home,
-  Search,
   Filter,
   DollarSign,
   ChevronLeft,
@@ -84,23 +84,13 @@ export default async function RentalsPage({
           <h2 className="text-sm font-semibold text-foreground">Search & Filter</h2>
         </div>
 
-        <form className="flex items-center gap-3 mb-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
-            <Input
-              name="q"
-              placeholder="Code, client name..."
-              defaultValue={searchParams?.q}
-              className="pl-9"
-            />
-          </div>
-          {searchParams?.status && (
-            <input type="hidden" name="status" value={searchParams.status} />
-          )}
-          <Button type="submit" variant="outline" size="sm">
-            Search
-          </Button>
-        </form>
+        <div className="flex items-center gap-3 mb-4">
+          <LiveSearchInput
+            placeholder="Code, client name..."
+            initialQuery={searchParams?.q ?? ""}
+            preserveStatus={activeStatus !== "all" ? activeStatus : undefined}
+          />
+        </div>
 
         {/* Pill filters */}
         <div className="flex flex-wrap gap-2">
@@ -134,20 +124,24 @@ export default async function RentalsPage({
         </div>
       ) : (
         <div className="rounded-bento bg-surface-card shadow-bento divide-y divide-border overflow-hidden">
-          {rentals.map((rental) => {
+          {rentals.map((rental: any) => {
             const clientName = Array.isArray(rental.clients)
               ? rental.clients[0]?.full_name
               : (rental.clients as { full_name?: string })?.full_name ??
               rental.client_snapshot?.full_name;
+            const assistedByName =
+              rental.user_profiles?.display_name ??
+              rental.assisted_by_agent_id ??
+              "";
 
             return (
               <div
                 key={rental.id}
                 className="flex items-center gap-4 px-5 py-3.5 hover:bg-surface-inset transition-colors"
               >
-                {/* Icon */}
-                <div className="h-10 w-10 rounded-xl bg-surface-inset flex items-center justify-center shrink-0">
-                  <Home className="h-4.5 w-4.5 text-foreground-muted" />
+                {/* Agent avatar */}
+                <div className="shrink-0">
+                  <AvatarCircle name={assistedByName || clientName || "Agent"} size={32} />
                 </div>
 
                 {/* Info */}
@@ -165,6 +159,10 @@ export default async function RentalsPage({
                     {clientName ?? "—"}
                     <span className="mx-1.5">·</span>
                     {formatDate(rental.created_at)}
+                  </p>
+                  <p className="text-xs text-foreground-muted mt-0.5 truncate">
+                    <span className="font-medium text-foreground">Agent:</span>{" "}
+                    {assistedByName || "—"}
                   </p>
                 </div>
 

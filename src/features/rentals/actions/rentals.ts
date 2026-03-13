@@ -85,6 +85,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   const profile = await requireUserProfile();
 
   // Extract form values
+  const codeFromForm = String(formData.get("code") ?? "");
   const clientId = String(formData.get("client_id") ?? "");
   const consultationFeeAmount = Number(formData.get("consultation_fee_amount") ?? 0);
   const paymentMethod = String(formData.get("payment_method") ?? "cash");
@@ -98,11 +99,8 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   const clientIdFiles = formData.getAll("client_id_doc") as File[];
 
   // Validate required documents
-  const sourcingOk =
-    sourcingAgreementFiles.length === 4 ||
-    (sourcingAgreementFiles.length === 1 && sourcingAgreementFiles[0]?.type === "application/pdf");
-  if (!sourcingOk) {
-    throw new Error("Sourcing agreement requires 4 images or a single PDF.");
+  if (sourcingAgreementFiles.length < 1) {
+    throw new Error("Sourcing agreement is required (at least 1 image or PDF).");
   }
   if (paymentProofFiles.length < 1) {
     throw new Error("Payment proof is required (at least 1 image or PDF).");
@@ -142,18 +140,22 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     .single();
   if (clientError) throw new Error(clientError.message);
 
-  // Generate rental code
-  const { data: codeData, error: codeError } = await supabase.rpc("next_rental_code", {
-    p_tenant_id: profile.tenant_id
-  });
-  if (codeError) throw new Error(codeError.message);
+  // Determine rental code: prefer code provided from form (preview), otherwise generate
+  let codeValue: string | null = codeFromForm || null;
+  if (!codeValue) {
+    const { data: codeData, error: codeError } = await supabase.rpc("next_rental_code", {
+      p_tenant_id: profile.tenant_id
+    });
+    if (codeError) throw new Error(codeError.message);
+    codeValue = String(codeData);
+  }
 
   // Create rental code
   const { data: rentalCode, error: rentalError } = await supabase
     .from("rental_codes")
     .insert({
       tenant_id: profile.tenant_id,
-      code: codeData,
+      code: codeValue,
       date: new Date().toISOString(),
       consultation_fee_amount: payload.consultation_fee_amount,
       rental_amount_gbp: payload.consultation_fee_amount,
@@ -180,10 +182,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   if (rentalError) throw new Error(rentalError.message);
 
   // Upload documents
-  const uploadDocumentSet = async (
-    setType: "sourcing_agreement" | "client_id" | "payment_proof",
-    files: File[]
-  ) => {
+  const uploadDocumentSet = async (setType: "sourcing_agreement" | "client_id" | "payment_proof", files: File[]) => {
     const { data: setData, error: setError } = await supabase
       .from("document_sets")
       .insert({
@@ -228,6 +227,13 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
 
   revalidatePath("/rentals");
   revalidatePath(`/clients/${clientId}`);
+
+  // Mark client as registered after rental creation
+  await supabase
+    .from("clients")
+    .update({ status: "registered" })
+    .eq("id", clientId);
+
   return { ok: true, rentalCode };
 }
 

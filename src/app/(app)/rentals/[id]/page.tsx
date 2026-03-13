@@ -85,24 +85,70 @@ export default async function RentalDetailPage({
     agents?.find((agent) => agent.id === rental.marketing_agent_id)?.display_name ?? "";
   const marketingAgentLabel = marketingAgentName || rental.marketing_agent_id || "—";
 
-  const rentalText = [
-    `Code: ${rental.code}`,
-    `Date: ${formatDate(rental.date)}`,
-    `Fee: ${formatCurrency(rental.consultation_fee_amount)}`,
-    `Payment: ${rental.payment_method}`,
-    `Property: ${rental.property_address}`,
-    `Licensor: ${rental.licensor_name}`,
+  // Build rental text in the requested format for clipboard
+  const paymentText =
+    rental.payment_method === "cash"
+      ? "Cash 💵"
+      : rental.payment_method === "transfer"
+      ? "Transfer 💸"
+      : rental.payment_method === "card"
+      ? "Card 💳"
+      : rental.payment_method;
+
+  // Age from DOB if available
+  let ageText: string | null = null;
+  if (rental.client_snapshot?.dob) {
+    const dobDate = new Date(rental.client_snapshot.dob);
+    if (!Number.isNaN(dobDate.getTime())) {
+      const today = new Date();
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const m = today.getMonth() - dobDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+        age--;
+      }
+      ageText = `Age: ${age}`;
+    }
+  }
+
+  const formattedDate = (() => {
+    const d = new Date(rental.date);
+    if (Number.isNaN(d.getTime())) return formatDate(rental.date);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  })();
+
+  const rentalTextLines: string[] = [
+    "Client Code",
     "",
-    `Client: ${rental.client_snapshot?.full_name}`,
-    `Phone: ${rental.client_snapshot?.phone}`,
-    rental.client_snapshot?.nationality ? `Nationality: ${rental.client_snapshot.nationality}` : null,
-    rental.client_snapshot?.dob ? `DOB: ${rental.client_snapshot.dob}` : null,
+    rental.code,
+    "",
+    `Date: ${formattedDate}`,
+    `Consultation Fee: ${formatCurrency(rental.consultation_fee_amount)}`,
+    `Payment: ${paymentText}`,
+    "___________",
+    "",
+    "Client Information",
+    "",
+    rental.client_snapshot?.full_name
+      ? `Full Name: ${rental.client_snapshot.full_name}`
+      : "",
+    rental.client_snapshot?.phone ? `Phone Number: ${rental.client_snapshot.phone}` : "",
+    ageText ?? "",
+    rental.client_snapshot?.nationality
+      ? `Nationality: ${rental.client_snapshot.nationality}`
+      : "",
+    rental.client_snapshot?.occupation
+      ? `Position/Role: ${rental.client_snapshot.occupation}`
+      : "",
+    "____________",
     "",
     `Assisted by: ${rental.user_profiles?.display_name ?? rental.assisted_by_agent_id}`,
-    rental.marketing_agent_id ? `Marketing agent: ${marketingAgentLabel}` : null
-  ]
-    .filter(Boolean)
-    .join("\n");
+    rental.marketing_agent_id ? `Marketing Agent: ${marketingAgentLabel}` : ""
+  ];
+
+  const rentalText = rentalTextLines.filter((line) => line !== "").join("\n");
 
   return (
     <div className="space-y-6">
@@ -164,33 +210,51 @@ export default async function RentalDetailPage({
         <CardContent className="space-y-2 text-sm text-foreground-secondary">
           <p className="text-sm font-medium text-navy">Rental template preview</p>
           <div className="space-y-1">
+            <p className="font-semibold">Client Code</p>
+            <p>{rental.code}</p>
             <p>
-              <strong>Code:</strong> {rental.code}
+              <strong>Date:</strong> {formattedDate}
             </p>
             <p>
-              <strong>Date:</strong> {formatDate(rental.date)}
+              <strong>Consultation Fee:</strong> {formatCurrency(rental.consultation_fee_amount)}
             </p>
             <p>
-              <strong>Fee:</strong> {formatCurrency(rental.consultation_fee_amount)}
+              <strong>Payment:</strong> {paymentText}
             </p>
-            <p>
-              <strong>Payment:</strong> {rental.payment_method}
-            </p>
-            <p>
-              <strong>Property:</strong> {rental.property_address}
-            </p>
-            <p>
-              <strong>Licensor:</strong> {rental.licensor_name}
-            </p>
-            <div className="pt-2">
-              <p className="font-medium text-navy">Client info</p>
-              <p>{rental.client_snapshot?.full_name}</p>
-              <p>{rental.client_snapshot?.phone}</p>
+            <p>___________</p>
+            <div className="pt-2 space-y-1">
+              <p className="font-semibold">Client Information</p>
+              <p>
+                <strong>Full Name:</strong> {rental.client_snapshot?.full_name}
+              </p>
+              <p>
+                <strong>Phone Number:</strong> {rental.client_snapshot?.phone}
+              </p>
+              {ageText && (
+                <p>
+                  <strong>Age:</strong> {ageText.replace("Age: ", "")}
+                </p>
+              )}
+              {rental.client_snapshot?.nationality && (
+                <p>
+                  <strong>Nationality:</strong> {rental.client_snapshot.nationality}
+                </p>
+              )}
+              {rental.client_snapshot?.occupation && (
+                <p>
+                  <strong>Position/Role:</strong> {rental.client_snapshot.occupation}
+                </p>
+              )}
+              <p>____________</p>
             </div>
-            <div className="pt-2">
-              <p className="font-medium text-navy">Agents</p>
-              <p>Assisted by: {rental.user_profiles?.display_name ?? rental.assisted_by_agent_id}</p>
-              <p>Marketing agent: {marketingAgentLabel}</p>
+            <div className="pt-2 space-y-1">
+              <p>
+                <strong>Assisted by:</strong>{" "}
+                {rental.user_profiles?.display_name ?? rental.assisted_by_agent_id}
+              </p>
+              <p>
+                <strong>Marketing Agent:</strong> {marketingAgentLabel}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -217,9 +281,9 @@ export default async function RentalDetailPage({
 
       <Card>
         <CardContent className="space-y-3">
-          <p className="text-sm font-medium text-brand">Upload documents</p>
-          <DocumentUploadForm rentalCodeId={rental.id} />
+          <p className="text-sm font-medium text-brand">Documents</p>
           <RentalDocumentsViewer sets={documentSetsForViewer} />
+          <DocumentUploadForm rentalCodeId={rental.id} />
         </CardContent>
       </Card>
     </div>

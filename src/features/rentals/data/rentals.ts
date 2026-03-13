@@ -16,7 +16,10 @@ export async function getRentalCodes({
 
   let query = supabase
     .from("rental_codes")
-    .select("id, code, status, created_at, payment_method, consultation_fee_amount, client_snapshot, clients(full_name, phone)", { count: "exact" })
+    .select(
+      "id, code, status, created_at, payment_method, consultation_fee_amount, client_snapshot, assisted_by_agent_id, clients(full_name, phone), user_profiles!rental_codes_assisted_by_agent_id_fkey(display_name)",
+      { count: "exact" }
+    )
     .order("created_at", { ascending: false });
 
   if (search) {

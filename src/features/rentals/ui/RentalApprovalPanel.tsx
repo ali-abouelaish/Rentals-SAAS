@@ -122,11 +122,15 @@ export function RentalApprovalPanel({
         </div>
       </div>
 
-      {needsOverride ? (
+      {hasMarketingAgent && (needsOverride || invalidNet) ? (
         <div className="space-y-3 rounded-2xl border border-accent/40 bg-accent/10 p-4">
           <div className="flex items-center gap-2 text-sm text-navy">
             <AlertTriangle size={16} />
-            <span>Marketing fee exceeds 45% of base. Add a custom amount.</span>
+            <span>
+              {needsOverride
+                ? "Marketing fee exceeds 45% of base. Add a custom amount."
+                : "Marketing fee is higher than the assisted agent's earnings. Enter a lower custom amount."}
+            </span>
           </div>
           <Badge className="border-accent text-accent-dark">Override required</Badge>
           <div className="grid gap-3 md:grid-cols-2">

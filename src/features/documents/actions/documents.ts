@@ -23,15 +23,7 @@ export async function uploadDocuments(formData: FormData) {
   }
 
   const minCount = REQUIRED_COUNTS[setType];
-  const isPdf =
-    files.length === 1 &&
-    files[0] &&
-    files[0].type === "application/pdf";
-  if (setType === "sourcing_agreement") {
-    if (!isPdf && files.length !== minCount) {
-      throw new Error("Sourcing agreement requires 4 images or a single PDF.");
-    }
-  } else if (files.length < minCount) {
+  if (files.length < minCount) {
     throw new Error("Please upload at least one document.");
   }
 

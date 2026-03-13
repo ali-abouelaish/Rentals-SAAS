@@ -1,21 +1,18 @@
 import type { ReactNode } from "react";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import { SideNav } from "./SideNav";
+import { getTenantBrandingForApp } from "@/features/admin/data/admin";
+import { AppShellClient } from "./AppShellClient";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const profile = await requireUserProfile();
+  const branding = await getTenantBrandingForApp(profile.tenant_id);
 
   return (
-    <div className="h-screen bg-surface-ground p-2 md:p-3 flex gap-3 overflow-hidden">
-      {/* Sidebar */}
-      <SideNav profile={profile} />
-
-      {/* Main content — white rounded container */}
-      <main className="flex-1 overflow-y-auto bg-surface-card rounded-bento shadow-bento">
-        <div className="px-6 py-8 lg:px-10 lg:py-10">
-          {children}
-        </div>
-      </main>
-    </div>
+    <AppShellClient
+      profile={{ display_name: profile.display_name, role: profile.role }}
+      branding={branding}
+    >
+      {children}
+    </AppShellClient>
   );
 }

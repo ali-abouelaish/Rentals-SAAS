@@ -252,6 +252,37 @@ export async function saveTenantBrandingAction(input: {
   return { ok: true };
 }
 
+const TENANT_BRANDING_BUCKET = "tenant-branding";
+
+export async function uploadTenantLogoAction(
+  tenantId: string,
+  formData: FormData
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+  const file = formData.get("file") as File | null;
+  if (!file?.size) return { ok: false, error: "No file provided" };
+  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  const allowed = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
+  if (!allowed.includes(ext)) return { ok: false, error: "Allowed: " + allowed.join(", ") };
+
+  const { error: bucketErr } = await admin.storage.getBucket(TENANT_BRANDING_BUCKET);
+  if (bucketErr) {
+    const { error: createErr } = await admin.storage.createBucket(TENANT_BRANDING_BUCKET, { public: true });
+    if (createErr) return { ok: false, error: createErr.message };
+  }
+
+  const path = `${tenantId}/logo.${ext}`;
+  const { error: uploadErr } = await admin.storage
+    .from(TENANT_BRANDING_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type || "image/png" });
+  if (uploadErr) return { ok: false, error: uploadErr.message };
+
+  const { data: urlData } = admin.storage.from(TENANT_BRANDING_BUCKET).getPublicUrl(path);
+  revalidatePath(`/admin/tenants/${tenantId}/branding`);
+  return { ok: true, url: urlData.publicUrl };
+}
+
 export async function upsertTenantAccessProfileAction(input: {
   tenantId: string;
   profileId?: string;

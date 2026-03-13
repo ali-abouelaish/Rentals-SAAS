@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
 import { getInvoices } from "@/features/invoices/data/queries";
 import { InvoicesTableWithBulkDelete } from "@/features/invoices/ui/InvoicesTableWithBulkDelete";
+import { InvoicesStatusFilter } from "@/features/invoices/ui/InvoicesStatusFilter";
 import { viewInvoicePdf } from "@/features/invoices/actions/invoices";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import {
   Plus,
   Download,
   FileText,
-  Search,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -92,33 +92,20 @@ export default async function InvoicesPage({
           <h2 className="text-sm font-semibold text-foreground">Search & Filter</h2>
         </div>
 
-        <form className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
-            <Input
-              name="q"
-              placeholder="Invoice # or landlord..."
-              defaultValue={search}
-              className="pl-9"
+        <div className="flex flex-col md:flex-row gap-3">
+          <LiveSearchInput
+            placeholder="Invoice # or landlord..."
+            initialQuery={search}
+            preserveStatus={status !== "all" ? status : undefined}
+          />
+          <div className="w-full md:w-48">
+            <InvoicesStatusFilter
+              currentStatus={status}
+              currentSearch={search}
+              options={statusOptions}
             />
           </div>
-          <div className="w-full md:w-48">
-            <select
-              name="status"
-              defaultValue={status}
-              className="flex h-10 w-full rounded-lg border bg-surface-card px-3 py-2 text-sm border-border text-foreground focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-            >
-              {statusOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button type="submit" variant="outline" size="sm">
-            Apply Filters
-          </Button>
-        </form>
+        </div>
       </div>
 
       {/* ── Results count ──── */}

@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
 import { getLandlords } from "@/features/landlords/data/landlords";
 import {
   Building,
   Check,
   X,
-  Search,
   Filter,
   ArrowRight,
   ChevronLeft,
@@ -42,6 +41,14 @@ export default async function LandlordsPage({
     return `/landlords?${params.toString()}`;
   };
 
+  const buildPayingUrl = (payingValue: string) => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (payingValue && payingValue !== "all") params.set("paying", payingValue);
+    const qs = params.toString();
+    return `/landlords${qs ? `?${qs}` : ""}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Header ─────────────────────────── */}
@@ -66,24 +73,18 @@ export default async function LandlordsPage({
           <h2 className="text-sm font-semibold text-foreground">Search & Filter</h2>
         </div>
 
-        <form className="flex flex-wrap gap-3 items-end">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
-            <Input
-              name="q"
-              placeholder="Name, contact, email..."
-              defaultValue={search}
-              className="pl-9"
-            />
-          </div>
-
-          <input type="hidden" name="paying" value={paying} />
+        <div className="flex flex-wrap gap-3 items-end">
+          <LiveSearchInput
+            placeholder="Name, contact, email..."
+            initialQuery={search}
+            preservePaying={paying !== "all" ? paying : undefined}
+          />
 
           <div className="flex gap-2">
             {payingFilters.map((opt) => (
               <Link
                 key={opt.value}
-                href={`/landlords?q=${search}&paying=${opt.value}`}
+                href={buildPayingUrl(opt.value)}
                 className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-base ${paying === opt.value
                     ? "bg-brand text-brand-fg shadow-sm"
                     : "bg-surface-inset text-foreground-secondary hover:bg-surface-highlight hover:text-foreground"
@@ -93,11 +94,7 @@ export default async function LandlordsPage({
               </Link>
             ))}
           </div>
-
-          <Button type="submit" variant="outline" size="sm">
-            Search
-          </Button>
-        </form>
+        </div>
       </div>
 
       {/* ── Results Count ─────────────────── */}

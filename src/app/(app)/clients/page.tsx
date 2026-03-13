@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
 import { getClients } from "@/features/clients/data/clients";
 import { AgentQrCard } from "@/features/clients/ui/AgentQrCard";
 import { requireUserProfile } from "@/lib/auth/requireRole";
@@ -10,7 +9,6 @@ import {
   Users,
   Phone,
   ArrowRight,
-  Search,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -45,13 +43,20 @@ export default async function ClientsPage({
         ? "On Hold"
         : s.charAt(0).toUpperCase() + s.slice(1);
 
-  // Build pagination URL preserving existing search params
+  // Build URL preserving search and status
   const buildPageUrl = (p: number) => {
     const params = new URLSearchParams();
     if (searchParams?.q) params.set("q", searchParams.q);
     if (searchParams?.status) params.set("status", searchParams.status);
     params.set("page", String(p));
     return `/clients?${params.toString()}`;
+  };
+  const buildStatusUrl = (status: string) => {
+    const params = new URLSearchParams();
+    if (searchParams?.q) params.set("q", searchParams.q);
+    if (status && status !== "all") params.set("status", status);
+    const qs = params.toString();
+    return `/clients${qs ? `?${qs}` : ""}`;
   };
 
   return (
@@ -86,26 +91,19 @@ export default async function ClientsPage({
             <h2 className="text-sm font-semibold text-foreground">Search & Filter</h2>
           </div>
 
-          <form className="flex gap-2 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
-              <Input
-                name="q"
-                placeholder="Search name or phone..."
-                defaultValue={searchParams?.q}
-                className="pl-9"
-              />
-            </div>
-            <Button type="submit" variant="outline" size="sm">
-              Search
-            </Button>
-          </form>
+          <div className="flex gap-2 mb-4">
+            <LiveSearchInput
+              placeholder="Search name or phone..."
+              initialQuery={searchParams?.q ?? ""}
+              preserveStatus={activeStatus !== "all" ? activeStatus : undefined}
+            />
+          </div>
 
           <div className="flex flex-wrap gap-2">
             {statusFilters.map((status) => (
               <Link
                 key={status}
-                href={`/clients?status=${status}`}
+                href={buildStatusUrl(status)}
                 className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-base ${activeStatus === status
                     ? "bg-brand text-brand-fg shadow-sm"
                     : "bg-surface-inset text-foreground-secondary hover:bg-surface-highlight hover:text-foreground"

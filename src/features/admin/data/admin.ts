@@ -209,6 +209,18 @@ export async function getTenantBrandingSettings(tenantId: string): Promise<Tenan
   return (data as TenantBrandingSettings | null) ?? null;
 }
 
+/** Used by app layout to apply tenant branding (no super-admin check; call only with current user's tenant_id). */
+export async function getTenantBrandingForApp(tenantId: string): Promise<TenantBrandingSettings | null> {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("tenant_branding_settings")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error) return null;
+  return (data as TenantBrandingSettings | null) ?? null;
+}
+
 export async function getTenantAccessProfiles(tenantId: string): Promise<TenantAccessProfile[]> {
   await requireSuperAdmin();
   const admin = createSupabaseAdminClient();

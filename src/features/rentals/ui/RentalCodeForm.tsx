@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { createRentalCodeWithDocuments } from "../actions/rentals";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export function RentalCodeForm({
@@ -18,6 +19,31 @@ export function RentalCodeForm({
   const [sourcingFiles, setSourcingFiles] = useState<File[]>([]);
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
   const [clientIdFiles, setClientIdFiles] = useState<File[]>([]);
+  const [nextCode, setNextCode] = useState<string | null>(null);
+  const [loadingCode, setLoadingCode] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadCode = async () => {
+      try {
+        setLoadingCode(true);
+        const res = await fetch("/api/rentals/next-code");
+        if (!mounted) return;
+        if (res.ok) {
+          const data = await res.json();
+          setNextCode(String(data.code ?? ""));
+        }
+      } catch {
+        // ignore preview errors
+      } finally {
+        if (mounted) setLoadingCode(false);
+      }
+    };
+    loadCode();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (formData: FormData) => {
     formData.append("client_id", clientId);
@@ -77,6 +103,17 @@ export function RentalCodeForm({
       action={handleSubmit}
       className="space-y-4"
     >
+      {nextCode && (
+        <>
+          <input type="hidden" name="code" value={nextCode} />
+          <div className="w-full md:w-[70%] mx-auto rounded-xl border border-border bg-surface-card px-4 py-3 text-sm shadow-sm">
+            <span className="block text-center font-semibold tracking-tight text-foreground">
+              {loadingCode ? "Client …" : `Client ${nextCode}`}
+            </span>
+          </div>
+        </>
+      )}
+
       <div className="grid gap-3 md:grid-cols-2">
         <Input
           name="consultation_fee_amount"
@@ -84,45 +121,56 @@ export function RentalCodeForm({
           type="number"
           step="0.01"
           required
-          defaultValue={0}
         />
         <Select
           name="payment_method"
-          defaultValue="cash"
+          defaultValue=""
           options={[
-            { label: "Cash", value: "cash" },
-            { label: "Transfer", value: "transfer" },
-            { label: "Card", value: "card" },
+            { label: "Select payment method", value: "" },
+            { label: "💵 Cash", value: "cash" },
+            { label: "💸 Bank transfer", value: "transfer" },
+            { label: "💳 Card", value: "card" },
           ]}
         />
         <Input
           name="property_address"
           placeholder="Property address"
-          required
         />
         <Input
           name="licensor_name"
           placeholder="Licensor name"
-          required
         />
         <div className="md:col-span-2">
           <label className="text-xs text-foreground-secondary mb-1 block">
             Marketing agent (optional)
           </label>
-          <Input
+          <Select
             name="marketing_agent_name"
-            list="marketing-agent-list"
-            placeholder="Search by name"
+            defaultValue=""
+            options={[
+              { label: "None", value: "" },
+              ...agents.map((agent) => ({
+                label: agent.name,
+                value: agent.name,
+              })),
+            ]}
           />
-          <datalist id="marketing-agent-list">
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.name} />
-            ))}
-          </datalist>
           <p className="text-xs text-foreground-muted mt-1">
-            Leave blank if not applicable.
+            Choose from the list or leave as None if not applicable.
           </p>
         </div>
+      </div>
+
+      {/* Notes */}
+      <div className="space-y-2">
+        <label className="text-xs text-foreground-secondary mb-1 block">
+          Notes (optional)
+        </label>
+        <Textarea
+          name="notes"
+          placeholder="Add any notes about this rental (visible only to your team)"
+          rows={3}
+        />
       </div>
 
       {/* Document Uploads */}

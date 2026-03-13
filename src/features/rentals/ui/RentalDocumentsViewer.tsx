@@ -53,18 +53,28 @@ export function RentalDocumentsViewer({ sets }: { sets: ViewerSet[] }) {
   };
 
   return (
-    <div className="space-y-2 text-sm text-foreground-secondary">
+    <div className="space-y-3 text-sm text-foreground-secondary">
       {sets.map((set) => (
-        <div key={set.id} className="space-y-1">
-          <p className="font-medium text-brand capitalize">{formatSetType(set.set_type)}</p>
-          <div className="flex items-center gap-2">
-            <p>{set.documents.length} documents</p>
-            {set.documents.length > 0 ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => openSet(set.id)}>
-                View
-              </Button>
-            ) : null}
+        <div
+          key={set.id}
+          className="flex items-center justify-between rounded-lg border border-border bg-surface-inset px-3 py-2"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground">
+              {formatSetType(set.set_type)}
+            </p>
+            <p className="text-xs text-foreground-muted">
+              {set.documents.length}{" "}
+              {set.documents.length === 1 ? "document" : "documents"}
+            </p>
           </div>
+          {set.documents.length > 0 ? (
+            <Button type="button" variant="outline" size="xs" onClick={() => openSet(set.id)}>
+              View
+            </Button>
+          ) : (
+            <span className="text-[11px] text-foreground-muted">No files</span>
+          )}
         </div>
       ))}
 

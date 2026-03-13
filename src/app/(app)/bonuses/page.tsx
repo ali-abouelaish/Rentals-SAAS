@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
 import { getBonuses } from "@/features/bonuses/data/bonuses";
 import { SubmitBonusDialog } from "@/features/bonuses/ui/SubmitBonusDialog";
+import { BonusesLandlordFilter } from "@/features/bonuses/ui/BonusesLandlordFilter";
 import { BonusesTableWithInvoice } from "@/features/bonuses/ui/BonusesTableWithInvoice";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import { FileText, Gift, Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Gift, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default async function BonusesPage({
   searchParams
@@ -55,6 +56,15 @@ export default async function BonusesPage({
     return `/bonuses?${params.toString()}`;
   };
 
+  const buildStatusUrl = (status: string) => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (status && status !== "all") params.set("status", status);
+    if (landlordFilter !== "all") params.set("landlord", landlordFilter);
+    const qs = params.toString();
+    return `/bonuses${qs ? `?${qs}` : ""}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Header ─────────────────────────── */}
@@ -99,40 +109,27 @@ export default async function BonusesPage({
           <h2 className="text-sm font-semibold text-foreground">Search & Filter</h2>
         </div>
 
-        <form className="flex flex-wrap gap-3 items-end mb-4">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
-            <Input
-              name="q"
-              placeholder="Code, client, property..."
-              defaultValue={search}
-              className="pl-9"
-            />
-          </div>
+        <div className="flex flex-wrap gap-3 items-end mb-4">
+          <LiveSearchInput
+            placeholder="Code, client, property..."
+            initialQuery={search}
+            preserveStatus={activeStatus !== "all" ? activeStatus : undefined}
+            preserveLandlord={landlordFilter !== "all" ? landlordFilter : undefined}
+          />
 
-          <select
-            name="landlord"
-            defaultValue={landlordFilter}
-            className="h-10 rounded-lg border bg-surface-card px-3 text-sm border-border text-foreground-secondary"
-          >
-            <option value="all">All Landlords</option>
-            {(landlords ?? []).map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-
-          <Button type="submit" variant="outline" size="sm">
-            Search
-          </Button>
-        </form>
+          <BonusesLandlordFilter
+            currentLandlord={landlordFilter}
+            currentSearch={search}
+            currentStatus={activeStatus}
+            landlords={(landlords ?? []).map((l) => ({ id: l.id, name: l.name }))}
+          />
+        </div>
 
         <div className="flex flex-wrap gap-2">
           {statusFilters.map((status) => (
             <Link
               key={status}
-              href={`/bonuses?status=${status}&landlord=${landlordFilter}${search ? `&q=${search}` : ""}`}
+              href={buildStatusUrl(status)}
               className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-base ${activeStatus === status
                 ? "bg-brand text-brand-fg shadow-sm"
                 : "bg-surface-inset text-foreground-secondary hover:bg-surface-highlight hover:text-foreground"

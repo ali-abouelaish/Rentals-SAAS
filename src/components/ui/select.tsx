@@ -35,10 +35,11 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         )}
         <select
           className={cn(
-            "flex h-10 w-full rounded-lg border bg-surface-card px-3 py-2 text-sm",
-            "border-border text-foreground-secondary",
-            "transition-all duration-base cursor-pointer",
-            "focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20",
+            "flex h-8 w-full rounded-lg border bg-gradient-to-br from-surface-card to-surface-app/80 px-2 py-1",
+            "text-xs border-border/70 text-foreground-secondary shadow-sm",
+            "transition-all duration-150 cursor-pointer",
+            "hover:border-brand hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]",
+            "focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/25",
             "disabled:bg-surface-inset disabled:text-foreground-muted disabled:cursor-not-allowed",
             "appearance-none bg-no-repeat bg-right",
             className

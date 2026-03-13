@@ -30,6 +30,7 @@ interface SideNavProps {
     display_name: string | null;
     role: string | null;
   };
+  branding?: { logoUrl: string | null; brandName: string | null } | null;
 }
 
 const navItems: Array<{
@@ -53,11 +54,13 @@ const navItems: Array<{
   { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
 ];
 
-export function SideNav({ profile }: SideNavProps) {
+export function SideNav({ profile, branding }: SideNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
   const isSuperAdminOnly = (profile.role ?? "").toLowerCase() === "super_admin";
+  const brandName = branding?.brandName?.trim() || "Rental Agency";
+  const logoUrl = branding?.logoUrl?.trim();
 
   // Clear navigating state when the route has changed
   useEffect(() => {
@@ -71,12 +74,21 @@ export function SideNav({ profile }: SideNavProps) {
     <>
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 pt-6 pb-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow">
-          R
-        </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-bold tracking-tight text-white">
-            Rental Agency
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt=""
+            className="h-10 w-10 rounded-xl object-contain bg-white/10 p-1 shrink-0"
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
+            R
+          </div>
+        )}
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-bold tracking-tight text-white truncate">
+            {brandName}
           </span>
           <span className="text-[11px] text-sidebar-text">Management</span>
         </div>
