@@ -9,11 +9,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { RentalApprovalPanel } from "@/features/rentals/ui/RentalApprovalPanel";
 import { Button } from "@/components/ui/button";
-import { deleteRentalCode } from "@/features/rentals/actions/rentals";
+import { deleteRentalCode, updateRentalStatus } from "@/features/rentals/actions/rentals";
 import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
 import { RentalEditPanel } from "@/features/rentals/ui/RentalEditPanel";
 import { RentalDocumentsViewer } from "@/features/rentals/ui/RentalDocumentsViewer";
 import { RentalPayoutSummary } from "@/features/rentals/ui/RentalPayoutSummary";
+import { DollarSign } from "lucide-react";
 
 export default async function RentalDetailPage({
   params
@@ -170,6 +171,37 @@ export default async function RentalDetailPage({
             </Button>
           </ConfirmDeleteForm>
         ) : null}
+
+        {/* Admin status shortcuts (same behavior as list view) */}
+        {profile.role.toLowerCase() === "admin" && rental.status === "approved" && (
+          <form
+            action={async (formData) => {
+              "use server";
+              await updateRentalStatus(formData);
+            }}
+          >
+            <input type="hidden" name="rental_id" value={rental.id} />
+            <input type="hidden" name="status" value="paid" />
+            <Button type="submit" variant="success" size="sm">
+              <DollarSign className="h-3 w-3 mr-1" />
+              Mark as paid
+            </Button>
+          </form>
+        )}
+        {profile.role.toLowerCase() === "admin" && rental.status === "paid" && (
+          <form
+            action={async (formData) => {
+              "use server";
+              await updateRentalStatus(formData);
+            }}
+          >
+            <input type="hidden" name="rental_id" value={rental.id} />
+            <input type="hidden" name="status" value="refunded" />
+            <Button type="submit" variant="outline" size="sm">
+              Refund
+            </Button>
+          </form>
+        )}
       </div>
 
       {profile.role.toLowerCase() === "admin" && rental.status === "pending" ? (
@@ -188,6 +220,23 @@ export default async function RentalDetailPage({
           </CardContent>
         </Card>
       ) : null}
+
+      {(profile.role.toLowerCase() === "admin" || rental.assisted_by_agent_id === profile.id) && (
+        <Card>
+          <CardContent className="space-y-3">
+            <RentalEditPanel
+              rentalId={rental.id}
+              clientId={rental.client_id}
+              consultationFeeAmount={rental.consultation_fee_amount}
+              paymentMethod={rental.payment_method}
+              propertyAddress={rental.property_address}
+              licensorName={rental.licensor_name}
+              marketingAgentName={marketingAgentName}
+              agents={agents ?? []}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {rental.assisted_by_agent_id === profile.id &&
       !(profile.role.toLowerCase() === "admin" && rental.status === "pending") ? (

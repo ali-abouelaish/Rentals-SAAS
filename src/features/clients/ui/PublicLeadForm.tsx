@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { toast } from "sonner";
+import { CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createPublicLead } from "@/features/clients/actions/publicLead";
@@ -32,12 +33,31 @@ export function PublicLeadForm({
   const [state, formAction] = useFormState(createPublicLead, initialState);
 
   useEffect(() => {
-    if (state?.ok) {
-      toast.success("Submitted successfully.");
-    } else if (state?.error) {
+    if (state?.error) {
       toast.error(state.error);
     }
-  }, [state?.ok, state?.error]);
+  }, [state?.error]);
+
+  if (state?.ok) {
+    return (
+      <div className="w-full max-w-lg rounded-2xl border border-border-muted bg-surface-card p-10 shadow-card text-center">
+        <div className="flex justify-center mb-6">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success-bg text-success">
+            <CheckCircle2 className="h-12 w-12" strokeWidth={2} />
+          </div>
+        </div>
+        <h2 className="font-heading text-2xl font-semibold text-navy mb-2">
+          Thank you
+        </h2>
+        <p className="text-lg text-foreground-secondary mb-1">
+          Your details have been submitted successfully.
+        </p>
+        <p className="text-sm text-foreground-muted">
+          {agentName} will be in touch with you shortly.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -46,7 +66,7 @@ export function PublicLeadForm({
     >
       <div>
         <h1 className="font-heading text-2xl font-semibold text-navy">
-          Client Lead Form
+          Client Registration Form
         </h1>
         <p className="text-sm text-foreground-secondary">Assigned to {agentName}</p>
       </div>

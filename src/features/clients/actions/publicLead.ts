@@ -36,6 +36,25 @@ export async function createPublicLead(
       assigned_agent_id: agentId
     });
 
+    const admin = createSupabaseAdminClient();
+    const normalizePhone = (p: string) => p.replace(/\D/g, "").trim();
+    const normalizedInput = normalizePhone(payload.phone);
+    if (normalizedInput.length >= 6) {
+      const { data: existing } = await admin
+        .from("clients")
+        .select("id, phone")
+        .eq("tenant_id", tenantId);
+      const isDuplicate = (existing ?? []).some(
+        (row) => normalizePhone(row.phone ?? "") === normalizedInput
+      );
+      if (isDuplicate) {
+        return {
+          error:
+            "A lead with this phone number has already been submitted. If you need to update your details, please contact your agent."
+        };
+      }
+    }
+
     const key = `${agentId}-${tenantId}`;
     const now = Date.now();
     const record = rateLimitMap.get(key);
@@ -50,7 +69,6 @@ export async function createPublicLead(
     }
 
     const supabase = createSupabaseServerClient();
-    const admin = createSupabaseAdminClient();
     const { data, error } = await supabase
       .from("clients")
       .insert({

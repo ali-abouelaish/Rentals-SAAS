@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { clientSchema, type ClientFormValues } from "../domain/schemas";
 import { requireUserProfile } from "@/lib/auth/requireRole";
@@ -92,4 +93,15 @@ export async function updateClientStatus(clientId: string, status: string) {
   revalidatePath(`/clients/${clientId}`);
   revalidatePath("/clients");
   return data;
+}
+
+export async function deleteClient(clientId: string) {
+  const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
+
+  const { error } = await supabase.from("clients").delete().eq("id", clientId).eq("tenant_id", profile.tenant_id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/clients");
+  redirect("/clients");
 }

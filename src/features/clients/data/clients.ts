@@ -14,7 +14,7 @@ export async function getClients({
   const supabase = createSupabaseServerClient();
   let query = supabase
     .from("clients")
-    .select("*", { count: "exact" })
+    .select("*, assigned_agent:user_profiles!assigned_agent_id(display_name)", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (search) {

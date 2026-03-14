@@ -28,7 +28,14 @@ type Client = {
   share_code?: string | null;
 };
 
-export function ClientDetailsCard({ client }: { client: Client }) {
+type ClientDetailsCardProps = {
+  client: Client;
+  /** When true (e.g. for admin), show who the client is assigned to */
+  showAssignedAgent?: boolean;
+  assignedAgentName?: string | null;
+};
+
+export function ClientDetailsCard({ client, showAssignedAgent, assignedAgentName }: ClientDetailsCardProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   const initialValues: Partial<ClientFormValues> = {
@@ -127,6 +134,12 @@ export function ClientDetailsCard({ client }: { client: Client }) {
                 Agency & contact
               </p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {showAssignedAgent && (
+                  <div>
+                    <p className="text-xs text-foreground-muted">Assigned to</p>
+                    <p className="text-sm text-foreground">{assignedAgentName ?? "—"}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-foreground-muted">Agency name</p>
                   <p className="text-sm text-foreground">{client.agency_name ?? "—"}</p>

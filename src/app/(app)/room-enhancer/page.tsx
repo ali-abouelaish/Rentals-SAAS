@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Eraser, Save, Upload, Wand2 } from "lucide-react";
+import { Eraser, Save, Upload, Wand2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -82,7 +82,14 @@ export default function RoomEnhancerPage() {
   }
 
   function persistHistory(id: string, nextHistory: EditHistoryEntry[]) {
-    localStorage.setItem(getHistoryStorageKey(id), JSON.stringify(nextHistory));
+    try {
+      // History is a convenience feature; if storage is full, safely no-op.
+      const key = getHistoryStorageKey(id);
+      const payload = JSON.stringify(nextHistory);
+      localStorage.setItem(key, payload);
+    } catch {
+      // Ignore quota or serialization errors to avoid crashing the page.
+    }
   }
 
   useEffect(() => {
@@ -433,7 +440,28 @@ export default function RoomEnhancerPage() {
 
               {mode === "edit" && (
                 <div className="space-y-3">
-                  <label className="block text-xs font-medium text-foreground-muted">Source image</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="block text-xs font-medium text-foreground-muted">Source image</label>
+                    {previewUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setImageFile(null);
+                          setPreviewUrl(null);
+                          clearMask();
+                          setShowMaskEditor(false);
+                          setOriginalImageSize(null);
+                        }}
+                        disabled={loading}
+                        className="text-foreground-muted hover:text-foreground"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Dismiss image
+                      </Button>
+                    )}
+                  </div>
                   <Input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
@@ -553,8 +581,27 @@ export default function RoomEnhancerPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Results</CardTitle>
-            <CardDescription>Generated room outputs appear here.</CardDescription>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle>Results</CardTitle>
+                <CardDescription>Generated room outputs appear here.</CardDescription>
+              </div>
+              {resultDataUrls.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setResults([]);
+                    setUsage(null);
+                  }}
+                  className="text-foreground-muted hover:text-foreground shrink-0"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Dismiss
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {process.env.NODE_ENV === "development" && usage && (

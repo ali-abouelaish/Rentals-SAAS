@@ -140,15 +140,12 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     .single();
   if (clientError) throw new Error(clientError.message);
 
-  // Determine rental code: prefer code provided from form (preview), otherwise generate
-  let codeValue: string | null = codeFromForm || null;
-  if (!codeValue) {
-    const { data: codeData, error: codeError } = await supabase.rpc("next_rental_code", {
-      p_tenant_id: profile.tenant_id
-    });
-    if (codeError) throw new Error(codeError.message);
-    codeValue = String(codeData);
-  }
+  // Always get next code from DB so we never insert a stale preview (e.g. CC0001 for new users).
+  const { data: codeData, error: codeError } = await supabase.rpc("next_rental_code", {
+    p_tenant_id: profile.tenant_id
+  });
+  if (codeError) throw new Error(codeError.message);
+  const codeValue = String(codeData);
 
   // Create rental code
   const { data: rentalCode, error: rentalError } = await supabase

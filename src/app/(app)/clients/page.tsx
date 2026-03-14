@@ -158,6 +158,11 @@ export default async function ClientsPage({
                       <Phone className="h-3 w-3 text-foreground-muted" />
                       <span className="text-xs text-foreground-muted">{client.phone}</span>
                     </div>
+                    {profile.role === "admin" && (client as { assigned_agent?: { display_name: string | null } | null }).assigned_agent && (
+                      <p className="text-xs text-foreground-muted mt-0.5">
+                        Assigned to {(client as { assigned_agent: { display_name: string | null } }).assigned_agent.display_name ?? "—"}
+                      </p>
+                    )}
                   </div>
                 </div>
 

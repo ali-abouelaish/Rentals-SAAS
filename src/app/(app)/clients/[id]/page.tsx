@@ -6,15 +6,18 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDate } from "@/lib/utils/formatters";
 import { getClientById } from "@/features/clients/data/clients";
 import { CopyProfileButton } from "@/features/clients/ui/CopyProfileButton";
+import { DeleteClientButton } from "@/features/clients/ui/DeleteClientButton";
 import { ClientDetailsCard } from "@/features/clients/ui/ClientDetailsCard";
 import { CreateRentalCodeCard } from "@/features/rentals/ui/CreateRentalCodeCard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUserProfile } from "@/lib/auth/requireRole";
 
 export default async function ClientDetailPage({
   params
 }: {
   params: { id: string };
 }) {
+  const profile = await requireUserProfile();
   const client = await getClientById(params.id);
   const supabase = createSupabaseServerClient();
   const [{ data: rentals }, { data: agents }] = await Promise.all([
@@ -72,10 +75,21 @@ export default async function ClientDetailPage({
     <div className="space-y-6">
       <PageHeader title={client.full_name} subtitle="Client profile overview" />
 
-      <ClientDetailsCard client={client} />
+      <ClientDetailsCard
+        client={client}
+        showAssignedAgent={profile.role === "admin"}
+        assignedAgentName={
+          agents?.find((a) => a.id === client.assigned_agent_id)?.display_name ?? null
+        }
+      />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <CopyProfileButton text={profileText} />
+        <DeleteClientButton
+          clientId={client.id}
+          clientName={client.full_name ?? "this client"}
+          rentalsCount={rentals?.length ?? 0}
+        />
       </div>
 
       <Card>

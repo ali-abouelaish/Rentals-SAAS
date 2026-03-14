@@ -62,6 +62,12 @@ export default async function LandlordsPage({
             Landlords
           </h1>
         </div>
+        <Link href="/landlords/new">
+          <Button>
+            <Building className="h-4 w-4 mr-2" />
+            Create landlord
+          </Button>
+        </Link>
       </div>
 
       {/* ── Search & Filter — Bento card ──── */}
