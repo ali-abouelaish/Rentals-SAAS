@@ -13,9 +13,13 @@ export function createSupabaseServerClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
-          cookiesToSet.forEach((cookie) => {
-            cookieStore.set(cookie.name, cookie.value, cookie.options);
-          });
+          try {
+            cookiesToSet.forEach((cookie) => {
+              cookieStore.set(cookie.name, cookie.value, cookie.options);
+            });
+          } catch {
+            // Called from a Server Component — middleware handles token refresh
+          }
         }
       }
     }
