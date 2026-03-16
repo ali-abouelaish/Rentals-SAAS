@@ -6,7 +6,7 @@ export async function GET(_request: NextRequest) {
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
 
-  const { data: codeData, error } = await supabase.rpc("next_rental_code", {
+  const { data: codeData, error } = await supabase.rpc("peek_rental_code", {
     p_tenant_id: profile.tenant_id
   });
 
