@@ -17,8 +17,15 @@ export function createSupabaseMiddlewareClient(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
-          cookiesToSet.forEach((cookie) => {
-            response.cookies.set(cookie.name, cookie.value, cookie.options);
+          // Update request cookies so refreshed tokens are visible to server actions/components
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+          // Rebuild response with updated request headers so cookies propagate
+          response = NextResponse.next({ request });
+          // Also set cookies on the response so the browser receives the new tokens
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
           });
         }
       }
