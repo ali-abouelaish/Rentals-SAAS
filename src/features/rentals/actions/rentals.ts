@@ -82,8 +82,10 @@ export async function createRentalCode(values: RentalCodeFormValues) {
 
 export async function createRentalCodeWithDocuments(formData: FormData) {
   try {
+  console.log("[rental] action called");
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
+  console.log("[rental] profile ok, user:", profile?.id, "tenant:", profile?.tenant_id);
 
   // Extract form values
   const codeFromForm = String(formData.get("code") ?? "");
@@ -98,6 +100,9 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   const sourcingAgreementFiles = formData.getAll("sourcing_agreement") as File[];
   const paymentProofFiles = formData.getAll("payment_proof") as File[];
   const clientIdFiles = formData.getAll("client_id_doc") as File[];
+
+  console.log("[rental] files - sourcing:", sourcingAgreementFiles.length, "payment:", paymentProofFiles.length, "clientId:", clientIdFiles.length);
+  console.log("[rental] fields - clientId:", clientId, "fee:", consultationFeeAmount, "method:", paymentMethod);
 
   // Validate required documents
   if (sourcingAgreementFiles.length < 1) {
@@ -179,6 +184,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     .single();
 
   if (rentalError) throw new Error(`Failed to insert rental record: ${rentalError.message} (code: ${rentalError.code})`);
+  console.log("[rental] inserted ok, id:", rentalCode.id, "code:", rentalCode.code);
 
   // Upload documents
   const uploadDocumentSet = async (setType: "sourcing_agreement" | "client_id" | "payment_proof", files: File[]) => {
