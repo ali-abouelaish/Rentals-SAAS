@@ -81,6 +81,7 @@ export async function createRentalCode(values: RentalCodeFormValues) {
 }
 
 export async function createRentalCodeWithDocuments(formData: FormData) {
+  try {
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
 
@@ -138,13 +139,14 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     .select("*")
     .eq("id", payload.client_id)
     .single();
-  if (clientError) throw new Error(clientError.message);
+  if (clientError) throw new Error(`Failed to load client: ${clientError.message} (code: ${clientError.code})`);
+  if (!client) throw new Error("Client not found or you do not have permission to access it.");
 
   // Always get next code from DB so we never insert a stale preview (e.g. CC0001 for new users).
   const { data: codeData, error: codeError } = await supabase.rpc("next_rental_code", {
     p_tenant_id: profile.tenant_id
   });
-  if (codeError) throw new Error(codeError.message);
+  if (codeError) throw new Error(`Failed to generate rental code: ${codeError.message} (code: ${codeError.code})`);
   const codeValue = String(codeData);
 
   // Create rental code
@@ -176,7 +178,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     .select("*")
     .single();
 
-  if (rentalError) throw new Error(rentalError.message);
+  if (rentalError) throw new Error(`Failed to insert rental record: ${rentalError.message} (code: ${rentalError.code})`);
 
   // Upload documents
   const uploadDocumentSet = async (setType: "sourcing_agreement" | "client_id" | "payment_proof", files: File[]) => {
@@ -232,6 +234,10 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     .eq("id", clientId);
 
   return { ok: true, rentalCode };
+  } catch (err) {
+    console.error("[createRentalCodeWithDocuments] error:", err);
+    throw err;
+  }
 }
 
 export async function updateRentalCode(formData: FormData) {
