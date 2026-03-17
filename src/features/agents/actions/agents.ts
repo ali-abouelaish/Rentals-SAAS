@@ -32,14 +32,30 @@ function getInviteRedirectBaseDomain(): string | null {
 
 export async function updateAgentCommission(userId: string, values: AgentUpdateValues) {
   const supabase = createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
   const profile = await requireRole(["admin"]);
   const payload = agentUpdateSchema.parse(values);
+
+  const isAgent =
+    payload.role === "agent" || payload.role === "agent_and_marketing" || payload.role === "admin";
+  const isMarketing =
+    payload.role === "marketing_only" ||
+    payload.role === "agent_and_marketing" ||
+    payload.role === "admin";
+
+  const { error: profileError } = await admin
+    .from("user_profiles")
+    .update({ role: payload.role })
+    .eq("id", userId)
+    .eq("tenant_id", profile.tenant_id);
+  if (profileError) throw new Error(profileError.message);
 
   const { error } = await supabase
     .from("agent_profiles")
     .update({
       commission_percent: payload.commission_percent,
-      marketing_fee: payload.marketing_fee
+      marketing_fee: payload.marketing_fee,
+      role_flags: { is_agent: isAgent, is_marketing: isMarketing }
     })
     .eq("user_id", userId)
     .eq("tenant_id", profile.tenant_id);

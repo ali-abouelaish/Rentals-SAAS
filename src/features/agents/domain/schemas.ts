@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const agentUpdateSchema = z.object({
   commission_percent: z.coerce.number().min(0).max(100),
-  marketing_fee: z.coerce.number().min(0)
+  marketing_fee: z.coerce.number().min(0),
+  role: z.enum(["admin", "agent", "marketing_only", "agent_and_marketing"])
 });
 
 export type AgentUpdateValues = z.infer<typeof agentUpdateSchema>;
