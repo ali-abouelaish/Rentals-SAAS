@@ -98,6 +98,7 @@ export function BonusEditForm({
           name="amount_owed"
           type="number"
           step="0.01"
+          min="0"
           defaultValue={String(bonus.amount_owed)}
           required
         />

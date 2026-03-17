@@ -91,6 +91,7 @@ export function BonusForm({
           placeholder="£0.00"
           type="number"
           step="0.01"
+          min="0"
           {...form.register("amount_owed")}
           required
         />

@@ -61,6 +61,7 @@ export function RentalEditPanel({
             name="consultation_fee_amount"
             type="number"
             step="0.01"
+            min="0"
             defaultValue={String(consultationFeeAmount)}
           />
           <select

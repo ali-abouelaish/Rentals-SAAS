@@ -89,6 +89,7 @@ export function InvoiceItemsForm({
             <Input
               type="number"
               step="0.01"
+              min="0"
               placeholder="Quantity"
               value={item.quantity}
               onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })}
@@ -96,6 +97,7 @@ export function InvoiceItemsForm({
             <Input
               type="number"
               step="0.01"
+              min="0"
               placeholder="Rate"
               value={item.rate}
               onChange={(event) => updateItem(index, { rate: Number(event.target.value) })}
