@@ -23,7 +23,7 @@ function formatRoleLabel(role: string): string {
   if (r === "marketing_only") return "Marketing only";
   if (r === "super_admin") return "Admin";
   if (!r) return "Unknown";
-  return r.charAt(0).toUpperCase() + r.slice(1);
+  return r.replaceAll("_", " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
 export function AgentTableRow({ row }: { row: AgentTableRowData }) {
