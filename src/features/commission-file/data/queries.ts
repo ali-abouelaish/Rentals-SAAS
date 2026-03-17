@@ -38,14 +38,6 @@ export type CommissionPayoutRow = {
   created_at: string;
 };
 
-type LedgerRow = {
-  reference_id: string;
-  type: string;
-  amount_gbp: number | null;
-  agent_earning_gbp: number | null;
-  agent_id: string | null;
-};
-
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
@@ -71,87 +63,77 @@ export async function getCommissionFileData({
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
 
-  const { data: agentProfile } = await supabase
-    .from("agent_profiles")
-    .select("commission_percent")
-    .eq("user_id", agentId)
-    .single();
-
-  const { data: rentals, error: rentalError } = await supabase
-    .from("rental_codes")
-    .select(
-      "id, code, created_at, consultation_fee_amount, rental_amount_gbp, payment_method, property_address, client_snapshot, status, assisted_by_agent_id, marketing_agent_id"
-    )
-    .eq("tenant_id", profile.tenant_id)
-    .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
-    .in("status", includeStatuses)
-    .gte("created_at", fromIso)
-    .lte("created_at", toIso)
-    .order("created_at", { ascending: false });
+  const [{ data: agentProfile }, { data: rentals, error: rentalError }] = await Promise.all([
+    supabase
+      .from("agent_profiles")
+      .select("commission_percent, marketing_fee")
+      .eq("user_id", agentId)
+      .single(),
+    supabase
+      .from("rental_codes")
+      .select(
+        "id, code, created_at, consultation_fee_amount, rental_amount_gbp, payment_method, property_address, client_snapshot, status, assisted_by_agent_id, marketing_agent_id, marketing_fee_override_gbp, commission_percent_at_approval"
+      )
+      .eq("tenant_id", profile.tenant_id)
+      .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
+      .in("status", includeStatuses)
+      .gte("created_at", fromIso)
+      .lte("created_at", toIso)
+      .order("created_at", { ascending: false })
+  ]);
   if (rentalError) throw new Error(rentalError.message);
 
-  const rentalIds = (rentals ?? []).map((rental) => rental.id);
-  const { data: ledgerRows } = rentalIds.length
-    ? await supabase
-      .from("ledger_entries")
-      .select("reference_id, type, amount_gbp, agent_earning_gbp, agent_id")
-      .eq("reference_type", "rental_code")
-      .in("reference_id", rentalIds)
-      .in("type", ["rental_net", "agent_earning", "marketing_fee"])
-    : { data: [] as LedgerRow[] };
+  const selfCommissionPct = agentProfile?.commission_percent ?? 0;
+  const selfMarketingFee = agentProfile?.marketing_fee ?? 0;
 
-  const rentalNetById = new Map<string, number>();
-  const marketingFeeById = new Map<string, number>();
-  const agentEarningById = new Map<string, number>();
+  // Fetch marketing agent display names and their marketing fees
+  const marketingAgentIds = [...new Set(
+    (rentals ?? []).map((r) => r.marketing_agent_id).filter((id): id is string => Boolean(id))
+  )];
 
-  (ledgerRows ?? []).forEach((row: LedgerRow) => {
-    if (row.type === "rental_net") {
-      rentalNetById.set(row.reference_id, Number(row.amount_gbp ?? 0));
-    }
-    if (row.type === "marketing_fee") {
-      const current = marketingFeeById.get(row.reference_id) ?? 0;
-      marketingFeeById.set(row.reference_id, current + Number(row.agent_earning_gbp ?? 0));
-    }
-    if (row.agent_id === agentId && ["agent_earning", "marketing_fee"].includes(row.type)) {
-      const current = agentEarningById.get(row.reference_id) ?? 0;
-      agentEarningById.set(row.reference_id, current + Number(row.agent_earning_gbp ?? 0));
-    }
-  });
+  const [{ data: marketingUserProfiles }, { data: marketingAgentProfiles }] = marketingAgentIds.length
+    ? await Promise.all([
+        supabase.from("user_profiles").select("id, display_name").in("id", marketingAgentIds),
+        supabase.from("agent_profiles").select("user_id, marketing_fee").in("user_id", marketingAgentIds)
+      ])
+    : [{ data: [] as { id: string; display_name: string | null }[] }, { data: [] as { user_id: string; marketing_fee: number | null }[] }];
 
-  const marketingAgentIds = (rentals ?? [])
-    .map((rental) => rental.marketing_agent_id)
-    .filter((id): id is string => Boolean(id));
-
-  const { data: marketingAgents } = marketingAgentIds.length
-    ? await supabase
-      .from("user_profiles")
-      .select("id, display_name")
-      .in("id", marketingAgentIds)
-    : { data: [] as { id: string; display_name: string | null }[] };
-
-  const marketingAgentMap = new Map(
-    (marketingAgents ?? []).map((agent) => [agent.id, agent.display_name ?? "Agent"])
+  const marketingAgentNameMap = new Map(
+    (marketingUserProfiles ?? []).map((u) => [u.id, u.display_name ?? "Agent"])
+  );
+  const marketingFeeProfileMap = new Map(
+    (marketingAgentProfiles ?? []).map((p) => [p.user_id, Number(p.marketing_fee ?? 0)])
   );
 
   const rentalRows: CommissionRentalRow[] = (rentals ?? []).map((rental) => {
-    const rentalAmount = Number(
-      rental.rental_amount_gbp ?? rental.consultation_fee_amount ?? 0
-    );
+    const rentalAmount = Number(rental.rental_amount_gbp ?? rental.consultation_fee_amount ?? 0);
     const feeRate = paymentFeeRate(rental.payment_method);
     const paymentFee = roundMoney(rentalAmount * feeRate);
-    const baseAmount =
-      rentalNetById.get(rental.id) ?? roundMoney(rentalAmount - paymentFee);
-    const marketingFee = marketingFeeById.get(rental.id) ?? 0;
-    const agentEarning = agentEarningById.get(rental.id) ?? 0;
-    const marketingAgentName = rental.marketing_agent_id
-      ? marketingAgentMap.get(rental.marketing_agent_id) ?? "—"
-      : "—";
+    const baseAmount = roundMoney(rentalAmount - paymentFee);
+
+    const hasMarketingAgent =
+      rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
+    const marketingFee = hasMarketingAgent
+      ? rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
+        ? Number(rental.marketing_fee_override_gbp)
+        : marketingFeeProfileMap.get(rental.marketing_agent_id!) ?? 0
+      : 0;
+
+    const commPct = rental.commission_percent_at_approval ?? selfCommissionPct;
+
+    let agentEarning: number;
+    if (rental.assisted_by_agent_id === agentId) {
+      const gross = roundMoney(baseAmount * Number(commPct) / 100);
+      agentEarning = roundMoney(gross - marketingFee);
+    } else {
+      // This agent is the marketing agent
+      agentEarning = rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
+        ? Number(rental.marketing_fee_override_gbp)
+        : selfMarketingFee;
+    }
+
     const marketingFeeDeducted =
-      rental.assisted_by_agent_id === agentId &&
-        rental.marketing_agent_id &&
-        rental.marketing_agent_id !== agentId
-        ? marketingFee
-        : 0;
+      rental.assisted_by_agent_id === agentId && hasMarketingAgent ? marketingFee : 0;
 
     return {
       id: rental.id,
@@ -164,8 +146,10 @@ export async function getCommissionFileData({
       rental_amount: rentalAmount,
       payment_fee: paymentFee,
       base_amount: baseAmount,
-      commission_percent: Number(agentProfile?.commission_percent ?? 0),
-      marketing_agent_name: marketingAgentName,
+      commission_percent: Number(commPct),
+      marketing_agent_name: rental.marketing_agent_id
+        ? marketingAgentNameMap.get(rental.marketing_agent_id) ?? "—"
+        : "—",
       marketing_fee_deducted: roundMoney(marketingFeeDeducted),
       agent_earning: roundMoney(agentEarning),
       status: rental.status

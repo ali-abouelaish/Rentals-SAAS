@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rentalCodeSchema, type RentalCodeFormValues } from "../domain/schemas";
 import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
 
@@ -307,48 +306,6 @@ export async function updateRentalCode(formData: FormData) {
     .eq("id", rentalId);
   if (error) throw new Error(error.message);
 
-  // Recalculate ledger entries if rental is already approved/paid
-  if (isAdmin && ["approved", "paid"].includes(rental.status)) {
-    const admin = createSupabaseAdminClient();
-
-    const { data: agentProfile } = await admin
-      .from("agent_profiles")
-      .select("commission_percent")
-      .eq("user_id", rental.assisted_by_agent_id)
-      .single();
-
-    const { data: mktFeeEntry } = await admin
-      .from("ledger_entries")
-      .select("agent_earning_gbp")
-      .eq("reference_id", rentalId)
-      .eq("type", "marketing_fee")
-      .maybeSingle();
-
-    const commissionPercent = agentProfile?.commission_percent ?? 0;
-    const paymentFee =
-      payload.payment_method === "cash"
-        ? 0
-        : payload.payment_method === "transfer"
-        ? 0.2
-        : 0.0175;
-    const base = roundMoney(payload.consultation_fee_amount * (1 - paymentFee));
-    const assistedGross = roundMoney(base * (commissionPercent / 100));
-    const marketingFee = mktFeeEntry?.agent_earning_gbp ?? 0;
-    const assistedNet = roundMoney(assistedGross - marketingFee);
-
-    await admin
-      .from("ledger_entries")
-      .update({ amount_gbp: base })
-      .eq("reference_id", rentalId)
-      .eq("type", "rental_net");
-
-    await admin
-      .from("ledger_entries")
-      .update({ agent_earning_gbp: assistedNet })
-      .eq("reference_id", rentalId)
-      .eq("type", "agent_earning");
-  }
-
   revalidatePath("/earnings");
   revalidatePath(`/rentals/${rentalId}`);
 }
@@ -447,14 +404,7 @@ export async function approveRentalCode(formData: FormData) {
     .eq("user_id", rental.marketing_agent_id)
     .single();
 
-  const existingLedger = await supabase
-    .from("ledger_entries")
-    .select("id")
-    .eq("reference_type", "rental_code")
-    .eq("reference_id", rental.id)
-    .in("type", ["rental_net", "agent_earning", "marketing_fee"]);
-
-  if (existingLedger.data && existingLedger.data.length > 0) {
+  if (["approved", "paid"].includes(rental.status)) {
     return { ok: true, status: "already_exists" };
   }
 
@@ -518,45 +468,9 @@ export async function approveRentalCode(formData: FormData) {
 
   const { error: updateError } = await supabase
     .from("rental_codes")
-    .update({ status: "approved" })
+    .update({ status: "approved", commission_percent_at_approval: commissionPercent })
     .eq("id", rentalId);
   if (updateError) throw new Error(updateError.message);
-
-  const ledgerRows = [
-    {
-      tenant_id: profile.tenant_id,
-      type: "rental_net",
-      reference_type: "rental_code",
-      reference_id: rental.id,
-      amount_gbp: base,
-      agent_earning_gbp: 0,
-      agent_id: null
-    },
-    {
-      tenant_id: profile.tenant_id,
-      type: "agent_earning",
-      reference_type: "rental_code",
-      reference_id: rental.id,
-      amount_gbp: 0,
-      agent_earning_gbp: assistedNet,
-      agent_id: rental.assisted_by_agent_id
-    }
-  ];
-
-  if (hasMarketingAgent && marketingFeeValue > 0) {
-    ledgerRows.push({
-      tenant_id: profile.tenant_id,
-      type: "marketing_fee",
-      reference_type: "rental_code",
-      reference_id: rental.id,
-      amount_gbp: 0,
-      agent_earning_gbp: roundMoney(marketingFeeValue),
-      agent_id: rental.marketing_agent_id
-    });
-  }
-
-  const { error: ledgerError } = await supabase.from("ledger_entries").insert(ledgerRows);
-  if (ledgerError) throw new Error(ledgerError.message);
 
   await supabase.from("activity_log").insert({
     tenant_id: profile.tenant_id,
@@ -573,7 +487,6 @@ export async function approveRentalCode(formData: FormData) {
 
 export async function updateRentalStatus(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
   await requireRole(["admin"]);
   const rentalId = String(formData.get("rental_id") ?? "");
   const status = String(formData.get("status") ?? "");
@@ -588,14 +501,6 @@ export async function updateRentalStatus(formData: FormData) {
     .update({ status })
     .eq("id", rentalId);
   if (error) throw new Error(error.message);
-
-  if (status === "refunded") {
-    await admin
-      .from("ledger_entries")
-      .delete()
-      .eq("reference_type", "rental_code")
-      .eq("reference_id", rentalId);
-  }
 
   revalidatePath("/rentals");
   revalidatePath(`/rentals/${rentalId}`);
