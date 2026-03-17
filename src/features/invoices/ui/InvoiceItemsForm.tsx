@@ -81,36 +81,47 @@ export function InvoiceItemsForm({
       <div className="space-y-3">
         {items.map((item, index) => (
           <div key={`item-${index}`} className="grid gap-2 md:grid-cols-4">
-            <Input
-              placeholder="Description"
-              value={item.description}
-              onChange={(event) => updateItem(index, { description: event.target.value })}
-            />
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Quantity"
-              value={item.quantity}
-              onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })}
-            />
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Rate"
-              value={item.rate}
-              onChange={(event) => updateItem(index, { rate: Number(event.target.value) })}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => removeItem(index)}
-              disabled={items.length === 1}
-            >
-              Remove
-            </Button>
-          </div>
+            <div className="space-y-1">
+              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">Description</label>}
+              <Input
+                placeholder="Description"
+                value={item.description}
+                onChange={(event) => updateItem(index, { description: event.target.value })}
+              />
+            </div>
+            <div className="space-y-1">
+              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">Quantity</label>}
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Quantity"
+                value={item.quantity}
+                onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })}
+              />
+            </div>
+            <div className="space-y-1">
+              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">Rate (£)</label>}
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Rate"
+                value={item.rate}
+                onChange={(event) => updateItem(index, { rate: Number(event.target.value) })}
+              />
+            </div>
+            <div className="space-y-1">
+              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">&nbsp;</label>}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => removeItem(index)}
+                disabled={items.length === 1}
+              >
+                Remove
+              </Button>
+            </div>
         ))}
         <Button
           type="button"
