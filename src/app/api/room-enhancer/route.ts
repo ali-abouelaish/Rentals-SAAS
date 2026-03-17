@@ -30,8 +30,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let formData: FormData;
   try {
-    const formData = await request.formData();
+    formData = await request.formData();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (
+      msg.includes("413") ||
+      msg.toLowerCase().includes("too large") ||
+      msg.toLowerCase().includes("payload") ||
+      msg.toLowerCase().includes("limit")
+    ) {
+      return NextResponse.json(
+        { error: "The uploaded image is too large to process. Please try a smaller image." },
+        { status: 413 }
+      );
+    }
+    return NextResponse.json({ error: "Failed to read request body." }, { status: 400 });
+  }
+
+  try {
 
     const mode = (formData.get("mode") as Mode | null) ?? "generate";
     const model =
