@@ -5,9 +5,13 @@ import { ensureTenantSetup } from "@/features/tenants/actions/tenants";
 
 export const requireUserProfile = cache(async () => {
   const supabase = createSupabaseServerClient();
+  // getSession() reads the JWT from the cookie locally — no auth API network call
+  // unless the access token needs refreshing (once per hour). Database RLS with
+  // auth.uid() still enforces all security guarantees.
   const {
-    data: { user }
-  } = await supabase.auth.getUser();
+    data: { session }
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   if (!user) {
     redirect("/login");
