@@ -534,7 +534,7 @@ export async function updateRentalStatus(formData: FormData) {
   const status = String(formData.get("status") ?? "");
 
   if (!rentalId) throw new Error("Missing rental id.");
-  if (!["paid", "refunded"].includes(status)) {
+  if (!["pending", "approved", "paid", "refunded"].includes(status)) {
     throw new Error("Unsupported status update.");
   }
 
