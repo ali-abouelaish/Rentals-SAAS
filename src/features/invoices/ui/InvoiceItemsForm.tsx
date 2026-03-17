@@ -68,8 +68,8 @@ export function InvoiceItemsForm({
         </div>
         <div>
           <label className="text-xs text-foreground-secondary">Landlord</label>
-          <select name="landlord_id" className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm">
-            <option value="" disabled selected>Select a landlord</option>
+          <select name="landlord_id" defaultValue="" className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm">
+            <option value="" disabled hidden>Select a landlord</option>
             {landlords.map((landlord) => (
               <option key={landlord.id} value={landlord.id}>
                 {landlord.name}
@@ -123,6 +123,7 @@ export function InvoiceItemsForm({
                 Remove
               </Button>
             </div>
+          </div>
         ))}
         <Button
           type="button"
