@@ -34,8 +34,14 @@ export function AgentCommissionForm({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3 md:grid-cols-2">
-      <Input placeholder="Commission %" type="number" {...form.register("commission_percent")} />
-      <Input placeholder="Marketing fee" type="number" {...form.register("marketing_fee")} />
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-foreground-muted">Commission (%)</label>
+        <Input placeholder="e.g. 15" type="number" min="0" {...form.register("commission_percent")} />
+      </div>
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-foreground-muted">Marketing fee (£)</label>
+        <Input placeholder="e.g. 20" type="number" min="0" {...form.register("marketing_fee")} />
+      </div>
       <div className="md:col-span-2">
         <Button type="submit" disabled={isPending}>
           Update commission
