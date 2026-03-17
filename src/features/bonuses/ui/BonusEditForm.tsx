@@ -61,6 +61,7 @@ export function BonusEditForm({
           name="landlord_id"
           defaultValue={bonus.landlord_id}
           options={landlords.map((l) => ({ label: l.name, value: l.id }))}
+          placeholder="Select a landlord"
           className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm"
         />
       </div>

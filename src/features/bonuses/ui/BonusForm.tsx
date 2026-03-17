@@ -36,13 +36,10 @@ export function BonusForm({
   });
 
   useEffect(() => {
-    if (landlords.length > 0 && !form.getValues("landlord_id")) {
-      form.setValue("landlord_id", landlords[0].id);
-    }
     if (agents.length > 0 && !form.getValues("agent_id")) {
       form.setValue("agent_id", agents[0].id);
     }
-  }, [agents, landlords, form]);
+  }, [agents, form]);
 
   const onSubmit = (values: BonusFormValues) => {
     startTransition(async () => {
@@ -81,9 +78,11 @@ export function BonusForm({
       <div>
         <p className="text-xs text-foreground-secondary">Landlord *</p>
         <Select
-          value={form.watch("landlord_id")}
+          value={form.watch("landlord_id") ?? ""}
           onChange={(value: string) => form.setValue("landlord_id", value)}
           options={landlords.map((landlord) => ({ label: landlord.name, value: landlord.id }))}
+          placeholder="Select a landlord"
+          required
         />
       </div>
       <div className="md:col-span-2">
