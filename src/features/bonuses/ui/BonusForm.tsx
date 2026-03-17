@@ -3,6 +3,7 @@
 import { useEffect, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { bonusSchema, type BonusFormValues } from "../domain/schemas";
 import { submitBonus } from "../actions/bonuses";
 import { Input } from "@/components/ui/input";
@@ -14,12 +15,14 @@ export function BonusForm({
   landlords,
   agents,
   isAdmin,
-  currentAgentId
+  currentAgentId,
+  onSuccess
 }: {
   landlords: { id: string; name: string }[];
   agents: { id: string; name: string }[];
   isAdmin: boolean;
   currentAgentId: string;
+  onSuccess?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<BonusFormValues>({
@@ -33,18 +36,21 @@ export function BonusForm({
   });
 
   useEffect(() => {
-    if (landlords.length > 0 && !form.getValues("landlord_id")) {
-      form.setValue("landlord_id", landlords[0].id);
-    }
     if (agents.length > 0 && !form.getValues("agent_id")) {
       form.setValue("agent_id", agents[0].id);
     }
-  }, [agents, landlords, form]);
+  }, [agents, form]);
 
   const onSubmit = (values: BonusFormValues) => {
     startTransition(async () => {
-      await submitBonus(values);
-      form.reset({ payout_mode: "standard", amount_owed: 0 });
+      try {
+        await submitBonus(values);
+        form.reset({ payout_mode: "standard", amount_owed: 0 });
+        toast.success("Bonus submitted successfully.");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to submit bonus.");
+      }
     });
   };
 
@@ -72,9 +78,11 @@ export function BonusForm({
       <div>
         <p className="text-xs text-foreground-secondary">Landlord *</p>
         <Select
-          value={form.watch("landlord_id")}
+          value={form.watch("landlord_id") ?? ""}
           onChange={(value: string) => form.setValue("landlord_id", value)}
           options={landlords.map((landlord) => ({ label: landlord.name, value: landlord.id }))}
+          placeholder="Select a landlord"
+          required
         />
       </div>
       <div className="md:col-span-2">
@@ -91,6 +99,7 @@ export function BonusForm({
           placeholder="£0.00"
           type="number"
           step="0.01"
+          min="0"
           {...form.register("amount_owed")}
           required
         />

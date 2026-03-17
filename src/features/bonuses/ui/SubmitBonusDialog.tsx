@@ -46,6 +46,7 @@ export function SubmitBonusDialog({
                     agents={agents}
                     isAdmin={isAdmin}
                     currentAgentId={currentAgentId}
+                    onSuccess={() => setOpen(false)}
                 />
             </DialogContent>
         </Dialog>

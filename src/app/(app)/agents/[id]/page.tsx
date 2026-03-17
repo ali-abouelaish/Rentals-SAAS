@@ -187,6 +187,7 @@ export default async function AgentProfilePage({
                 userId={agent.user_id}
                 commission_percent={agent.commission_percent}
                 marketing_fee={agent.marketing_fee}
+                role={(agent.user_profiles as { role?: string } | null)?.role ?? "agent"}
               />
             </CardContent>
           </Card>

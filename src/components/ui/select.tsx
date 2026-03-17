@@ -9,11 +9,12 @@ interface SelectOption {
 interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
   label?: string;
   options?: SelectOption[];
+  placeholder?: string;
   onChange?: ((value: string) => void) | React.ChangeEventHandler<HTMLSelectElement>;
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, options, children, onChange, ...props }, ref) => {
+  ({ className, label, options, placeholder, children, onChange, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       if (onChange) {
         if (typeof onChange === 'function') {
@@ -54,6 +55,9 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           onChange={handleChange}
           {...props}
         >
+          {placeholder && (
+            <option value="" disabled hidden>{placeholder}</option>
+          )}
           {options
             ? options.map((option) => (
               <option key={option.value} value={option.value}>

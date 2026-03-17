@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { bonusSchema, type BonusFormValues } from "../domain/schemas";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function submitBonus(values: BonusFormValues) {
   const supabase = createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
   const profile = await requireUserProfile();
   const payload = bonusSchema.parse(values);
   const agentId = payload.agent_id ?? profile.id;
@@ -16,7 +18,7 @@ export async function submitBonus(values: BonusFormValues) {
   );
   if (bonusCodeError) throw new Error(bonusCodeError.message);
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("bonuses")
     .insert({
       tenant_id: profile.tenant_id,

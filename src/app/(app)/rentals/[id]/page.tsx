@@ -14,6 +14,7 @@ import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
 import { RentalEditPanel } from "@/features/rentals/ui/RentalEditPanel";
 import { RentalDocumentsViewer } from "@/features/rentals/ui/RentalDocumentsViewer";
 import { RentalPayoutSummary } from "@/features/rentals/ui/RentalPayoutSummary";
+import { RentalStatusSelect } from "@/features/rentals/ui/RentalStatusSelect";
 import { DollarSign } from "lucide-react";
 
 export default async function RentalDetailPage({
@@ -203,6 +204,15 @@ export default async function RentalDetailPage({
           </form>
         )}
       </div>
+
+      {profile.role.toLowerCase() === "admin" && (
+        <Card>
+          <CardContent className="space-y-3">
+            <p className="text-sm font-medium text-navy">Admin controls</p>
+            <RentalStatusSelect rentalId={rental.id} currentStatus={rental.status} />
+          </CardContent>
+        </Card>
+      )}
 
       {profile.role.toLowerCase() === "admin" && rental.status === "pending" ? (
         <Card>

@@ -26,7 +26,7 @@ export default async function BillingProfilesPage() {
         <Card>
           <CardContent className="space-y-3">
             <p className="text-sm font-medium text-brand">Create profile</p>
-            <form action={createBillingProfile} className="grid gap-3 md:grid-cols-2">
+            <form action={createBillingProfile} encType="multipart/form-data" className="grid gap-3 md:grid-cols-2">
               <Input name="name" placeholder="Profile name" required />
               <Input name="sender_company_name" placeholder="Company name" required />
               <Input name="sender_address" placeholder="Sender address" />
@@ -37,6 +37,10 @@ export default async function BillingProfilesPage() {
               <Input name="bank_sort_code" placeholder="Sort code" required />
               <Input name="default_payment_terms_days" placeholder="Payment terms (net days)" />
               <Input name="footer_thank_you_text" placeholder="Footer text" />
+              <div className="md:col-span-2 space-y-1">
+                <label className="block text-xs font-medium text-foreground-muted">Logo (optional)</label>
+                <Input type="file" name="logo" accept="image/*" />
+              </div>
               <div className="md:col-span-2">
                 <Button type="submit">Create</Button>
               </div>

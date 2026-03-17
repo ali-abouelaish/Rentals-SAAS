@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -127,13 +127,10 @@ export function BillingProfilesTable({
   );
 }
 
-function SubmitUploadButton() {
+function LogoUploadStatus() {
   const { pending } = useFormStatus();
-  return (
-    <Button type="submit" variant="outline" size="sm" disabled={pending}>
-      {pending ? "Uploading..." : "Upload logo"}
-    </Button>
-  );
+  if (!pending) return null;
+  return <span className="text-xs text-foreground-muted">Uploading...</span>;
 }
 
 function LogoUploadForm({
@@ -147,6 +144,7 @@ function LogoUploadForm({
   ) => Promise<{ ok?: boolean; error?: string }>;
 }) {
   const [state, formAction] = useFormState(onUploadLogo, { ok: false });
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state?.ok) {
@@ -158,13 +156,22 @@ function LogoUploadForm({
 
   return (
     <form
+      ref={formRef}
       action={formAction}
       encType="multipart/form-data"
       className="flex flex-wrap items-center gap-2"
     >
       <input type="hidden" name="billing_profile_id" value={profileId} />
-      <input type="file" name="file" accept="image/*" required />
-      <SubmitUploadButton />
+      <input
+        type="file"
+        name="file"
+        accept="image/*"
+        required
+        onChange={(e) => {
+          if (e.target.files?.length) formRef.current?.requestSubmit();
+        }}
+      />
+      <LogoUploadStatus />
     </form>
   );
 }

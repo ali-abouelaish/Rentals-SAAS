@@ -14,16 +14,21 @@ export async function getAgents({
     .eq("is_disabled", false)
     .order("created_at", { ascending: false });
 
-  if (search) {
-    query = query.or(`user_profiles.display_name.ilike.%${search}%`);
-  }
   if (role && role !== "all") {
     query = query.eq("user_profiles.role", role);
   }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const agents = data ?? [];
+  if (!search) return agents;
+
+  const term = search.toLowerCase();
+  return agents.filter((a) => {
+    const name = (a.user_profiles as { display_name?: string } | null)?.display_name ?? "";
+    return name.toLowerCase().includes(term);
+  });
 }
 
 export async function getAgentById(id: string) {

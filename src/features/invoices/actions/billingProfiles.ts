@@ -7,12 +7,13 @@ import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 
 export async function createBillingProfile(formData: FormData) {
   const supabase = createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
   const profile = await requireRole(["admin"]);
   const termsRaw = String(formData.get("default_payment_terms_days") ?? "");
   const termsValue = Number(termsRaw);
   const termsDays = Number.isFinite(termsValue) && termsValue > 0 ? termsValue : 7;
 
-  const { error } = await supabase.from("billing_profiles").insert({
+  const { data, error } = await supabase.from("billing_profiles").insert({
     tenant_id: profile.tenant_id,
     name: String(formData.get("name") ?? ""),
     sender_company_name: String(formData.get("sender_company_name") ?? ""),
@@ -24,8 +25,26 @@ export async function createBillingProfile(formData: FormData) {
     bank_sort_code: String(formData.get("bank_sort_code") ?? ""),
     default_payment_terms_days: termsDays,
     footer_thank_you_text: String(formData.get("footer_thank_you_text") ?? "Thank you for your business!")
-  });
+  }).select("id").single();
   if (error) throw new Error(error.message);
+
+  const logoFile = formData.get("logo") as File | null;
+  if (logoFile && logoFile.size > 0 && data?.id) {
+    const bucketName = "billing-logos";
+    const { error: bucketError } = await admin.storage.getBucket(bucketName);
+    if (bucketError) await admin.storage.createBucket(bucketName, { public: false });
+    const path = `${profile.tenant_id}/${data.id}/${logoFile.name}`;
+    const { error: uploadError } = await admin.storage
+      .from(bucketName)
+      .upload(path, logoFile, { upsert: true, contentType: logoFile.type || "image/png" });
+    if (!uploadError) {
+      await supabase
+        .from("billing_profiles")
+        .update({ logo_url: path })
+        .eq("id", data.id)
+        .eq("tenant_id", profile.tenant_id);
+    }
+  }
 
   revalidatePath("/settings/billing-profiles");
 }

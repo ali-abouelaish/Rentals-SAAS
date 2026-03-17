@@ -35,7 +35,7 @@ export function ProfileHeader({
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
               <span className="inline-flex items-center rounded-full bg-brand/15 px-2.5 py-0.5 text-xs font-medium text-brand capitalize">
-                {role?.replace("_", " ") ?? "Agent"}
+                {role?.replaceAll("_", " ") ?? "Agent"}
               </span>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-foreground-muted">
