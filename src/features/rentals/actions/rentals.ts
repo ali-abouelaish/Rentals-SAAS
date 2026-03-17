@@ -264,7 +264,7 @@ export async function updateRentalCode(formData: FormData) {
   if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
     throw new Error("You do not have access to edit this rental.");
   }
-  if (rental.status !== "pending") {
+  if (!isAdmin && rental.status !== "pending") {
     throw new Error("Only pending rentals can be edited.");
   }
 
@@ -307,6 +307,49 @@ export async function updateRentalCode(formData: FormData) {
     .eq("id", rentalId);
   if (error) throw new Error(error.message);
 
+  // Recalculate ledger entries if rental is already approved/paid
+  if (isAdmin && ["approved", "paid"].includes(rental.status)) {
+    const admin = createSupabaseAdminClient();
+
+    const { data: agentProfile } = await admin
+      .from("agent_profiles")
+      .select("commission_percent")
+      .eq("user_id", rental.assisted_by_agent_id)
+      .single();
+
+    const { data: mktFeeEntry } = await admin
+      .from("ledger_entries")
+      .select("agent_earning_gbp")
+      .eq("reference_id", rentalId)
+      .eq("type", "marketing_fee")
+      .maybeSingle();
+
+    const commissionPercent = agentProfile?.commission_percent ?? 0;
+    const paymentFee =
+      payload.payment_method === "cash"
+        ? 0
+        : payload.payment_method === "transfer"
+        ? 0.2
+        : 0.0175;
+    const base = roundMoney(payload.consultation_fee_amount * (1 - paymentFee));
+    const assistedGross = roundMoney(base * (commissionPercent / 100));
+    const marketingFee = mktFeeEntry?.agent_earning_gbp ?? 0;
+    const assistedNet = roundMoney(assistedGross - marketingFee);
+
+    await admin
+      .from("ledger_entries")
+      .update({ amount_gbp: base })
+      .eq("reference_id", rentalId)
+      .eq("type", "rental_net");
+
+    await admin
+      .from("ledger_entries")
+      .update({ agent_earning_gbp: assistedNet })
+      .eq("reference_id", rentalId)
+      .eq("type", "agent_earning");
+  }
+
+  revalidatePath("/earnings");
   revalidatePath(`/rentals/${rentalId}`);
 }
 
