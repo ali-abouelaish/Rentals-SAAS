@@ -3,6 +3,7 @@
 import { useEffect, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { bonusSchema, type BonusFormValues } from "../domain/schemas";
 import { submitBonus } from "../actions/bonuses";
 import { Input } from "@/components/ui/input";
@@ -14,12 +15,14 @@ export function BonusForm({
   landlords,
   agents,
   isAdmin,
-  currentAgentId
+  currentAgentId,
+  onSuccess
 }: {
   landlords: { id: string; name: string }[];
   agents: { id: string; name: string }[];
   isAdmin: boolean;
   currentAgentId: string;
+  onSuccess?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<BonusFormValues>({
@@ -43,8 +46,14 @@ export function BonusForm({
 
   const onSubmit = (values: BonusFormValues) => {
     startTransition(async () => {
-      await submitBonus(values);
-      form.reset({ payout_mode: "standard", amount_owed: 0 });
+      try {
+        await submitBonus(values);
+        form.reset({ payout_mode: "standard", amount_owed: 0 });
+        toast.success("Bonus submitted successfully.");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to submit bonus.");
+      }
     });
   };
 
