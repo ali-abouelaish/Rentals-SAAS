@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rentalCodeSchema, type RentalCodeFormValues } from "../domain/schemas";
 import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
 
@@ -529,6 +530,7 @@ export async function approveRentalCode(formData: FormData) {
 
 export async function updateRentalStatus(formData: FormData) {
   const supabase = createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
   await requireRole(["admin"]);
   const rentalId = String(formData.get("rental_id") ?? "");
   const status = String(formData.get("status") ?? "");
@@ -544,7 +546,16 @@ export async function updateRentalStatus(formData: FormData) {
     .eq("id", rentalId);
   if (error) throw new Error(error.message);
 
+  if (status === "refunded") {
+    await admin
+      .from("ledger_entries")
+      .delete()
+      .eq("reference_type", "rental_code")
+      .eq("reference_id", rentalId);
+  }
+
   revalidatePath("/rentals");
   revalidatePath(`/rentals/${rentalId}`);
+  revalidatePath("/earnings");
   return { ok: true };
 }

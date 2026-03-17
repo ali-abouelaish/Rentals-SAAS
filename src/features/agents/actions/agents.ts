@@ -61,7 +61,48 @@ export async function updateAgentCommission(userId: string, values: AgentUpdateV
     .eq("tenant_id", profile.tenant_id);
   if (error) throw new Error(error.message);
 
+  // Recalculate agent_earning ledger entries with the new commission %
+  const { data: rentals } = await admin
+    .from("rental_codes")
+    .select("id, consultation_fee_amount, payment_method")
+    .eq("assisted_by_agent_id", userId)
+    .in("status", ["approved", "paid"]);
+
+  if (rentals && rentals.length > 0) {
+    const rentalIds = rentals.map((r) => r.id);
+
+    const { data: mktFees } = await admin
+      .from("ledger_entries")
+      .select("reference_id, agent_earning_gbp")
+      .eq("type", "marketing_fee")
+      .in("reference_id", rentalIds);
+
+    const mktFeeMap = new Map(
+      (mktFees ?? []).map((f) => [f.reference_id, f.agent_earning_gbp ?? 0])
+    );
+
+    for (const rental of rentals) {
+      const paymentFee =
+        rental.payment_method === "cash"
+          ? 0
+          : rental.payment_method === "transfer"
+          ? 0.2
+          : 0.0175;
+      const base = Math.round(rental.consultation_fee_amount * (1 - paymentFee) * 100) / 100;
+      const assistedGross = Math.round(base * (payload.commission_percent / 100) * 100) / 100;
+      const marketingFee = mktFeeMap.get(rental.id) ?? 0;
+      const assistedNet = Math.round((assistedGross - marketingFee) * 100) / 100;
+
+      await admin
+        .from("ledger_entries")
+        .update({ agent_earning_gbp: assistedNet })
+        .eq("type", "agent_earning")
+        .eq("reference_id", rental.id);
+    }
+  }
+
   revalidatePath(`/agents/${userId}`);
+  revalidatePath("/earnings");
   return { ok: true };
 }
 

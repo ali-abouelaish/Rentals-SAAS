@@ -82,6 +82,7 @@ export async function getEarningsStatsForAgent(
       .from("rental_codes")
       .select("id", { count: "exact", head: true })
       .eq("assisted_by_agent_id", agentId)
+      .in("status", ["approved", "paid"])
       .gte("date", from)
       .lte("date", to)
   ]);
