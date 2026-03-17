@@ -33,15 +33,21 @@ export async function middleware(request: NextRequest) {
   const tenantSlug = getTenantFromHost(host);
 
   const { supabase, response } = createSupabaseMiddlewareClient(request);
+  // Use getSession() here (reads from cookie JWT, no network call unless token needs refresh).
+  // Full getUser() validation happens inside requireUserProfile() in each server action/page,
+  // so security is maintained where it matters. This avoids hitting Supabase auth rate limits
+  // when many agents submit concurrently.
   const {
-    data: { user }
-  } = await supabase.auth.getUser();
+    data: { session }
+  } = await supabase.auth.getSession();
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
   const isApiRoute = pathname.startsWith("/api/");
+
+  const user = session?.user ?? null;
 
   if (!user && !isPublic && !isApiRoute) {
     const redirectUrl = request.nextUrl.clone();
