@@ -72,23 +72,42 @@ export function PublicLeadForm({
       </div>
       <input type="hidden" name="agent_id" value={agentId} />
       <input type="hidden" name="tenant_id" value={tenantId} />
-      <Input name="full_name" placeholder="Full name" required />
-      <Input name="phone" placeholder="Phone" required />
-      <Input name="email" placeholder="Email" required />
-      <Input name="dob" type="date" placeholder="Date of birth" required />
-      <Input name="nationality" placeholder="Nationality" required />
-      <Input name="current_address" placeholder="Current address" required />
-      <Input
-        name="company_or_university_name"
-        placeholder="Company / University name"
-        required
-      />
-      <Input
-        name="company_address"
-        placeholder="Company / University address"
-        required
-      />
-      <Input name="occupation" placeholder="Occupation" required />
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Full name</label>
+        <Input name="full_name" placeholder="Full name" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Phone</label>
+        <Input name="phone" placeholder="Phone" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Email</label>
+        <Input name="email" placeholder="Email" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Date of birth</label>
+        <Input name="dob" type="date" placeholder="Date of birth" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Nationality</label>
+        <Input name="nationality" placeholder="Nationality" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Current address</label>
+        <Input name="current_address" placeholder="Current address" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Company / University name</label>
+        <Input name="company_or_university_name" placeholder="Company / University name" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Company / University address</label>
+        <Input name="company_address" placeholder="Company / University address" required />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Occupation</label>
+        <Input name="occupation" placeholder="Occupation" required />
+      </div>
       <SubmitButton />
     </form>
   );
