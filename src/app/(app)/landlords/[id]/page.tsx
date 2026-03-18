@@ -7,6 +7,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { InvoiceStatusBadge } from "@/features/invoices/ui/InvoiceStatusBadge";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
 import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
+import { requireUserProfile } from "@/lib/auth/requireRole";
+import { deleteLandlord } from "@/features/landlords/actions/landlords";
+import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
+import { Button } from "@/components/ui/button";
 
 export default async function LandlordDetailPage({
   params
@@ -14,19 +18,29 @@ export default async function LandlordDetailPage({
   params: { id: string };
 }) {
   const supabase = createSupabaseServerClient();
-  const [landlordResult, { data: invoices }] = await Promise.all([
+  const [landlordResult, { data: invoices }, profile] = await Promise.all([
     getLandlordById(params.id),
     supabase
       .from("invoices")
       .select("id, invoice_number, status, total, due_date")
       .eq("landlord_id", params.id)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    requireUserProfile()
   ]);
   const { landlord, rentalsCount, listings, scrapedListings } = landlordResult;
 
   return (
     <div className="space-y-6">
-      <PageHeader title={landlord.name} subtitle="Landlord detail" />
+      <PageHeader
+        title={landlord.name}
+        subtitle="Landlord detail"
+        action={profile.role === "admin" ? (
+          <ConfirmDeleteForm action={deleteLandlord} message="Delete this landlord? This cannot be undone.">
+            <input type="hidden" name="landlord_id" value={landlord.id} />
+            <Button type="submit" variant="outline" size="sm">Delete landlord</Button>
+          </ConfirmDeleteForm>
+        ) : undefined}
+      />
       <Card>
         <CardContent className="grid gap-3 md:grid-cols-3 text-sm text-foreground-secondary">
           <div>

@@ -72,7 +72,7 @@ export async function getCommissionFileData({
     supabase
       .from("rental_codes")
       .select(
-        "id, code, created_at, consultation_fee_amount, rental_amount_gbp, payment_method, property_address, client_snapshot, status, assisted_by_agent_id, marketing_agent_id, marketing_fee_override_gbp"
+        "id, code, created_at, consultation_fee_amount, rental_amount_gbp, payment_method, property_address, clients!rental_codes_client_id_fkey(full_name, phone), status, assisted_by_agent_id, marketing_agent_id, marketing_fee_override_gbp"
       )
       .eq("tenant_id", profile.tenant_id)
       .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
@@ -139,8 +139,8 @@ export async function getCommissionFileData({
       id: rental.id,
       created_at: rental.created_at,
       code: rental.code,
-      client_name: rental.client_snapshot?.full_name ?? "Client",
-      client_phone: rental.client_snapshot?.phone ?? "—",
+      client_name: (rental.clients as any)?.full_name ?? "Client",
+      client_phone: (rental.clients as any)?.phone ?? "—",
       property_address: rental.property_address,
       payment_method: rental.payment_method,
       rental_amount: rentalAmount,

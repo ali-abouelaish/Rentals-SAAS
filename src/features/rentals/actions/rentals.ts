@@ -26,13 +26,6 @@ export async function createRentalCode(values: RentalCodeFormValues) {
     marketingAgentId = agentMatch?.id ?? null;
   }
 
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("id", payload.client_id)
-    .single();
-  if (clientError) throw new Error(clientError.message);
-
   const { data: codeData, error: codeError } = await supabase.rpc("next_rental_code", {
     p_tenant_id: profile.tenant_id
   });
@@ -53,14 +46,6 @@ export async function createRentalCode(values: RentalCodeFormValues) {
       marketing_agent_id: marketingAgentId,
       client_id: payload.client_id,
       status: "pending",
-      client_snapshot: {
-        full_name: client.full_name,
-        phone: client.phone,
-        nationality: client.nationality,
-        dob: client.dob,
-        company_or_university_name: client.company_or_university_name,
-        occupation: client.occupation
-      }
     })
     .select("*")
     .single();
@@ -171,14 +156,6 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
       marketing_agent_id: marketingAgentId,
       client_id: payload.client_id,
       status: "pending",
-      client_snapshot: {
-        full_name: client.full_name,
-        phone: client.phone,
-        nationality: client.nationality,
-        dob: client.dob,
-        company_or_university_name: client.company_or_university_name,
-        occupation: client.occupation
-      }
     })
     .select("*")
     .single();

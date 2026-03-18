@@ -97,13 +97,12 @@ export default async function RentalDetailPage({
       ? "Card 💳"
       : rental.payment_method;
 
-  // Use live client data from JOIN; fall back to snapshot for older rentals
   const client = rental.clients as { full_name?: string; phone?: string; nationality?: string | null; dob?: string | null; occupation?: string | null; company_or_university_name?: string | null } | null;
-  const clientFullName = client?.full_name ?? rental.client_snapshot?.full_name ?? "";
-  const clientPhone = client?.phone ?? rental.client_snapshot?.phone ?? "";
-  const clientNationality = client?.nationality ?? rental.client_snapshot?.nationality ?? null;
-  const clientDob = client?.dob ?? rental.client_snapshot?.dob ?? null;
-  const clientOccupation = client?.occupation ?? rental.client_snapshot?.occupation ?? null;
+  const clientFullName = client?.full_name ?? "";
+  const clientPhone = client?.phone ?? "";
+  const clientNationality = client?.nationality ?? null;
+  const clientDob = client?.dob ?? null;
+  const clientOccupation = client?.occupation ?? null;
 
   // Age from DOB if available
   let ageText: string | null = null;

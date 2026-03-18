@@ -127,8 +127,7 @@ export default async function RentalsPage({
           {rentals.map((rental: any) => {
             const clientName = Array.isArray(rental.clients)
               ? rental.clients[0]?.full_name
-              : (rental.clients as { full_name?: string })?.full_name ??
-              rental.client_snapshot?.full_name;
+              : (rental.clients as { full_name?: string })?.full_name;
             const assistedByName =
               rental.user_profiles?.display_name ??
               rental.assisted_by_agent_id ??

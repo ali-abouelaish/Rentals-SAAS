@@ -13,13 +13,5 @@ export type RentalCode = {
   marketing_fee_override_gbp: number | null;
   marketing_fee_override_reason: string | null;
   status: "pending" | "approved" | "paid" | "refunded";
-  client_snapshot: {
-    full_name: string;
-    phone: string;
-    nationality?: string | null;
-    dob?: string | null;
-    company_or_university_name?: string | null;
-    occupation?: string | null;
-  };
   created_at: string;
 };

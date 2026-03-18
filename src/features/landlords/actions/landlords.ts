@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireUserProfile } from "@/lib/auth/requireRole";
+import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
 
 function parseLandlordFormData(formData: FormData) {
   const paysCommission = String(formData.get("pays_commission") ?? "yes") === "yes";
@@ -55,7 +55,19 @@ export async function createLandlord(formData: FormData) {
   redirect(`/landlords/${data.id}`);
 }
 
-export async function updateLandlord(formData: FormData) {
+export async function deleteLandlord(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  await requireRole(["admin"]);
+  const landlordId = String(formData.get("landlord_id") ?? "");
+  if (!landlordId) throw new Error("Missing landlord id.");
+
+  const { error } = await supabase.from("landlords").delete().eq("id", landlordId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/landlords");
+  redirect("/landlords");
+}
+
   const supabase = createSupabaseServerClient();
   await requireUserProfile();
   const landlordId = String(formData.get("landlord_id") ?? "");
