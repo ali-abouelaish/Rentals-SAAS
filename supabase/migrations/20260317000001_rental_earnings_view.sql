@@ -7,6 +7,11 @@
 alter table rental_codes
   add column if not exists commission_percent_at_approval numeric;
 
+-- Ensure columns exist (may be missing on older production DBs where
+-- CREATE TABLE IF NOT EXISTS skipped additions from a later schema version).
+alter table rental_codes add column if not exists marketing_fee_override_gbp numeric(12,2);
+alter table rental_codes add column if not exists marketing_fee_override_reason text;
+
 -- Step 2: live view that computes rental earnings from rental_codes + agent_profiles.
 -- Uses security_invoker so the caller's RLS context applies to the underlying tables.
 create or replace view rental_earnings_view
