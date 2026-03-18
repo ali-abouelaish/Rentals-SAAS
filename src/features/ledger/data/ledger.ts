@@ -1,44 +1,38 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUserProfile } from "@/lib/auth/requireRole";
+
+function computeRentalNet(amount: number, method: string): number {
+  const rate = method === "cash" ? 0 : method === "transfer" ? 0.2 : 0.0175;
+  return Math.round(amount * (1 - rate) * 100) / 100;
+}
 
 export async function getLedgerTotals() {
   const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
   const { data, error } = await supabase
-    .from("ledger_entries")
-    .select("amount_gbp, agent_earning_gbp, type");
+    .from("rental_codes")
+    .select("consultation_fee_amount, payment_method")
+    .eq("tenant_id", profile.tenant_id)
+    .in("status", ["approved", "paid"]);
   if (error) throw new Error(error.message);
-  const totals = data?.reduce(
-    (acc, entry) => {
-      if (entry.type === "rental_net") {
-        acc.revenue += entry.amount_gbp ?? 0;
-      }
-      if (["agent_earning", "marketing_fee"].includes(entry.type)) {
-        acc.earnings += entry.agent_earning_gbp ?? 0;
-      }
-      return acc;
-    },
-    { revenue: 0, earnings: 0 }
+  const revenue = (data ?? []).reduce(
+    (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method),
+    0
   );
-  return totals ?? { revenue: 0, earnings: 0 };
+  return { revenue, earnings: 0 };
 }
 
 export async function getLedgerTotalsForAgent(agentId: string) {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
-    .from("ledger_entries")
-    .select("amount_gbp, agent_earning_gbp, type")
-    .eq("agent_id", agentId);
+    .from("rental_codes")
+    .select("consultation_fee_amount, payment_method")
+    .eq("assisted_by_agent_id", agentId)
+    .in("status", ["approved", "paid"]);
   if (error) throw new Error(error.message);
-  const totals = data?.reduce(
-    (acc, entry) => {
-      if (entry.type === "rental_net") {
-        acc.revenue += entry.amount_gbp ?? 0;
-      }
-      if (["agent_earning", "marketing_fee"].includes(entry.type)) {
-        acc.earnings += entry.agent_earning_gbp ?? 0;
-      }
-      return acc;
-    },
-    { revenue: 0, earnings: 0 }
+  const revenue = (data ?? []).reduce(
+    (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method),
+    0
   );
-  return totals ?? { revenue: 0, earnings: 0 };
+  return { revenue, earnings: 0 };
 }
