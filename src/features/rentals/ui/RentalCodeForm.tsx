@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useCallback, useState, useTransition } from "react";
 import { createRentalCodeWithDocuments } from "../actions/rentals";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,14 @@ import { toast } from "sonner";
 
 export function RentalCodeForm({
   clientId,
-  agents
+  agents,
+  isAdmin,
+  currentUserId
 }: {
   clientId: string;
   agents: { id: string; name: string }[];
+  isAdmin?: boolean;
+  currentUserId?: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [sourcingFiles, setSourcingFiles] = useState<File[]>([]);
@@ -22,33 +26,28 @@ export function RentalCodeForm({
   const [nextCode, setNextCode] = useState<string | null>(null);
   const [loadingCode, setLoadingCode] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    const loadCode = async () => {
-      try {
-        setLoadingCode(true);
-        const res = await fetch("/api/rentals/next-code");
-        if (!mounted) return;
-        if (res.ok) {
-          const data = await res.json();
-          setNextCode(String(data.code ?? ""));
-        }
-      } catch {
-        // ignore preview errors
-      } finally {
-        if (mounted) setLoadingCode(false);
+  const loadCode = useCallback(async () => {
+    try {
+      setLoadingCode(true);
+      const res = await fetch("/api/rentals/next-code");
+      if (res.ok) {
+        const data = await res.json();
+        setNextCode(String(data.code ?? ""));
       }
-    };
-    loadCode();
-    return () => {
-      mounted = false;
-    };
+    } catch {
+      // ignore preview errors
+    } finally {
+      setLoadingCode(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadCode();
+  }, [loadCode]);
 
   const handleSubmit = async (formData: FormData) => {
     formData.append("client_id", clientId);
-    
-    // Validate files are selected
+
     if (sourcingFiles.length === 0) {
       toast.error("Please upload sourcing agreement documents");
       return;
@@ -61,28 +60,22 @@ export function RentalCodeForm({
       toast.error("Please upload client ID documents");
       return;
     }
-    
-    // Add files to formData
-    sourcingFiles.forEach((file) => {
-      formData.append("sourcing_agreement", file);
-    });
-    paymentFiles.forEach((file) => {
-      formData.append("payment_proof", file);
-    });
-    clientIdFiles.forEach((file) => {
-      formData.append("client_id_doc", file);
-    });
+
+    sourcingFiles.forEach((file) => formData.append("sourcing_agreement", file));
+    paymentFiles.forEach((file) => formData.append("payment_proof", file));
+    clientIdFiles.forEach((file) => formData.append("client_id_doc", file));
 
     startTransition(async () => {
       try {
         await createRentalCodeWithDocuments(formData);
         toast.success("Rental code created successfully");
-        // Reset form
         const form = document.getElementById("rental-code-form") as HTMLFormElement;
         form?.reset();
         setSourcingFiles([]);
         setPaymentFiles([]);
         setClientIdFiles([]);
+        // Refresh the next code preview
+        loadCode();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to create rental code");
       }
@@ -115,6 +108,21 @@ export function RentalCodeForm({
       )}
 
       <div className="grid gap-3 md:grid-cols-2">
+        {isAdmin && (
+          <div className="md:col-span-2 space-y-1">
+            <label className="text-xs text-foreground-secondary mb-1 block">
+              Create for agent
+            </label>
+            <Select
+              name="assisted_by_agent_id"
+              defaultValue={currentUserId ?? ""}
+              options={agents.map((agent) => ({
+                label: agent.name,
+                value: agent.id,
+              }))}
+            />
+          </div>
+        )}
         <Input
           name="consultation_fee_amount"
           placeholder="Consultation fee"
@@ -156,13 +164,9 @@ export function RentalCodeForm({
               })),
             ]}
           />
-          <p className="text-xs text-foreground-muted mt-1">
-            Choose from the list or leave as None if not applicable.
-          </p>
         </div>
       </div>
 
-      {/* Notes */}
       <div className="space-y-2">
         <label className="text-xs text-foreground-secondary mb-1 block">
           Notes (optional)
@@ -174,18 +178,14 @@ export function RentalCodeForm({
         />
       </div>
 
-      {/* Document Uploads */}
       <div className="space-y-4 pt-4 border-t border-border">
         <h3 className="text-sm font-semibold text-foreground mb-3">Required Documents</h3>
-        
-        {/* Sourcing Agreement */}
+
         <div>
           <label className="text-xs text-foreground-secondary mb-1 block">
             Sourcing Agreement <span className="text-red-500">*</span>
           </label>
-          <p className="text-xs text-foreground-muted mb-2">
-            Upload 4 images or 1 PDF
-          </p>
+          <p className="text-xs text-foreground-muted mb-2">Upload 4 images or 1 PDF</p>
           <input
             type="file"
             accept="image/*,application/pdf"
@@ -201,14 +201,11 @@ export function RentalCodeForm({
           )}
         </div>
 
-        {/* Payment Proof */}
         <div>
           <label className="text-xs text-foreground-secondary mb-1 block">
             Payment Proof <span className="text-red-500">*</span>
           </label>
-          <p className="text-xs text-foreground-muted mb-2">
-            Upload at least 1 image or PDF
-          </p>
+          <p className="text-xs text-foreground-muted mb-2">Upload at least 1 image or PDF</p>
           <input
             type="file"
             accept="image/*,application/pdf"
@@ -224,14 +221,11 @@ export function RentalCodeForm({
           )}
         </div>
 
-        {/* Client ID */}
         <div>
           <label className="text-xs text-foreground-secondary mb-1 block">
             Client ID <span className="text-red-500">*</span>
           </label>
-          <p className="text-xs text-foreground-muted mb-2">
-            Upload at least 1 image or PDF
-          </p>
+          <p className="text-xs text-foreground-muted mb-2">Upload at least 1 image or PDF</p>
           <input
             type="file"
             accept="image/*,application/pdf"

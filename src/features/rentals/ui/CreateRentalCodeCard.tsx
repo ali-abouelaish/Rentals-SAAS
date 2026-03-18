@@ -6,10 +6,14 @@ import { RentalCodeForm } from "./RentalCodeForm";
 
 export function CreateRentalCodeCard({
   clientId,
-  agents
+  agents,
+  isAdmin,
+  currentUserId
 }: {
   clientId: string;
   agents: { id: string; name: string }[];
+  isAdmin?: boolean;
+  currentUserId?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -28,7 +32,12 @@ export function CreateRentalCodeCard({
       </div>
 
       {isOpen && (
-        <RentalCodeForm clientId={clientId} agents={agents} />
+        <RentalCodeForm
+          clientId={clientId}
+          agents={agents}
+          isAdmin={isAdmin}
+          currentUserId={currentUserId}
+        />
       )}
     </div>
   );

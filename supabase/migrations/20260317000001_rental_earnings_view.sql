@@ -2,11 +2,6 @@
 -- The ledger entries for rental_net / agent_earning / marketing_fee are no longer
 -- written; all earnings figures are derived on the fly from source data.
 
--- Step 1: snapshot the agent's commission % onto rental_codes at approval time.
--- Existing rows will have NULL here; those fall back to the current agent_profiles value.
-alter table rental_codes
-  add column if not exists commission_percent_at_approval numeric;
-
 -- Ensure columns exist (may be missing on older production DBs where
 -- CREATE TABLE IF NOT EXISTS skipped additions from a later schema version).
 alter table rental_codes add column if not exists marketing_fee_override_gbp numeric(12,2);
@@ -26,7 +21,7 @@ select
   rc.consultation_fee_amount,
   rc.payment_method,
   rc.status,
-  coalesce(rc.commission_percent_at_approval, ap.commission_percent, 0) as commission_percent,
+  coalesce(ap.commission_percent, 0) as commission_percent,
   -- rental_net: consultation fee minus payment processing cost
   round(
     rc.consultation_fee_amount
@@ -58,7 +53,7 @@ select
           else 0::numeric
         end)
     , 2)
-    * coalesce(rc.commission_percent_at_approval, ap.commission_percent, 0) / 100
+    * coalesce(ap.commission_percent, 0) / 100
     - coalesce(
         rc.marketing_fee_override_gbp,
         case

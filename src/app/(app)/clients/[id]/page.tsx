@@ -100,6 +100,8 @@ export default async function ClientDetailPage({
               id: agent.id,
               name: agent.display_name ?? "Agent"
             }))}
+            isAdmin={profile.role === "admin"}
+            currentUserId={profile.id}
           />
         </CardContent>
       </Card>
