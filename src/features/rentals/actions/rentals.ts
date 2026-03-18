@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rentalCodeSchema, type RentalCodeFormValues } from "../domain/schemas";
 import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
@@ -335,7 +336,8 @@ export async function deleteRentalCode(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/rentals");
-  revalidatePath(`/clients`);
+  revalidatePath("/clients");
+  redirect("/rentals");
 }
 
 function roundMoney(value: number) {
