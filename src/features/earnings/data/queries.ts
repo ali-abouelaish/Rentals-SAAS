@@ -75,7 +75,7 @@ export async function getEarningsStatsForAgent(
       .single(),
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, commission_percent_at_approval")
+      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
       .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
       .in("status", ["approved", "paid"])
       .gte("date", from)
@@ -105,7 +105,7 @@ export async function getEarningsStatsForAgent(
     if (rental.assisted_by_agent_id === agentId) {
       rentalsCount++;
       const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
-      const commPct = rental.commission_percent_at_approval ?? selfCommissionPct;
+      const commPct = selfCommissionPct;
       const gross = Math.round(rentalNet * commPct / 100 * 100) / 100;
       const mktFee =
         rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
@@ -152,7 +152,7 @@ export async function getEarningsTrend(filters: EarningsFilterValues): Promise<E
   // Fallback: compute from rental_codes
   const { data: rentals } = await supabase
     .from("rental_codes")
-    .select("consultation_fee_amount, payment_method, commission_percent_at_approval, date")
+    .select("consultation_fee_amount, payment_method, date")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["approved", "paid"])
     .gte("date", fromDate.toISOString())
@@ -188,7 +188,7 @@ export async function getEarningsTrendForAgent(
     supabase.from("agent_profiles").select("commission_percent, marketing_fee").eq("user_id", agentId).single(),
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, commission_percent_at_approval, date")
+      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
       .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
@@ -224,7 +224,7 @@ export async function getEarningsTrendForAgent(
     let earned = 0;
     if (r.assisted_by_agent_id === agentId) {
       const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
-      const commPct = r.commission_percent_at_approval ?? selfCommissionPct;
+      const commPct = selfCommissionPct;
       const gross = Math.round(rentalNet * commPct / 100 * 100) / 100;
       const mktFee =
         r.marketing_fee_override_gbp !== null && r.marketing_fee_override_gbp !== undefined
@@ -301,7 +301,7 @@ async function buildLeaderboard(
   const [{ data: rentals }, { data: agents }, { data: activities }] = await Promise.all([
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, commission_percent_at_approval")
+      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
       .eq("tenant_id", tenantId)
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
@@ -372,7 +372,7 @@ async function buildLeaderboard(
 
   for (const rental of rentals ?? []) {
     const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
-    const commPct = rental.commission_percent_at_approval ?? commPctMap.get(rental.assisted_by_agent_id) ?? 0;
+    const commPct = commPctMap.get(rental.assisted_by_agent_id) ?? 0;
     const gross = Math.round(rentalNet * commPct / 100 * 100) / 100;
     const mktFee =
       rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
@@ -418,7 +418,7 @@ export async function getTransactions(
 
   let query = supabase
     .from("rental_codes")
-    .select("id, property_address, licensor_name, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, commission_percent_at_approval, date")
+    .select("id, property_address, licensor_name, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["approved", "paid"])
     .gte("date", fromDate.toISOString())
@@ -447,7 +447,7 @@ export async function getTransactions(
 
   for (const rental of rentals) {
     const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
-    const commPct = rental.commission_percent_at_approval ?? agentProfileMap.get(rental.assisted_by_agent_id)?.commission_percent ?? 0;
+    const commPct = agentProfileMap.get(rental.assisted_by_agent_id)?.commission_percent ?? 0;
     const gross = Math.round(rentalNet * Number(commPct) / 100 * 100) / 100;
     const mktFee =
       rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
@@ -500,7 +500,7 @@ export async function getEarningsTrendByAgents(
   const [{ data: rentals }, { data: agentProfiles }] = await Promise.all([
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, commission_percent_at_approval, date")
+      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
       .eq("tenant_id", profile.tenant_id)
       .or(agentIds.map(id => `assisted_by_agent_id.eq.${id},marketing_agent_id.eq.${id}`).join(","))
       .in("status", ["approved", "paid"])
@@ -546,7 +546,7 @@ export async function getEarningsTrendByAgents(
     const b = ensureBucket(key);
 
     const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
-    const commPct = r.commission_percent_at_approval ?? agentProfileMap.get(r.assisted_by_agent_id)?.commission_percent ?? 0;
+    const commPct = agentProfileMap.get(r.assisted_by_agent_id)?.commission_percent ?? 0;
     const gross = Math.round(rentalNet * Number(commPct) / 100 * 100) / 100;
     const mktFee =
       r.marketing_fee_override_gbp !== null && r.marketing_fee_override_gbp !== undefined

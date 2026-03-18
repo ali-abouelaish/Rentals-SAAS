@@ -52,7 +52,6 @@ export async function createRentalCode(values: RentalCodeFormValues) {
       assisted_by_agent_id: profile.id,
       marketing_agent_id: marketingAgentId,
       client_id: payload.client_id,
-      landlord_id: null,
       status: "pending",
       client_snapshot: {
         full_name: client.full_name,
@@ -96,6 +95,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   const propertyAddress = String(formData.get("property_address") ?? "");
   const licensorName = String(formData.get("licensor_name") ?? "");
   const marketingAgentName = String(formData.get("marketing_agent_name") ?? "");
+  const assistedByOverride = String(formData.get("assisted_by_agent_id") ?? "");
 
   // Extract files
   const sourcingAgreementFiles = formData.getAll("sourcing_agreement") as File[];
@@ -167,10 +167,9 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
       payment_method: payload.payment_method,
       property_address: payload.property_address,
       licensor_name: payload.licensor_name,
-      assisted_by_agent_id: profile.id,
+      assisted_by_agent_id: profile.role === "admin" && assistedByOverride ? assistedByOverride : profile.id,
       marketing_agent_id: marketingAgentId,
       client_id: payload.client_id,
-      landlord_id: null,
       status: "pending",
       client_snapshot: {
         full_name: client.full_name,
@@ -470,7 +469,7 @@ export async function approveRentalCode(formData: FormData) {
 
   const { error: updateError } = await supabase
     .from("rental_codes")
-    .update({ status: "approved", commission_percent_at_approval: commissionPercent })
+    .update({ status: "approved" })
     .eq("id", rentalId);
   if (updateError) throw new Error(updateError.message);
 

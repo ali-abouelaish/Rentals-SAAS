@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ export function RentalApprovalPanel({
 }: Props) {
   const [overrideFee, setOverrideFee] = useState<string>("");
   const [overrideReason, setOverrideReason] = useState<string>("");
+  const [showOverride, setShowOverride] = useState(false);
 
   const paymentFee = paymentMethod === "cash" ? 0 : paymentMethod === "transfer" ? 0.2 : 0.0175;
   const base = useMemo(() => rentalAmount * (1 - paymentFee), [rentalAmount, paymentFee]);
@@ -42,22 +43,18 @@ export function RentalApprovalPanel({
   const overrideValue = overrideFee ? Number(overrideFee) : null;
   const marketingFeeValue = useMemo(() => {
     if (!hasMarketingAgent) return 0;
-    if (!needsOverride) return marketingFeeDefault;
-    if (overrideValue !== null && !Number.isNaN(overrideValue)) {
-      return overrideValue;
-    }
+    if (overrideValue !== null && !Number.isNaN(overrideValue)) return overrideValue;
     return marketingFeeDefault;
-  }, [hasMarketingAgent, needsOverride, marketingFeeDefault, overrideValue]);
+  }, [hasMarketingAgent, marketingFeeDefault, overrideValue]);
 
   const assistedNet = useMemo(() => assistedGross - marketingFeeValue, [assistedGross, marketingFeeValue]);
   const invalidOverride =
-    needsOverride &&
     overrideValue !== null &&
     !Number.isNaN(overrideValue) &&
     overrideValue > marketingFeeDefault;
-
   const invalidNet = assistedNet < 0;
-  const canApprove = !invalidOverride && !invalidNet;
+  const overrideActive = overrideValue !== null && !Number.isNaN(overrideValue) && overrideValue >= 0;
+  const canApprove = !invalidOverride && !invalidNet && (!needsOverride || overrideActive);
 
   return (
     <form
@@ -110,7 +107,10 @@ export function RentalApprovalPanel({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-foreground-secondary">Applied marketing fee</span>
-              <span className="font-semibold text-navy">{formatGBP(marketingFeeValue)}</span>
+              <span className={`font-semibold ${overrideActive ? "text-accent-dark" : "text-navy"}`}>
+                {formatGBP(marketingFeeValue)}
+                {overrideActive && <span className="ml-1 text-xs">(overridden)</span>}
+              </span>
             </div>
             <div className="mt-2 border-t border-border pt-2 flex items-center justify-between">
               <span className="font-medium text-foreground">Assisted net</span>
@@ -122,56 +122,78 @@ export function RentalApprovalPanel({
         </div>
       </div>
 
-      {hasMarketingAgent && (needsOverride || invalidNet) ? (
-        <div className="space-y-3 rounded-2xl border border-accent/40 bg-accent/10 p-4">
-          <div className="flex items-center gap-2 text-sm text-navy">
-            <AlertTriangle size={16} />
-            <span>
-              {needsOverride
-                ? "Marketing fee exceeds 45% of base. Add a custom amount."
-                : "Marketing fee is higher than the assisted agent's earnings. Enter a lower custom amount."}
-            </span>
-          </div>
-          <Badge className="border-accent text-accent-dark">Override required</Badge>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground-secondary">
-                Custom marketing fee (GBP)
-              </label>
-              <Input
-                type="number"
-                min={0}
-                max={marketingFeeDefault}
-                step="0.01"
-                placeholder={`Max ${formatGBP(marketingFeeDefault)}`}
-                value={overrideFee}
-                onChange={(event) => setOverrideFee(event.target.value)}
-              />
+      {hasMarketingAgent && (
+        <div className={`rounded-2xl border p-4 space-y-3 ${
+          needsOverride || invalidNet
+            ? "border-error/40 bg-error/5"
+            : overrideActive
+            ? "border-accent/40 bg-accent/10"
+            : "border-border bg-surface-inset"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              {(needsOverride || invalidNet) && <AlertTriangle size={16} className="text-error" />}
+              <span className="font-medium text-navy">
+                {needsOverride
+                  ? "Override required — fee exceeds 45% of base"
+                  : invalidNet
+                  ? "Override required — fee exceeds agent earnings"
+                  : "Override marketing fee"}
+              </span>
+              {overrideActive && (
+                <Badge className="border-accent text-accent-dark">Override set</Badge>
+              )}
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground-secondary">
-                Override reason (optional)
-              </label>
-              <Input
-                placeholder="Why is this fee different?"
-                value={overrideReason}
-                onChange={(event) => setOverrideReason(event.target.value)}
-              />
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowOverride((v) => !v)}
+              className="flex items-center gap-1 text-xs text-brand hover:underline"
+            >
+              {showOverride ? <><ChevronUp size={14} /> Hide</> : <><ChevronDown size={14} /> {overrideActive ? "Edit" : "Set override"}</>}
+            </button>
           </div>
-          {invalidOverride ? (
-            <p className="text-xs text-error">
-              Override cannot exceed the default marketing fee.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
 
-      {invalidNet ? (
+          {showOverride && (
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground-secondary">
+                  Custom marketing fee (GBP)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={marketingFeeDefault}
+                  step="0.01"
+                  placeholder={`Max ${formatGBP(marketingFeeDefault)}`}
+                  value={overrideFee}
+                  onChange={(event) => setOverrideFee(event.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground-secondary">
+                  Override reason (optional)
+                </label>
+                <Input
+                  placeholder="Why is this fee different?"
+                  value={overrideReason}
+                  onChange={(event) => setOverrideReason(event.target.value)}
+                />
+              </div>
+              {invalidOverride && (
+                <p className="md:col-span-2 text-xs text-error">
+                  Override cannot exceed the default marketing fee.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {invalidNet && !hasMarketingAgent && (
         <p className="text-sm text-error">
           Marketing fee exceeds agent earnings. Enter a lower custom amount.
         </p>
-      ) : null}
+      )}
 
       <Button type="submit" variant="secondary" disabled={!canApprove}>
         Approve rental

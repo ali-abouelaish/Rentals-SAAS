@@ -48,7 +48,7 @@ export async function getRentalCodeById(id: string) {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("rental_codes")
-    .select("*, clients!rental_codes_client_id_fkey(full_name, phone), user_profiles!rental_codes_assisted_by_agent_id_fkey(display_name)")
+    .select("*, clients!rental_codes_client_id_fkey(full_name, phone, nationality, dob, occupation, company_or_university_name), user_profiles!rental_codes_assisted_by_agent_id_fkey(display_name)")
     .eq("id", id)
     .single();
   if (error) throw new Error(error.message);

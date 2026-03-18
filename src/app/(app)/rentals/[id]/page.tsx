@@ -97,10 +97,18 @@ export default async function RentalDetailPage({
       ? "Card 💳"
       : rental.payment_method;
 
+  // Use live client data from JOIN; fall back to snapshot for older rentals
+  const client = rental.clients as { full_name?: string; phone?: string; nationality?: string | null; dob?: string | null; occupation?: string | null; company_or_university_name?: string | null } | null;
+  const clientFullName = client?.full_name ?? rental.client_snapshot?.full_name ?? "";
+  const clientPhone = client?.phone ?? rental.client_snapshot?.phone ?? "";
+  const clientNationality = client?.nationality ?? rental.client_snapshot?.nationality ?? null;
+  const clientDob = client?.dob ?? rental.client_snapshot?.dob ?? null;
+  const clientOccupation = client?.occupation ?? rental.client_snapshot?.occupation ?? null;
+
   // Age from DOB if available
   let ageText: string | null = null;
-  if (rental.client_snapshot?.dob) {
-    const dobDate = new Date(rental.client_snapshot.dob);
+  if (clientDob) {
+    const dobDate = new Date(clientDob);
     if (!Number.isNaN(dobDate.getTime())) {
       const today = new Date();
       let age = today.getFullYear() - dobDate.getFullYear();
@@ -133,17 +141,11 @@ export default async function RentalDetailPage({
     "",
     "Client Information",
     "",
-    rental.client_snapshot?.full_name
-      ? `Full Name: ${rental.client_snapshot.full_name}`
-      : "",
-    rental.client_snapshot?.phone ? `Phone Number: ${rental.client_snapshot.phone}` : "",
+    clientFullName ? `Full Name: ${clientFullName}` : "",
+    clientPhone ? `Phone Number: ${clientPhone}` : "",
     ageText ?? "",
-    rental.client_snapshot?.nationality
-      ? `Nationality: ${rental.client_snapshot.nationality}`
-      : "",
-    rental.client_snapshot?.occupation
-      ? `Position/Role: ${rental.client_snapshot.occupation}`
-      : "",
+    clientNationality ? `Nationality: ${clientNationality}` : "",
+    clientOccupation ? `Position/Role: ${clientOccupation}` : "",
     "____________",
     "",
     `Assisted by: ${rental.user_profiles?.display_name ?? rental.assisted_by_agent_id}`,
@@ -158,7 +160,6 @@ export default async function RentalDetailPage({
 
       <div className="flex items-center gap-3">
         <StatusBadge status={rental.status} />
-        <CopyRentalTextButton text={rentalText} />
         {rental.status === "pending" &&
           (profile.role.toLowerCase() === "admin" ||
             rental.assisted_by_agent_id === profile.id) ? (
@@ -284,24 +285,24 @@ export default async function RentalDetailPage({
             <div className="pt-2 space-y-1">
               <p className="font-semibold">Client Information</p>
               <p>
-                <strong>Full Name:</strong> {rental.client_snapshot?.full_name}
+                <strong>Full Name:</strong> {clientFullName}
               </p>
               <p>
-                <strong>Phone Number:</strong> {rental.client_snapshot?.phone}
+                <strong>Phone Number:</strong> {clientPhone}
               </p>
               {ageText && (
                 <p>
                   <strong>Age:</strong> {ageText.replace("Age: ", "")}
                 </p>
               )}
-              {rental.client_snapshot?.nationality && (
+              {clientNationality && (
                 <p>
-                  <strong>Nationality:</strong> {rental.client_snapshot.nationality}
+                  <strong>Nationality:</strong> {clientNationality}
                 </p>
               )}
-              {rental.client_snapshot?.occupation && (
+              {clientOccupation && (
                 <p>
-                  <strong>Position/Role:</strong> {rental.client_snapshot.occupation}
+                  <strong>Position/Role:</strong> {clientOccupation}
                 </p>
               )}
               <p>____________</p>
@@ -319,24 +320,9 @@ export default async function RentalDetailPage({
         </CardContent>
       </Card>
 
-      {rental.status === "pending" &&
-        (profile.role.toLowerCase() === "admin" ||
-          rental.assisted_by_agent_id === profile.id) ? (
-        <Card>
-          <CardContent className="space-y-3">
-            <RentalEditPanel
-              rentalId={rental.id}
-              clientId={rental.client_id}
-              consultationFeeAmount={rental.consultation_fee_amount}
-              paymentMethod={rental.payment_method}
-              propertyAddress={rental.property_address}
-              licensorName={rental.licensor_name}
-              marketingAgentName={marketingAgentName}
-              agents={agents ?? []}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
+      <div className="flex justify-end">
+        <CopyRentalTextButton text={rentalText} label="Copy Rental Details" />
+      </div>
 
       <Card>
         <CardContent className="space-y-3">
