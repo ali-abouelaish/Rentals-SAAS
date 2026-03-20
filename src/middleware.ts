@@ -42,6 +42,18 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getSession();
 
   const { pathname } = request.nextUrl;
+
+  // Fallback: if Supabase redirected a ?code to the root instead of /auth/callback,
+  // forward it to /auth/callback so the session exchange works correctly.
+  const code = request.nextUrl.searchParams.get("code");
+  const type = request.nextUrl.searchParams.get("type");
+  if (code && pathname === "/") {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    callbackUrl.searchParams.set("next", type === "recovery" ? "/reset-password" : "/me");
+    return NextResponse.redirect(callbackUrl);
+  }
+
   const isPublic = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
