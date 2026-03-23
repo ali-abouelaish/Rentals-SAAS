@@ -16,6 +16,7 @@ import {
   ArrowUpRight,
   Plus,
 } from "lucide-react";
+import { RealtimeRefresher } from "@/components/shared/RealtimeRefresher";
 
 export default async function RentalsPage({
   searchParams,
@@ -56,6 +57,7 @@ export default async function RentalsPage({
 
   return (
     <div className="space-y-[var(--gap-bento)]">
+      <RealtimeRefresher table="rental_codes" />
       {/* ── Inline header ──── */}
       <div className="flex items-end justify-between">
         <div>

@@ -6,6 +6,7 @@ import { getClients } from "@/features/clients/data/clients";
 import { AgentQrCard } from "@/features/clients/ui/AgentQrCard";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { CreateClientDialog } from "@/features/clients/ui/CreateClientDialog";
+import { RealtimeRefresher } from "@/components/shared/RealtimeRefresher";
 import {
   Users,
   Phone,
@@ -63,6 +64,7 @@ export default async function ClientsPage({
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresher table="clients" />
       {/* ── Header ─────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
