@@ -55,6 +55,22 @@ export async function createLandlord(formData: FormData) {
   redirect(`/landlords/${data.id}`);
 }
 
+export async function deleteLandlord(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  await requireUserProfile();
+  const landlordId = String(formData.get("landlord_id") ?? "");
+  if (!landlordId) throw new Error("Missing landlord id.");
+
+  const { error } = await supabase
+    .from("landlords")
+    .delete()
+    .eq("id", landlordId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/landlords");
+  redirect("/landlords");
+}
+
 export async function updateLandlord(formData: FormData) {
   const supabase = createSupabaseServerClient();
   await requireUserProfile();
