@@ -6,3 +6,4 @@ credentials/
 **/google-credentials.json
 **/service_account.json
 .env
+.claude/
