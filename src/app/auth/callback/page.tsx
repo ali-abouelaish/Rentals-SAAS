@@ -28,6 +28,15 @@ function CallbackContent() {
           router.replace(`/invite/accept?error=${encodeURIComponent(error.message)}`);
           return;
         }
+      } else if (tokenHash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery",
+        });
+        if (error && mounted) {
+          router.replace(`/forgot-password?error=${encodeURIComponent(error.message)}`);
+          return;
+        }
       } else {
         await supabase.auth.getSession();
       }
