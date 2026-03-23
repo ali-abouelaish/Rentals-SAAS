@@ -12,6 +12,8 @@ const PUBLIC_PATHS = [
   "/invite/accept",
   "/invite/set-password",
   "/api/invite/complete",
+  "/api/leads/webhook",
+  "/api/gmail/callback",
   "/auth/error"
 ];
 

@@ -11,6 +11,7 @@ export type FeatureKey =
   | "room_enhancer"
   | "billing_profiles"
   | "billing_info"
+  | "leads"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -26,6 +27,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "room_enhancer",
   "billing_profiles",
   "billing_info",
+  "leads",
   "admin",
 ];
 
@@ -50,6 +52,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   billing_info: {
     label: "Billing Info",
     description: "Tenant billing account details and status."
+  },
+  leads: {
+    label: "Leads",
+    description: "Inbound leads from property portals via Gmail parsing."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

@@ -7,6 +7,8 @@ import type { ClientFormValues } from "../domain/schemas";
 
 type Client = {
   id: string;
+  first_name: string | null;
+  last_name: string | null;
   full_name: string | null;
   dob: string | null;
   phone: string | null;
@@ -27,7 +29,8 @@ export function ClientEditCard({ client }: { client: Client }) {
   const [isEditing, setIsEditing] = useState(false);
 
   const initialValues: Partial<ClientFormValues> = {
-    full_name: client.full_name ?? "",
+    first_name: client.first_name ?? "",
+    last_name: client.last_name ?? "",
     dob: client.dob ?? "",
     phone: client.phone ?? "",
     email: client.email ?? "",

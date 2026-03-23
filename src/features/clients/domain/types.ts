@@ -1,7 +1,9 @@
 export type Client = {
   id: string;
   tenant_id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
+  full_name: string; // generated column: first_name || ' ' || last_name
   dob: string;
   phone: string;
   email: string;

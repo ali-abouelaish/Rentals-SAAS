@@ -33,7 +33,7 @@ export async function createClient(values: ClientFormValues) {
     action: "client_created",
     entity_type: "client",
     entity_id: data.id,
-    metadata: { full_name: data.full_name }
+    metadata: { first_name: data.first_name, last_name: data.last_name }
   });
 
   revalidatePath("/clients");
@@ -65,7 +65,7 @@ export async function updateClient(id: string, values: ClientFormValues) {
     action: "client_updated",
     entity_type: "client",
     entity_id: data.id,
-    metadata: { full_name: data.full_name }
+    metadata: { first_name: data.first_name, last_name: data.last_name }
   });
 
   revalidatePath(`/clients/${id}`);

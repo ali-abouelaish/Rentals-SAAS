@@ -72,9 +72,15 @@ export function PublicLeadForm({
       </div>
       <input type="hidden" name="agent_id" value={agentId} />
       <input type="hidden" name="tenant_id" value={tenantId} />
-      <div>
-        <label className="text-xs font-medium text-foreground-secondary mb-1 block">Full name</label>
-        <Input name="full_name" placeholder="Full name" required />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-foreground-secondary mb-1 block">First name</label>
+          <Input name="first_name" placeholder="First name" required />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-foreground-secondary mb-1 block">Last name</label>
+          <Input name="last_name" placeholder="Last name" required />
+        </div>
       </div>
       <div>
         <label className="text-xs font-medium text-foreground-secondary mb-1 block">Phone</label>

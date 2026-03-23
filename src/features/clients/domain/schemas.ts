@@ -11,7 +11,8 @@ const shareCodeOptional = z
   });
 
 export const clientSchema = z.object({
-  full_name: z.string().min(2),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
   dob: z.string().min(1),
   phone: z.string().min(6),
   email: z.string().email(),

@@ -23,8 +23,8 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
       const q = searchInput.trim().toLowerCase();
       list = list.filter(
         (t) =>
-          t.property_name.toLowerCase().includes(q) ||
-          (t.tenant_name ?? "").toLowerCase().includes(q)
+          t.code.toLowerCase().includes(q) ||
+          t.client_name.toLowerCase().includes(q)
       );
     }
     return [...list].sort((a, b) => {
@@ -49,7 +49,7 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 pb-4 border-b border-border">
         <form onSubmit={(e) => { e.preventDefault(); setParam("search", searchInput.trim()); }} className="flex gap-2">
-          <Input placeholder="Search property or tenant..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="w-56 text-sm" />
+          <Input placeholder="Search code or client..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="w-56 text-sm" />
           <Button type="submit" size="sm">Search</Button>
         </form>
         <div className="flex items-center gap-2 text-sm">
@@ -68,8 +68,8 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
               <thead>
                 <tr className="border-b border-border text-left text-foreground-muted font-medium">
                   <th className="pb-3 pr-4">Date</th>
-                  <th className="pb-3 pr-4">Property</th>
-                  <th className="pb-3 pr-4">Tenant</th>
+                  <th className="pb-3 pr-4">Rental Code</th>
+                  <th className="pb-3 pr-4">Client</th>
                   <th className="pb-3 pr-4 text-right tabular-nums">Rent</th>
                   <th className="pb-3 pl-4 text-right tabular-nums">Earnings</th>
                 </tr>
@@ -78,8 +78,8 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
                 {paged.map((t) => (
                   <tr key={t.id} className="border-b border-border/60">
                     <td className="py-3 pr-4 text-foreground-muted">{formatDate(t.created_at)}</td>
-                    <td className="py-3 pr-4">{t.property_name}</td>
-                    <td className="py-3 pr-4 text-foreground-muted">{t.tenant_name ?? "—"}</td>
+                    <td className="py-3 pr-4 font-mono text-xs">{t.code}</td>
+                    <td className="py-3 pr-4">{t.client_name}</td>
                     <td className="py-3 pr-4 text-right tabular-nums">{t.rent_amount != null ? formatGBP(t.rent_amount) : "—"}</td>
                     <td className="py-3 pl-4 text-right tabular-nums font-medium">{formatGBP(t.amount)}</td>
                   </tr>

@@ -27,7 +27,11 @@ create table if not exists agent_profiles (
 create table if not exists clients (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id) on delete cascade,
-  full_name text not null,
+  first_name text not null,
+  last_name text not null default '',
+  full_name text generated always as (
+    case when last_name = '' then first_name else first_name || ' ' || last_name end
+  ) stored,
   dob text,
   phone text not null,
   email text,

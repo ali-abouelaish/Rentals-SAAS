@@ -47,7 +47,7 @@ function PodiumCard({
     },
   }[place];
 
-  const href = `/agents/${row.agent_id}`;
+  const href = `/earnings/${row.agent_id}`;
 
   return (
     <Link
@@ -93,7 +93,7 @@ function RunnerUpRow({
   row: EarningsLeaderboardRow;
   showAgencyTotals: boolean;
 }) {
-  const href = `/agents/${row.agent_id}`;
+  const href = `/earnings/${row.agent_id}`;
 
   return (
     <Link

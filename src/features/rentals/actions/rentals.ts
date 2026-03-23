@@ -54,6 +54,8 @@ export async function createRentalCode(values: RentalCodeFormValues) {
       client_id: payload.client_id,
       status: "pending",
       client_snapshot: {
+        first_name: client.first_name,
+        last_name: client.last_name,
         full_name: client.full_name,
         phone: client.phone,
         nationality: client.nationality,
@@ -172,6 +174,8 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
       client_id: payload.client_id,
       status: "pending",
       client_snapshot: {
+        first_name: client.first_name,
+        last_name: client.last_name,
         full_name: client.full_name,
         phone: client.phone,
         nationality: client.nationality,

@@ -11,6 +11,8 @@ import type { ClientFormValues } from "../domain/schemas";
 
 type Client = {
   id: string;
+  first_name: string | null;
+  last_name: string | null;
   full_name: string | null;
   dob: string | null;
   phone: string | null;
@@ -39,7 +41,8 @@ export function ClientDetailsCard({ client, showAssignedAgent, assignedAgentName
   const [isEditing, setIsEditing] = useState(false);
 
   const initialValues: Partial<ClientFormValues> = {
-    full_name: client.full_name ?? "",
+    first_name: client.first_name ?? "",
+    last_name: client.last_name ?? "",
     dob: client.dob ?? "",
     phone: client.phone ?? "",
     email: client.email ?? "",
@@ -83,8 +86,12 @@ export function ClientDetailsCard({ client, showAssignedAgent, assignedAgentName
               </p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <p className="text-xs text-foreground-muted">Full name</p>
-                  <p className="text-sm text-foreground">{client.full_name ?? "—"}</p>
+                  <p className="text-xs text-foreground-muted">First name</p>
+                  <p className="text-sm text-foreground">{client.first_name ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-foreground-muted">Last name</p>
+                  <p className="text-sm text-foreground">{client.last_name ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-foreground-muted">Phone</p>

@@ -8,6 +8,8 @@ import {
   Send,
   FileText,
   DollarSign,
+  Bell,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 
@@ -86,6 +88,32 @@ const statusConfig: Record<string, StatusConfig> = {
   inactive: {
     className: "bg-surface-inset text-foreground-muted border-border",
     label: "Inactive",
+  },
+  // Lead statuses
+  new: {
+    className: "bg-info-bg text-info-fg border-info-border",
+    icon: Bell,
+    label: "New",
+  },
+  contacted: {
+    className: "bg-pending-bg text-pending-fg border-pending-border",
+    icon: Send,
+    label: "Contacted",
+  },
+  viewing: {
+    className: "bg-warning-bg text-warning-fg border-warning-border",
+    icon: Eye,
+    label: "Viewing",
+  },
+  offer: {
+    className: "bg-surface-inset text-foreground-secondary border-border",
+    icon: FileText,
+    label: "Offer",
+  },
+  closed: {
+    className: "bg-success-bg text-success-fg border-success-border",
+    icon: CheckCircle2,
+    label: "Closed",
   },
 };
 

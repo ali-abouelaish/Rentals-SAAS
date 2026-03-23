@@ -1,0 +1,3 @@
+-- Placeholder: default platform configs are seeded at the app layer
+-- (in /api/gmail/callback) when a tenant first connects their Gmail account.
+-- This migration is intentionally empty.

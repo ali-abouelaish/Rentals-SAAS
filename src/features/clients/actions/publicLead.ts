@@ -21,7 +21,8 @@ export async function createPublicLead(
     }
 
     const payload = clientSchema.parse({
-      full_name: String(formData.get("full_name") ?? ""),
+      first_name: String(formData.get("first_name") ?? ""),
+      last_name: String(formData.get("last_name") ?? ""),
       phone: String(formData.get("phone") ?? ""),
       email: String(formData.get("email") ?? ""),
       dob: String(formData.get("dob") ?? ""),
@@ -95,7 +96,7 @@ export async function createPublicLead(
         action: "client_lead_created",
         entity_type: "client",
         entity_id: adminData.id,
-        metadata: { full_name: payload.full_name }
+        metadata: { first_name: payload.first_name, last_name: payload.last_name }
       });
 
       return { ok: true };
@@ -107,7 +108,7 @@ export async function createPublicLead(
       action: "client_lead_created",
       entity_type: "client",
       entity_id: data.id,
-      metadata: { full_name: payload.full_name }
+      metadata: { first_name: payload.first_name, last_name: payload.last_name }
     });
 
     return { ok: true };

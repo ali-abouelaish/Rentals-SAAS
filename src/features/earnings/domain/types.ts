@@ -31,9 +31,8 @@ export type EarningsLeaderboardRow = {
 export type EarningsTransaction = {
   id: string;
   agent_id: string;
-  property_id?: string;
-  property_name: string;
-  tenant_name?: string;
+  code: string;
+  client_name: string;
   amount: number;
   rent_amount?: number;
   created_at: string;

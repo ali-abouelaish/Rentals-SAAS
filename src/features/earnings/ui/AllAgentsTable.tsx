@@ -33,7 +33,7 @@ export function AllAgentsTable({ rows }: { rows: EarningsLeaderboardRow[] }) {
               <td className="py-3 pr-4 tabular-nums text-foreground-muted">{row.rank}</td>
               <td className="py-3 pr-4">
                 <Link
-                  href={`/agents/${row.agent_id}`}
+                  href={`/earnings/${row.agent_id}`}
                   className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg -m-1 p-1"
                 >
                   <div className="h-9 w-9 shrink-0">

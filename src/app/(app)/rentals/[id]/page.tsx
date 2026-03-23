@@ -98,8 +98,11 @@ export default async function RentalDetailPage({
       : rental.payment_method;
 
   // Use live client data from JOIN; fall back to snapshot for older rentals
-  const client = rental.clients as { full_name?: string; phone?: string; nationality?: string | null; dob?: string | null; occupation?: string | null; company_or_university_name?: string | null } | null;
-  const clientFullName = client?.full_name ?? rental.client_snapshot?.full_name ?? "";
+  const client = rental.clients as { first_name?: string; last_name?: string; full_name?: string; phone?: string; nationality?: string | null; dob?: string | null; occupation?: string | null; company_or_university_name?: string | null } | null;
+  const snap = rental.client_snapshot as { first_name?: string; last_name?: string; full_name?: string } | null;
+  const clientFirstName = client?.first_name ?? snap?.first_name ?? (snap?.full_name?.split(" ")[0] ?? "");
+  const clientLastName  = client?.last_name  ?? snap?.last_name  ?? (snap?.full_name?.split(" ").slice(1).join(" ") ?? "");
+  const clientFullName  = client?.full_name  ?? (clientFirstName || clientLastName ? `${clientFirstName} ${clientLastName}`.trim() : "");
   const clientPhone = client?.phone ?? rental.client_snapshot?.phone ?? "";
   const clientNationality = client?.nationality ?? rental.client_snapshot?.nationality ?? null;
   const clientDob = client?.dob ?? rental.client_snapshot?.dob ?? null;
@@ -141,7 +144,8 @@ export default async function RentalDetailPage({
     "",
     "Client Information",
     "",
-    clientFullName ? `Full Name: ${clientFullName}` : "",
+    clientFirstName ? `First Name: ${clientFirstName}` : "",
+    clientLastName  ? `Last Name: ${clientLastName}`  : "",
     clientPhone ? `Phone Number: ${clientPhone}` : "",
     ageText ?? "",
     clientNationality ? `Nationality: ${clientNationality}` : "",
@@ -285,7 +289,10 @@ export default async function RentalDetailPage({
             <div className="pt-2 space-y-1">
               <p className="font-semibold">Client Information</p>
               <p>
-                <strong>Full Name:</strong> {clientFullName}
+                <strong>First Name:</strong> {clientFirstName}
+              </p>
+              <p>
+                <strong>Last Name:</strong> {clientLastName}
               </p>
               <p>
                 <strong>Phone Number:</strong> {clientPhone}

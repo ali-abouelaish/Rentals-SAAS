@@ -41,7 +41,8 @@ export default async function ClientDetailPage({
     // Contact section
     "Contact",
     "-------",
-    `- Full name: ${client.full_name}`,
+    `- First name: ${client.first_name}`,
+    `- Last name: ${client.last_name}`,
     `- Phone: ${client.phone}`,
     client.contact_number ? `- Alt phone: ${client.contact_number}` : null,
     client.email ? `- Email: ${client.email}` : null,

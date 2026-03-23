@@ -84,6 +84,21 @@ Required in `.env.local`:
 
 For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`, and optionally `DEV_TENANT_NAME`.
 
+## UI Rules
+
+- Every input field must have a visible `<label>` element positioned above it (not placeholder-only).
+- Every delete button must be red and use the `Trash2` icon from `lucide-react`.
+- Every action button (e.g. save, submit, confirm) must use the tenant's secondary button variant.
+
+## Feature Entitlement Rules
+
+- Any feature added to the sidebar must be gated by a corresponding row in the `tenant_feature_entitlements` table. The sidebar item must only render if the tenant has that entitlement. Use the existing entitlement check utilities in `src/lib/entitlements/`. A migration must also be added to insert the entitlement row for any tenant that should have access.
+- Every new feature must also be added to the super admin features management view, so super admins can toggle it per tenant.
+
+## Database Rules
+
+- Any schema change must be made via a new timestamped migration file in `supabase/migrations/` — never modify the database directly or edit existing migrations.
+
 ## Key Dependencies
 
 - `@radix-ui/*` — Accessible UI primitives

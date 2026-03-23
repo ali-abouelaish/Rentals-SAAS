@@ -77,8 +77,8 @@ export function AgentTransactionsTable({
             <thead>
               <tr className="border-b border-border text-left text-foreground-muted font-medium">
                 <th className="pb-3 pr-4">Date</th>
-                <th className="pb-3 pr-4">Property</th>
-                <th className="pb-3 pr-4">Tenant</th>
+                <th className="pb-3 pr-4">Rental Code</th>
+                <th className="pb-3 pr-4">Client</th>
                 <th className="pb-3 pr-4 text-right tabular-nums">Rent</th>
                 <th className="pb-3 pl-4 text-right tabular-nums">Earnings</th>
               </tr>
@@ -89,8 +89,8 @@ export function AgentTransactionsTable({
                   <td className="py-3 pr-4 text-foreground-muted">
                     {formatDate(t.created_at)}
                   </td>
-                  <td className="py-3 pr-4">{t.property_name}</td>
-                  <td className="py-3 pr-4 text-foreground-muted">{t.tenant_name ?? "—"}</td>
+                  <td className="py-3 pr-4 font-mono text-xs">{t.code}</td>
+                  <td className="py-3 pr-4">{t.client_name}</td>
                   <td className="py-3 pr-4 text-right tabular-nums">
                     {t.rent_amount != null ? formatGBP(t.rent_amount) : "—"}
                   </td>

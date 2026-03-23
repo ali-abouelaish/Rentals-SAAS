@@ -20,6 +20,7 @@ import {
   CreditCard,
   User,
   Shield,
+  Inbox,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -43,6 +44,7 @@ const navItems: Array<{
   { href: "/me", label: "My Profile", icon: User, allowedRoles: ["agent"] },
   { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/leads", label: "Leads", icon: Inbox },
   { href: "/rentals", label: "Rentals", icon: ClipboardList },
   { href: "/landlords", label: "Landlords", icon: Building2 },
   { href: "/bonuses", label: "Bonuses", icon: Gift },

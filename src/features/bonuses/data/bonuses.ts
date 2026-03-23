@@ -71,7 +71,7 @@ export async function getBonusesForAgent(
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("bonuses")
-    .select("id, bonus_date, client_name, amount_owed, status, created_at")
+    .select("id, bonus_date, client_name, property_address, amount_owed, payout_mode, status, created_at")
     .eq("agent_id", agentId)
     .gte("bonus_date", filters.from)
     .lte("bonus_date", filters.to)

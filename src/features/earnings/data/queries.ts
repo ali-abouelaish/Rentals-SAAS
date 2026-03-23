@@ -418,7 +418,7 @@ export async function getTransactions(
 
   let query = supabase
     .from("rental_codes")
-    .select("id, property_address, licensor_name, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
+    .select("id, code, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["approved", "paid"])
     .gte("date", fromDate.toISOString())
@@ -469,9 +469,8 @@ export async function getTransactions(
     out.push({
       id: rental.id,
       agent_id: rental.assisted_by_agent_id,
-      property_id: rental.id,
-      property_name: rental.property_address ?? "—",
-      tenant_name: rental.licensor_name ?? undefined,
+      code: rental.code ?? "—",
+      client_name: (rental.client_snapshot as { full_name?: string } | null)?.full_name ?? "—",
       amount,
       rent_amount: rentalNet,
       created_at: rental.date

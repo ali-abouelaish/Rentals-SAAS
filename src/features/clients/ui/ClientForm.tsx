@@ -21,7 +21,8 @@ export function ClientForm({
 }) {
   const [isPending, startTransition] = useTransition();
   const normalizedInitial = {
-    full_name: initialValues?.full_name ?? "",
+    first_name: initialValues?.first_name ?? "",
+    last_name: initialValues?.last_name ?? "",
     dob: initialValues?.dob ?? "",
     phone: initialValues?.phone ?? "",
     email: initialValues?.email ?? "",
@@ -68,8 +69,18 @@ export function ClientForm({
         <h4 className="text-sm font-semibold text-brand">Personal Information</h4>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-foreground-muted">Full name *</label>
-            <Input placeholder="Full name" required {...form.register("full_name")} />
+            <label className="text-xs font-medium text-foreground-muted">First name *</label>
+            <Input placeholder="First name" required {...form.register("first_name")} />
+            {form.formState.errors.first_name && (
+              <p className="text-xs text-red-500">{form.formState.errors.first_name.message}</p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground-muted">Last name *</label>
+            <Input placeholder="Last name" required {...form.register("last_name")} />
+            {form.formState.errors.last_name && (
+              <p className="text-xs text-red-500">{form.formState.errors.last_name.message}</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Phone *</label>
