@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rentalCodeSchema, type RentalCodeFormValues } from "../domain/schemas";
 import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
 
@@ -26,10 +27,12 @@ export async function createRentalCode(values: RentalCodeFormValues) {
     marketingAgentId = agentMatch?.id ?? null;
   }
 
-  const { data: client, error: clientError } = await supabase
+  const adminClient = createSupabaseAdminClient();
+  const { data: client, error: clientError } = await adminClient
     .from("clients")
     .select("*")
     .eq("id", payload.client_id)
+    .eq("tenant_id", profile.tenant_id)
     .single();
   if (clientError) throw new Error(clientError.message);
 
@@ -141,11 +144,15 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     marketingAgentId = agentMatch?.id ?? null;
   }
 
-  // Get client data
-  const { data: client, error: clientError } = await supabase
+  // Get client data — use admin client so agents can fetch any client in the
+  // tenant (e.g. clients created by admin or assigned to another agent).
+  // The rental insert itself is still RLS-enforced via assisted_by_agent_id.
+  const adminClient = createSupabaseAdminClient();
+  const { data: client, error: clientError } = await adminClient
     .from("clients")
     .select("*")
     .eq("id", payload.client_id)
+    .eq("tenant_id", profile.tenant_id)
     .single();
   if (clientError) throw new Error(`Failed to load client: ${clientError.message} (code: ${clientError.code})`);
   if (!client) throw new Error("Client not found or you do not have permission to access it.");
