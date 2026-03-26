@@ -101,8 +101,7 @@ export function CreateAgentDialog() {
             >
               <option value="agent">Agent</option>
               <option value="marketing_only">Marketing Only</option>
-              <option value="agent_and_marketing">Agent + Marketing</option>
-              <option value="admin">Admin (Agent + Marketing)</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
           <div className="pt-2">

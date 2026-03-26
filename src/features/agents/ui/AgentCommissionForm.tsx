@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 const ROLE_OPTIONS = [
   { value: "agent", label: "Agent" },
   { value: "marketing_only", label: "Marketing only" },
-  { value: "agent_and_marketing", label: "Agent + Marketing" },
   { value: "admin", label: "Admin" },
 ] as const;
 

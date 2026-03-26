@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import { requireAgentOnly } from "@/lib/auth/requireRole";
+import { requireUserProfile } from "@/lib/auth/requireRole";
 
-/** Only agents can access /me; admins are redirected to /earnings. */
 export default async function MeLayout({ children }: { children: ReactNode }) {
-  await requireAgentOnly();
+  await requireUserProfile();
   return <>{children}</>;
 }
 

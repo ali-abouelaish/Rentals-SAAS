@@ -3,14 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireAgentOnly } from "@/lib/auth/requireRole";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireUserProfile } from "@/lib/auth/requireRole";
 
 const AVATARS_BUCKET = "avatars";
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function updateMyProfile(formData: FormData) {
-  const profile = await requireAgentOnly();
+  const profile = await requireUserProfile();
   const displayName = formData.get("display_name")?.toString()?.trim();
 
   if (displayName === undefined || displayName === "") {
@@ -30,7 +31,7 @@ export async function updateMyProfile(formData: FormData) {
 }
 
 export async function uploadAvatar(formData: FormData) {
-  const profile = await requireAgentOnly();
+  const profile = await requireUserProfile();
   const file = formData.get("avatar") as File | null;
 
   if (!file || file.size === 0) {
@@ -48,6 +49,7 @@ export async function uploadAvatar(formData: FormData) {
   const path = `${profile.tenant_id}/${profile.id}/avatar.${safeExt}`;
 
   const supabase = createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
 
   const { error: uploadError } = await supabase.storage
     .from(AVATARS_BUCKET)
@@ -56,9 +58,11 @@ export async function uploadAvatar(formData: FormData) {
   if (uploadError) return { error: uploadError.message };
 
   const { data: urlData } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(path);
-  const publicUrl = urlData?.publicUrl ?? "";
+  // Append timestamp to bust CDN cache on re-upload (same path, new content)
+  const publicUrl = `${urlData?.publicUrl ?? ""}?t=${Date.now()}`;
 
-  const { error: updateError } = await supabase
+  // Use admin client to bypass RLS — agents may not have UPDATE rights on their own agent_profiles row
+  const { error: updateError } = await admin
     .from("agent_profiles")
     .update({ avatar_url: publicUrl })
     .eq("user_id", profile.id);
@@ -70,8 +74,40 @@ export async function uploadAvatar(formData: FormData) {
   return { success: true, url: publicUrl };
 }
 
+export async function updateMyPhone(formData: FormData) {
+  const profile = await requireUserProfile();
+  const phone = formData.get("phone")?.toString()?.trim() || null;
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("agent_profiles")
+    .update({ phone })
+    .eq("user_id", profile.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/me");
+  return { success: true };
+}
+
+export async function updateMySocialLinks(formData: FormData) {
+  const profile = await requireUserProfile();
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("agent_profiles")
+    .update({
+      contact_email: formData.get("contact_email")?.toString()?.trim() || null,
+      facebook_url: formData.get("facebook_url")?.toString()?.trim() || null,
+      instagram_url: formData.get("instagram_url")?.toString()?.trim() || null,
+      linkedin_url: formData.get("linkedin_url")?.toString()?.trim() || null,
+    })
+    .eq("user_id", profile.id);
+  if (error) return { error: error.message };
+  revalidatePath("/me");
+  return { success: true };
+}
+
 export async function requestPasswordReset() {
-  await requireAgentOnly();
+  await requireUserProfile();
   const supabase = createSupabaseServerClient();
   const {
     data: { user }

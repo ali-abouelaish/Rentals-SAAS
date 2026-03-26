@@ -28,8 +28,18 @@ export function LeadCard({ lead }: Props) {
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-foreground-muted truncate">{lead.email}</span>
-            <span className="text-foreground-muted">·</span>
+            {!lead.email.includes("@noreply.local") && (
+              <>
+                <span className="text-xs text-foreground-muted truncate">{lead.email}</span>
+                <span className="text-foreground-muted">·</span>
+              </>
+            )}
+            {lead.email.includes("@noreply.local") && lead.telephone && (
+              <>
+                <span className="text-xs text-foreground-muted truncate">{lead.telephone}</span>
+                <span className="text-foreground-muted">·</span>
+              </>
+            )}
             <span className="text-xs capitalize text-foreground-secondary shrink-0 rounded-full bg-surface-inset px-2 py-0.5 border border-border">
               {lead.source}
             </span>

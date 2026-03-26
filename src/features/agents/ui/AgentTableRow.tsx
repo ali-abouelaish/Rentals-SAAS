@@ -19,7 +19,7 @@ export type AgentTableRowData = {
 
 function formatRoleLabel(role: string): string {
   const r = role.toLowerCase();
-  if (r === "agent_and_marketing") return "Agent + Marketing";
+  if (r === "agent_and_marketing") return "Agent";
   if (r === "marketing_only") return "Marketing only";
   if (r === "super_admin") return "Admin";
   if (!r) return "Unknown";

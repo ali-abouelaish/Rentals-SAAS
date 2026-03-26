@@ -28,7 +28,7 @@ export default async function RentalDetailPage({
   ]);
   const supabase = createSupabaseServerClient();
 
-  const [{ data: documentSets }, { data: assistedAgent }, { data: marketingAgent }, { data: agents }] =
+  const [{ data: documentSets }, { data: assistedAgent }, { data: marketingAgent }, { data: agents }, { data: rentalMarketingAgents }] =
     await Promise.all([
       supabase
         .from("document_sets")
@@ -48,7 +48,11 @@ export default async function RentalDetailPage({
         .from("user_profiles")
         .select("id, display_name")
         .eq("tenant_id", rental.tenant_id)
-        .order("display_name", { ascending: true })
+        .order("display_name", { ascending: true }),
+      supabase
+        .from("rental_marketing_agents")
+        .select("agent_id, user_profiles(display_name)")
+        .eq("rental_id", params.id)
     ]);
 
   const allDocumentPaths =
@@ -83,9 +87,21 @@ export default async function RentalDetailPage({
         })) ?? [],
     })) ?? [];
 
+  // Multi-agent support: get names from junction table
+  const rentalMktAgents = rentalMarketingAgents ?? [];
+  const mktAgentDisplayNames = rentalMktAgents.map(
+    (row) => (row.user_profiles as unknown as { display_name: string | null } | null)?.display_name ?? "Agent"
+  );
+  const marketingAgentCount = rentalMktAgents.length;
+  // Fallback for display when junction table is empty (legacy)
   const marketingAgentName =
+    mktAgentDisplayNames[0] ??
     agents?.find((agent) => agent.id === rental.marketing_agent_id)?.display_name ?? "";
-  const marketingAgentLabel = marketingAgentName || rental.marketing_agent_id || "—";
+  const marketingAgentLabel = mktAgentDisplayNames.length > 0
+    ? mktAgentDisplayNames.join(", ")
+    : rental.marketing_agent_id
+    ? "—"
+    : "—";
 
   // Build rental text in the requested format for clipboard
   const paymentText =
@@ -153,7 +169,7 @@ export default async function RentalDetailPage({
     "____________",
     "",
     `Assisted by: ${rental.user_profiles?.display_name ?? rental.assisted_by_agent_id}`,
-    rental.marketing_agent_id ? `Marketing Agent: ${marketingAgentLabel}` : ""
+    (rentalMktAgents.length > 0 || rental.marketing_agent_id) ? `Marketing Agent: ${marketingAgentLabel}` : ""
   ];
 
   const rentalText = rentalTextLines.filter((line) => line !== "").join("\n");
@@ -231,6 +247,7 @@ export default async function RentalDetailPage({
               marketingFeeDefault={marketingAgent?.marketing_fee ?? 0}
               assistedAgentId={rental.assisted_by_agent_id}
               marketingAgentId={rental.marketing_agent_id}
+              marketingAgentCount={marketingAgentCount}
             />
           </CardContent>
         </Card>
@@ -246,7 +263,9 @@ export default async function RentalDetailPage({
               paymentMethod={rental.payment_method}
               propertyAddress={rental.property_address}
               licensorName={rental.licensor_name}
-              marketingAgentName={marketingAgentName}
+              marketingAgentNames={mktAgentDisplayNames}
+              marketingFeeDefault={marketingAgent?.marketing_fee ?? 0}
+              commissionPercent={assistedAgent?.commission_percent ?? 0}
               agents={agents ?? []}
             />
           </CardContent>
@@ -265,6 +284,9 @@ export default async function RentalDetailPage({
               marketingFeeDefault={marketingAgent?.marketing_fee ?? 0}
               assistedAgentId={rental.assisted_by_agent_id}
               marketingAgentId={rental.marketing_agent_id}
+              marketingFeeOverride={rental.marketing_fee_override_gbp}
+              marketingFeeOverrideReason={rental.marketing_fee_override_reason}
+              marketingAgentCount={marketingAgentCount}
             />
           </CardContent>
         </Card>

@@ -36,10 +36,12 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
 
       {/* Contact */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-foreground-muted">Email</label>
-          <p className="text-sm text-foreground">{lead.email}</p>
-        </div>
+        {!lead.email.includes("@noreply.local") && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground-muted">Email</label>
+            <p className="text-sm text-foreground">{lead.email}</p>
+          </div>
+        )}
         {lead.telephone && (
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted flex items-center gap-1">

@@ -99,7 +99,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   const paymentMethod = String(formData.get("payment_method") ?? "cash");
   const propertyAddress = String(formData.get("property_address") ?? "");
   const licensorName = String(formData.get("licensor_name") ?? "");
-  const marketingAgentName = String(formData.get("marketing_agent_name") ?? "");
+  const marketingAgentNames = (formData.getAll("marketing_agent_name") as string[]).filter(Boolean);
   const assistedByOverride = String(formData.get("assisted_by_agent_id") ?? "");
 
   // Extract files
@@ -128,21 +128,23 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     payment_method: paymentMethod as "cash" | "transfer" | "card",
     property_address: propertyAddress,
     licensor_name: licensorName,
-    marketing_agent_name: marketingAgentName || null
+    marketing_agent_name: marketingAgentNames[0] || null
   });
 
-  // Resolve marketing agent
-  let marketingAgentId: string | null = null;
-  if (marketingAgentName) {
+  // Resolve all marketing agent names to IDs
+  const resolvedMarketingAgentIds: string[] = [];
+  for (const name of marketingAgentNames) {
+    if (!name) continue;
     const { data: agentMatch } = await supabase
       .from("user_profiles")
       .select("id")
       .eq("tenant_id", profile.tenant_id)
-      .ilike("display_name", marketingAgentName)
+      .ilike("display_name", name)
       .limit(1)
       .single();
-    marketingAgentId = agentMatch?.id ?? null;
+    if (agentMatch?.id) resolvedMarketingAgentIds.push(agentMatch.id);
   }
+  const marketingAgentId = resolvedMarketingAgentIds[0] ?? null;
 
   // Get client data — use admin client so agents can fetch any client in the
   // tenant (e.g. clients created by admin or assigned to another agent).
@@ -196,6 +198,18 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
 
   if (rentalError) throw new Error(`Failed to insert rental record: ${rentalError.message} (code: ${rentalError.code})`);
   console.log("[rental] inserted ok, id:", rentalCode.id, "code:", rentalCode.code);
+
+  // Insert junction table rows for all marketing agents
+  if (resolvedMarketingAgentIds.length > 0) {
+    const uniqueIds = [...new Set(resolvedMarketingAgentIds)];
+    await supabase.from("rental_marketing_agents").insert(
+      uniqueIds.map((agentId) => ({
+        tenant_id: profile.tenant_id,
+        rental_id: rentalCode.id,
+        agent_id: agentId
+      }))
+    );
+  }
 
   // Upload documents
   const uploadDocumentSet = async (setType: "sourcing_agreement" | "client_id" | "payment_proof", files: File[]) => {
@@ -278,31 +292,40 @@ export async function updateRentalCode(formData: FormData) {
     throw new Error("Only pending rentals can be edited.");
   }
 
+  const marketingAgentNames = (formData.getAll("marketing_agent_name") as string[]).filter(Boolean);
+  const overrideValueRaw = formData.get("marketing_fee_override_gbp");
+  const overrideReason = String(formData.get("marketing_fee_override_reason") ?? "");
+
   const payload = rentalCodeSchema.parse({
     client_id: String(formData.get("client_id") ?? ""),
     consultation_fee_amount: Number(formData.get("consultation_fee_amount") ?? 0),
     payment_method: String(formData.get("payment_method") ?? "cash"),
     property_address: String(formData.get("property_address") ?? ""),
     licensor_name: String(formData.get("licensor_name") ?? ""),
-    marketing_agent_id: String(formData.get("marketing_agent_id") ?? ""),
-    marketing_agent_name: String(formData.get("marketing_agent_name") ?? "")
+    marketing_agent_name: marketingAgentNames[0] || null
   });
 
-  let marketingAgentId =
-    payload.marketing_agent_id && payload.marketing_agent_id.length > 0
-      ? payload.marketing_agent_id
-      : null;
-
-  if (!marketingAgentId && payload.marketing_agent_name) {
+  // Resolve all marketing agent names to IDs
+  const resolvedMarketingAgentIds: string[] = [];
+  for (const name of marketingAgentNames) {
+    if (!name) continue;
     const { data: agentMatch } = await supabase
       .from("user_profiles")
       .select("id")
       .eq("tenant_id", rental.tenant_id)
-      .ilike("display_name", payload.marketing_agent_name)
+      .ilike("display_name", name)
       .limit(1)
       .single();
-    marketingAgentId = agentMatch?.id ?? null;
+    if (agentMatch?.id) resolvedMarketingAgentIds.push(agentMatch.id);
   }
+  const marketingAgentId = resolvedMarketingAgentIds[0] ?? null;
+
+  // Parse override if provided
+  const parsedOverride =
+    typeof overrideValueRaw === "string" && overrideValueRaw.length > 0
+      ? Number(overrideValueRaw)
+      : null;
+  const hasValidOverride = parsedOverride !== null && !Number.isNaN(parsedOverride);
 
   const { error } = await supabase
     .from("rental_codes")
@@ -312,10 +335,35 @@ export async function updateRentalCode(formData: FormData) {
       payment_method: payload.payment_method,
       property_address: payload.property_address,
       licensor_name: payload.licensor_name,
-      marketing_agent_id: marketingAgentId
+      marketing_agent_id: marketingAgentId,
+      ...(hasValidOverride
+        ? {
+            marketing_fee_override_gbp: roundMoney(parsedOverride!),
+            marketing_fee_override_reason: overrideReason || null
+          }
+        : marketingAgentId === null
+        ? { marketing_fee_override_gbp: null, marketing_fee_override_reason: null }
+        : {})
     })
     .eq("id", rentalId);
   if (error) throw new Error(error.message);
+
+  // Sync junction table: delete old rows, insert new ones
+  await supabase
+    .from("rental_marketing_agents")
+    .delete()
+    .eq("rental_id", rentalId);
+
+  if (resolvedMarketingAgentIds.length > 0) {
+    const uniqueIds = [...new Set(resolvedMarketingAgentIds)];
+    await supabase.from("rental_marketing_agents").insert(
+      uniqueIds.map((agentId) => ({
+        tenant_id: rental.tenant_id,
+        rental_id: rentalId,
+        agent_id: agentId
+      }))
+    );
+  }
 
   revalidatePath("/earnings");
   revalidatePath(`/rentals/${rentalId}`);

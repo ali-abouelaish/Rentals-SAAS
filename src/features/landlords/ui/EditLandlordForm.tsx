@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { updateLandlord } from "@/features/landlords/actions/landlords";
+import { updateLandlord, deleteLandlord } from "@/features/landlords/actions/landlords";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 
 type Landlord = {
   id: string;
@@ -25,6 +26,8 @@ type Landlord = {
 export function EditLandlordForm({ landlord }: { landlord: Landlord }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(formData: FormData) {
@@ -41,18 +44,67 @@ export function EditLandlordForm({ landlord }: { landlord: Landlord }) {
     }
   }
 
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      const formData = new FormData();
+      formData.append("landlord_id", landlord.id);
+      await deleteLandlord(formData);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete landlord");
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-brand">Edit landlord</p>
-        <Button
-          type="button"
-          variant={isEditing ? "ghost" : "secondary"}
-          size="sm"
-          onClick={() => setIsEditing((prev) => !prev)}
-        >
-          {isEditing ? "Cancel" : "Edit"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {confirmDelete ? (
+            <>
+              <span className="text-xs text-foreground-secondary">Are you sure?</span>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={isDeleting}
+                onClick={handleDelete}
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                {isDeleting ? "Deleting…" : "Yes, delete"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={isDeleting}
+                onClick={() => setConfirmDelete(false)}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="mr-1 h-4 w-4" />
+              Delete
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant={isEditing ? "ghost" : "secondary"}
+            size="sm"
+            onClick={() => setIsEditing((prev) => !prev)}
+          >
+            {isEditing ? "Cancel" : "Edit"}
+          </Button>
+        </div>
       </div>
 
       {isEditing && (

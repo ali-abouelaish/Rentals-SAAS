@@ -13,7 +13,7 @@ export type CommissionRentalRow = {
   payment_fee: number;
   base_amount: number;
   commission_percent: number;
-  marketing_agent_name: string;
+  marketing_agent_names: string;
   marketing_fee_deducted: number;
   agent_earning: number;
   status: string;
@@ -63,6 +63,13 @@ export async function getCommissionFileData({
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
 
+  // Also find rentals where agent is a secondary marketing agent
+  const { data: mktJunctionRows } = await supabase
+    .from("rental_marketing_agents")
+    .select("rental_id")
+    .eq("agent_id", agentId);
+  const mktRentalIds = (mktJunctionRows ?? []).map(r => r.rental_id);
+
   const [{ data: agentProfile }, { data: rentals, error: rentalError }] = await Promise.all([
     supabase
       .from("agent_profiles")
@@ -75,7 +82,10 @@ export async function getCommissionFileData({
         "id, code, created_at, consultation_fee_amount, rental_amount_gbp, payment_method, property_address, client_snapshot, status, assisted_by_agent_id, marketing_agent_id, marketing_fee_override_gbp"
       )
       .eq("tenant_id", profile.tenant_id)
-      .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
+      .or([
+        `assisted_by_agent_id.eq.${agentId}`,
+        ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
+      ].join(","))
       .in("status", includeStatuses)
       .gte("created_at", fromIso)
       .lte("created_at", toIso)
@@ -84,17 +94,16 @@ export async function getCommissionFileData({
   if (rentalError) throw new Error(rentalError.message);
 
   const selfCommissionPct = agentProfile?.commission_percent ?? 0;
-  const selfMarketingFee = agentProfile?.marketing_fee ?? 0;
 
-  // Fetch marketing agent display names and their marketing fees
-  const marketingAgentIds = [...new Set(
+  // Fetch primary marketing agent display names and their fees
+  const primaryMarketingAgentIds = [...new Set(
     (rentals ?? []).map((r) => r.marketing_agent_id).filter((id): id is string => Boolean(id))
   )];
 
-  const [{ data: marketingUserProfiles }, { data: marketingAgentProfiles }] = marketingAgentIds.length
+  const [{ data: marketingUserProfiles }, { data: marketingAgentProfiles }] = primaryMarketingAgentIds.length
     ? await Promise.all([
-        supabase.from("user_profiles").select("id, display_name").in("id", marketingAgentIds),
-        supabase.from("agent_profiles").select("user_id, marketing_fee").in("user_id", marketingAgentIds)
+        supabase.from("user_profiles").select("id, display_name").in("id", primaryMarketingAgentIds),
+        supabase.from("agent_profiles").select("user_id, marketing_fee").in("user_id", primaryMarketingAgentIds)
       ])
     : [{ data: [] as { id: string; display_name: string | null }[] }, { data: [] as { user_id: string; marketing_fee: number | null }[] }];
 
@@ -105,6 +114,25 @@ export async function getCommissionFileData({
     (marketingAgentProfiles ?? []).map((p) => [p.user_id, Number(p.marketing_fee ?? 0)])
   );
 
+  // Fetch junction table for all rentals to get counts and all agent names
+  const allRentalIds = (rentals ?? []).map(r => r.id);
+  const { data: allJunctionRows } = allRentalIds.length > 0
+    ? await supabase
+        .from("rental_marketing_agents")
+        .select("rental_id, agent_id, user_profiles(display_name)")
+        .in("rental_id", allRentalIds)
+    : { data: [] as { rental_id: string; agent_id: string; user_profiles: { display_name: string | null } | null }[] };
+
+  const jCountMap = new Map<string, number>();
+  const jNamesMap = new Map<string, string[]>();
+  for (const row of allJunctionRows ?? []) {
+    jCountMap.set(row.rental_id, (jCountMap.get(row.rental_id) ?? 0) + 1);
+    const names = jNamesMap.get(row.rental_id) ?? [];
+    const name = (row.user_profiles as any)?.display_name ?? "Agent";
+    names.push(name);
+    jNamesMap.set(row.rental_id, names);
+  }
+
   const rentalRows: CommissionRentalRow[] = (rentals ?? []).map((rental) => {
     const rentalAmount = Number(rental.rental_amount_gbp ?? rental.consultation_fee_amount ?? 0);
     const feeRate = paymentFeeRate(rental.payment_method);
@@ -113,27 +141,34 @@ export async function getCommissionFileData({
 
     const hasMarketingAgent =
       rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
-    const marketingFee = hasMarketingAgent
+    const totalMarketingFee = hasMarketingAgent
       ? rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
         ? Number(rental.marketing_fee_override_gbp)
         : marketingFeeProfileMap.get(rental.marketing_agent_id!) ?? 0
       : 0;
 
+    const agentCount = jCountMap.get(rental.id) ?? 1;
+    const splitFee = agentCount > 0 ? roundMoney(totalMarketingFee / agentCount) : 0;
     const commPct = selfCommissionPct;
 
     let agentEarning: number;
     if (rental.assisted_by_agent_id === agentId) {
       const gross = roundMoney(baseAmount * Number(commPct) / 100);
-      agentEarning = roundMoney(gross - marketingFee);
+      agentEarning = roundMoney(gross - totalMarketingFee);
     } else {
-      // This agent is the marketing agent
-      agentEarning = rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
-        ? Number(rental.marketing_fee_override_gbp)
-        : selfMarketingFee;
+      // This agent is one of the marketing agents — earns their split
+      agentEarning = splitFee;
     }
 
     const marketingFeeDeducted =
-      rental.assisted_by_agent_id === agentId && hasMarketingAgent ? marketingFee : 0;
+      rental.assisted_by_agent_id === agentId && hasMarketingAgent ? totalMarketingFee : 0;
+
+    const allMktNames = jNamesMap.get(rental.id) ?? [];
+    const marketingAgentNames = allMktNames.length > 0
+      ? allMktNames.join(", ")
+      : rental.marketing_agent_id
+      ? marketingAgentNameMap.get(rental.marketing_agent_id) ?? "—"
+      : "—";
 
     return {
       id: rental.id,
@@ -147,9 +182,7 @@ export async function getCommissionFileData({
       payment_fee: paymentFee,
       base_amount: baseAmount,
       commission_percent: Number(commPct),
-      marketing_agent_name: rental.marketing_agent_id
-        ? marketingAgentNameMap.get(rental.marketing_agent_id) ?? "—"
-        : "—",
+      marketing_agent_names: marketingAgentNames,
       marketing_fee_deducted: roundMoney(marketingFeeDeducted),
       agent_earning: roundMoney(agentEarning),
       status: rental.status

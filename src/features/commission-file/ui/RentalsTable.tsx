@@ -58,7 +58,7 @@ export function RentalsTable({
           "Fee",
           "Base",
           "Commission %",
-          "Marketing Agent",
+          "Marketing Agents",
           "Marketing Fee",
           "Agent Earning",
           "Status",
@@ -95,7 +95,7 @@ export function RentalsTable({
               {rental.commission_percent}%
             </span>,
             <span key={`${rental.id}-marketing`} className="text-sm text-foreground-secondary">
-              {rental.marketing_agent_name}
+              {rental.marketing_agent_names}
             </span>,
             <span key={`${rental.id}-marketing-fee`} className="text-sm text-foreground-secondary">
               {formatGBP(rental.marketing_fee_deducted)}

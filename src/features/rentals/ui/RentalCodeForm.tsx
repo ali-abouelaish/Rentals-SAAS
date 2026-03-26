@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function RentalCodeForm({
@@ -25,6 +26,7 @@ export function RentalCodeForm({
   const [clientIdFiles, setClientIdFiles] = useState<File[]>([]);
   const [nextCode, setNextCode] = useState<string | null>(null);
   const [loadingCode, setLoadingCode] = useState(false);
+  const [marketingAgentNames, setMarketingAgentNames] = useState<string[]>([]);
 
   const loadCode = useCallback(async () => {
     try {
@@ -65,6 +67,11 @@ export function RentalCodeForm({
     paymentFiles.forEach((file) => formData.append("payment_proof", file));
     clientIdFiles.forEach((file) => formData.append("client_id_doc", file));
 
+    // Append marketing agent names as individual form fields
+    marketingAgentNames.filter(Boolean).forEach((name) => {
+      formData.append("marketing_agent_name", name);
+    });
+
     startTransition(async () => {
       try {
         await createRentalCodeWithDocuments(formData);
@@ -74,6 +81,7 @@ export function RentalCodeForm({
         setSourcingFiles([]);
         setPaymentFiles([]);
         setClientIdFiles([]);
+        setMarketingAgentNames([]);
         // Refresh the next code preview
         loadCode();
       } catch (error) {
@@ -149,21 +157,45 @@ export function RentalCodeForm({
           name="licensor_name"
           placeholder="Licensor name"
         />
-        <div className="md:col-span-2">
-          <label className="text-xs text-foreground-secondary mb-1 block">
-            Marketing agent (optional)
+        <div className="md:col-span-2 space-y-2">
+          <label className="text-xs text-foreground-secondary block">
+            Marketing agents (optional)
           </label>
-          <Select
-            name="marketing_agent_name"
-            defaultValue=""
-            options={[
-              { label: "None", value: "" },
-              ...agents.map((agent) => ({
-                label: agent.name,
-                value: agent.name,
-              })),
-            ]}
-          />
+          {marketingAgentNames.map((name, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <Input
+                list="marketing-agent-list"
+                value={name}
+                placeholder="Search by name"
+                onChange={(e) => {
+                  const updated = [...marketingAgentNames];
+                  updated[index] = e.target.value;
+                  setMarketingAgentNames(updated);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setMarketingAgentNames(marketingAgentNames.filter((_, i) => i !== index))}
+                className="text-error hover:text-error/80"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          <datalist id="marketing-agent-list">
+            {agents.map((agent) => (
+              <option key={agent.id} value={agent.name} />
+            ))}
+          </datalist>
+          {marketingAgentNames.length < 5 && (
+            <button
+              type="button"
+              onClick={() => setMarketingAgentNames([...marketingAgentNames, ""])}
+              className="text-xs text-brand hover:underline"
+            >
+              + Add marketing agent
+            </button>
+          )}
         </div>
       </div>
 

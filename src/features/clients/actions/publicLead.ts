@@ -14,11 +14,25 @@ export async function createPublicLead(
 ) {
   try {
     const agentId = String(formData.get("agent_id") ?? "");
-    const tenantId = String(formData.get("tenant_id") ?? "");
 
-    if (!agentId || !tenantId) {
+    if (!agentId) {
       return { error: "Invalid link. Please contact the agent." };
     }
+
+    // Always resolve tenant_id server-side from the agent's user profile —
+    // never trust the hidden form field which could be stale or tampered with.
+    const admin = createSupabaseAdminClient();
+    const { data: agentProfile } = await admin
+      .from("user_profiles")
+      .select("tenant_id")
+      .eq("id", agentId)
+      .single();
+
+    if (!agentProfile?.tenant_id) {
+      return { error: "Invalid link. Please contact the agent." };
+    }
+
+    const tenantId = agentProfile.tenant_id;
 
     const payload = clientSchema.parse({
       first_name: String(formData.get("first_name") ?? ""),
@@ -37,7 +51,6 @@ export async function createPublicLead(
       assigned_agent_id: agentId
     });
 
-    const admin = createSupabaseAdminClient();
     const normalizePhone = (p: string) => p.replace(/\D/g, "").trim();
     const normalizedInput = normalizePhone(payload.phone);
     if (normalizedInput.length >= 6) {

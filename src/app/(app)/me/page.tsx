@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { getEntitlements } from "@/lib/entitlements/getEntitlements";
+import { BusinessCardModal } from "@/features/me/ui/BusinessCardModal";
 import {
   getEarningsStatsForAgent,
   getEarningsTrendForAgent,
@@ -52,12 +55,18 @@ export default async function MePage({
   const end = searchParams?.end ?? defaults.end;
   const filters = { from: start, to: end, payment_method: "all" as const };
 
-  const [agentProfile, stats, trend, transactions, bonuses] = await Promise.all([
+  const headersList = headers();
+  const host = headersList.get("host") ?? "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const cardUrl = `${protocol}://${host}/public/card/${profile.id}`;
+
+  const [agentProfile, stats, trend, transactions, bonuses, entitlements] = await Promise.all([
     getAgentById(profile.id).catch(() => null),
     getEarningsStatsForAgent(filters, profile.id),
     getEarningsTrendForAgent(filters, profile.id),
     getTransactions(filters, { agentId: profile.id }),
-    getBonusesForAgent(profile.id, { from: start, to: end })
+    getBonusesForAgent(profile.id, { from: start, to: end }),
+    getEntitlements(),
   ]);
 
   const totalBonuses = bonuses.reduce((sum, b) => sum + (b.amount_owed ?? 0), 0);
@@ -69,15 +78,24 @@ export default async function MePage({
   const displayName = profile.display_name ?? agentProfile?.user_profiles?.display_name ?? "Agent";
   const role = profile.role ?? agentProfile?.user_profiles?.role ?? "agent";
 
+  const hasBusinessCard = entitlements.has("digital_business_card");
+
   return (
     <div className="space-y-8">
-      <ProfileHeader
-        displayName={displayName}
-        role={role}
-        avatarUrl={agentProfile?.avatar_url}
-        joinedAt={(profile as { created_at?: string }).created_at}
-        editSupported={true}
-      />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <ProfileHeader
+          displayName={displayName}
+          role={role}
+          avatarUrl={agentProfile?.avatar_url}
+          joinedAt={(profile as { created_at?: string }).created_at}
+          editSupported={true}
+        />
+        {hasBusinessCard && (
+          <div className="shrink-0">
+            <BusinessCardModal agentId={profile.id} cardUrl={cardUrl} />
+          </div>
+        )}
+      </div>
 
       <MeDateRangeFilter start={start} end={end} />
 
@@ -159,7 +177,15 @@ export default async function MePage({
         <TabsContent value="settings" className="space-y-8 mt-8">
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Profile &amp; security</h3>
-            <MeProfileSettingsForm displayName={displayName} avatarUrl={agentProfile?.avatar_url} />
+            <MeProfileSettingsForm
+              displayName={displayName}
+              avatarUrl={agentProfile?.avatar_url}
+              phone={agentProfile?.phone}
+              contactEmail={agentProfile?.contact_email}
+              facebookUrl={agentProfile?.facebook_url}
+              instagramUrl={agentProfile?.instagram_url}
+              linkedinUrl={agentProfile?.linkedin_url}
+            />
           </div>
         </TabsContent>
       </Tabs>

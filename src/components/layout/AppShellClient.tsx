@@ -6,7 +6,7 @@ import { BrandingStyles } from "./BrandingStyles";
 import { SideNav } from "./SideNav";
 import type { TenantBrandingSettings } from "@/features/admin/domain/types";
 
-type Profile = { display_name: string | null; role: string | null };
+type Profile = { display_name: string | null; role: string | null; avatar_url: string | null };
 
 export function AppShellClient({
   profile,

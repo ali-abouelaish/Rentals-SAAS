@@ -36,12 +36,8 @@ export async function updateAgentCommission(userId: string, values: AgentUpdateV
   const profile = await requireRole(["admin"]);
   const payload = agentUpdateSchema.parse(values);
 
-  const isAgent =
-    payload.role === "agent" || payload.role === "agent_and_marketing" || payload.role === "admin";
-  const isMarketing =
-    payload.role === "marketing_only" ||
-    payload.role === "agent_and_marketing" ||
-    payload.role === "admin";
+  const isAgent = payload.role === "agent" || payload.role === "admin";
+  const isMarketing = payload.role === "agent" || payload.role === "marketing_only" || payload.role === "admin";
 
   const { error: profileError } = await admin
     .from("user_profiles")
@@ -127,12 +123,8 @@ export async function createAgent(
     return { ok: false, error: profileError.message };
   }
 
-  const isAgent =
-    payload.role === "agent" || payload.role === "agent_and_marketing" || payload.role === "admin";
-  const isMarketing =
-    payload.role === "marketing_only" ||
-    payload.role === "agent_and_marketing" ||
-    payload.role === "admin";
+  const isAgent = payload.role === "agent" || payload.role === "admin";
+  const isMarketing = payload.role === "agent" || payload.role === "marketing_only" || payload.role === "admin";
 
   const { error: agentError } = await admin.from("agent_profiles").insert({
     user_id: userId,

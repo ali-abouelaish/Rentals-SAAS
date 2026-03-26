@@ -52,8 +52,26 @@ export async function middleware(request: NextRequest) {
   if (code && pathname === "/") {
     const callbackUrl = request.nextUrl.clone();
     callbackUrl.pathname = "/auth/callback";
-    callbackUrl.searchParams.set("next", type === "recovery" ? "/reset-password" : "/me");
+    // Preserve an existing `next` param if Supabase passed it through; otherwise
+    // derive from `type`. Note: the onAuthStateChange PASSWORD_RECOVERY handler in
+    // /auth/callback is the authoritative redirect for recovery sessions.
+    const existingNext = request.nextUrl.searchParams.get("next");
+    const resolvedNext =
+      existingNext ??
+      (type === "recovery"
+        ? "/reset-password"
+        : type === "invite"
+        ? "/invite/set-password"
+        : "/me");
+    callbackUrl.searchParams.set("next", resolvedNext);
     return NextResponse.redirect(callbackUrl);
+  }
+
+  // On tenant subdomains, the root always redirects to login
+  if (tenantSlug && pathname === "/") {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    return NextResponse.redirect(loginUrl);
   }
 
   const isPublic = PUBLIC_PATHS.some(

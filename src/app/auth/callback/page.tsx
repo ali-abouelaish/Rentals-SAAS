@@ -13,12 +13,37 @@ function CallbackContent() {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
 
+  // Listen for PASSWORD_RECOVERY event — Supabase fires this whenever a code/token
+  // exchange results in a recovery session, regardless of the `type` param in the URL.
+  // This handles unconfirmed users (invited but not yet accepted) whose reset email
+  // may carry type=signup or type=email instead of type=recovery.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        router.replace("/reset-password");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase, router]);
+
   useEffect(() => {
     let mounted = true;
 
     const run = async () => {
       if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error && mounted) {
+          if (type === "invite") {
+            router.replace(`/invite/accept?error=${encodeURIComponent(error.message)}`);
+          } else {
+            router.replace("/login");
+          }
+          return;
+        }
+        if (type === "invite" && mounted) {
+          router.replace("/invite/set-password");
+          return;
+        }
       } else if (tokenHash && type === "invite") {
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
@@ -28,10 +53,13 @@ function CallbackContent() {
           router.replace(`/invite/accept?error=${encodeURIComponent(error.message)}`);
           return;
         }
-      } else if (tokenHash && type === "recovery") {
+      } else if (tokenHash && (type === "recovery" || type === "signup" || type === "email")) {
+        // type=signup or type=email can be sent by Supabase for unconfirmed users
+        // (invited but not yet accepted) going through password recovery.
+        const otpType = type as "recovery" | "signup" | "email";
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: "recovery",
+          type: otpType,
         });
         if (error && mounted) {
           router.replace(`/forgot-password?error=${encodeURIComponent(error.message)}`);

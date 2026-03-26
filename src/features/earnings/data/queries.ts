@@ -24,6 +24,30 @@ function computeRentalNet(amount: number, method: string): number {
   return Math.round(amount * (1 - paymentFeeRate(method)) * 100) / 100;
 }
 
+/** Fetch junction table data for a set of rental IDs.
+ *  Returns:
+ *  - countMap: how many marketing agents are assigned per rental
+ *  - agentRentalIds: rental IDs where `agentId` is a marketing agent (if provided)
+ */
+async function fetchRentalMarketingData(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  rentalIds: string[],
+  agentId?: string
+): Promise<{ countMap: Map<string, number>; agentRentalIds: Set<string> }> {
+  if (rentalIds.length === 0) return { countMap: new Map(), agentRentalIds: new Set() };
+  const { data: rows } = await supabase
+    .from("rental_marketing_agents")
+    .select("rental_id, agent_id")
+    .in("rental_id", rentalIds);
+  const countMap = new Map<string, number>();
+  const agentRentalIds = new Set<string>();
+  for (const row of rows ?? []) {
+    countMap.set(row.rental_id, (countMap.get(row.rental_id) ?? 0) + 1);
+    if (agentId && row.agent_id === agentId) agentRentalIds.add(row.rental_id);
+  }
+  return { countMap, agentRentalIds };
+}
+
 export async function getEarningsStats(filters: EarningsFilterValues): Promise<EarningsStats> {
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
@@ -67,6 +91,13 @@ export async function getEarningsStatsForAgent(
   const supabase = createSupabaseServerClient();
   const { from, to } = filters;
 
+  // Also find rentals where agent is a secondary marketing agent (junction table only)
+  const { data: mktJunctionRows } = await supabase
+    .from("rental_marketing_agents")
+    .select("rental_id")
+    .eq("agent_id", agentId);
+  const mktRentalIds = (mktJunctionRows ?? []).map(r => r.rental_id);
+
   const [{ data: agentProfile }, { data: rentals }] = await Promise.all([
     supabase
       .from("agent_profiles")
@@ -76,50 +107,51 @@ export async function getEarningsStatsForAgent(
     supabase
       .from("rental_codes")
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
-      .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
+      .or([
+        `assisted_by_agent_id.eq.${agentId}`,
+        ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
+      ].join(","))
       .in("status", ["approved", "paid"])
       .gte("date", from)
       .lte("date", to)
   ]);
 
   const selfCommissionPct = agentProfile?.commission_percent ?? 0;
-  const selfMarketingFee = agentProfile?.marketing_fee ?? 0;
 
-  // Batch-fetch marketing agent profiles for rentals where this agent is assisted agent
-  const mktAgentIds = [...new Set(
+  // Fetch marketing agent profiles for primary-agent fee lookup
+  const primaryMktIds = [...new Set(
     (rentals ?? [])
-      .filter(r => r.assisted_by_agent_id === agentId && r.marketing_agent_id && r.marketing_agent_id !== agentId)
-      .map(r => r.marketing_agent_id as string)
+      .map(r => r.marketing_agent_id)
+      .filter((id): id is string => Boolean(id) && id !== agentId)
   )];
-
-  const { data: mktProfiles } = mktAgentIds.length > 0
-    ? await supabase.from("agent_profiles").select("user_id, marketing_fee").in("user_id", mktAgentIds)
+  const { data: mktProfiles } = primaryMktIds.length > 0
+    ? await supabase.from("agent_profiles").select("user_id, marketing_fee").in("user_id", primaryMktIds)
     : { data: [] as { user_id: string; marketing_fee: number | null }[] };
-
   const mktFeeMap = new Map((mktProfiles ?? []).map(p => [p.user_id, Number(p.marketing_fee ?? 0)]));
+
+  const rentalIds = (rentals ?? []).map(r => r.id);
+  const { countMap, agentRentalIds } = await fetchRentalMarketingData(supabase, rentalIds, agentId);
 
   let totalEarnings = 0;
   let rentalsCount = 0;
 
   for (const rental of rentals ?? []) {
+    const hasMarketing = rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
+    const totalMktFee = rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
+      ? Number(rental.marketing_fee_override_gbp)
+      : hasMarketing
+      ? (mktFeeMap.get(rental.marketing_agent_id!) ?? 0)
+      : 0;
+    const agentCount = countMap.get(rental.id) ?? 1;
+    const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
+
     if (rental.assisted_by_agent_id === agentId) {
       rentalsCount++;
       const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
-      const commPct = selfCommissionPct;
-      const gross = Math.round(rentalNet * commPct / 100 * 100) / 100;
-      const mktFee =
-        rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
-          ? Number(rental.marketing_fee_override_gbp)
-          : (rental.marketing_agent_id && rental.marketing_agent_id !== agentId)
-          ? (mktFeeMap.get(rental.marketing_agent_id) ?? 0)
-          : 0;
-      totalEarnings += Math.round((gross - mktFee) * 100) / 100;
-    } else if (rental.marketing_agent_id === agentId) {
-      const mktEarned =
-        rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
-          ? Number(rental.marketing_fee_override_gbp)
-          : selfMarketingFee;
-      totalEarnings += mktEarned;
+      const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
+      totalEarnings += Math.round((gross - totalMktFee) * 100) / 100;
+    } else if (agentRentalIds.has(rental.id)) {
+      totalEarnings += splitFee;
     }
   }
 
@@ -184,31 +216,40 @@ export async function getEarningsTrendForAgent(
   const toDate = new Date(filters.to);
   const bucket = getBucket(fromDate, toDate);
 
+  const { data: mktJunctionRows } = await supabase
+    .from("rental_marketing_agents")
+    .select("rental_id")
+    .eq("agent_id", agentId);
+  const mktRentalIds = (mktJunctionRows ?? []).map(r => r.rental_id);
+
   const [{ data: agentProfile }, { data: rentals }] = await Promise.all([
     supabase.from("agent_profiles").select("commission_percent, marketing_fee").eq("user_id", agentId).single(),
     supabase
       .from("rental_codes")
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
-      .or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`)
+      .or([
+        `assisted_by_agent_id.eq.${agentId}`,
+        ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
+      ].join(","))
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
       .lte("date", toDate.toISOString())
   ]);
 
   const selfCommissionPct = agentProfile?.commission_percent ?? 0;
-  const selfMarketingFee = agentProfile?.marketing_fee ?? 0;
 
-  const mktAgentIds = [...new Set(
+  const primaryMktIds = [...new Set(
     (rentals ?? [])
-      .filter(r => r.assisted_by_agent_id === agentId && r.marketing_agent_id && r.marketing_agent_id !== agentId)
-      .map(r => r.marketing_agent_id as string)
+      .map(r => r.marketing_agent_id)
+      .filter((id): id is string => Boolean(id) && id !== agentId)
   )];
-
-  const { data: mktProfiles } = mktAgentIds.length > 0
-    ? await supabase.from("agent_profiles").select("user_id, marketing_fee").in("user_id", mktAgentIds)
+  const { data: mktProfiles } = primaryMktIds.length > 0
+    ? await supabase.from("agent_profiles").select("user_id, marketing_fee").in("user_id", primaryMktIds)
     : { data: [] as { user_id: string; marketing_fee: number | null }[] };
-
   const mktFeeMap = new Map((mktProfiles ?? []).map(p => [p.user_id, Number(p.marketing_fee ?? 0)]));
+
+  const rentalIds = (rentals ?? []).map(r => r.id);
+  const { countMap, agentRentalIds } = await fetchRentalMarketingData(supabase, rentalIds, agentId);
 
   const buckets = new Map<string, EarningsTrendPoint>();
 
@@ -221,23 +262,20 @@ export async function getEarningsTrendForAgent(
     const key = bucketDate.toISOString().slice(0, 10);
     const current = buckets.get(key) ?? { bucket_date: key, total_earnings: 0, agent_earnings: 0 };
 
+    const hasMarketing = r.marketing_agent_id && r.marketing_agent_id !== r.assisted_by_agent_id;
+    const totalMktFee = r.marketing_fee_override_gbp !== null && r.marketing_fee_override_gbp !== undefined
+      ? Number(r.marketing_fee_override_gbp)
+      : hasMarketing ? (mktFeeMap.get(r.marketing_agent_id!) ?? 0) : 0;
+    const agentCount = countMap.get(r.id) ?? 1;
+    const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
+
     let earned = 0;
     if (r.assisted_by_agent_id === agentId) {
       const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
-      const commPct = selfCommissionPct;
-      const gross = Math.round(rentalNet * commPct / 100 * 100) / 100;
-      const mktFee =
-        r.marketing_fee_override_gbp !== null && r.marketing_fee_override_gbp !== undefined
-          ? Number(r.marketing_fee_override_gbp)
-          : (r.marketing_agent_id && r.marketing_agent_id !== agentId)
-          ? (mktFeeMap.get(r.marketing_agent_id) ?? 0)
-          : 0;
-      earned = Math.round((gross - mktFee) * 100) / 100;
-    } else if (r.marketing_agent_id === agentId) {
-      earned =
-        r.marketing_fee_override_gbp !== null && r.marketing_fee_override_gbp !== undefined
-          ? Number(r.marketing_fee_override_gbp)
-          : selfMarketingFee;
+      const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
+      earned = Math.round((gross - totalMktFee) * 100) / 100;
+    } else if (agentRentalIds.has(r.id)) {
+      earned = splitFee;
     }
 
     current.agent_earnings += earned;
@@ -318,7 +356,7 @@ async function buildLeaderboard(
       .lte("created_at", toDate.toISOString())
   ]);
 
-  // Batch-fetch marketing agent profiles
+  // Batch-fetch marketing agent profiles for primary fee lookup
   const mktAgentIds = [...new Set(
     (rentals ?? [])
       .map(r => r.marketing_agent_id)
@@ -335,6 +373,21 @@ async function buildLeaderboard(
     ? await supabase.from("agent_profiles").select("user_id, commission_percent").in("user_id", assistedAgentIds)
     : { data: [] as { user_id: string; commission_percent: number | null }[] };
   const commPctMap = new Map((assistedProfiles ?? []).map(p => [p.user_id, Number(p.commission_percent ?? 0)]));
+
+  // Fetch junction table for all rentals to get agent counts and assignments
+  const rentalIds = (rentals ?? []).map(r => r.id);
+  const { data: junctionRows } = rentalIds.length > 0
+    ? await supabase.from("rental_marketing_agents").select("rental_id, agent_id").in("rental_id", rentalIds)
+    : { data: [] as { rental_id: string; agent_id: string }[] };
+
+  const junctionCountMap = new Map<string, number>();
+  const junctionAgentsMap = new Map<string, string[]>();
+  for (const row of junctionRows ?? []) {
+    junctionCountMap.set(row.rental_id, (junctionCountMap.get(row.rental_id) ?? 0) + 1);
+    const arr = junctionAgentsMap.get(row.rental_id) ?? [];
+    arr.push(row.agent_id);
+    junctionAgentsMap.set(row.rental_id, arr);
+  }
 
   const activityMap = new Map<string, string>();
   (activities ?? []).forEach((a) => {
@@ -374,13 +427,11 @@ async function buildLeaderboard(
     const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
     const commPct = commPctMap.get(rental.assisted_by_agent_id) ?? 0;
     const gross = Math.round(rentalNet * commPct / 100 * 100) / 100;
-    const mktFee =
-      rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
-        ? Number(rental.marketing_fee_override_gbp)
-        : (rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id)
-        ? (mktFeeMap.get(rental.marketing_agent_id) ?? 0)
-        : 0;
-    const agentNet = Math.round((gross - mktFee) * 100) / 100;
+    const hasMarketing = rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
+    const totalMktFee = rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
+      ? Number(rental.marketing_fee_override_gbp)
+      : hasMarketing ? (mktFeeMap.get(rental.marketing_agent_id!) ?? 0) : 0;
+    const agentNet = Math.round((gross - totalMktFee) * 100) / 100;
 
     // Assisted agent row
     const assistedRow = getOrCreate(rental.assisted_by_agent_id);
@@ -388,10 +439,17 @@ async function buildLeaderboard(
     assistedRow.total_earnings += rentalNet;
     assistedRow.agent_earnings += agentNet;
 
-    // Marketing agent row
-    if (rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id && mktFee > 0) {
-      const mktRow = getOrCreate(rental.marketing_agent_id);
-      mktRow.agent_earnings += mktFee;
+    // Marketing agents: split fee equally among all in junction table
+    const mktAgents = junctionAgentsMap.get(rental.id) ?? [];
+    const agentCount = junctionCountMap.get(rental.id) ?? 0;
+    if (agentCount > 0 && totalMktFee > 0) {
+      const splitFee = Math.round(totalMktFee / agentCount * 100) / 100;
+      for (const mktAgentId of mktAgents) {
+        if (mktAgentId !== rental.assisted_by_agent_id) {
+          const mktRow = getOrCreate(mktAgentId);
+          mktRow.agent_earnings += splitFee;
+        }
+      }
     }
   }
 
@@ -416,6 +474,16 @@ export async function getTransactions(
   const fromDate = new Date(filters.from);
   const toDate = new Date(filters.to);
 
+  // If filtering by agent, also find rentals where they are a secondary marketing agent
+  let mktRentalIds: string[] = [];
+  if (options?.agentId) {
+    const { data: jRows } = await supabase
+      .from("rental_marketing_agents")
+      .select("rental_id")
+      .eq("agent_id", options.agentId);
+    mktRentalIds = (jRows ?? []).map(r => r.rental_id);
+  }
+
   let query = supabase
     .from("rental_codes")
     .select("id, code, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
@@ -426,7 +494,9 @@ export async function getTransactions(
     .order("date", { ascending: false });
 
   if (options?.agentId) {
-    query = query.or(`assisted_by_agent_id.eq.${options.agentId},marketing_agent_id.eq.${options.agentId}`);
+    const orParts = [`assisted_by_agent_id.eq.${options.agentId}`];
+    if (mktRentalIds.length > 0) orParts.push(`id.in.(${mktRentalIds.join(",")})`);
+    query = query.or(orParts.join(","));
   }
 
   const { data: rentals } = await query;
@@ -443,26 +513,29 @@ export async function getTransactions(
 
   const agentProfileMap = new Map((agentProfiles ?? []).map(p => [p.user_id, p]));
 
+  const rentalIds = rentals.map(r => r.id);
+  const { countMap, agentRentalIds } = await fetchRentalMarketingData(supabase, rentalIds, options?.agentId);
+
   const out: EarningsTransaction[] = [];
 
   for (const rental of rentals) {
     const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
     const commPct = agentProfileMap.get(rental.assisted_by_agent_id)?.commission_percent ?? 0;
     const gross = Math.round(rentalNet * Number(commPct) / 100 * 100) / 100;
-    const mktFee =
-      rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
-        ? Number(rental.marketing_fee_override_gbp)
-        : (rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id)
-        ? Number(agentProfileMap.get(rental.marketing_agent_id)?.marketing_fee ?? 0)
-        : 0;
+    const hasMarketing = rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
+    const totalMktFee = rental.marketing_fee_override_gbp !== null && rental.marketing_fee_override_gbp !== undefined
+      ? Number(rental.marketing_fee_override_gbp)
+      : hasMarketing ? Number(agentProfileMap.get(rental.marketing_agent_id!)?.marketing_fee ?? 0) : 0;
+    const agentCount = countMap.get(rental.id) ?? 1;
+    const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
 
     let amount: number;
-    if (options?.agentId && options.agentId === rental.marketing_agent_id && options.agentId !== rental.assisted_by_agent_id) {
-      amount = mktFee;
+    if (options?.agentId && options.agentId !== rental.assisted_by_agent_id && agentRentalIds.has(rental.id)) {
+      amount = splitFee;
     } else if (options?.agentId && options.agentId === rental.assisted_by_agent_id) {
-      amount = Math.round((gross - mktFee) * 100) / 100;
+      amount = Math.round((gross - totalMktFee) * 100) / 100;
     } else {
-      // All-agents view: total agent payout = gross (assisted net + marketing fee)
+      // All-agents view: total agent payout = gross
       amount = gross;
     }
 
@@ -496,12 +569,24 @@ export async function getEarningsTrendByAgents(
   const toDate = new Date(filters.to);
   const bucket = getBucket(fromDate, toDate);
 
+  // Get rental IDs where any of the filter agents is a marketing agent (via junction table)
+  const { data: junctionForAgents } = await supabase
+    .from("rental_marketing_agents")
+    .select("rental_id")
+    .in("agent_id", agentIds);
+  const mktRentalIds = [...new Set((junctionForAgents ?? []).map(r => r.rental_id))];
+
+  const orParts = [
+    ...agentIds.map(id => `assisted_by_agent_id.eq.${id}`),
+    ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
+  ];
+
   const [{ data: rentals }, { data: agentProfiles }] = await Promise.all([
     supabase
       .from("rental_codes")
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
       .eq("tenant_id", profile.tenant_id)
-      .or(agentIds.map(id => `assisted_by_agent_id.eq.${id},marketing_agent_id.eq.${id}`).join(","))
+      .or(orParts.join(","))
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
       .lte("date", toDate.toISOString()),
@@ -527,6 +612,21 @@ export async function getEarningsTrendByAgents(
     ...(extraMktProfiles ?? []).map(p => [p.user_id, Number(p.marketing_fee ?? 0)] as [string, number])
   ]);
 
+  // Fetch junction table for all fetched rentals
+  const allRentalIds = (rentals ?? []).map(r => r.id);
+  const { data: allJunctionRows } = allRentalIds.length > 0
+    ? await supabase.from("rental_marketing_agents").select("rental_id, agent_id").in("rental_id", allRentalIds)
+    : { data: [] as { rental_id: string; agent_id: string }[] };
+
+  const jCountMap = new Map<string, number>();
+  const jAgentsMap = new Map<string, string[]>();
+  for (const row of allJunctionRows ?? []) {
+    jCountMap.set(row.rental_id, (jCountMap.get(row.rental_id) ?? 0) + 1);
+    const arr = jAgentsMap.get(row.rental_id) ?? [];
+    arr.push(row.agent_id);
+    jAgentsMap.set(row.rental_id, arr);
+  }
+
   const buckets = new Map<string, EarningsTrendPoint & { by_agent: Record<string, number> }>();
   const ensureBucket = (key: string) => {
     if (!buckets.has(key)) {
@@ -547,26 +647,29 @@ export async function getEarningsTrendByAgents(
     const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
     const commPct = agentProfileMap.get(r.assisted_by_agent_id)?.commission_percent ?? 0;
     const gross = Math.round(rentalNet * Number(commPct) / 100 * 100) / 100;
-    const mktFee =
-      r.marketing_fee_override_gbp !== null && r.marketing_fee_override_gbp !== undefined
-        ? Number(r.marketing_fee_override_gbp)
-        : (r.marketing_agent_id && r.marketing_agent_id !== r.assisted_by_agent_id)
-        ? (mktFeeMap.get(r.marketing_agent_id) ?? 0)
-        : 0;
+    const hasMarketing = r.marketing_agent_id && r.marketing_agent_id !== r.assisted_by_agent_id;
+    const totalMktFee = r.marketing_fee_override_gbp !== null && r.marketing_fee_override_gbp !== undefined
+      ? Number(r.marketing_fee_override_gbp)
+      : hasMarketing ? (mktFeeMap.get(r.marketing_agent_id!) ?? 0) : 0;
+    const agentCount = jCountMap.get(r.id) ?? 1;
+    const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
+    const mktAgentsForRental = jAgentsMap.get(r.id) ?? [];
 
     // Credit assisted agent (if in filter)
     if (agentIds.includes(r.assisted_by_agent_id)) {
-      const agentNet = Math.round((gross - mktFee) * 100) / 100;
+      const agentNet = Math.round((gross - totalMktFee) * 100) / 100;
       b.agent_earnings += agentNet;
       b.total_earnings += agentNet;
       b.by_agent[r.assisted_by_agent_id] = (b.by_agent[r.assisted_by_agent_id] ?? 0) + agentNet;
     }
 
-    // Credit marketing agent (if in filter and different from assisted)
-    if (r.marketing_agent_id && agentIds.includes(r.marketing_agent_id) && r.marketing_agent_id !== r.assisted_by_agent_id && mktFee > 0) {
-      b.agent_earnings += mktFee;
-      b.total_earnings += mktFee;
-      b.by_agent[r.marketing_agent_id] = (b.by_agent[r.marketing_agent_id] ?? 0) + mktFee;
+    // Credit marketing agents in filter with their split
+    for (const mktAgentId of mktAgentsForRental) {
+      if (agentIds.includes(mktAgentId) && mktAgentId !== r.assisted_by_agent_id && splitFee > 0) {
+        b.agent_earnings += splitFee;
+        b.total_earnings += splitFee;
+        b.by_agent[mktAgentId] = (b.by_agent[mktAgentId] ?? 0) + splitFee;
+      }
     }
   }
 

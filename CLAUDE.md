@@ -99,6 +99,21 @@ For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`
 
 - Any schema change must be made via a new timestamped migration file in `supabase/migrations/` — never modify the database directly or edit existing migrations.
 
+## Supabase & RLS Rules
+
+- Always wrap `auth.uid()` in `(select auth.uid())` in RLS policies for performance.
+- Every new table must have RLS enabled and policies defined — never skip.
+- Never use the service role key client-side — admin client (`createSupabaseAdminClient()`) is server-only.
+- Never hardcode Supabase URLs or keys — always use env vars.
+- Set Supabase MCP to **read-only** — Claude generates SQL, you apply it manually. Never point MCP at production.
+
+## Component & Data Rules
+
+- Use Server Components by default; add `"use client"` only when necessary (interactivity, browser APIs, hooks).
+- All mutations use Server Actions (`"use server"`).
+- Use Supabase SSR client (`createSupabaseServerClient`) in server context; browser client (`createSupabaseBrowserClient`) in `"use client"` components.
+- Handle loading, error, and empty states on every data fetch.
+
 ## Key Dependencies
 
 - `@radix-ui/*` — Accessible UI primitives

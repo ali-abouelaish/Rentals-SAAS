@@ -19,6 +19,8 @@ import {
     Send,
 } from "lucide-react";
 import { getInvoicesNeedingApproval, getInvoicesSentOverSevenDaysAgo } from "@/features/invoices/data/queries";
+import { getQuickLinks } from "@/features/quick-links/data/queries";
+import { QuickLinksSection } from "@/features/quick-links/ui/QuickLinksSection";
 
 export default async function DashboardPage() {
     const profile = await requireUserProfile();
@@ -33,6 +35,7 @@ export default async function DashboardPage() {
         { data: pendingApprovals },
         invoicesNeedingApproval,
         invoicesSentOver7Days,
+        quickLinks,
     ] = await Promise.all([
         supabase.from("clients").select("*", { count: "exact", head: true }),
         supabase.from("rental_codes").select("*", { count: "exact", head: true }),
@@ -50,6 +53,7 @@ export default async function DashboardPage() {
             .limit(5),
         isAdmin ? getInvoicesNeedingApproval() : Promise.resolve([]),
         isAdmin ? getInvoicesSentOverSevenDaysAgo() : Promise.resolve([]),
+        getQuickLinks(),
     ]);
 
     const quickActions = [
@@ -106,34 +110,10 @@ export default async function DashboardPage() {
                 <p className="text-[13px] text-foreground-muted">Here&apos;s your overview</p>
             </div>
 
-            {/* ── Stat Tiles — Bento Row 1 ─────────── */}
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-[var(--gap-bento)]">
-                {[
-                    { label: "Total Clients", value: clientCount ?? 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-                    { label: "Active Rentals", value: rentalCount ?? 0, icon: Building2, color: "text-emerald-600", bg: "bg-emerald-50" },
-                    { label: "Invoices", value: invoiceCount ?? 0, icon: FileText, color: "text-violet-600", bg: "bg-violet-50" },
-                    { label: "Pending", value: pendingApprovals?.length ?? 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-                ].map((stat) => (
-                    <div
-                        key={stat.label}
-                        className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5"
-                    >
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">
-                                    {stat.label}
-                                </p>
-                                <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">
-                                    {stat.value}
-                                </p>
-                            </div>
-                            <div className={`p-3 rounded-xl ${stat.bg}`}>
-                                <stat.icon className={`h-5 w-5 ${stat.color}`} strokeWidth={1.8} />
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+            {/* ── Bento Row 1: Useful Resources ─── */}
+            {(quickLinks.length > 0 || isAdmin) && (
+                <QuickLinksSection links={quickLinks} isAdmin={isAdmin} />
+            )}
 
             {/* ── Bento Row 2: Activity + Quick Actions ─── */}
             <div className="grid lg:grid-cols-5 gap-[var(--gap-bento)]">
@@ -267,7 +247,7 @@ export default async function DashboardPage() {
                 </div>
             )}
 
-            {/* ── Bento Row 4: Invoices needing approval (Admin) ─── */}
+            {/* ── Bento Row 5: Invoices needing approval (Admin) ─── */}
             {isAdmin && (
                 <div className="rounded-bento bg-surface-card shadow-bento p-6">
                     <div className="flex items-center justify-between mb-5">
@@ -328,7 +308,7 @@ export default async function DashboardPage() {
                 </div>
             )}
 
-            {/* ── Bento Row 5: Payment reminders — sent 7+ days ago (Admin) ─── */}
+            {/* ── Bento Row 6: Payment reminders — sent 7+ days ago (Admin) ─── */}
             {isAdmin && (
                 <div className="rounded-bento bg-surface-card shadow-bento p-6">
                     <div className="flex items-center justify-between mb-5">
@@ -389,6 +369,34 @@ export default async function DashboardPage() {
                     )}
                 </div>
             )}
+            {/* ── Stat Tiles — bottom row ─────────── */}
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-[var(--gap-bento)]">
+                {[
+                    { label: "Total Clients", value: clientCount ?? 0, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+                    { label: "Active Rentals", value: rentalCount ?? 0, icon: Building2, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    { label: "Invoices", value: invoiceCount ?? 0, icon: FileText, color: "text-violet-600", bg: "bg-violet-50" },
+                    { label: "Pending", value: pendingApprovals?.length ?? 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+                ].map((stat) => (
+                    <div
+                        key={stat.label}
+                        className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">
+                                    {stat.label}
+                                </p>
+                                <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">
+                                    {stat.value}
+                                </p>
+                            </div>
+                            <div className={`p-3 rounded-xl ${stat.bg}`}>
+                                <stat.icon className={`h-5 w-5 ${stat.color}`} strokeWidth={1.8} />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

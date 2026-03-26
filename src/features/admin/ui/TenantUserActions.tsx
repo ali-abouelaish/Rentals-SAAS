@@ -17,8 +17,7 @@ const roleOptions = [
   { value: "super_admin", label: "Super Admin" },
   { value: "admin", label: "Admin" },
   { value: "agent", label: "Agent" },
-  { value: "marketing_only", label: "Marketing Only" },
-  { value: "agent_and_marketing", label: "Agent + Marketing" }
+  { value: "marketing_only", label: "Marketing Only" }
 ];
 
 export function TenantUserActions({

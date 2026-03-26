@@ -10,6 +10,9 @@ type Props = {
   marketingFeeDefault: number;
   assistedAgentId: string;
   marketingAgentId?: string | null;
+  marketingFeeOverride?: number | null;
+  marketingFeeOverrideReason?: string | null;
+  marketingAgentCount?: number;
 };
 
 export function RentalPayoutSummary({
@@ -18,7 +21,10 @@ export function RentalPayoutSummary({
   commissionPercent,
   marketingFeeDefault,
   assistedAgentId,
-  marketingAgentId
+  marketingAgentId,
+  marketingFeeOverride,
+  marketingFeeOverrideReason,
+  marketingAgentCount = 1
 }: Props) {
   const paymentFee = paymentMethod === "cash" ? 0 : paymentMethod === "transfer" ? 0.2 : 0.0175;
   const base = useMemo(() => rentalAmount * (1 - paymentFee), [rentalAmount, paymentFee]);
@@ -26,12 +32,12 @@ export function RentalPayoutSummary({
   const threshold = useMemo(() => base * 0.45, [base]);
 
   const hasMarketingAgent = Boolean(marketingAgentId) && marketingAgentId !== assistedAgentId;
-  const needsOverride = hasMarketingAgent && marketingFeeDefault > threshold;
+  const overrideActive = marketingFeeOverride !== null && marketingFeeOverride !== undefined && !Number.isNaN(marketingFeeOverride);
   const marketingFeeValue = useMemo(() => {
     if (!hasMarketingAgent) return 0;
-    if (!needsOverride) return marketingFeeDefault;
+    if (overrideActive) return marketingFeeOverride!;
     return marketingFeeDefault;
-  }, [hasMarketingAgent, needsOverride, marketingFeeDefault]);
+  }, [hasMarketingAgent, overrideActive, marketingFeeOverride, marketingFeeDefault]);
 
   const assistedNet = useMemo(
     () => assistedGross - marketingFeeValue,
@@ -76,8 +82,22 @@ export function RentalPayoutSummary({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-foreground-secondary">Applied marketing fee</span>
-            <span className="font-semibold text-navy">{formatGBP(marketingFeeValue)}</span>
+            <span className={`font-semibold ${overrideActive ? "text-accent-dark" : "text-navy"}`}>
+              {formatGBP(marketingFeeValue)}
+              {overrideActive && <span className="ml-1 text-xs">(overridden)</span>}
+            </span>
           </div>
+          {hasMarketingAgent && marketingAgentCount > 1 && (
+            <div className="flex items-center justify-between text-xs text-foreground-secondary">
+              <span>Per agent ({marketingAgentCount} agents)</span>
+              <span>{formatGBP(Math.round(marketingFeeValue / marketingAgentCount * 100) / 100)} each</span>
+            </div>
+          )}
+          {overrideActive && marketingFeeOverrideReason && (
+            <div className="text-xs text-foreground-secondary italic">
+              Note: {marketingFeeOverrideReason}
+            </div>
+          )}
           <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
             <span className="font-medium text-foreground">Assisted net</span>
             <span

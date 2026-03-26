@@ -12,6 +12,8 @@ export type FeatureKey =
   | "billing_profiles"
   | "billing_info"
   | "leads"
+  | "digital_business_card"
+  | "properties"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -28,6 +30,8 @@ export const ALL_FEATURES: FeatureKey[] = [
   "billing_profiles",
   "billing_info",
   "leads",
+  "digital_business_card",
+  "properties",
   "admin",
 ];
 
@@ -56,6 +60,14 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   leads: {
     label: "Leads",
     description: "Inbound leads from property portals via Gmail parsing."
+  },
+  digital_business_card: {
+    label: "Digital Business Card",
+    description: "Public agent profile card with QR code, vCard download, and enquiry link."
+  },
+  properties: {
+    label: "Properties",
+    description: "Property portfolio, room inventory, vacancy tracking, and marketing export."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

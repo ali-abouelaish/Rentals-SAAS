@@ -16,6 +16,7 @@ type Props = {
   marketingFeeDefault: number;
   assistedAgentId: string;
   marketingAgentId?: string | null;
+  marketingAgentCount?: number;
 };
 
 export function RentalApprovalPanel({
@@ -25,7 +26,8 @@ export function RentalApprovalPanel({
   commissionPercent,
   marketingFeeDefault,
   assistedAgentId,
-  marketingAgentId
+  marketingAgentId,
+  marketingAgentCount = 1
 }: Props) {
   const [overrideFee, setOverrideFee] = useState<string>("");
   const [overrideReason, setOverrideReason] = useState<string>("");
@@ -112,6 +114,12 @@ export function RentalApprovalPanel({
                 {overrideActive && <span className="ml-1 text-xs">(overridden)</span>}
               </span>
             </div>
+            {hasMarketingAgent && marketingAgentCount > 1 && (
+              <div className="flex items-center justify-between text-xs text-foreground-secondary">
+                <span>Per agent ({marketingAgentCount} agents)</span>
+                <span>{formatGBP(Math.round(marketingFeeValue / marketingAgentCount * 100) / 100)} each</span>
+              </div>
+            )}
             <div className="mt-2 border-t border-border pt-2 flex items-center justify-between">
               <span className="font-medium text-foreground">Assisted net</span>
               <span className={`text-base font-bold ${invalidNet ? "text-error" : "text-navy"}`}>

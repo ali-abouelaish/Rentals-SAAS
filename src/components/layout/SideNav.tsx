@@ -21,6 +21,7 @@ import {
   User,
   Shield,
   Inbox,
+  Warehouse,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -30,6 +31,7 @@ interface SideNavProps {
   profile: {
     display_name: string | null;
     role: string | null;
+    avatar_url?: string | null;
   };
   branding?: { logoUrl: string | null; brandName: string | null } | null;
 }
@@ -41,11 +43,12 @@ const navItems: Array<{
   allowedRoles?: readonly string[];
 }> = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/me", label: "My Profile", icon: User, allowedRoles: ["agent"] },
+  { href: "/me", label: "My Profile", icon: User },
   { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/leads", label: "Leads", icon: Inbox },
   { href: "/rentals", label: "Rentals", icon: ClipboardList },
+  { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
   { href: "/landlords", label: "Landlords", icon: Building2 },
   { href: "/bonuses", label: "Bonuses", icon: Gift },
   { href: "/invoices", label: "Invoices", icon: FileText },
@@ -146,15 +149,28 @@ export function SideNav({ profile, branding }: SideNavProps) {
       <div className="p-4">
         <div className="mx-1 h-px bg-white/[0.06] mb-4" />
         <div className="flex items-center gap-3 px-2 mb-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white text-sm font-semibold ring-1 ring-white/[0.08]">
-            {profile.display_name?.[0]?.toUpperCase() ?? "A"}
+          <div className="h-9 w-9 rounded-full overflow-hidden ring-1 ring-white/[0.08] shrink-0">
+            {profile.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatar_url}
+                alt={profile.display_name ?? ""}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-white/10 text-white text-sm font-semibold">
+                {profile.display_name?.[0]?.toUpperCase() ?? "A"}
+              </div>
+            )}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-[13px] font-medium text-white truncate">
               {profile.display_name ?? "User"}
             </span>
             <span className="text-[11px] text-sidebar-text capitalize">
-              {profile.role?.replace("_", " ")}
+              {profile.role === "agent_and_marketing"
+                ? "Agent"
+                : profile.role?.replace(/_/g, " ")}
             </span>
           </div>
         </div>

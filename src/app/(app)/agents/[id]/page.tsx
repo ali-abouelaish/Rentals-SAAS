@@ -1,15 +1,18 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getAgentById } from "@/features/agents/data/agents";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { getEntitlements } from "@/lib/entitlements/getEntitlements";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { canAccessRoute } from "@/lib/auth/roles";
 import { AgentCommissionForm } from "@/features/agents/ui/AgentCommissionForm";
 import { AvatarCircle } from "@/components/shared/AvatarCircle";
 import { ArrowLeft, TrendingUp } from "lucide-react";
 import { AgentDisableToggle } from "@/features/agents/ui/AgentDisableToggle";
+import { BusinessCardModal } from "@/features/me/ui/BusinessCardModal";
 
 export default async function AgentProfilePage({
   params,
@@ -28,12 +31,21 @@ export default async function AgentProfilePage({
     );
   }
 
-  const agent = await getAgentById(params.id);
+  const headersList = headers();
+  const host = headersList.get("host") ?? "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const cardUrl = `${protocol}://${host}/public/card/${params.id}`;
+
+  const [agent, entitlements] = await Promise.all([
+    getAgentById(params.id),
+    getEntitlements(),
+  ]);
+  const hasBusinessCard = entitlements.has("digital_business_card");
   const displayName = agent.user_profiles?.display_name ?? "Agent";
 
   const roleLabel = (() => {
     const role = (agent.user_profiles?.role ?? "agent").toLowerCase();
-    if (role === "agent_and_marketing") return "Agent + Marketing";
+    if (role === "agent_and_marketing") return "Agent";
     if (role === "marketing_only") return "Marketing only";
     if (role === "super_admin") return "Admin";
     return role.charAt(0).toUpperCase() + role.slice(1);
@@ -73,13 +85,18 @@ export default async function AgentProfilePage({
             </div>
           </div>
 
-          {/* View Earnings button */}
-          <Button variant="outline" asChild>
-            <Link href={`/earnings/${params.id}`} className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              View Earnings
-            </Link>
-          </Button>
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            {hasBusinessCard && (
+              <BusinessCardModal agentId={params.id} cardUrl={cardUrl} />
+            )}
+            <Button variant="outline" asChild>
+              <Link href={`/earnings/${params.id}`} className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                View Earnings
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
