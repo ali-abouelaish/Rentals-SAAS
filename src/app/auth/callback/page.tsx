@@ -65,6 +65,10 @@ function CallbackContent() {
           router.replace(`/forgot-password?error=${encodeURIComponent(error.message)}`);
           return;
         }
+        if (mounted) {
+          router.replace("/reset-password");
+          return;
+        }
       } else {
         await supabase.auth.getSession();
       }

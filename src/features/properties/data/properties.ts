@@ -8,7 +8,7 @@ export async function getProperties(filters?: {
   const supabase = createSupabaseServerClient();
   let query = supabase
     .from("properties")
-    .select("*, portfolio:portfolios(id, name, color)")
+    .select("*, portfolio:portfolios(id, name, color), owner_landlord:owner_landlords(id, name)")
     .order("name", { ascending: true });
 
   if (filters?.portfolioId) {
@@ -27,7 +27,7 @@ export async function getPropertyById(id: string): Promise<Property | null> {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("properties")
-    .select("*, portfolio:portfolios(id, name, color)")
+    .select("*, portfolio:portfolios(id, name, color), owner_landlord:owner_landlords(id, name)")
     .eq("id", id)
     .single();
   if (error) return null;

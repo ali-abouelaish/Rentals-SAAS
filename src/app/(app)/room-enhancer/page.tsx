@@ -39,6 +39,33 @@ const IMAGE_COUNT_OPTIONS = [
   { value: "4", label: "4 images" },
 ];
 
+const MASTER_PROMPTS = [
+  {
+    label: "Improve Bedding",
+    description: "Upgrade linens and pillows, preserve everything else",
+    prompt:
+      "Enhance the bedding with fresh, clean, premium-quality linens, pillows, and duvet. The colour and style of the bedding should complement the existing room decor. Preserve the exact room layout, furniture placement, dimensions, proportions, and camera angle exactly as shown. Do not make the room appear larger, do not add or remove any furniture, and do not change the walls, floor, or any other element.",
+  },
+  {
+    label: "Enhance Photo Quality",
+    description: "Professional real estate photography look, no structural changes",
+    prompt:
+      "Improve the photo quality, lighting, and visual appeal to look like a professional real estate photograph. Enhance brightness, sharpness, white balance, and depth of field. Preserve the exact room layout, all furniture placement, dimensions, proportions, and camera angle exactly as shown. Do not add, remove, rearrange, or replace any furniture or decor.",
+  },
+  {
+    label: "Upgrade Furniture",
+    description: "Higher-quality furniture of same type, layout unchanged",
+    prompt:
+      "Replace the existing furniture with higher-quality, more stylish alternatives of the same type and similar scale. Keep the room layout, dimensions, camera angle, and all fixed architectural elements (walls, floors, windows, doors) exactly as shown. Do not make the room appear larger and do not change the number or arrangement of furniture pieces.",
+  },
+  {
+    label: "Refresh Decor & Styling",
+    description: "Add soft furnishings and accents, no layout or furniture changes",
+    prompt:
+      "Add tasteful soft furnishings, cushions, throws, plants, and decorative accents to improve the overall aesthetic of the room. Keep the exact room layout, dimensions, proportions, and camera angle unchanged. Do not move or remove any existing furniture. Do not make the room appear larger or alter the architectural structure in any way.",
+  },
+] as const;
+
 export default function RoomEnhancerPage() {
   const supabase = createSupabaseBrowserClient();
   const [mode, setMode] = useState<Mode>("edit");
@@ -57,6 +84,8 @@ export default function RoomEnhancerPage() {
   const [originalImageSize, setOriginalImageSize] = useState<{ width: number; height: number } | null>(
     null
   );
+  const [referenceImageFile, setReferenceImageFile] = useState<File | null>(null);
+  const [referencePreviewUrl, setReferencePreviewUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [editHistory, setEditHistory] = useState<EditHistoryEntry[]>([]);
   const [usage, setUsage] = useState<any | null>(null);
@@ -228,6 +257,19 @@ export default function RoomEnhancerPage() {
     setMaskPreviewUrl(null);
   }
 
+  async function setAsReference(dataUrl: string) {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], "room-reference.png", { type: "image/png" });
+    setReferenceImageFile(file);
+    setReferencePreviewUrl(dataUrl);
+  }
+
+  function clearReference() {
+    setReferenceImageFile(null);
+    setReferencePreviewUrl(null);
+  }
+
   function saveMask() {
     if (!originalImageSize || drawnPoints.length === 0) {
       setMaskFile(null);
@@ -300,6 +342,9 @@ export default function RoomEnhancerPage() {
         form.append("image", imageFile, imageFile.name);
         if (maskFile) {
           form.append("mask", maskFile, maskFile.name);
+        }
+        if (referenceImageFile) {
+          form.append("reference", referenceImageFile, referenceImageFile.name);
         }
       }
 
@@ -428,6 +473,28 @@ export default function RoomEnhancerPage() {
               </div>
 
               <div>
+                <label className="block text-xs font-medium text-foreground-muted mb-1.5">Quick prompts</label>
+                <div className="flex flex-wrap gap-2">
+                  {MASTER_PROMPTS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => setPrompt(preset.prompt)}
+                      title={preset.description}
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        prompt === preset.prompt
+                          ? "border-brand bg-brand/10 text-brand"
+                          : "border-border text-foreground-secondary hover:border-brand/50 hover:text-foreground"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-medium text-foreground-muted mb-1.5">Prompt</label>
                 <Textarea
                   value={prompt}
@@ -437,6 +504,36 @@ export default function RoomEnhancerPage() {
                   disabled={loading}
                 />
               </div>
+
+              {mode === "edit" && referencePreviewUrl && (
+                <div className="space-y-2 rounded-xl border border-brand/30 bg-surface-inset p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-foreground-secondary">Room reference (active)</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearReference}
+                      disabled={loading}
+                      className="text-foreground-muted hover:text-foreground"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <Image
+                      src={referencePreviewUrl}
+                      alt="Room reference image"
+                      width={400}
+                      height={300}
+                      className="w-full h-auto object-cover max-h-32"
+                      unoptimized
+                    />
+                  </div>
+                  <p className="text-xs text-foreground-muted">This image will guide the style of all new enhancements.</p>
+                </div>
+              )}
 
               {mode === "edit" && (
                 <div className="space-y-3">
@@ -633,13 +730,24 @@ export default function RoomEnhancerPage() {
                         unoptimized
                       />
                     </div>
-                    <a
-                      href={src}
-                      download={`room-enhancer-${idx + 1}.${results[idx]?.output_format || "png"}`}
-                      className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs text-foreground-secondary hover:bg-surface-inset"
-                    >
-                      Download
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={src}
+                        download={`room-enhancer-${idx + 1}.${results[idx]?.output_format || "png"}`}
+                        className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs text-foreground-secondary hover:bg-surface-inset"
+                      >
+                        Download
+                      </a>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAsReference(src)}
+                        className={referencePreviewUrl === src ? "border-brand text-brand" : ""}
+                      >
+                        {referencePreviewUrl === src ? "Reference set" : "Set as room reference"}
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -712,6 +820,16 @@ export default function RoomEnhancerPage() {
                         >
                           Load results
                         </Button>
+                        {entry.resultDataUrls[0] && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAsReference(entry.resultDataUrls[0])}
+                          >
+                            Set as reference
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

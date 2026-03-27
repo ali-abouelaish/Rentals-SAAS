@@ -34,20 +34,7 @@ export async function updateUnit(id: string, values: Partial<UnitFormValues>) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
-  // Auto-set available_date when notice_given is toggled on
   const updates: Record<string, unknown> = { ...values, updated_at: new Date().toISOString() };
-  if (values.notice_given && !values.available_date) {
-    // Fetch current contract_end_date
-    const { data: current } = await supabase
-      .from("units")
-      .select("contract_end_date")
-      .eq("id", id)
-      .eq("tenant_id", profile.tenant_id)
-      .single();
-    if (current?.contract_end_date) {
-      updates.available_date = current.contract_end_date;
-    }
-  }
 
   const { data, error } = await supabase
     .from("units")
@@ -73,7 +60,6 @@ export async function updateUnitStatus(id: string, values: UnitStatusUpdateValue
   };
 
   if (payload.available_date !== undefined) updates.available_date = payload.available_date || null;
-  if (payload.contract_end_date !== undefined) updates.contract_end_date = payload.contract_end_date || null;
   if (payload.notice_given !== undefined) updates.notice_given = payload.notice_given;
 
   const { data, error } = await supabase

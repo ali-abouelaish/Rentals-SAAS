@@ -7,7 +7,8 @@ const UNIT_SELECT = `
     *,
     portfolio:portfolios(id, name, color)
   ),
-  resident:property_residents(*)
+  resident:property_residents(*),
+  pm_tenant:pm_tenants(id, full_name, email, phone)
 ` as const;
 
 export type UnitsResult = {

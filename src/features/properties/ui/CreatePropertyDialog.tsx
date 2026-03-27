@@ -168,14 +168,18 @@ export function CreatePropertyDialog({ portfolios, onCreated }: CreatePropertyDi
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Area">
-              <select {...register("area")} className={selectCls}>
-                <option value="">— Select area —</option>
+              <input
+                {...register("area")}
+                list="areas-datalist-dialog"
+                className={inputCls}
+                placeholder="e.g. Canary Wharf"
+                autoComplete="off"
+              />
+              <datalist id="areas-datalist-dialog">
                 {LONDON_AREAS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
+                  <option key={a} value={a} />
                 ))}
-              </select>
+              </datalist>
             </Field>
             <Field label="Nearest tube / station">
               <input

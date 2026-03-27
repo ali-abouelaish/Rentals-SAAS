@@ -23,17 +23,6 @@ export type OwnerLandlord = {
   created_at: string;
 };
 
-export type ManagerLandlord = {
-  id: string;
-  tenant_id: string;
-  full_name: string;
-  company_name: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  notes: string | null;
-  created_at: string;
-};
 
 export type PropertyType = "hmo" | "studio" | "whole_flat";
 export type BillsType = "all_included" | "top_up_gas_elec" | "top_up_elec" | "top_up_gas";
@@ -75,6 +64,7 @@ export type Property = {
   created_at: string;
   updated_at: string;
   portfolio?: Portfolio | null;
+  owner_landlord?: Pick<OwnerLandlord, "id" | "name"> | null;
 };
 
 export type UnitType = "room" | "studio" | "whole_flat";
@@ -117,15 +107,14 @@ export type Unit = {
   couples_allowed: boolean;
   couples_price_pcm: number | null;
   deposit: number | null;
-  contract_start_date: string | null;
-  contract_end_date: string | null;
-  collection_date: number | null;
+  pm_tenant_id: string | null;
   furnishings: FurnishingsType;
   drive_folder_url: string | null;
   created_at: string;
   updated_at: string;
   property?: Property & { portfolio?: Portfolio | null };
   resident?: PropertyResident | null;
+  pm_tenant?: { id: string; full_name: string; email: string; phone: string } | null;
 };
 
 export type UnitPhoto = {

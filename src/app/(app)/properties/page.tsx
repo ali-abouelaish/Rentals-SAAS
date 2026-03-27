@@ -1,7 +1,9 @@
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getPortfolios } from "@/features/properties/data/portfolios";
+import { getProperties } from "@/features/properties/data/properties";
 import { getUnits } from "@/features/properties/data/units";
+import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
 import { UnitsPage } from "@/features/properties/ui/UnitsPage";
 import { Warehouse } from "lucide-react";
 
@@ -9,15 +11,26 @@ export default async function PropertiesPage() {
   await requireRole([...ADMIN_ROLES]);
 
   try {
-    const [portfolios, unitsResult] = await Promise.all([
+    const [portfolios, propertiesData, unitsResult, pmTenantsData] = await Promise.all([
       getPortfolios(),
+      getProperties(),
       getUnits({}, 1, 200),
+      getPmTenants().catch(() => []),
     ]);
+
+    const pmTenants = pmTenantsData.map((t) => ({
+      id: t.id,
+      full_name: t.full_name,
+      email: t.email,
+      phone: t.phone,
+    }));
 
     return (
       <UnitsPage
         portfolios={portfolios}
+        initialProperties={propertiesData}
         initialUnits={unitsResult.units}
+        pmTenants={pmTenants}
       />
     );
   } catch (err) {

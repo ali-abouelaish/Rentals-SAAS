@@ -45,7 +45,6 @@ export function StatusChangeModal({
 }: StatusChangeModalProps) {
   const [isPending, startTransition] = useTransition();
   const [availableDate, setAvailableDate] = useState("");
-  const [contractEndDate, setContractEndDate] = useState("");
   const [holdReason, setHoldReason] = useState("");
 
   const toConfig = STATUS_CONFIG[toStatus];
@@ -56,7 +55,6 @@ export function StatusChangeModal({
         await updateUnitStatus(unitId, {
           status: toStatus,
           available_date: availableDate || undefined,
-          contract_end_date: contractEndDate || undefined,
           notice_given: toStatus === "move_out" ? true : undefined,
           hold_reason: holdReason || undefined,
         });
@@ -134,14 +132,9 @@ export function StatusChangeModal({
           )}
 
           {toStatus === "renewal" && (
-            <Field label="New contract end date">
-              <input
-                type="date"
-                value={contractEndDate}
-                onChange={(e) => setContractEndDate(e.target.value)}
-                className={inputCls}
-              />
-            </Field>
+            <p className="text-sm text-foreground-secondary">
+              Confirm moving this unit to <strong>{toConfig.label}</strong>? Manage the contract renewal in the Contracts module.
+            </p>
           )}
 
           {toStatus === "replacement" && (

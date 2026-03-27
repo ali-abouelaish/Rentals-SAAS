@@ -14,6 +14,9 @@ export type FeatureKey =
   | "leads"
   | "digital_business_card"
   | "properties"
+  | "bookings"
+  | "pm_tenants"
+  | "contracts"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -32,6 +35,9 @@ export const ALL_FEATURES: FeatureKey[] = [
   "leads",
   "digital_business_card",
   "properties",
+  "bookings",
+  "pm_tenants",
+  "contracts",
   "admin",
 ];
 
@@ -68,6 +74,18 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   properties: {
     label: "Properties",
     description: "Property portfolio, room inventory, vacancy tracking, and marketing export."
+  },
+  bookings: {
+    label: "Bookings",
+    description: "Inbound rental applications pipeline with kanban workflow and approval cascade."
+  },
+  pm_tenants: {
+    label: "Tenants",
+    description: "Property tenant profiles, right to rent tracking, guarantors, and document storage."
+  },
+  contracts: {
+    label: "Contracts",
+    description: "Periodic tenancy contracts, deposit protection tracking, and notice management."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

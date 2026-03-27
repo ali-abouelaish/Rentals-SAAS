@@ -29,14 +29,22 @@ function formatUnitLabel(unit: Unit): string {
   return "Whole Flat";
 }
 
+interface PmTenantOption {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+}
+
 interface UnitDrawerProps {
   unit: Unit | null;
   open: boolean;
   onClose: () => void;
   onUnitUpdated: (unit: Unit) => void;
+  pmTenants: PmTenantOption[];
 }
 
-export function UnitDrawer({ unit, open, onClose, onUnitUpdated }: UnitDrawerProps) {
+export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants }: UnitDrawerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [localUnit, setLocalUnit] = useState<Unit | null>(unit);
@@ -133,7 +141,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated }: UnitDrawerPro
           {activeTab === "tenant" && (
             <TenantTab
               unit={localUnit}
-              isEditing={isEditing}
+              pmTenants={pmTenants}
               onUnitUpdated={(updated) => {
                 setLocalUnit(updated);
                 onUnitUpdated(updated);

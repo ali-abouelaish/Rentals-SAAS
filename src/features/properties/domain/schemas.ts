@@ -52,9 +52,6 @@ export const unitSchema = z.object({
   couples_allowed: z.boolean().default(false),
   couples_price_pcm: z.coerce.number().int().positive().nullable().optional(),
   deposit: z.coerce.number().int().positive().nullable().optional(),
-  contract_start_date: z.string().nullable().optional().or(z.literal("")),
-  contract_end_date: z.string().nullable().optional().or(z.literal("")),
-  collection_date: z.coerce.number().int().min(1).max(31).nullable().optional(),
   furnishings: z.enum(["furnished", "unfurnished", "part_furnished"]).default("furnished"),
   drive_folder_url: z.string().nullable().optional().or(z.literal("")),
   resident_id: z.string().uuid().nullable().optional().or(z.literal("")),
@@ -64,11 +61,24 @@ export type UnitFormValues = z.infer<typeof unitSchema>;
 export const unitStatusUpdateSchema = z.object({
   status: z.enum(["available", "occupied", "move_out", "booked", "on_hold", "renewal", "replacement"]),
   available_date: z.string().nullable().optional().or(z.literal("")),
-  contract_end_date: z.string().nullable().optional().or(z.literal("")),
   notice_given: z.boolean().optional(),
   hold_reason: z.string().nullable().optional().or(z.literal("")),
 });
 export type UnitStatusUpdateValues = z.infer<typeof unitStatusUpdateSchema>;
+
+export const ownerLandlordSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  phone: z.string().nullable().optional().or(z.literal("")),
+  email: z.string().email("Invalid email").nullable().optional().or(z.literal("")),
+  contract_start_date: z.string().nullable().optional().or(z.literal("")),
+  contract_expiry_date: z.string().nullable().optional().or(z.literal("")),
+  monthly_rent_owed: z.coerce.number().positive().nullable().optional(),
+  payment_schedule: z.enum(["monthly", "quarterly", "biannual", "annual"]).nullable().optional(),
+  alert_60_days: z.boolean().default(false),
+  alert_30_days: z.boolean().default(false),
+});
+export type OwnerLandlordFormValues = z.infer<typeof ownerLandlordSchema>;
+
 
 export const residentSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),

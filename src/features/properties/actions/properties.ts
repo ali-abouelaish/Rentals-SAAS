@@ -18,8 +18,21 @@ export async function createProperty(values: PropertyFormValues) {
     .single();
   if (error) throw new Error(error.message);
 
-  // Auto-create one unit for studio/whole_flat
-  if (property.property_type !== "hmo") {
+  if (property.property_type === "hmo") {
+    // Auto-create N room units from total_rooms
+    const count = payload.total_rooms ?? 0;
+    if (count > 0) {
+      const rooms = Array.from({ length: count }, () => ({
+        tenant_id: profile.tenant_id,
+        property_id: property.id,
+        unit_type: "room" as const,
+        status: "available" as const,
+        furnishings: (payload.furnished ? "furnished" : "unfurnished") as "furnished" | "unfurnished",
+      }));
+      await supabase.from("units").insert(rooms);
+    }
+  } else {
+    // Auto-create one unit for studio/whole_flat
     const unitType = property.property_type as "studio" | "whole_flat";
     await supabase.from("units").insert({
       tenant_id: profile.tenant_id,

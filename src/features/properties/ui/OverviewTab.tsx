@@ -84,9 +84,6 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
       couples_allowed: unit.couples_allowed,
       couples_price_pcm: unit.couples_price_pcm ?? undefined,
       deposit: unit.deposit ?? undefined,
-      contract_start_date: unit.contract_start_date ?? "",
-      contract_end_date: unit.contract_end_date ?? "",
-      collection_date: unit.collection_date ?? undefined,
       furnishings: unit.furnishings,
       drive_folder_url: unit.drive_folder_url ?? "",
     },
@@ -144,34 +141,26 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
             <ReadField label="Min PCM" value={unit.min_price_pcm ? `£${unit.min_price_pcm.toLocaleString()}` : null} />
             <ReadField label="Max PCM" value={unit.max_price_pcm ? `£${unit.max_price_pcm.toLocaleString()}` : null} />
             <ReadField label="Deposit" value={unit.deposit ? `£${unit.deposit.toLocaleString()}` : null} />
-            <ReadField label="Collection day" value={unit.collection_date ? `${unit.collection_date}${["st","nd","rd"][unit.collection_date - 1] ?? "th"} of month` : null} />
             {unit.couples_allowed && (
               <ReadField label="Couples price" value={unit.couples_price_pcm ? `£${unit.couples_price_pcm.toLocaleString()}` : null} />
             )}
           </div>
         </section>
 
-        {/* Contract */}
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted mb-3">Contract</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <ReadField label="Start date" value={unit.contract_start_date ? new Date(unit.contract_start_date).toLocaleDateString("en-GB") : null} />
-            <ReadField label="End date" value={unit.contract_end_date ? new Date(unit.contract_end_date).toLocaleDateString("en-GB") : null} />
-            {unit.drive_folder_url && (
-              <div className="col-span-2">
-                <a
-                  href={unit.drive_folder_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-foreground-link hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Google Drive folder
-                </a>
-              </div>
-            )}
-          </div>
-        </section>
+        {/* Drive folder link */}
+        {unit.drive_folder_url && (
+          <section>
+            <a
+              href={unit.drive_folder_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-foreground-link hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Google Drive folder
+            </a>
+          </section>
+        )}
 
         {/* Property summary */}
         {property && (
@@ -281,18 +270,6 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
         </FormField>
         <FormField label="Deposit (£)">
           <input type="number" {...register("deposit")} className={inputCls} />
-        </FormField>
-        <FormField label="Collection day">
-          <input type="number" min="1" max="31" {...register("collection_date")} className={inputCls} />
-        </FormField>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label="Contract start">
-          <input type="date" {...register("contract_start_date")} className={inputCls} />
-        </FormField>
-        <FormField label="Contract end">
-          <input type="date" {...register("contract_end_date")} className={inputCls} />
         </FormField>
       </div>
 

@@ -97,10 +97,13 @@ export async function POST(request: NextRequest) {
     const mask = formData.get("mask");
     const hasMask = mask instanceof File;
 
+    const referenceImage = formData.get("reference");
+    const hasReference = referenceImage instanceof File;
+
     const result = await openai.images.edit({
       model,
       prompt,
-      image: [image],
+      image: hasReference ? [referenceImage as File, image] : [image],
       ...(hasMask ? { mask } : {}),
       n,
       size: "auto",

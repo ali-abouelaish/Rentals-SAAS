@@ -1,21 +1,36 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { User, UserPlus, X, Check, Search, FileSignature } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UserPlus, User, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils/cn";
-import { createResident, updateResident } from "../actions/residents";
-import { updateUnit } from "../actions/units";
-import { residentSchema, type ResidentFormValues } from "../domain/schemas";
-import type { Unit, PropertyResident } from "../domain/types";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { updateUnit } from "../actions/units";
+import { createContract } from "@/features/contracts/actions/contracts";
+import { contractSchema, type ContractFormValues } from "@/features/contracts/domain/schemas";
+import { DEPOSIT_SCHEME_LABELS, SIGNING_METHOD_LABELS } from "@/features/contracts/domain/types";
+import type { Unit } from "../domain/types";
 
-const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+interface PmTenantOption {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+}
 
-function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
+interface TenantTabProps {
+  unit: Unit;
+  onUnitUpdated: (unit: Unit) => void;
+  pmTenants: PmTenantOption[];
+}
+
+const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+
+function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-sm font-medium text-foreground">{label}</label>
@@ -25,178 +40,332 @@ function Field({ label, children, error }: { label: string; children: React.Reac
   );
 }
 
-function ReadField({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">{label}</span>
-      <span className="text-sm text-foreground">{value || "—"}</span>
-    </div>
-  );
-}
+function CreateContractDialog({
+  open,
+  onClose,
+  unit,
+  pmTenants,
+  preselectedTenantId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  unit: Unit;
+  pmTenants: PmTenantOption[];
+  preselectedTenantId?: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const unitLabel = unit.unit_type === "room" && unit.room_number
+    ? `Room ${unit.room_number}`
+    : unit.unit_type;
 
-interface ResidentFormProps {
-  defaultValues?: Partial<ResidentFormValues>;
-  onSubmit: (values: ResidentFormValues) => Promise<void>;
-  isPending: boolean;
-  onCancel?: () => void;
-}
+  const tenantOptions = pmTenants.map((t) => ({
+    value: t.id,
+    label: t.full_name,
+    sublabel: t.phone,
+  }));
 
-function ResidentForm({ defaultValues, onSubmit, isPending, onCancel }: ResidentFormProps) {
-  const { register, handleSubmit, formState: { errors } } = useForm<ResidentFormValues>({
-    resolver: zodResolver(residentSchema),
-    defaultValues,
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ContractFormValues>({
+    resolver: zodResolver(contractSchema),
+    defaultValues: {
+      unit_id: unit.id,
+      pm_tenant_id: preselectedTenantId ?? "",
+      deposit_scheme: "none",
+      deposit_protection_alert: true,
+      status: "draft",
+    },
   });
 
+  const handleCreate = (values: ContractFormValues) => {
+    startTransition(async () => {
+      try {
+        await createContract(values);
+        toast.success("Contract created");
+        reset();
+        onClose();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to create contract");
+      }
+    });
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-      <Field label="Full name" error={errors.full_name?.message}>
-        <input {...register("full_name")} className={inputCls} placeholder="e.g. Jane Smith" />
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Phone" error={errors.phone?.message}>
-          <input {...register("phone")} className={inputCls} placeholder="+44 7700…" />
-        </Field>
-        <Field label="Email" error={errors.email?.message}>
-          <input type="email" {...register("email")} className={inputCls} placeholder="jane@…" />
-        </Field>
-        <Field label="Date of birth">
-          <input type="date" {...register("date_of_birth")} className={inputCls} />
-        </Field>
-        <Field label="Nationality">
-          <input {...register("nationality")} className={inputCls} placeholder="e.g. British" />
-        </Field>
-      </div>
-      <Field label="Occupation">
-        <input {...register("occupation")} className={inputCls} placeholder="e.g. Software Engineer" />
-      </Field>
-      <div className="flex justify-end gap-2 pt-1">
-        {onCancel && (
-          <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-        )}
-        <Button type="submit" variant="secondary" size="sm" loading={isPending}>
-          <Check className="h-3.5 w-3.5 mr-1" />
-          Save tenant
-        </Button>
-      </div>
-    </form>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>New Contract — {unit.property?.name} · {unitLabel}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(handleCreate)} className="space-y-4 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <FormField label="Tenant *" error={errors.pm_tenant_id?.message}>
+                <Controller
+                  name="pm_tenant_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      options={tenantOptions}
+                      placeholder="Search tenants…"
+                      error={!!errors.pm_tenant_id}
+                    />
+                  )}
+                />
+              </FormField>
+            </div>
+            <FormField label="Start date *" error={errors.start_date?.message}>
+              <input type="date" {...register("start_date")} className={inputCls} />
+            </FormField>
+            <FormField label="Collection day">
+              <input type="number" min="1" max="31" {...register("collection_date")} className={inputCls} />
+            </FormField>
+            <FormField label="Rent PCM (£) *" error={errors.rent_pcm?.message}>
+              <input type="number" {...register("rent_pcm")} className={inputCls} />
+            </FormField>
+            <FormField label="Deposit (£) *" error={errors.deposit?.message}>
+              <input type="number" {...register("deposit")} className={inputCls} />
+            </FormField>
+            <FormField label="Deposit scheme">
+              <select {...register("deposit_scheme")} className={selectCls}>
+                {Object.entries(DEPOSIT_SCHEME_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Signing method">
+              <select {...register("signing_method")} className={selectCls}>
+                <option value="">Select…</option>
+                {Object.entries(SIGNING_METHOD_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <Button type="button" variant="outline" size="sm" onClick={() => { reset(); onClose(); }}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="secondary" size="sm" loading={isPending}>
+              Create Contract
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-interface TenantTabProps {
-  unit: Unit;
-  isEditing: boolean;
-  onUnitUpdated: (unit: Unit) => void;
-}
-
-export function TenantTab({ unit, isEditing, onUnitUpdated }: TenantTabProps) {
-  const [showAddForm, setShowAddForm] = useState(false);
+export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
   const [isPending, startTransition] = useTransition();
-  const resident = unit.resident;
+  const [linking, setLinking] = useState(false);
+  const [search, setSearch] = useState("");
+  const [contractDialogOpen, setContractDialogOpen] = useState(false);
 
-  const handleCreate = async (values: ResidentFormValues) => {
+  const current = unit.pm_tenant ?? null;
+
+  const handleLink = (tenant: PmTenantOption) => {
     startTransition(async () => {
       try {
-        const newResident = await createResident(values);
-        // Link resident to unit
-        const updated = await updateUnit(unit.id, { resident_id: newResident.id });
-        onUnitUpdated({ ...unit, resident: newResident as PropertyResident, resident_id: newResident.id });
-        setShowAddForm(false);
-        toast.success("Tenant added");
+        await updateUnit(unit.id, { pm_tenant_id: tenant.id } as never);
+        onUnitUpdated({ ...unit, pm_tenant_id: tenant.id, pm_tenant: tenant });
+        setLinking(false);
+        setSearch("");
+        toast.success(`${tenant.full_name} linked to this unit`);
       } catch {
-        toast.error("Failed to add tenant");
+        toast.error("Failed to link tenant");
       }
     });
   };
 
-  const handleUpdate = async (values: ResidentFormValues) => {
-    if (!resident) return;
+  const handleUnlink = () => {
     startTransition(async () => {
       try {
-        const updated = await updateResident(resident.id, values);
-        onUnitUpdated({ ...unit, resident: updated as PropertyResident });
-        toast.success("Tenant updated");
+        await updateUnit(unit.id, { pm_tenant_id: null } as never);
+        onUnitUpdated({ ...unit, pm_tenant_id: null, pm_tenant: null });
+        toast.success("Tenant unlinked");
       } catch {
-        toast.error("Failed to update tenant");
+        toast.error("Failed to unlink tenant");
       }
     });
   };
 
-  // ── No resident + not adding ──────────────────────────────────────────────
-  if (!resident && !showAddForm) {
+  const filtered = pmTenants.filter((t) => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
     return (
-      <div className="py-12 text-center">
-        <User className="h-10 w-10 text-foreground-muted mx-auto mb-3" />
-        <p className="text-sm font-medium text-foreground mb-1">No tenant assigned</p>
-        <p className="text-xs text-foreground-secondary mb-4">This unit is currently vacant.</p>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => setShowAddForm(true)}
-        >
-          <UserPlus className="h-3.5 w-3.5 mr-1" />
-          Add Tenant
-        </Button>
-      </div>
+      t.full_name.toLowerCase().includes(s) ||
+      t.email.toLowerCase().includes(s) ||
+      t.phone.toLowerCase().includes(s)
     );
-  }
+  });
 
-  // ── Adding new resident form ───────────────────────────────────────────────
-  if (!resident && showAddForm) {
+  // ── Currently linked ──────────────────────────────────────────────────────
+  if (current && !linking) {
     return (
-      <div className="py-2">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Add Tenant</h3>
-        <ResidentForm
-          onSubmit={handleCreate}
-          isPending={isPending}
-          onCancel={() => setShowAddForm(false)}
+      <>
+        <div className="space-y-4 py-1">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset border border-border">
+            <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-brand">
+                {current.full_name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">{current.full_name}</p>
+              <p className="text-xs text-foreground-secondary truncate">{current.email}</p>
+              <p className="text-xs text-foreground-muted">{current.phone}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleUnlink}
+              disabled={isPending}
+              title="Unlink tenant from unit"
+              className="shrink-0 p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Contract shortcut */}
+          <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Contract</p>
+              <p className="text-xs text-foreground-secondary mt-0.5">
+                Create a contract for this tenant and unit, or manage existing contracts in the Contracts module.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setContractDialogOpen(true)}
+              className="w-full"
+            >
+              <FileSignature className="h-3.5 w-3.5 mr-1.5" />
+              New Contract
+            </Button>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setLinking(true)}
+            className="w-full"
+          >
+            Reassign to a different tenant
+          </Button>
+        </div>
+
+        <CreateContractDialog
+          open={contractDialogOpen}
+          onClose={() => setContractDialogOpen(false)}
+          unit={unit}
+          pmTenants={pmTenants}
+          preselectedTenantId={current.id}
         />
-      </div>
+      </>
     );
   }
 
-  // ── Existing resident ──────────────────────────────────────────────────────
-  if (!isEditing && resident) {
-    return (
-      <div className="space-y-4 py-1">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset border border-border">
-          <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
-            <span className="text-sm font-bold text-brand">
-              {resident.full_name.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{resident.full_name}</p>
-            <p className="text-xs text-foreground-secondary">{resident.occupation ?? "Tenant"}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <ReadField label="Phone" value={resident.phone} />
-          <ReadField label="Email" value={resident.email} />
-          <ReadField label="Date of birth" value={resident.date_of_birth ? new Date(resident.date_of_birth).toLocaleDateString("en-GB") : null} />
-          <ReadField label="Nationality" value={resident.nationality} />
-          <ReadField label="Occupation" value={resident.occupation} />
-        </div>
-      </div>
-    );
-  }
-
-  // ── Edit mode ──────────────────────────────────────────────────────────────
+  // ── Assign / reassign picker ──────────────────────────────────────────────
   return (
-    <div className="py-1">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Edit Tenant</h3>
-      <ResidentForm
-        defaultValues={{
-          full_name: resident?.full_name ?? "",
-          phone: resident?.phone ?? "",
-          email: resident?.email ?? "",
-          date_of_birth: resident?.date_of_birth ?? "",
-          nationality: resident?.nationality ?? "",
-          occupation: resident?.occupation ?? "",
-        }}
-        onSubmit={handleUpdate}
-        isPending={isPending}
+    <>
+      <div className="space-y-3 py-1">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">
+            {linking ? "Reassign tenant" : "Assign tenant to unit"}
+          </h3>
+          {linking && (
+            <button
+              type="button"
+              onClick={() => { setLinking(false); setSearch(""); }}
+              className="text-xs text-foreground-muted hover:text-foreground"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+
+        {pmTenants.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-8 text-center">
+            <User className="h-8 w-8 text-foreground-muted mx-auto mb-2" />
+            <p className="text-sm text-foreground-secondary">No tenants found.</p>
+            <p className="text-xs text-foreground-muted mt-1">
+              Add tenants from the <span className="font-medium">Tenants</span> module first,
+              or approve a booking to auto-create one.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by name, email or phone…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-surface-inset pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1 max-h-72 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <p className="text-center text-sm text-foreground-muted py-6">No matches</p>
+              ) : (
+                filtered.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    disabled={isPending || t.id === current?.id}
+                    onClick={() => handleLink(t)}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border bg-surface-card px-3 py-2.5 text-left hover:bg-surface-inset transition-colors disabled:opacity-50"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-brand">
+                        {t.full_name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{t.full_name}</p>
+                      <p className="text-[11px] text-foreground-muted truncate">{t.email} · {t.phone}</p>
+                    </div>
+                    {t.id === current?.id ? (
+                      <Check className="h-4 w-4 text-brand shrink-0" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 text-foreground-muted shrink-0" />
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Allow creating contract without linking first */}
+        {!linking && pmTenants.length > 0 && (
+          <div className="pt-2 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setContractDialogOpen(true)}
+              className="w-full"
+            >
+              <FileSignature className="h-3.5 w-3.5 mr-1.5" />
+              New Contract for this unit
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <CreateContractDialog
+        open={contractDialogOpen}
+        onClose={() => setContractDialogOpen(false)}
+        unit={unit}
+        pmTenants={pmTenants}
       />
-    </div>
+    </>
   );
 }

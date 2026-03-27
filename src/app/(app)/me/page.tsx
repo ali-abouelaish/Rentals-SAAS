@@ -2,7 +2,6 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { getEntitlements } from "@/lib/entitlements/getEntitlements";
-import { BusinessCardModal } from "@/features/me/ui/BusinessCardModal";
 import {
   getEarningsStatsForAgent,
   getEarningsTrendForAgent,
@@ -29,18 +28,13 @@ import {
   Calculator
 } from "lucide-react";
 
-/** Default period: 11th of previous month → 10th of current month (or 10th of previous month if today < 11). */
 function getDefaultRange() {
-  const now = new Date();
-  const day = now.getDate();
-  const endDate =
-    day >= 11
-      ? new Date(now.getFullYear(), now.getMonth(), 10)
-      : new Date(now.getFullYear(), now.getMonth() - 1, 10);
-  const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 11);
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 30);
   return {
-    start: startDate.toISOString().slice(0, 10),
-    end: endDate.toISOString().slice(0, 10)
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
   };
 }
 
@@ -82,20 +76,18 @@ export default async function MePage({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <ProfileHeader
-          displayName={displayName}
-          role={role}
-          avatarUrl={agentProfile?.avatar_url}
-          joinedAt={(profile as { created_at?: string }).created_at}
-          editSupported={true}
-        />
-        {hasBusinessCard && (
-          <div className="shrink-0">
-            <BusinessCardModal agentId={profile.id} cardUrl={cardUrl} />
-          </div>
-        )}
-      </div>
+      <ProfileHeader
+        displayName={displayName}
+        role={role}
+        avatarUrl={agentProfile?.avatar_url}
+        joinedAt={(profile as { created_at?: string }).created_at}
+        editSupported={true}
+        totalRentals={stats.totalTransactions ?? 0}
+        totalEarnings={stats.totalEarnings ?? 0}
+        avgPerRental={avgPerRental}
+        cardUrl={cardUrl}
+        hasBusinessCard={hasBusinessCard}
+      />
 
       <MeDateRangeFilter start={start} end={end} />
 

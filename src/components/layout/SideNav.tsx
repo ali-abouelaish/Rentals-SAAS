@@ -22,6 +22,12 @@ import {
   Shield,
   Inbox,
   Warehouse,
+  CalendarCheck,
+  Users2,
+  FileSignature,
+  Banknote,
+  Wrench,
+  Megaphone,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -49,6 +55,12 @@ const navItems: Array<{
   { href: "/leads", label: "Leads", icon: Inbox },
   { href: "/rentals", label: "Rentals", icon: ClipboardList },
   { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
+  { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
+  { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
+  { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
+  { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
+  { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
+  { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
   { href: "/landlords", label: "Landlords", icon: Building2 },
   { href: "/bonuses", label: "Bonuses", icon: Gift },
   { href: "/invoices", label: "Invoices", icon: FileText },
