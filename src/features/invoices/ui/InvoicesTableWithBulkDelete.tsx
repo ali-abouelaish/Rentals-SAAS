@@ -36,17 +36,13 @@ export function InvoicesTableWithBulkDelete({
   const [selected, setSelected] = useState<string[]>([]);
   const [state, action] = useFormState(bulkDeleteInvoicesAction, { ok: false });
 
-  // Only drafts created by user (or anyone if admin) can be selected for delete
+  // Only admins can delete draft invoices
   const selectableIds = useMemo(
     () =>
-      invoices
-        .filter(
-          (invoice) =>
-            invoice.status === "draft" &&
-            (isAdmin || invoice.created_by_user_id === currentUserId)
-        )
-        .map((invoice) => invoice.id),
-    [invoices, isAdmin, currentUserId]
+      isAdmin
+        ? invoices.filter((invoice) => invoice.status === "draft").map((invoice) => invoice.id)
+        : [],
+    [invoices, isAdmin]
   );
 
   useEffect(() => {
@@ -130,14 +126,12 @@ export function InvoicesTableWithBulkDelete({
       <div className="rounded-bento bg-surface-card shadow-bento divide-y divide-border overflow-hidden">
         {invoices.map((invoice) => {
           const isSelected = selected.includes(invoice.id);
-          const canDelete =
-            invoice.status === "draft" &&
-            (isAdmin || invoice.created_by_user_id === currentUserId);
+          const canDelete = isAdmin && invoice.status === "draft";
 
           return (
             <div
               key={invoice.id}
-              className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${isSelected ? "bg-brand-subtle/30" : "hover:bg-surface-inset"
+              className={`flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-3 sm:py-3.5 transition-colors ${isSelected ? "bg-brand-subtle/30" : "hover:bg-surface-inset"
                 }`}
             >
               {/* Checkbox (only for deletable drafts) */}
@@ -152,14 +146,14 @@ export function InvoicesTableWithBulkDelete({
                 />
               </div>
 
-              {/* Icon */}
-              <div className="h-10 w-10 rounded-xl bg-surface-inset flex items-center justify-center shrink-0 text-foreground-muted">
+              {/* Icon — hidden on mobile */}
+              <div className="hidden sm:flex h-10 w-10 rounded-xl bg-surface-inset items-center justify-center shrink-0 text-foreground-muted">
                 <FileText className="h-5 w-5" />
               </div>
 
               {/* Main Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Link
                     href={`/invoices/${invoice.id}`}
                     className="text-sm font-semibold text-brand hover:underline"
@@ -167,25 +161,29 @@ export function InvoicesTableWithBulkDelete({
                     {invoice.invoice_number}
                   </Link>
                   <InvoiceStatusBadge status={invoice.status} />
+                  {/* Amount shown inline on mobile */}
+                  <span className="sm:hidden text-xs font-semibold text-foreground tabular-nums ml-auto">
+                    {formatGBP(Number(invoice.total))}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-foreground-muted mt-0.5 truncate">
-                  <span className="font-medium text-foreground-secondary">
+                <div className="flex items-center gap-1.5 text-xs text-foreground-muted mt-0.5">
+                  <span className="font-medium text-foreground-secondary truncate">
                     {invoice.landlords?.name ?? "Unknown Landlord"}
                   </span>
-                  <span>·</span>
-                  <span>Due {formatDate(invoice.due_date)}</span>
+                  <span className="hidden sm:inline">·</span>
+                  <span className="hidden sm:inline">Due {formatDate(invoice.due_date)}</span>
                 </div>
               </div>
 
-              {/* Amount */}
-              <div className="text-right shrink-0">
+              {/* Amount — desktop only */}
+              <div className="hidden sm:block text-right shrink-0">
                 <p className="text-sm font-semibold text-foreground tabular-nums">
                   {formatGBP(Number(invoice.total))}
                 </p>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                 {(invoice.pdf_storage_path || isAdmin || (invoice.created_by_user_id === currentUserId && invoice.status !== "draft")) && (
                   <form action={onViewPdf.bind(null, invoice.id)}>
                     <Button

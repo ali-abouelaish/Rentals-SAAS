@@ -26,7 +26,7 @@ type Props = { info: TenantBillingInfo | null };
 export function BillingInfoForm({ info }: Props) {
   return (
     <Card key={info?.updated_at ?? info?.id ?? "new"}>
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 overflow-hidden">
         <form action={upsertTenantBillingInfo} className="grid gap-4 md:grid-cols-2">
           <Select
             name="plan"
@@ -40,35 +40,47 @@ export function BillingInfoForm({ info }: Props) {
             options={STATUS_OPTIONS}
             defaultValue={info?.payment_status ?? "active"}
           />
-          <Input
-            name="billing_email"
-            type="email"
-            placeholder="Billing email"
-            defaultValue={info?.billing_email ?? ""}
-          />
-          <Input
-            name="billing_name"
-            placeholder="Billing name / company"
-            defaultValue={info?.billing_name ?? ""}
-          />
+          <div>
+            <label className="block text-xs font-medium text-foreground-muted mb-1.5">Billing email</label>
+            <Input
+              name="billing_email"
+              type="email"
+              placeholder="billing@company.com"
+              defaultValue={info?.billing_email ?? ""}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-foreground-muted mb-1.5">Billing name / company</label>
+            <Input
+              name="billing_name"
+              placeholder="Company Ltd"
+              defaultValue={info?.billing_name ?? ""}
+            />
+          </div>
           <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-foreground-muted mb-1.5">Billing address</label>
             <Input
               name="billing_address"
-              placeholder="Billing address"
+              placeholder="123 Main St, London"
               defaultValue={info?.billing_address ?? ""}
             />
           </div>
-          <Input
-            name="next_billing_date"
-            type="date"
-            placeholder="Next billing date"
-            defaultValue={info?.next_billing_date ?? ""}
-          />
-          <Input
-            name="stripe_customer_id"
-            placeholder="Stripe customer ID (optional)"
-            defaultValue={info?.stripe_customer_id ?? ""}
-          />
+          <div>
+            <label className="block text-xs font-medium text-foreground-muted mb-1.5">Next billing date</label>
+            <Input
+              name="next_billing_date"
+              type="date"
+              defaultValue={info?.next_billing_date ?? ""}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-foreground-muted mb-1.5">Stripe customer ID</label>
+            <Input
+              name="stripe_customer_id"
+              placeholder="cus_... (optional)"
+              defaultValue={info?.stripe_customer_id ?? ""}
+            />
+          </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-medium text-foreground-muted mb-1.5">
               Notes

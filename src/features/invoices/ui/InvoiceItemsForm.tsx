@@ -81,9 +81,9 @@ export function InvoiceItemsForm({
 
       <div className="space-y-3">
         {items.map((item, index) => (
-          <div key={`item-${index}`} className="grid gap-2 md:grid-cols-4">
-            <div className="space-y-1">
-              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">Description</label>}
+          <div key={`item-${index}`} className="grid gap-2 grid-cols-2 md:grid-cols-4">
+            <div className="col-span-2 md:col-span-1 space-y-1">
+              <label className="block text-xs font-medium text-foreground-muted">Description</label>
               <Input
                 placeholder="Description"
                 value={item.description}
@@ -91,32 +91,32 @@ export function InvoiceItemsForm({
               />
             </div>
             <div className="space-y-1">
-              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">Quantity</label>}
+              <label className="block text-xs font-medium text-foreground-muted">Qty</label>
               <Input
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="Quantity"
+                placeholder="1"
                 value={item.quantity}
                 onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })}
               />
             </div>
             <div className="space-y-1">
-              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">Rate (£)</label>}
+              <label className="block text-xs font-medium text-foreground-muted">Rate (£)</label>
               <Input
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="Rate"
+                placeholder="0.00"
                 value={item.rate}
                 onChange={(event) => updateItem(index, { rate: Number(event.target.value) })}
               />
             </div>
-            <div className="space-y-1">
-              {index === 0 && <label className="block text-xs font-medium text-foreground-muted">&nbsp;</label>}
+            <div className="col-span-2 md:col-span-1 flex items-end">
               <Button
                 type="button"
                 variant="outline"
+                className="w-full md:w-auto"
                 onClick={() => removeItem(index)}
                 disabled={items.length === 1}
               >

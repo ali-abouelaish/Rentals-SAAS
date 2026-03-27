@@ -86,11 +86,13 @@ export default async function ClientDetailPage({
 
       <div className="flex items-center gap-3 flex-wrap">
         <CopyProfileButton text={profileText} />
-        <DeleteClientButton
-          clientId={client.id}
-          clientName={client.full_name ?? "this client"}
-          rentalsCount={rentals?.length ?? 0}
-        />
+        {profile.role === "admin" && (
+          <DeleteClientButton
+            clientId={client.id}
+            clientName={client.full_name ?? "this client"}
+            rentalsCount={rentals?.length ?? 0}
+          />
+        )}
       </div>
 
       <Card>

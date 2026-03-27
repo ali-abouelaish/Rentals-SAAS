@@ -141,34 +141,34 @@ export default async function ClientsPage({
               <Link
                 key={client.id}
                 href={`/clients/${client.id}`}
-                className="flex items-center justify-between px-6 py-4 hover:bg-surface-inset transition-colors duration-base group"
+                className="flex items-center justify-between px-3 py-3 sm:px-6 sm:py-4 hover:bg-surface-inset transition-colors duration-base group"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 min-w-0">
                   {/* Avatar */}
-                  <div className="h-10 w-10 rounded-xl bg-brand-subtle flex items-center justify-center group-hover:bg-brand group-hover:text-brand-fg transition-colors">
+                  <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-brand-subtle flex items-center justify-center shrink-0 group-hover:bg-brand group-hover:text-brand-fg transition-colors">
                     <span className="text-brand font-semibold text-sm group-hover:text-brand-fg">
                       {client.full_name?.charAt(0)?.toUpperCase() ?? "?"}
                     </span>
                   </div>
 
                   {/* Info */}
-                  <div>
-                    <p className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors truncate">
                       {client.full_name}
                     </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Phone className="h-3 w-3 text-foreground-muted" />
-                      <span className="text-xs text-foreground-muted">{client.phone}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Phone className="h-3 w-3 text-foreground-muted shrink-0" />
+                      <span className="text-xs text-foreground-muted truncate">{client.phone}</span>
                     </div>
                     {profile.role === "admin" && (client as { assigned_agent?: { display_name: string | null } | null }).assigned_agent && (
-                      <p className="text-xs text-foreground-muted mt-0.5">
-                        Assigned to {(client as { assigned_agent: { display_name: string | null } }).assigned_agent.display_name ?? "—"}
+                      <p className="text-xs text-foreground-muted mt-0.5 truncate">
+                        {(client as { assigned_agent: { display_name: string | null } }).assigned_agent.display_name ?? "—"}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4 shrink-0 ml-2">
                   <StatusBadge status={client.status} size="sm" />
                   <ArrowRight className="h-4 w-4 text-foreground-muted group-hover:text-brand transition-colors" />
                 </div>

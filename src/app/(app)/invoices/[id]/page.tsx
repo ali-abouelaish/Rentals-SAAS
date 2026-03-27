@@ -191,13 +191,19 @@ export default async function InvoiceDetailPage({
                   ))}
                 </select>
               </div>
-              <Input name="issue_date" type="date" defaultValue={invoice.issue_date} />
-              <Input
-                name="payment_terms_days"
-                type="number"
-                defaultValue={invoice.payment_terms_days}
-                placeholder="Payment terms (days)"
-              />
+              <div>
+                <label className="text-xs text-foreground-secondary">Issue date</label>
+                <Input name="issue_date" type="date" defaultValue={invoice.issue_date} />
+              </div>
+              <div>
+                <label className="text-xs text-foreground-secondary">Payment terms (days)</label>
+                <Input
+                  name="payment_terms_days"
+                  type="number"
+                  defaultValue={invoice.payment_terms_days}
+                  placeholder="7"
+                />
+              </div>
               <div className="md:col-span-2">
                 <Textarea name="notes" defaultValue={invoice.notes ?? ""} placeholder="Notes" />
               </div>

@@ -34,7 +34,7 @@ function formatBonusCode(code: string | null, fallbackId: string) {
   return code.startsWith("LC") ? code : `LC${code}`;
 }
 
-export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
+export function BonusesTableWithInvoice({ bonuses, isAdmin }: { bonuses: BonusRow[]; isAdmin: boolean }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
             <div key={bonus.id}>
               <div
                 onClick={() => toggle(bonus)}
-                className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors duration-150 ${isSelected
+                className={`flex items-center gap-3 px-3 py-3 sm:px-4 cursor-pointer transition-colors duration-150 ${isSelected
                     ? "bg-brand-subtle/50"
                     : "hover:bg-surface-inset"
                   }`}
@@ -122,32 +122,34 @@ export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
                   className="h-4 w-4 rounded border-border text-brand focus:ring-brand shrink-0"
                 />
 
-                {/* Icon */}
-                <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? "bg-brand text-brand-fg" : "bg-surface-inset text-foreground-muted"
-                  }`}>
+                {/* Icon — hidden on smallest screens */}
+                <div className={`hidden sm:flex h-9 w-9 rounded-lg items-center justify-center shrink-0 ${isSelected ? "bg-brand text-brand-fg" : "bg-surface-inset text-foreground-muted"}`}>
                   <Gift className="h-4 w-4" />
                 </div>
 
-                {/* Info — stacked compact */}
+                {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-foreground">
                       {formatBonusCode(bonus.code, bonus.id)}
                     </span>
                     <StatusBadge status={bonus.status} size="sm" />
+                    {/* Amount shown inline on mobile */}
+                    <span className="sm:hidden text-xs font-semibold text-foreground tabular-nums ml-auto">
+                      {formatCurrency(bonus.amount_owed)}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-foreground-muted mt-0.5 truncate">
-                    <span>{bonus.client_name}</span>
+                  <div className="flex items-center gap-1.5 text-xs text-foreground-muted mt-0.5">
+                    <span className="truncate max-w-[120px] sm:max-w-none">{bonus.client_name}</span>
                     <span>·</span>
-                    <span className="truncate">{bonus.property_address}</span>
-                    <span>·</span>
-                    <span>{bonus.landlords?.[0]?.name ?? "—"}</span>
+                    <span className="hidden sm:inline truncate">{bonus.property_address} ·</span>
+                    <span className="truncate">{bonus.landlords?.[0]?.name ?? "—"}</span>
                   </div>
                 </div>
 
-                {/* Right side — amount + date + actions */}
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="text-right">
+                {/* Right side — amount (desktop) + actions */}
+                <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                  <div className="hidden sm:block text-right">
                     <p className="text-sm font-semibold text-foreground tabular-nums">
                       {formatCurrency(bonus.amount_owed)}
                     </p>
@@ -159,11 +161,11 @@ export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <Link
                       href={`/bonuses/${bonus.id}`}
-                      className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-foreground-muted hover:bg-surface-highlight hover:text-foreground transition-colors"
+                      className="inline-flex items-center gap-1 h-8 px-2 rounded-lg text-xs font-medium text-foreground-muted hover:bg-surface-highlight hover:text-foreground transition-colors"
                       title="View and edit bonus"
                     >
                       <Eye className="h-3.5 w-3.5" />
-                      View
+                      <span className="hidden sm:inline">View</span>
                     </Link>
                     <button
                       type="button"
@@ -179,59 +181,58 @@ export function BonusesTableWithInvoice({ bonuses }: { bonuses: BonusRow[] }) {
                         <Pencil className="h-3.5 w-3.5" />
                       )}
                     </button>
-                    <ConfirmDeleteForm
-                      action={deleteAction}
-                      message="Delete this bonus? This cannot be undone."
-                    >
-                      <input type="hidden" name="bonus_id" value={bonus.id} />
-                      <DeleteButton />
-                    </ConfirmDeleteForm>
+                    {isAdmin && (
+                      <ConfirmDeleteForm
+                        action={deleteAction}
+                        message="Delete this bonus? This cannot be undone."
+                      >
+                        <input type="hidden" name="bonus_id" value={bonus.id} />
+                        <DeleteButton />
+                      </ConfirmDeleteForm>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Inline edit panel */}
               {editingId === bonus.id && (
-                <div className="bg-surface-inset px-4 py-4 border-t border-border">
-                  <form action={updateBonus} className="grid gap-3 md:grid-cols-3">
+                <div className="bg-surface-inset px-3 py-4 sm:px-4 border-t border-border">
+                  <form action={updateBonus} className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                     <input type="hidden" name="bonus_id" value={bonus.id} />
-                    <Input name="bonus_date" type="date" defaultValue={bonus.bonus_date} required />
-                    <Input
-                      name="client_name"
-                      defaultValue={bonus.client_name}
-                      placeholder="Client name"
-                      required
-                    />
-                    <Input
-                      name="property_address"
-                      defaultValue={bonus.property_address}
-                      placeholder="Property address"
-                      required
-                    />
-                    <Input
-                      name="landlord_id"
-                      defaultValue={bonus.landlord_id}
-                      placeholder="Landlord id"
-                      required
-                    />
+                    <div>
+                      <label className="block text-xs text-foreground-muted mb-1">Date</label>
+                      <Input name="bonus_date" type="date" defaultValue={bonus.bonus_date} required />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-foreground-muted mb-1">Client name</label>
+                      <Input name="client_name" defaultValue={bonus.client_name} placeholder="Client name" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-foreground-muted mb-1">Property address</label>
+                      <Input name="property_address" defaultValue={bonus.property_address} placeholder="Property address" required />
+                    </div>
                     <input type="hidden" name="agent_id" value={bonus.agent_id} />
-                    <Input
-                      name="amount_owed"
-                      type="number"
-                      step="0.01"
-                      defaultValue={String(bonus.amount_owed)}
-                      required
-                    />
-                    <select
-                      name="payout_mode"
-                      defaultValue={bonus.payout_mode}
-                      className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
-                    >
-                      <option value="standard">Standard Split</option>
-                      <option value="full">Full payout</option>
-                    </select>
-                    <Input name="notes" defaultValue={bonus.notes ?? ""} placeholder="Notes" />
-                    <div className="md:col-span-3">
+                    <input type="hidden" name="landlord_id" value={bonus.landlord_id} />
+                    <div>
+                      <label className="block text-xs text-foreground-muted mb-1">Amount (£)</label>
+                      <Input name="amount_owed" type="number" step="0.01" defaultValue={String(bonus.amount_owed)} required />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-foreground-muted mb-1">Payout mode</label>
+                      <select
+                        name="payout_mode"
+                        defaultValue={bonus.payout_mode}
+                        className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
+                      >
+                        <option value="standard">Standard Split</option>
+                        <option value="full">Full payout</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-foreground-muted mb-1">Notes</label>
+                      <Input name="notes" defaultValue={bonus.notes ?? ""} placeholder="Notes" />
+                    </div>
+                    <div className="sm:col-span-2 md:col-span-3">
                       <Button type="submit" variant="secondary" size="sm">
                         Save changes
                       </Button>

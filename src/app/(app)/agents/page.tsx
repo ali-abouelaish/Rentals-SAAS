@@ -142,6 +142,7 @@ export default async function AgentsPage({
       </div>
 
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -160,6 +161,7 @@ export default async function AgentsPage({
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       {sorted.length === 0 && (

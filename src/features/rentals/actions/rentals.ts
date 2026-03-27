@@ -371,21 +371,17 @@ export async function updateRentalCode(formData: FormData) {
 
 export async function deleteRentalCode(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireUserProfile();
+  await requireRole(["admin"]);
   const rentalId = String(formData.get("rental_id") ?? "");
   if (!rentalId) throw new Error("Missing rental id.");
 
   const { data: rental, error: rentalError } = await supabase
     .from("rental_codes")
-    .select("id, status, assisted_by_agent_id")
+    .select("id, status")
     .eq("id", rentalId)
     .single();
   if (rentalError) throw new Error(rentalError.message);
 
-  const isAdmin = profile.role.toLowerCase() === "admin";
-  if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
-    throw new Error("You do not have access to delete this rental.");
-  }
   if (rental.status !== "pending") {
     throw new Error("Only pending rentals can be deleted.");
   }

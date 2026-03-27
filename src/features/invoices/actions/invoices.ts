@@ -292,20 +292,15 @@ export async function updateInvoiceDraft(formData: FormData) {
 
 export async function deleteInvoice(invoiceId: string) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireUserProfile();
+  await requireRole(["admin"]);
   const { data: invoice, error: invoiceError } = await supabase
     .from("invoices")
-    .select("id, status, created_by_user_id")
+    .select("id, status")
     .eq("id", invoiceId)
     .single();
   if (invoiceError) throw new Error(invoiceError.message);
   if (invoice.status !== "draft") {
     throw new Error("Only draft invoices can be deleted.");
-  }
-
-  const isAdmin = profile.role.toLowerCase() === "admin";
-  if (!isAdmin && invoice.created_by_user_id !== profile.id) {
-    throw new Error("You do not have access to delete this invoice.");
   }
 
   await supabase.from("invoice_bonus_links").delete().eq("invoice_id", invoiceId);
@@ -320,23 +315,18 @@ export async function deleteInvoice(invoiceId: string) {
 
 async function deleteInvoicesByIds(invoiceIds: string[]) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireUserProfile();
+  await requireRole(["admin"]);
   if (invoiceIds.length === 0) return;
 
   const { data: invoices, error } = await supabase
     .from("invoices")
-    .select("id, status, created_by_user_id")
+    .select("id, status")
     .in("id", invoiceIds);
   if (error) throw new Error(error.message);
 
-  const isAdmin = profile.role.toLowerCase() === "admin";
-  const invalid = (invoices ?? []).filter(
-    (invoice) =>
-      invoice.status !== "draft" ||
-      (!isAdmin && invoice.created_by_user_id !== profile.id)
-  );
+  const invalid = (invoices ?? []).filter((invoice) => invoice.status !== "draft");
   if (invalid.length > 0) {
-    throw new Error("Only draft invoices you own can be deleted.");
+    throw new Error("Only draft invoices can be deleted.");
   }
 
   await supabase.from("invoice_bonus_links").delete().in("invoice_id", invoiceIds);

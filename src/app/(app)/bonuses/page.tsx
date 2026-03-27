@@ -160,7 +160,7 @@ export default async function BonusesPage({
             <p className="text-sm text-foreground-secondary">No bonuses available for invoicing</p>
           </div>
         ) : (
-          <BonusesTableWithInvoice bonuses={invoiceEligible} />
+          <BonusesTableWithInvoice bonuses={invoiceEligible} isAdmin={isAdmin} />
         )}
       </div>
 

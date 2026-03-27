@@ -180,9 +180,7 @@ export default async function RentalDetailPage({
 
       <div className="flex items-center gap-3">
         <StatusBadge status={rental.status} />
-        {rental.status === "pending" &&
-          (profile.role.toLowerCase() === "admin" ||
-            rental.assisted_by_agent_id === profile.id) ? (
+        {rental.status === "pending" && profile.role.toLowerCase() === "admin" ? (
           <ConfirmDeleteForm
             action={deleteRentalCode}
             message="Delete this rental? This cannot be undone."

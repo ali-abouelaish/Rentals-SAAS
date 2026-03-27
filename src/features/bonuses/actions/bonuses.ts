@@ -103,18 +103,7 @@ export async function updateBonus(formData: FormData) {
 
 async function deleteBonusById(bonusId: string) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireUserProfile();
-
-  if (profile.role.toLowerCase() !== "admin") {
-    const { data: bonus } = await supabase
-      .from("bonuses")
-      .select("status, agent_id")
-      .eq("id", bonusId)
-      .single();
-    if (!bonus || bonus.agent_id !== profile.id || bonus.status !== "pending") {
-      throw new Error("You cannot delete this bonus.");
-    }
-  }
+  await requireRole(["admin"]);
 
   const { data: links, error: linkError } = await supabase
     .from("invoice_bonus_links")
