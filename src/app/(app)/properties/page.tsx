@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth/requireRole";
+import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getPortfolios } from "@/features/properties/data/portfolios";
 import { getProperties } from "@/features/properties/data/properties";
@@ -9,6 +10,7 @@ import { Warehouse } from "lucide-react";
 
 export default async function PropertiesPage() {
   await requireRole([...ADMIN_ROLES]);
+  await requireModuleAccess("property_management");
 
   try {
     const [portfolios, propertiesData, unitsResult, pmTenantsData] = await Promise.all([

@@ -1,9 +1,11 @@
 import { Banknote } from "lucide-react";
 import { requireRole } from "@/lib/auth/requireRole";
+import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 
 export default async function RentCollectionPage() {
   await requireRole([...ADMIN_ROLES]);
+  await requireModuleAccess("property_management");
 
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">

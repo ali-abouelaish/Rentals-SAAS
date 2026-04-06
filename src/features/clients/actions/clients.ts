@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { clientSchema, type ClientFormValues } from "../domain/schemas";
-import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
+import { requireUserProfile } from "@/lib/auth/requireRole";
 
 export async function createClient(values: ClientFormValues) {
   const supabase = createSupabaseServerClient();
@@ -97,7 +97,7 @@ export async function updateClientStatus(clientId: string, status: string) {
 
 export async function deleteClient(clientId: string) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireUserProfile();
 
   const { error } = await supabase.from("clients").delete().eq("id", clientId).eq("tenant_id", profile.tenant_id);
   if (error) throw new Error(error.message);

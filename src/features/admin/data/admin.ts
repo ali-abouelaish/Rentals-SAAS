@@ -3,6 +3,8 @@ import { requireSuperAdmin } from "@/lib/auth/requireRole";
 import type {
   AdminActivityRow,
   AdminOverviewStats,
+  AgencyModuleConfig,
+  PublishedModuleConfig,
   TenantAccessProfile,
   TenantBrandingSettings,
   TenantDetails,
@@ -300,6 +302,57 @@ export async function getTenantSelectOptions(): Promise<Array<{ id: string; name
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function getAgencyModuleConfig(tenantId: string): Promise<AgencyModuleConfig | null> {
+  await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const { data, error } = await admin
+    .from("agency_module_configs")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const userIds = [data.published_by, data.last_updated_by].filter(Boolean) as string[];
+  let nameById = new Map<string, string>();
+  if (userIds.length) {
+    const { data: profiles } = await admin
+      .from("user_profiles")
+      .select("id, display_name")
+      .in("id", userIds);
+    nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name ?? ""]));
+  }
+
+  return {
+    ...(data as AgencyModuleConfig),
+    published_by_name: data.published_by ? (nameById.get(data.published_by) ?? null) : null,
+    last_updated_by_name: data.last_updated_by ? (nameById.get(data.last_updated_by) ?? null) : null
+  };
+}
+
+/**
+ * Returns the live/published module config for a tenant.
+ * Used by the app shell — no super-admin check; scoped to current user's tenant.
+ * Defaults to rental-agency-only when no config row exists (preserves legacy behaviour).
+ */
+export async function getPublishedModuleConfigForApp(tenantId: string): Promise<PublishedModuleConfig> {
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("agency_module_configs")
+    .select("live_rental_agency_enabled, live_property_management_enabled")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (!data) {
+    return { rental_agency_enabled: true, property_management_enabled: false };
+  }
+  return {
+    rental_agency_enabled: data.live_rental_agency_enabled,
+    property_management_enabled: data.live_property_management_enabled
+  };
 }
 
 export async function getTenantFeatureEntitlements(

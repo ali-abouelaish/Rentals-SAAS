@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { bonusSchema, type BonusFormValues } from "../domain/schemas";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function submitBonus(values: BonusFormValues) {
@@ -103,7 +104,7 @@ export async function updateBonus(formData: FormData) {
 
 async function deleteBonusById(bonusId: string) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
 
   const { data: links, error: linkError } = await supabase
     .from("invoice_bonus_links")
@@ -138,7 +139,7 @@ export async function deleteBonusAction(
 
 export async function approveBonus(bonusId: string) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
 
   const { data: bonus, error } = await supabase
     .from("bonuses")

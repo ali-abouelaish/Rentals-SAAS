@@ -371,7 +371,7 @@ export async function updateRentalCode(formData: FormData) {
 
 export async function deleteRentalCode(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
   const rentalId = String(formData.get("rental_id") ?? "");
   if (!rentalId) throw new Error("Missing rental id.");
 
@@ -400,7 +400,7 @@ function roundMoney(value: number) {
 
 export async function approveRentalCode(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const rentalId = String(formData.get("rental_id") ?? "");
   const overrideValueRaw = formData.get("marketing_fee_override_gbp");
   const overrideReason = String(formData.get("marketing_fee_override_reason") ?? "");
@@ -543,7 +543,7 @@ export async function approveRentalCode(formData: FormData) {
 
 export async function updateRentalStatus(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
   const rentalId = String(formData.get("rental_id") ?? "");
   const status = String(formData.get("status") ?? "");
 

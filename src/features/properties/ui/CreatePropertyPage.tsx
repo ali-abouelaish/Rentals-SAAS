@@ -27,6 +27,7 @@ import {
   ImageIcon,
   X,
   KeyRound,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { createProperty, updateProperty } from "../actions/properties";
@@ -476,6 +477,8 @@ export function CreatePropertyPage({
   const [isPending, startTransition] = useTransition();
   const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([]);
   const [ownerLandlords, setOwnerLandlords] = useState<OwnerLandlord[]>(initialOwnerLandlords);
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const contractFileRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -514,6 +517,11 @@ export function CreatePropertyPage({
           max_age: initialProperty.max_age ?? undefined,
           owner_landlord_id: initialProperty.owner_landlord_id ?? "",
           manager_landlord_id: initialProperty.manager_landlord_id ?? "",
+          contract_start_date: initialProperty.contract_start_date ?? "",
+          contract_expiry_date: initialProperty.contract_expiry_date ?? "",
+          monthly_rent_owed: initialProperty.monthly_rent_owed ?? undefined,
+          payment_schedule: initialProperty.payment_schedule ?? undefined,
+          contract_document_url: initialProperty.contract_document_url ?? "",
         }
       : {
           property_type: "hmo",
@@ -541,13 +549,40 @@ export function CreatePropertyPage({
     startTransition(async () => {
       try {
         if (isEditMode) {
-          await updateProperty(initialProperty!.id, values);
+          let contractUrl = values.contract_document_url ?? null;
+          if (contractFile) {
+            const supabase = createSupabaseBrowserClient();
+            const path = `${initialProperty!.id}/${Date.now()}_${contractFile.name.replace(/\s+/g, "_")}`;
+            const { error: uploadError } = await supabase.storage
+              .from("property_contracts")
+              .upload(path, contractFile);
+            if (!uploadError) {
+              contractUrl = supabase.storage.from("property_contracts").getPublicUrl(path).data.publicUrl;
+            }
+          }
+          await updateProperty(initialProperty!.id, { ...values, contract_document_url: contractUrl });
           toast.success("Property updated");
           router.push("/properties");
           return;
         }
 
-        const property = await createProperty(values);
+        let contractUrl: string | null = null;
+        if (contractFile) {
+          try {
+            const supabase = createSupabaseBrowserClient();
+            const path = `tmp/${Date.now()}_${contractFile.name.replace(/\s+/g, "_")}`;
+            const { error: uploadError } = await supabase.storage
+              .from("property_contracts")
+              .upload(path, contractFile);
+            if (!uploadError) {
+              contractUrl = supabase.storage.from("property_contracts").getPublicUrl(path).data.publicUrl;
+            }
+          } catch {
+            // Non-blocking
+          }
+        }
+
+        const property = await createProperty({ ...values, contract_document_url: contractUrl });
 
         // Upload staged photos (failures are non-blocking)
         if (stagedPhotos.length > 0) {
@@ -759,7 +794,7 @@ export function CreatePropertyPage({
           </SectionCard>
 
           {/* Ownership */}
-          <SectionCard icon={KeyRound} title="Ownership" description="Associate this property with its landlord owners.">
+          <SectionCard icon={KeyRound} title="Ownership" description="Associate this property with its landlord and contract details.">
             {/* Owner Landlord */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -770,10 +805,7 @@ export function CreatePropertyPage({
                   }}
                 />
               </div>
-              <select
-                {...register("owner_landlord_id")}
-                className={selectCls}
-              >
+              <select {...register("owner_landlord_id")} className={selectCls}>
                 <option value="">— None —</option>
                 {ownerLandlords.map((l) => (
                   <option key={l.id} value={l.id}>{l.name}</option>
@@ -782,6 +814,84 @@ export function CreatePropertyPage({
               <p className="text-xs text-foreground-muted">The person or company you pay rent to (rent-to-rent).</p>
             </div>
 
+            {/* Contract dates */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Contract start">
+                <input type="date" {...register("contract_start_date")} className={inputCls} />
+              </Field>
+              <Field label="Contract expiry">
+                <input type="date" {...register("contract_expiry_date")} className={inputCls} />
+              </Field>
+            </div>
+
+            {/* Rent & schedule */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Monthly rent owed (£)">
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-foreground-muted">£</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register("monthly_rent_owed")}
+                    className={inputCls + " pl-7"}
+                    placeholder="0.00"
+                  />
+                </div>
+              </Field>
+              <Field label="Payment schedule">
+                <select {...register("payment_schedule")} className={selectCls}>
+                  <option value="">— Select —</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="biannual">Biannual</option>
+                  <option value="annual">Annual</option>
+                </select>
+              </Field>
+            </div>
+
+            {/* Contract document */}
+            <Field label="Contract document">
+              {contractFile ? (
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-inset px-3 py-2 text-sm">
+                  <FileText className="h-4 w-4 text-brand shrink-0" />
+                  <span className="flex-1 truncate text-foreground">{contractFile.name}</span>
+                  <button type="button" onClick={() => setContractFile(null)} className="text-foreground-muted hover:text-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : liveValues.contract_document_url ? (
+                <div className="flex items-center gap-3 text-sm">
+                  <a href={liveValues.contract_document_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-brand hover:underline">
+                    <FileText className="h-3.5 w-3.5" />
+                    View current contract
+                  </a>
+                  <button type="button" onClick={() => contractFileRef.current?.click()} className="text-xs text-foreground-muted hover:text-foreground underline">
+                    Replace
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => contractFileRef.current?.click()}
+                  className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-surface-inset px-3 py-2 text-sm text-foreground-muted hover:border-brand/40 hover:text-brand transition-colors w-full"
+                >
+                  <FileText className="h-4 w-4" />
+                  Upload contract (PDF or Word)
+                </button>
+              )}
+              <input
+                ref={contractFileRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setContractFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </Field>
           </SectionCard>
 
           {/* Tenant preferences */}

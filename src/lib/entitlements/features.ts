@@ -17,6 +17,8 @@ export type FeatureKey =
   | "bookings"
   | "pm_tenants"
   | "contracts"
+  | "profitability"
+  | "maintenance"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -38,6 +40,8 @@ export const ALL_FEATURES: FeatureKey[] = [
   "bookings",
   "pm_tenants",
   "contracts",
+  "profitability",
+  "maintenance",
   "admin",
 ];
 
@@ -86,6 +90,14 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   contracts: {
     label: "Contracts",
     description: "Periodic tenancy contracts, deposit protection tracking, and notice management."
+  },
+  profitability: {
+    label: "Profitability",
+    description: "Property P&L tracking, cost management, and profitability alerts."
+  },
+  maintenance: {
+    label: "Maintenance",
+    description: "Maintenance job tracking, cost logging, and profitability integration."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

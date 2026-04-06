@@ -77,3 +77,28 @@ export type TenantFeatureEntitlement = {
   updated_at: string;
 };
 
+export type AgencyModuleConfig = {
+  id: string;
+  tenant_id: string;
+  // Draft (what super admin is editing)
+  rental_agency_enabled: boolean;
+  property_management_enabled: boolean;
+  // Live/published (what the agency sees)
+  live_rental_agency_enabled: boolean;
+  live_property_management_enabled: boolean;
+  // Publishing state
+  published: boolean;
+  published_at: string | null;
+  published_by: string | null;
+  published_by_name?: string | null;
+  last_updated_at: string;
+  last_updated_by: string | null;
+  last_updated_by_name?: string | null;
+};
+
+/** The live module access for a tenant — always derived from live_* fields. */
+export type PublishedModuleConfig = {
+  rental_agency_enabled: boolean;
+  property_management_enabled: boolean;
+};
+

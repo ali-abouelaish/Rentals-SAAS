@@ -1,11 +1,13 @@
 import { Users2 } from "lucide-react";
 import { requireRole } from "@/lib/auth/requireRole";
+import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
 import { TenantsPage } from "@/features/pm-tenants/ui/TenantsPage";
 
 export default async function TenantsRoute() {
   await requireRole([...ADMIN_ROLES]);
+  await requireModuleAccess("property_management");
 
   try {
     const tenants = await getPmTenants();

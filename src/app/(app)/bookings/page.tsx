@@ -1,5 +1,6 @@
 import { CalendarCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth/requireRole";
+import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getBookings } from "@/features/bookings/data/bookings";
 import { getPortfolios } from "@/features/properties/data/portfolios";
@@ -8,6 +9,7 @@ import { BookingsPage } from "@/features/bookings/ui/BookingsPage";
 
 export default async function BookingsRoute() {
   await requireRole([...ADMIN_ROLES]);
+  await requireModuleAccess("property_management");
 
   try {
     const [bookings, portfolios, forms] = await Promise.all([

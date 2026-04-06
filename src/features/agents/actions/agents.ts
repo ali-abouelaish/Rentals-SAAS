@@ -33,7 +33,7 @@ function getInviteRedirectBaseDomain(): string | null {
 export async function updateAgentCommission(userId: string, values: AgentUpdateValues) {
   const supabase = createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const payload = agentUpdateSchema.parse(values);
 
   const isAgent = payload.role === "agent" || payload.role === "admin";

@@ -1,5 +1,6 @@
 import { FileSignature } from "lucide-react";
 import { requireRole } from "@/lib/auth/requireRole";
+import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getContracts } from "@/features/contracts/data/contracts";
 import { getPortfolios } from "@/features/properties/data/portfolios";
@@ -9,6 +10,7 @@ import { ContractsPage } from "@/features/contracts/ui/ContractsPage";
 
 export default async function ContractsRoute() {
   await requireRole([...ADMIN_ROLES]);
+  await requireModuleAccess("property_management");
 
   try {
     const [contracts, portfolios, pmTenants, unitsResult] = await Promise.all([

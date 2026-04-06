@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { invoiceFromBonusesSchema, invoiceManualSchema } from "../domain/schemas";
 import { InvoicePdf } from "../pdf/InvoicePdf";
 import { formatGBP } from "@/lib/utils/formatters";
@@ -292,7 +293,7 @@ export async function updateInvoiceDraft(formData: FormData) {
 
 export async function deleteInvoice(invoiceId: string) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
   const { data: invoice, error: invoiceError } = await supabase
     .from("invoices")
     .select("id, status")
@@ -315,7 +316,7 @@ export async function deleteInvoice(invoiceId: string) {
 
 async function deleteInvoicesByIds(invoiceIds: string[]) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
   if (invoiceIds.length === 0) return;
 
   const { data: invoices, error } = await supabase
@@ -361,7 +362,7 @@ export async function bulkDeleteInvoicesAction(
 
 export async function approveInvoice(invoiceId: string) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const { error } = await supabase
     .from("invoices")
     .update({
@@ -487,7 +488,7 @@ function applyTemplate(input: string, variables: Record<string, string>) {
 
 export async function sendInvoice(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const invoiceId = String(formData.get("invoice_id") ?? "");
   const subjectInput = String(formData.get("subject") ?? "");
   const bodyInput = String(formData.get("body") ?? "");
@@ -584,7 +585,7 @@ export async function sendInvoice(formData: FormData) {
 
 export async function markInvoicePaid(invoiceId: string) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
 
   const { error } = await supabase
     .from("invoices")
@@ -608,7 +609,7 @@ export async function markInvoicePaid(invoiceId: string) {
 
 export async function markInvoiceDeclined(invoiceId: string) {
   const supabase = createSupabaseServerClient();
-  await requireRole(["admin"]);
+  await requireRole([...ADMIN_ROLES]);
 
   const { error } = await supabase
     .from("invoices")

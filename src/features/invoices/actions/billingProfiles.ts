@@ -4,11 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 
 export async function createBillingProfile(formData: FormData) {
   const supabase = createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const termsRaw = String(formData.get("default_payment_terms_days") ?? "");
   const termsValue = Number(termsRaw);
   const termsDays = Number.isFinite(termsValue) && termsValue > 0 ? termsValue : 7;
@@ -51,7 +52,7 @@ export async function createBillingProfile(formData: FormData) {
 
 export async function updateBillingProfile(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const billingProfileId = String(formData.get("billing_profile_id") ?? "");
   const termsRaw = String(formData.get("default_payment_terms_days") ?? "");
   const termsValue = Number(termsRaw);
@@ -85,7 +86,7 @@ export async function updateBillingProfile(formData: FormData) {
 
 export async function deleteBillingProfile(profileId: string) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const { error } = await supabase
     .from("billing_profiles")
     .delete()
@@ -102,7 +103,7 @@ export async function uploadBillingLogo(
   try {
     const supabase = createSupabaseServerClient();
     const admin = createSupabaseAdminClient();
-    const profile = await requireRole(["admin"]);
+    const profile = await requireRole([...ADMIN_ROLES]);
     const billingProfileId = String(formData.get("billing_profile_id") ?? "");
     const file = formData.get("file") as File | null;
     if (!billingProfileId || !file) {

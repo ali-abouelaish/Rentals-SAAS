@@ -49,6 +49,15 @@ export default async function LandlordsPage({
     return `/landlords${qs ? `?${qs}` : ""}`;
   };
 
+  const buildLandlordUrl = (id: string) => {
+    const backParams = new URLSearchParams();
+    if (search) backParams.set("q", search);
+    if (paying !== "all") backParams.set("paying", paying);
+    if (currentPage > 1) backParams.set("page", String(currentPage));
+    const back = `/landlords${backParams.toString() ? `?${backParams.toString()}` : ""}`;
+    return `/landlords/${id}?back=${encodeURIComponent(back)}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Header ─────────────────────────── */}
@@ -123,7 +132,7 @@ export default async function LandlordsPage({
             {landlords.map((landlord) => (
               <Link
                 key={landlord.id}
-                href={`/landlords/${landlord.id}`}
+                href={buildLandlordUrl(landlord.id)}
                 className="flex items-center justify-between px-6 py-4 hover:bg-surface-inset transition-colors duration-base group"
               >
                 <div className="flex items-center gap-4">

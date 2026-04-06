@@ -556,6 +556,106 @@ export async function setTenantFeatureEnabledAction(input: {
   return { ok: true };
 }
 
+export async function saveModuleConfigDraftAction(input: {
+  tenantId: string;
+  rentalAgencyEnabled: boolean;
+  propertyManagementEnabled: boolean;
+}): Promise<{ ok: boolean; error?: string }> {
+  const actor = await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const payload = {
+    tenant_id: input.tenantId,
+    rental_agency_enabled: input.rentalAgencyEnabled,
+    property_management_enabled: input.propertyManagementEnabled,
+    published: false,
+    last_updated_at: new Date().toISOString(),
+    last_updated_by: actor.id
+  };
+
+  const { error } = await admin
+    .from("agency_module_configs")
+    .upsert(payload, { onConflict: "tenant_id" });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/admin/tenants/${input.tenantId}/modules`);
+  return { ok: true };
+}
+
+export async function publishModuleConfigAction(input: {
+  tenantId: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const actor = await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const { data: current, error: fetchError } = await admin
+    .from("agency_module_configs")
+    .select("rental_agency_enabled, property_management_enabled")
+    .eq("tenant_id", input.tenantId)
+    .single();
+  if (fetchError || !current) {
+    return { ok: false, error: "No draft config found. Save a draft first." };
+  }
+
+  const { error } = await admin
+    .from("agency_module_configs")
+    .update({
+      live_rental_agency_enabled: current.rental_agency_enabled,
+      live_property_management_enabled: current.property_management_enabled,
+      published: true,
+      published_at: new Date().toISOString(),
+      published_by: actor.id
+    })
+    .eq("tenant_id", input.tenantId);
+  if (error) return { ok: false, error: error.message };
+
+  await logAdminAction(
+    actor.id,
+    input.tenantId,
+    "admin_module_config_published",
+    "agency_module_config",
+    input.tenantId,
+    {
+      rental_agency_enabled: current.rental_agency_enabled,
+      property_management_enabled: current.property_management_enabled
+    }
+  );
+
+  revalidatePath(`/admin/tenants/${input.tenantId}/modules`);
+  return { ok: true };
+}
+
+export async function revertModuleConfigAction(input: {
+  tenantId: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const actor = await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const { data: current, error: fetchError } = await admin
+    .from("agency_module_configs")
+    .select("live_rental_agency_enabled, live_property_management_enabled")
+    .eq("tenant_id", input.tenantId)
+    .single();
+  if (fetchError || !current) {
+    return { ok: false, error: "No published config to revert to." };
+  }
+
+  const { error } = await admin
+    .from("agency_module_configs")
+    .update({
+      rental_agency_enabled: current.live_rental_agency_enabled,
+      property_management_enabled: current.live_property_management_enabled,
+      published: true,
+      last_updated_at: new Date().toISOString(),
+      last_updated_by: actor.id
+    })
+    .eq("tenant_id", input.tenantId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/admin/tenants/${input.tenantId}/modules`);
+  return { ok: true };
+}
+
 export async function setTenantFeatureEndDateAction(input: {
   tenantId: string;
   featureKey: string;

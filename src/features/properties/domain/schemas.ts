@@ -15,8 +15,14 @@ export const propertySchema = z.object({
   postcode: z.string().nullable().optional().or(z.literal("")),
   area: z.string().nullable().optional().or(z.literal("")),
   nearest_tube_station: z.string().nullable().optional().or(z.literal("")),
-  total_rooms: z.coerce.number().int().positive().nullable().optional(),
-  total_bathrooms: z.coerce.number().int().positive().nullable().optional(),
+  total_rooms: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().int().positive().optional()
+  ),
+  total_bathrooms: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().int().positive().optional()
+  ),
   bills: z.enum(["all_included", "top_up_gas_elec", "top_up_elec", "top_up_gas"]).nullable().optional(),
   bills_notes: z.string().nullable().optional().or(z.literal("")),
   furnished: z.boolean().default(true),
@@ -31,11 +37,25 @@ export const propertySchema = z.object({
   pets_ok: z.boolean().default(false),
   preferred_occupation: z.enum(["professional", "student", "any"]).default("any"),
   preferred_gender: z.enum(["male", "female", "any"]).default("any"),
-  min_age: z.coerce.number().int().positive().nullable().optional(),
-  max_age: z.coerce.number().int().positive().nullable().optional(),
+  min_age: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().int().positive().optional()
+  ),
+  max_age: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().int().positive().optional()
+  ),
   floor_plan_url: z.string().url().nullable().optional().or(z.literal("")),
   owner_landlord_id: z.string().uuid().nullable().optional().or(z.literal("")),
   manager_landlord_id: z.string().uuid().nullable().optional().or(z.literal("")),
+  contract_start_date: z.string().nullable().optional().or(z.literal("")),
+  contract_expiry_date: z.string().nullable().optional().or(z.literal("")),
+  monthly_rent_owed: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().positive().optional()
+  ),
+  payment_schedule: z.enum(["monthly", "quarterly", "biannual", "annual"]).nullable().optional(),
+  contract_document_url: z.string().nullable().optional().or(z.literal("")),
 });
 export type PropertyFormValues = z.infer<typeof propertySchema>;
 
@@ -76,6 +96,7 @@ export const ownerLandlordSchema = z.object({
   payment_schedule: z.enum(["monthly", "quarterly", "biannual", "annual"]).nullable().optional(),
   alert_60_days: z.boolean().default(false),
   alert_30_days: z.boolean().default(false),
+  contract_document_url: z.string().nullable().optional().or(z.literal("")),
 });
 export type OwnerLandlordFormValues = z.infer<typeof ownerLandlordSchema>;
 

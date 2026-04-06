@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 
 export async function createAgentPayout(formData: FormData) {
   const supabase = createSupabaseServerClient();
-  const profile = await requireRole(["admin"]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const agentId = String(formData.get("agent_id") ?? "");
   const amountRaw = String(formData.get("amount_gbp") ?? "");
   const payoutDate = String(formData.get("payout_date") ?? "");

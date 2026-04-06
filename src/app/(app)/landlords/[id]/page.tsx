@@ -11,13 +11,16 @@ import { InvoiceStatusBadge } from "@/features/invoices/ui/InvoiceStatusBadge";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
 import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import { Trash2 } from "lucide-react";
+import { Trash2, ArrowLeft } from "lucide-react";
 
 export default async function LandlordDetailPage({
-  params
+  params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams?: { back?: string };
 }) {
+  const backHref = searchParams?.back ?? "/landlords";
   const profile = await requireUserProfile();
   const isAdmin = profile.role.toLowerCase() === "admin";
   const supabase = createSupabaseServerClient();
@@ -33,6 +36,10 @@ export default async function LandlordDetailPage({
 
   return (
     <div className="space-y-6">
+      <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-foreground-secondary hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" />
+        Back to Landlords
+      </Link>
       <div className="flex items-start justify-between">
         <PageHeader title={landlord.name} subtitle="Landlord detail" />
         {isAdmin && (

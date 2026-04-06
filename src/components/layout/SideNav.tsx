@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard,
@@ -28,10 +28,14 @@ import {
   Banknote,
   Wrench,
   Megaphone,
+  TrendingUp,
+  Layers,
+  Search,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import type { PublishedModuleConfig } from "@/features/admin/domain/types";
 
 interface SideNavProps {
   profile: {
@@ -40,46 +44,94 @@ interface SideNavProps {
     avatar_url?: string | null;
   };
   branding?: { logoUrl: string | null; brandName: string | null } | null;
+  moduleConfig: PublishedModuleConfig;
 }
 
-const navItems: Array<{
+type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
   allowedRoles?: readonly string[];
-}> = [
+};
+
+const RA_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/me", label: "My Profile", icon: User },
   { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/leads", label: "Leads", icon: Inbox },
   { href: "/rentals", label: "Rentals", icon: ClipboardList },
-  { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
-  { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
-  { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
-  { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
-  { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
-  { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
-  { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
   { href: "/landlords", label: "Landlords", icon: Building2 },
   { href: "/bonuses", label: "Bonuses", icon: Gift },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/room-enhancer", label: "Room Enhancer", icon: Sparkles },
   { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES },
-  { href: "/admin", label: "Super Admin", icon: Shield, allowedRoles: SUPER_ADMIN_ROLES },
   { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
 ];
 
-export function SideNav({ profile, branding }: SideNavProps) {
+const PM_NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
+  { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
+  { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
+  { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
+  { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
+  { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
+  { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
+  { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
+  { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/billing-info", label: "Settings", icon: Settings, allowedRoles: ADMIN_ROLES },
+];
+
+const PM_ROUTE_PREFIXES = [
+  "/properties",
+  "/bookings",
+  "/tenants",
+  "/contracts",
+  "/profitability",
+  "/rent-collection",
+  "/maintenance",
+  "/acquisition-insights",
+  "/marketing",
+];
+
+function isPmRoute(pathname: string) {
+  return PM_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+  );
+}
+
+/** Inner component — reads searchParams so must be inside Suspense. */
+function SideNavInner({ profile, branding, moduleConfig }: SideNavProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
-  const isSuperAdminOnly = (profile.role ?? "").toLowerCase() === "super_admin";
-  const brandName = branding?.brandName?.trim() || "Rental Agency";
-  const logoUrl = branding?.logoUrl?.trim();
 
-  // Clear navigating state when the route has changed
+  const isSuperAdminOnly = (profile.role ?? "").toLowerCase() === "super_admin";
+  const hasBoth =
+    moduleConfig.rental_agency_enabled && moduleConfig.property_management_enabled;
+  const hasPmOnly =
+    !moduleConfig.rental_agency_enabled && moduleConfig.property_management_enabled;
+
+  // Determine which sidebar context is active
+  const activeModule: "ra" | "pm" = (() => {
+    if (!hasBoth) return hasPmOnly ? "pm" : "ra";
+    // "Both" agency — derive from route or dashboard view param
+    if (pathname === "/dashboard") {
+      return searchParams.get("view") === "pm" ? "pm" : "ra";
+    }
+    return isPmRoute(pathname) ? "pm" : "ra";
+  })();
+
+  const isPm = activeModule === "pm";
+  const navItems = isPm ? PM_NAV_ITEMS : RA_NAV_ITEMS;
+
+  // Brand identity
+  const raBrandName = branding?.brandName?.trim() || "Rental Agency";
+  const raLogoUrl = branding?.logoUrl?.trim();
+
   useEffect(() => {
     setNavigatingTo(null);
   }, [pathname]);
@@ -87,37 +139,51 @@ export function SideNav({ profile, branding }: SideNavProps) {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
+  // Logo block — differs between RA and PM
+  const logoBlock = isPm ? (
+    <div className="flex items-center gap-3 px-5 pt-6 pb-5">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
+        <Layers size={18} />
+      </div>
+      <div className="flex flex-col min-w-0">
+        <span className="text-sm font-bold tracking-tight text-white truncate">
+          Harbor Ops
+        </span>
+        <span className="text-[11px] text-sidebar-text">Tenant Management</span>
+      </div>
+    </div>
+  ) : (
+    <div className="flex items-center gap-3 px-5 pt-6 pb-5">
+      {raLogoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={raLogoUrl}
+          alt=""
+          className="h-10 w-10 rounded-xl object-contain bg-white/10 p-1 shrink-0"
+        />
+      ) : (
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
+          R
+        </div>
+      )}
+      <div className="flex flex-col min-w-0">
+        <span className="text-sm font-bold tracking-tight text-white truncate">
+          {raBrandName}
+        </span>
+        <span className="text-[11px] text-sidebar-text">Management</span>
+      </div>
+    </div>
+  );
+
   const navContent = (
     <>
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 pt-6 pb-5">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoUrl}
-            alt=""
-            className="h-10 w-10 rounded-xl object-contain bg-white/10 p-1 shrink-0"
-          />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
-            R
-          </div>
-        )}
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-bold tracking-tight text-white truncate">
-            {brandName}
-          </span>
-          <span className="text-[11px] text-sidebar-text">Management</span>
-        </div>
-      </div>
+      {logoBlock}
 
-      {/* Divider */}
       <div className="mx-5 h-px bg-white/[0.06] mb-2" />
 
-      {/* Navigation */}
       <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
         {(isSuperAdminOnly
-          ? navItems.filter((item) => item.href === "/admin")
+          ? [{ href: "/admin", label: "Super Admin", icon: Shield } as NavItem]
           : navItems.filter((item) => item.href !== "/admin")
         ).map((item) => {
           if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
@@ -146,15 +212,46 @@ export function SideNav({ profile, branding }: SideNavProps) {
                 strokeWidth={active ? 2.2 : 1.8}
                 className={cn(
                   "shrink-0 transition-colors",
-                  active
-                    ? "text-accent-fg"
-                    : "text-sidebar-text group-hover:text-white"
+                  active ? "text-accent-fg" : "text-sidebar-text group-hover:text-white"
                 )}
               />
               {item.label}
             </Link>
           );
         })}
+
+        {/* Super admin link for non-super-admin-only users */}
+        {!isSuperAdminOnly &&
+          canAccessRoute(profile.role, SUPER_ADMIN_ROLES) && (
+            <Link
+              href="/admin"
+              prefetch={false}
+              onClick={() => {
+                setMobileOpen(false);
+                setNavigatingTo("/admin");
+              }}
+              className={cn(
+                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium",
+                "transition-all duration-base ease-default",
+                isActive("/admin")
+                  ? "bg-accent text-accent-fg shadow-glow"
+                  : "text-sidebar-text hover:bg-white/[0.06] hover:text-white",
+                navigatingTo === "/admin" && "opacity-80"
+              )}
+            >
+              <Shield
+                size={18}
+                strokeWidth={isActive("/admin") ? 2.2 : 1.8}
+                className={cn(
+                  "shrink-0 transition-colors",
+                  isActive("/admin")
+                    ? "text-accent-fg"
+                    : "text-sidebar-text group-hover:text-white"
+                )}
+              />
+              Super Admin
+            </Link>
+          )}
       </nav>
 
       {/* User Area */}
@@ -199,7 +296,7 @@ export function SideNav({ profile, branding }: SideNavProps) {
 
   return (
     <>
-      {/* Global progress bar — shows immediately on nav click */}
+      {/* Global progress bar */}
       {navigatingTo && (
         <div
           className="fixed top-0 left-0 right-0 z-[100] h-0.5 bg-brand overflow-hidden"
@@ -247,12 +344,38 @@ export function SideNav({ profile, branding }: SideNavProps) {
         {navContent}
       </aside>
 
-      {/* Desktop Sidebar — Glassmorphism */}
+      {/* Desktop Sidebar */}
       <aside
         className="hidden w-[260px] shrink-0 flex-col md:flex rounded-bento backdrop-blur-xl overflow-hidden"
         style={{ backgroundColor: "var(--sidebar-glass-bg)" }}
       >
         {navContent}
+      </aside>
+    </>
+  );
+}
+
+export function SideNav(props: SideNavProps) {
+  return (
+    <Suspense fallback={<SideNavSkeleton />}>
+      <SideNavInner {...props} />
+    </Suspense>
+  );
+}
+
+function SideNavSkeleton() {
+  return (
+    <>
+      <aside className="hidden w-[260px] shrink-0 flex-col md:flex rounded-bento backdrop-blur-xl overflow-hidden opacity-40 pointer-events-none"
+        style={{ backgroundColor: "var(--sidebar-glass-bg)" }}
+      >
+        <div className="flex items-center gap-3 px-5 pt-6 pb-5">
+          <div className="h-10 w-10 rounded-xl bg-white/10 shrink-0" />
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <div className="h-3 w-24 rounded bg-white/10" />
+            <div className="h-2.5 w-16 rounded bg-white/[0.06]" />
+          </div>
+        </div>
       </aside>
     </>
   );

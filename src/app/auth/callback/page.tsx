@@ -1,59 +1,74 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const next = searchParams.get("next") ?? "/me";
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
 
-  // Listen for PASSWORD_RECOVERY event — Supabase fires this whenever a code/token
-  // exchange results in a recovery session, regardless of the `type` param in the URL.
-  // This handles unconfirmed users (invited but not yet accepted) whose reset email
-  // may carry type=signup or type=email instead of type=recovery.
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        router.replace("/reset-password");
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase, router]);
-
   useEffect(() => {
     let mounted = true;
 
     const run = async () => {
+      console.log("[callback] url params:", { code: !!code, tokenHash: !!tokenHash, type, next, fullUrl: window.location.href });
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error && mounted) {
+        console.log("[callback] exchange result:", { error: error?.message, status: error?.status });
+        if (!mounted) return;
+
+        if (error) {
+          // In React StrictMode (dev), effects fire twice — the first call may have
+          // already consumed the single-use code. If a session exists, the exchange
+          // succeeded in the previous invocation and we can proceed normally.
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!mounted) return;
+          if (session) {
+            console.log("[callback] session exists after failed exchange (StrictMode) — proceeding to", next);
+            router.replace(next);
+            return;
+          }
+
           if (type === "invite") {
             router.replace(`/invite/accept?error=${encodeURIComponent(error.message)}`);
+          } else if (type === "recovery" || next === "/reset-password") {
+            router.replace(`/forgot-password?error=${encodeURIComponent(error.message)}`);
           } else {
             router.replace("/login");
           }
           return;
         }
-        if (type === "invite" && mounted) {
+
+        if (type === "invite") {
           router.replace("/invite/set-password");
           return;
         }
-      } else if (tokenHash && type === "invite") {
+
+        router.replace(next);
+        return;
+      }
+
+      if (tokenHash && type === "invite") {
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: "invite",
         });
-        if (error && mounted) {
+        if (!mounted) return;
+        if (error) {
           router.replace(`/invite/accept?error=${encodeURIComponent(error.message)}`);
           return;
         }
-      } else if (tokenHash && (type === "recovery" || type === "signup" || type === "email")) {
+        router.replace("/invite/set-password");
+        return;
+      }
+
+      if (tokenHash && (type === "recovery" || type === "signup" || type === "email")) {
         // type=signup or type=email can be sent by Supabase for unconfirmed users
         // (invited but not yet accepted) going through password recovery.
         const otpType = type as "recovery" | "signup" | "email";
@@ -61,26 +76,22 @@ function CallbackContent() {
           token_hash: tokenHash,
           type: otpType,
         });
-        if (error && mounted) {
+        if (!mounted) return;
+        if (error) {
           router.replace(`/forgot-password?error=${encodeURIComponent(error.message)}`);
           return;
         }
-        if (mounted) {
-          router.replace("/reset-password");
-          return;
-        }
-      } else {
-        await supabase.auth.getSession();
+        router.replace("/reset-password");
+        return;
       }
-      if (mounted) {
-        router.replace(next);
-      }
+
+      // Generic: just refresh session and go to next
+      await supabase.auth.getSession();
+      if (mounted) router.replace(next);
     };
 
     run();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [router, next, code, tokenHash, type, supabase]);
 
   return (

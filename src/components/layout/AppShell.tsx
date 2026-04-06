@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import { getTenantBrandingForApp } from "@/features/admin/data/admin";
+import { getTenantBrandingForApp, getPublishedModuleConfigForApp } from "@/features/admin/data/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppShellClient } from "./AppShellClient";
 
@@ -8,7 +8,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const profile = await requireUserProfile();
 
   const supabase = createSupabaseServerClient();
-  const [branding, agentRow] = await Promise.all([
+  const [branding, agentRow, moduleConfig] = await Promise.all([
     getTenantBrandingForApp(profile.tenant_id),
     supabase
       .from("agent_profiles")
@@ -16,6 +16,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
       .eq("user_id", profile.id)
       .single()
       .then(({ data }) => data),
+    getPublishedModuleConfigForApp(profile.tenant_id)
   ]);
 
   return (
@@ -26,6 +27,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         avatar_url: agentRow?.avatar_url ?? null,
       }}
       branding={branding}
+      moduleConfig={moduleConfig}
     >
       {children}
     </AppShellClient>

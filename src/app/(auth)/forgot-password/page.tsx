@@ -1,29 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { requestPasswordResetForSignedOut } from "@/features/auth/actions/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? "Sending..." : "Send reset link"}
-    </Button>
-  );
-}
+function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
+  const callbackError = searchParams.get("error");
+  const [email, setEmail] = useState("");
+  const [pending, setPending] = useState(false);
+  const [ok, setOk] = useState(false);
+  const [error, setError] = useState<string | null>(callbackError);
 
-const initialState: { ok?: boolean; error?: string; message?: string } = {};
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
 
-export default function ForgotPasswordPage() {
-  const [state, action] = useFormState(requestPasswordResetForSignedOut, initialState);
+    const supabase = createSupabaseBrowserClient();
+    const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`;
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo,
+    });
+
+    setPending(false);
+
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+
+    setOk(true);
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-app px-6">
       <form
-        action={action}
+        onSubmit={handleSubmit}
         className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-surface-card p-8 shadow-lg"
       >
         <div>
@@ -33,16 +50,31 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
-        <Input name="email" type="email" placeholder="Email" required />
+        <div className="space-y-1">
+          <label htmlFor="email" className="text-sm font-medium text-foreground">
+            Email
+          </label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={pending || ok}
+          />
+        </div>
 
-        {state?.error && (
-          <p className="text-sm text-error">{state.error}</p>
-        )}
-        {state?.ok && (
-          <p className="text-sm text-success">{state.message}</p>
+        {error && <p className="text-sm text-error">{error}</p>}
+        {ok && (
+          <p className="text-sm text-success">
+            If this email exists, a reset link has been sent.
+          </p>
         )}
 
-        <SubmitButton />
+        <Button type="submit" className="w-full" disabled={pending || ok}>
+          {pending ? "Sending..." : "Send reset link"}
+        </Button>
 
         <p className="text-xs text-foreground-muted text-center">
           Remembered it?{" "}
@@ -55,3 +87,10 @@ export default function ForgotPasswordPage() {
   );
 }
 
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-surface-app"><p className="text-foreground-muted">Loading...</p></div>}>
+      <ForgotPasswordForm />
+    </Suspense>
+  );
+}

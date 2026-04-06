@@ -61,6 +61,11 @@ export type Property = {
   floor_plan_url: string | null;
   owner_landlord_id: string | null;
   manager_landlord_id: string | null;
+  contract_start_date: string | null;
+  contract_expiry_date: string | null;
+  monthly_rent_owed: number | null;
+  payment_schedule: "monthly" | "quarterly" | "biannual" | "annual" | null;
+  contract_document_url: string | null;
   created_at: string;
   updated_at: string;
   portfolio?: Portfolio | null;
