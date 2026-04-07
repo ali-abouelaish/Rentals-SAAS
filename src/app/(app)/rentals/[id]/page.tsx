@@ -92,6 +92,7 @@ export default async function RentalDetailPage({
   const mktAgentDisplayNames = rentalMktAgents.map(
     (row) => (row.user_profiles as unknown as { display_name: string | null } | null)?.display_name ?? "Agent"
   );
+  const mktAgentIds = rentalMktAgents.map((row) => row.agent_id as string);
   const marketingAgentCount = rentalMktAgents.length;
   // Fallback for display when junction table is empty (legacy)
   const marketingAgentName =
@@ -259,9 +260,7 @@ export default async function RentalDetailPage({
               clientId={rental.client_id}
               consultationFeeAmount={rental.consultation_fee_amount}
               paymentMethod={rental.payment_method}
-              propertyAddress={rental.property_address}
-              licensorName={rental.licensor_name}
-              marketingAgentNames={mktAgentDisplayNames}
+              marketingAgentIds={mktAgentIds}
               marketingFeeDefault={marketingAgent?.marketing_fee ?? 0}
               commissionPercent={assistedAgent?.commission_percent ?? 0}
               agents={agents ?? []}

@@ -81,8 +81,8 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
         const updated = await updateContract(contract.id, values);
         toast.success("Contract saved");
         onSaved(updated as unknown as PropertyContract);
-      } catch {
-        toast.error("Failed to save contract");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to save contract");
       }
     });
   };

@@ -6,8 +6,8 @@ export type RentalCode = {
   consultation_fee_amount: number;
   rental_amount_gbp?: number | null;
   payment_method: "cash" | "transfer" | "card";
-  property_address: string;
-  licensor_name: string;
+  property_address?: string | null;
+  licensor_name?: string | null;
   assisted_by_agent_id: string;
   marketing_agent_id: string | null;
   marketing_fee_override_gbp: number | null;

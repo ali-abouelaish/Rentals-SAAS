@@ -26,7 +26,7 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 interface AddQuestionFormProps {
   formId: string;
   nextSortOrder: number;
-  onAdded: () => void;
+  onAdded: (question: FormQuestion) => void;
   onCancel: () => void;
 }
 
@@ -56,9 +56,9 @@ function AddQuestionForm({ formId, nextSortOrder, onAdded, onCancel }: AddQuesti
   const onSubmit = (values: FormQuestionValues) => {
     startTransition(async () => {
       try {
-        await createFormQuestion(formId, values);
+        const question = await createFormQuestion(formId, values);
         toast.success("Question added");
-        onAdded();
+        onAdded(question as FormQuestion);
       } catch {
         toast.error("Failed to add question");
       }
@@ -212,9 +212,9 @@ export function QuestionEditor({ formId, questions, onQuestionsChange }: Questio
         <AddQuestionForm
           formId={formId}
           nextSortOrder={questions.length}
-          onAdded={() => {
+          onAdded={(question) => {
             setAdding(false);
-            // Parent page will refetch via router.refresh() or re-render
+            onQuestionsChange([...questions, question]);
           }}
           onCancel={() => setAdding(false)}
         />

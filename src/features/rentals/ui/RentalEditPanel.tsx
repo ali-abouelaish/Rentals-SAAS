@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 import { updateRentalCode } from "@/features/rentals/actions/rentals";
 import { formatGBP } from "@/lib/utils/formatters";
@@ -17,9 +18,7 @@ type RentalEditPanelProps = {
   clientId: string;
   consultationFeeAmount: number;
   paymentMethod: "cash" | "transfer" | "card";
-  propertyAddress: string;
-  licensorName: string;
-  marketingAgentNames: string[];
+  marketingAgentIds: string[];
   marketingFeeDefault: number;
   commissionPercent: number;
   agents: AgentOption[];
@@ -30,21 +29,19 @@ export function RentalEditPanel({
   clientId,
   consultationFeeAmount,
   paymentMethod,
-  propertyAddress,
-  licensorName,
-  marketingAgentNames: initialMarketingAgentNames,
+  marketingAgentIds: initialMarketingAgentIds,
   marketingFeeDefault,
   commissionPercent,
   agents,
 }: RentalEditPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [marketingAgentNames, setMarketingAgentNames] = useState<string[]>(initialMarketingAgentNames);
+  const [marketingAgentIds, setMarketingAgentIds] = useState<string[]>(initialMarketingAgentIds);
   const [overrideFee, setOverrideFee] = useState<string>("");
   const [overrideReason, setOverrideReason] = useState<string>("");
   const [currentPaymentMethod, setCurrentPaymentMethod] = useState(paymentMethod);
   const [currentFeeAmount, setCurrentFeeAmount] = useState(String(consultationFeeAmount));
 
-  const hasMarketing = marketingAgentNames.some(Boolean);
+  const hasMarketing = marketingAgentIds.some(Boolean);
 
   const paymentFee = currentPaymentMethod === "cash" ? 0 : currentPaymentMethod === "transfer" ? 0.2 : 0.0175;
   const base = useMemo(
@@ -58,8 +55,8 @@ export function RentalEditPanel({
   const assistedNet = useMemo(() => Math.round((gross - (hasMarketing ? appliedFee : 0)) * 100) / 100, [gross, appliedFee, hasMarketing]);
 
   const handleSubmit = async (formData: FormData) => {
-    marketingAgentNames.filter(Boolean).forEach((name) => {
-      formData.append("marketing_agent_name", name);
+    marketingAgentIds.filter(Boolean).forEach((id) => {
+      formData.append("marketing_agent_id_list", id);
     });
     if (overrideActive) {
       formData.append("marketing_fee_override_gbp", String(overrideValue));
@@ -79,7 +76,7 @@ export function RentalEditPanel({
           size="sm"
           onClick={() => {
             if (!isEditing) {
-              setMarketingAgentNames(initialMarketingAgentNames);
+              setMarketingAgentIds(initialMarketingAgentIds);
               setOverrideFee("");
               setOverrideReason("");
             }
@@ -123,47 +120,37 @@ export function RentalEditPanel({
                 <option value="card">Card</option>
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-foreground-secondary">Property address</label>
-              <Input name="property_address" defaultValue={propertyAddress} placeholder="Property address" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-foreground-secondary">Licensor name</label>
-              <Input name="licensor_name" defaultValue={licensorName} placeholder="Licensor name" />
-            </div>
-
             <div className="md:col-span-2 space-y-2">
               <label className="text-xs text-foreground-secondary block">Marketing agents (optional)</label>
-              {marketingAgentNames.map((name, index) => (
+              {marketingAgentIds.map((agentId, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <Input
-                    list="marketing-agent-edit-list"
-                    value={name}
-                    placeholder="Search by name"
-                    onChange={(e) => {
-                      const updated = [...marketingAgentNames];
-                      updated[index] = e.target.value;
-                      setMarketingAgentNames(updated);
+                  <Select
+                    value={agentId}
+                    onChange={(val: string) => {
+                      const updated = [...marketingAgentIds];
+                      updated[index] = val;
+                      setMarketingAgentIds(updated);
                     }}
+                    options={[
+                      { label: "Select agent", value: "" },
+                      ...agents
+                        .filter((a) => a.id === agentId || !marketingAgentIds.includes(a.id))
+                        .map((a) => ({ label: a.display_name ?? "Agent", value: a.id })),
+                    ]}
                   />
                   <button
                     type="button"
-                    onClick={() => setMarketingAgentNames(marketingAgentNames.filter((_, i) => i !== index))}
+                    onClick={() => setMarketingAgentIds(marketingAgentIds.filter((_, i) => i !== index))}
                     className="text-error hover:text-error/80"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
               ))}
-              <datalist id="marketing-agent-edit-list">
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.display_name ?? "Agent"} />
-                ))}
-              </datalist>
-              {marketingAgentNames.length < 5 && (
+              {marketingAgentIds.length < 5 && (
                 <button
                   type="button"
-                  onClick={() => setMarketingAgentNames([...marketingAgentNames, ""])}
+                  onClick={() => setMarketingAgentIds([...marketingAgentIds, ""])}
                   className="text-xs text-brand hover:underline"
                 >
                   + Add marketing agent

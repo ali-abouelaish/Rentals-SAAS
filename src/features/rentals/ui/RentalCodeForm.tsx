@@ -26,7 +26,16 @@ export function RentalCodeForm({
   const [clientIdFiles, setClientIdFiles] = useState<File[]>([]);
   const [nextCode, setNextCode] = useState<string | null>(null);
   const [loadingCode, setLoadingCode] = useState(false);
-  const [marketingAgentNames, setMarketingAgentNames] = useState<string[]>([]);
+  const [marketingAgentIds, setMarketingAgentIds] = useState<string[]>([]);
+  const [fee, setFee] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+
+  const isComplete =
+    fee !== "" && Number(fee) > 0 &&
+    paymentMethod !== "" &&
+    sourcingFiles.length > 0 &&
+    paymentFiles.length > 0 &&
+    clientIdFiles.length > 0;
 
   const loadCode = useCallback(async () => {
     try {
@@ -67,9 +76,9 @@ export function RentalCodeForm({
     paymentFiles.forEach((file) => formData.append("payment_proof", file));
     clientIdFiles.forEach((file) => formData.append("client_id_doc", file));
 
-    // Append marketing agent names as individual form fields
-    marketingAgentNames.filter(Boolean).forEach((name) => {
-      formData.append("marketing_agent_name", name);
+    // Append marketing agent IDs as individual form fields
+    marketingAgentIds.filter(Boolean).forEach((id) => {
+      formData.append("marketing_agent_id_list", id);
     });
 
     startTransition(async () => {
@@ -81,7 +90,9 @@ export function RentalCodeForm({
         setSourcingFiles([]);
         setPaymentFiles([]);
         setClientIdFiles([]);
-        setMarketingAgentNames([]);
+        setMarketingAgentIds([]);
+        setFee("");
+        setPaymentMethod("");
         // Refresh the next code preview
         loadCode();
       } catch (error) {
@@ -137,11 +148,14 @@ export function RentalCodeForm({
           type="number"
           step="0.01"
           min="0"
+          value={fee}
+          onChange={(e) => setFee(e.target.value)}
           required
         />
         <Select
           name="payment_method"
-          defaultValue=""
+          value={paymentMethod}
+          onChange={(val: string) => setPaymentMethod(val)}
           options={[
             { label: "Select payment method", value: "" },
             { label: "💵 Cash", value: "cash" },
@@ -149,48 +163,39 @@ export function RentalCodeForm({
             { label: "💳 Card", value: "card" },
           ]}
         />
-        <Input
-          name="property_address"
-          placeholder="Property address"
-        />
-        <Input
-          name="licensor_name"
-          placeholder="Licensor name"
-        />
         <div className="md:col-span-2 space-y-2">
           <label className="text-xs text-foreground-secondary block">
             Marketing agents (optional)
           </label>
-          {marketingAgentNames.map((name, index) => (
+          {marketingAgentIds.map((agentId, index) => (
             <div key={index} className="flex items-center gap-2">
-              <Input
-                list="marketing-agent-list"
-                value={name}
-                placeholder="Search by name"
-                onChange={(e) => {
-                  const updated = [...marketingAgentNames];
-                  updated[index] = e.target.value;
-                  setMarketingAgentNames(updated);
+              <Select
+                value={agentId}
+                onChange={(val: string) => {
+                  const updated = [...marketingAgentIds];
+                  updated[index] = val;
+                  setMarketingAgentIds(updated);
                 }}
+                options={[
+                  { label: "Select agent", value: "" },
+                  ...agents
+                    .filter((a) => a.id === agentId || !marketingAgentIds.includes(a.id))
+                    .map((a) => ({ label: a.name, value: a.id })),
+                ]}
               />
               <button
                 type="button"
-                onClick={() => setMarketingAgentNames(marketingAgentNames.filter((_, i) => i !== index))}
+                onClick={() => setMarketingAgentIds(marketingAgentIds.filter((_, i) => i !== index))}
                 className="text-error hover:text-error/80"
               >
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
-          <datalist id="marketing-agent-list">
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.name} />
-            ))}
-          </datalist>
-          {marketingAgentNames.length < 5 && (
+          {marketingAgentIds.length < 5 && (
             <button
               type="button"
-              onClick={() => setMarketingAgentNames([...marketingAgentNames, ""])}
+              onClick={() => setMarketingAgentIds([...marketingAgentIds, ""])}
               className="text-xs text-brand hover:underline"
             >
               + Add marketing agent
@@ -275,7 +280,7 @@ export function RentalCodeForm({
       </div>
 
       <div className="pt-4">
-        <Button type="submit" disabled={isPending} className="w-full md:w-auto">
+        <Button type="submit" disabled={isPending || !isComplete} className="w-full md:w-auto">
           {isPending ? "Creating..." : "Create rental code"}
         </Button>
       </div>

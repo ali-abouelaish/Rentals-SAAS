@@ -84,3 +84,45 @@ export async function updatePmTenantDocuments(
   revalidatePath("/tenants");
   return data;
 }
+
+export async function uploadPmTenantDocument(formData: FormData) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const pmTenantId = String(formData.get("pm_tenant_id") ?? "");
+  const docType = String(formData.get("doc_type") ?? "") as "passport_photo" | "passport_scan";
+  const file = formData.get("file") as File;
+
+  if (!pmTenantId || !docType || !file?.size) {
+    throw new Error("Missing required fields.");
+  }
+
+  const ext = file.name.split(".").pop() ?? "bin";
+  const filePath = `${profile.tenant_id}/${pmTenantId}/${docType}/${crypto.randomUUID()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("pm-tenant-docs")
+    .upload(filePath, file);
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data: urlData } = supabase.storage
+    .from("pm-tenant-docs")
+    .getPublicUrl(filePath);
+
+  const docs =
+    docType === "passport_photo"
+      ? { passport_photo_url: urlData.publicUrl }
+      : { passport_scan_url: urlData.publicUrl };
+
+  const { data, error } = await supabase
+    .from("pm_tenants")
+    .update({ ...docs, updated_at: new Date().toISOString() })
+    .eq("id", pmTenantId)
+    .eq("tenant_id", profile.tenant_id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/tenants");
+  return data;
+}

@@ -19,7 +19,7 @@ export async function createFormQuestion(formId: string, values: FormQuestionVal
     .single();
   if (!form) throw new Error("Form not found");
 
-  const { error } = await supabase.from("form_questions").insert({
+  const { data, error } = await supabase.from("form_questions").insert({
     tenant_id: profile.tenant_id,
     form_id: formId,
     question_text: values.question_text,
@@ -27,10 +27,11 @@ export async function createFormQuestion(formId: string, values: FormQuestionVal
     options: values.options && values.options.length > 0 ? JSON.stringify(values.options) : null,
     is_required: values.is_required,
     sort_order: values.sort_order,
-  });
+  }).select("*").single();
 
   if (error) throw new Error(error.message);
   revalidatePath("/settings/booking-forms");
+  return data;
 }
 
 export async function updateFormQuestion(id: string, values: Partial<FormQuestionValues>) {

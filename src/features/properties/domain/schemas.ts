@@ -12,7 +12,7 @@ export const propertySchema = z.object({
   name: z.string().min(1, "Name is required"),
   address_line_1: z.string().min(1, "Address is required"),
   address_line_2: z.string().nullable().optional().or(z.literal("")),
-  postcode: z.string().nullable().optional().or(z.literal("")),
+  postcode: z.string().min(1, "Postcode is required"),
   area: z.string().nullable().optional().or(z.literal("")),
   nearest_tube_station: z.string().nullable().optional().or(z.literal("")),
   total_rooms: z.preprocess(

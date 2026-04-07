@@ -38,7 +38,7 @@ const TargetSchema = z.object({
 // ──────────────────────────────────────────────────────────
 
 export async function createPropertyCost(raw: z.infer<typeof CostSchema>) {
-  await requireRole([...ADMIN_ROLES]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const parsed = CostSchema.safeParse(raw);
   if (!parsed.success) {
     return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
@@ -47,6 +47,7 @@ export async function createPropertyCost(raw: z.infer<typeof CostSchema>) {
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("property_costs").insert({
+    tenant_id: profile.tenant_id,
     property_id: data.property_id,
     unit_id: data.unit_id ?? null,
     cost_type: data.cost_type,
@@ -118,7 +119,7 @@ export async function deletePropertyCost(id: string, propertyId: string) {
 // ──────────────────────────────────────────────────────────
 
 export async function upsertPropertyTarget(raw: z.infer<typeof TargetSchema>) {
-  await requireRole([...ADMIN_ROLES]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const parsed = TargetSchema.safeParse(raw);
   if (!parsed.success) {
     return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
@@ -127,7 +128,7 @@ export async function upsertPropertyTarget(raw: z.infer<typeof TargetSchema>) {
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("property_targets").upsert(
-    { property_id, target_profit_pcm, updated_at: new Date().toISOString() },
+    { tenant_id: profile.tenant_id, property_id, target_profit_pcm, updated_at: new Date().toISOString() },
     { onConflict: "tenant_id,property_id" }
   );
   if (error) return { error: error.message };

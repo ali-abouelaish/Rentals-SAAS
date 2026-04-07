@@ -2,13 +2,150 @@
 
 import Link from "next/link";
 import { differenceInDays, parseISO } from "date-fns";
-import { MapPin, Clock, User, Warehouse, Pencil, Key } from "lucide-react";
+import { MapPin, Clock, User, Warehouse, Pencil, Key, PoundSterling, Check } from "lucide-react";
+import { useState, useTransition, useEffect } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
 import { UnitStatusBadge } from "./UnitStatusBadge";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { AddRoomDialog } from "./AddRoomDialog";
 import { DeletePropertyButton } from "./DeletePropertyButton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  getActiveContractForUnit,
+  recordRentPayment,
+} from "@/features/contracts/actions/rent-payments";
 import type { Property, Unit } from "../domain/types";
+
+const MONTH_NAMES = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open: boolean; onClose: () => void; onPaid: (year: number, month: number) => void }) {
+  const now = new Date();
+  const [isPending, startTransition] = useTransition();
+  const [loaded, setLoaded] = useState(false);
+  const [contract, setContract] = useState<{ id: string; rent_pcm: number; collection_date: number | null } | null>(null);
+  const [periodYear, setPeriodYear] = useState(now.getFullYear());
+  const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Fetch contract once when dialog first opens
+  useEffect(() => {
+    if (open && !loaded) {
+      setLoaded(true);
+      getActiveContractForUnit(unit.id).then((c) => {
+        setContract(c);
+        if (c) setAmount(String(c.rent_pcm));
+      });
+    }
+  }, [open, loaded, unit.id]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contract) return;
+    const parsed = parseFloat(amount);
+    if (!parsed || parsed <= 0) { toast.error("Enter a valid amount"); return; }
+    startTransition(async () => {
+      try {
+        await recordRentPayment({
+          contractId: contract.id,
+          unitId: unit.id,
+          periodYear,
+          periodMonth,
+          amount: parsed,
+          notes: notes.trim() || undefined,
+        });
+        toast.success(`Rent marked as paid — ${MONTH_NAMES[periodMonth - 1]} ${periodYear}`);
+        onPaid(periodYear, periodMonth);
+        onClose();
+        setNotes("");
+      } catch {
+        toast.error("Failed to record payment");
+      }
+    });
+  };
+
+  const unitLabel =
+    unit.unit_type === "room"
+      ? unit.room_number ? `Room ${unit.room_number}` : "Room"
+      : unit.unit_type === "studio" ? "Studio" : "Whole Flat";
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-sm" aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle>Mark Rent Paid — {unitLabel}</DialogTitle>
+        </DialogHeader>
+        {!loaded || (loaded && !contract) ? (
+          <p className="text-sm text-foreground-secondary py-2">
+            {loaded ? "No active contract found for this unit." : "Loading…"}
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3 mt-1">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-foreground">Amount (£)</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                step="0.01"
+                min="0"
+                className="h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground">Month</label>
+                <select
+                  value={periodMonth}
+                  onChange={(e) => setPeriodMonth(Number(e.target.value))}
+                  className="h-9 w-full rounded-lg border border-border bg-surface-inset px-2 text-sm"
+                >
+                  {MONTH_NAMES.map((m, i) => (
+                    <option key={m} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground">Year</label>
+                <select
+                  value={periodYear}
+                  onChange={(e) => setPeriodYear(Number(e.target.value))}
+                  className="h-9 w-full rounded-lg border border-border bg-surface-inset px-2 text-sm"
+                >
+                  {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-foreground">Notes (optional)</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. bank transfer"
+                className="h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm"
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-1 border-t border-border">
+              <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+              <Button type="submit" variant="secondary" size="sm" loading={isPending}>
+                <Check className="h-3.5 w-3.5 mr-1" />
+                Confirm
+              </Button>
+            </div>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function formatPrice(min: number | null, max: number | null): string {
   if (!min && !max) return "—";
@@ -56,88 +193,122 @@ function UnitRow({
   onUnitClick: (id: string) => void;
   striped: boolean;
 }) {
+  const now = new Date();
   const daysEmpty = getDaysEmpty(unit);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [paidThisMonth, setPaidThisMonth] = useState(false);
+
   return (
-    <button
-      type="button"
-      onClick={() => onUnitClick(unit.id)}
-      className={cn(
-        COLS,
-        "w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-inset",
-        striped && "bg-surface-inset/40"
-      )}
-    >
-      {/* Unit label */}
-      <div className="flex items-center min-w-0 pl-5 border-l-2 border-border">
-        <span className="text-sm font-medium text-foreground">{formatUnitLabel(unit)}</span>
-      </div>
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onUnitClick(unit.id)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onUnitClick(unit.id); }}
+        className={cn(
+          COLS,
+          "w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-inset cursor-pointer",
+          striped && "bg-surface-inset/40"
+        )}
+      >
+        {/* Unit label */}
+        <div className="flex items-center min-w-0 pl-5 border-l-2 border-border">
+          <span className="text-sm font-medium text-foreground">{formatUnitLabel(unit)}</span>
+        </div>
 
-      {/* Status */}
-      <div className="flex items-center">
-        <UnitStatusBadge status={unit.status} size="sm" />
-      </div>
+        {/* Status */}
+        <div className="flex items-center">
+          <UnitStatusBadge status={unit.status} size="sm" />
+        </div>
 
-      {/* Available date */}
-      <div className="flex items-center">
-        {unit.available_date ? (
-          <span className="text-xs text-foreground-secondary">
-            {new Date(unit.available_date).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-            })}
+        {/* Available date */}
+        <div className="flex items-center">
+          {unit.available_date ? (
+            <span className="text-xs text-foreground-secondary">
+              {new Date(unit.available_date).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+              })}
+            </span>
+          ) : (
+            <span className="text-xs text-foreground-muted">—</span>
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="flex items-center">
+          <span className="text-sm font-medium text-foreground tabular-nums">
+            {formatPrice(unit.min_price_pcm, unit.max_price_pcm)}
           </span>
-        ) : (
-          <span className="text-xs text-foreground-muted">—</span>
-        )}
-      </div>
+        </div>
 
-      {/* Price */}
-      <div className="flex items-center">
-        <span className="text-sm font-medium text-foreground tabular-nums">
-          {formatPrice(unit.min_price_pcm, unit.max_price_pcm)}
-        </span>
-      </div>
-
-      {/* Tenant */}
-      <div className="flex items-center min-w-0">
-        {unit.resident ? (
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div className="h-5 w-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
-              <User className="h-3 w-3 text-brand" />
+        {/* Tenant */}
+        <div className="flex items-center min-w-0">
+          {unit.resident ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="h-5 w-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <User className="h-3 w-3 text-brand" />
+              </div>
+              <span className="text-xs text-foreground truncate">{unit.resident.full_name}</span>
             </div>
-            <span className="text-xs text-foreground truncate">{unit.resident.full_name}</span>
-          </div>
-        ) : (
-          <span className="text-xs text-foreground-muted">Vacant</span>
-        )}
-      </div>
+          ) : (
+            <span className="text-xs text-foreground-muted">Vacant</span>
+          )}
+        </div>
 
-      {/* Days empty */}
-      <div className="flex items-center justify-center">
-        {daysEmpty !== null ? (
-          <span
+        {/* Days empty */}
+        <div className="flex items-center justify-center">
+          {daysEmpty !== null ? (
+            <span
+              className={cn(
+                "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium",
+                daysEmpty === 0
+                  ? "bg-green-50 text-green-700"
+                  : daysEmpty <= 7
+                  ? "bg-amber-50 text-amber-700"
+                  : daysEmpty <= 30
+                  ? "bg-orange-50 text-orange-700"
+                  : "bg-red-50 text-red-700"
+              )}
+            >
+              <Clock className="h-2.5 w-2.5" />
+              {daysEmpty}d
+            </span>
+          ) : (
+            <span className="text-xs text-foreground-muted">—</span>
+          )}
+        </div>
+
+        {/* Mark rent paid action */}
+        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            title={paidThisMonth ? "Rent paid this month" : "Mark rent paid"}
+            onClick={() => setDialogOpen(true)}
             className={cn(
-              "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium",
-              daysEmpty === 0
-                ? "bg-green-50 text-green-700"
-                : daysEmpty <= 7
-                ? "bg-amber-50 text-amber-700"
-                : daysEmpty <= 30
-                ? "bg-orange-50 text-orange-700"
-                : "bg-red-50 text-red-700"
+              "flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors",
+              paidThisMonth
+                ? "border-green-400 bg-green-50 text-green-700 hover:bg-green-100"
+                : "border-border bg-surface-card text-foreground-secondary hover:border-green-400 hover:text-green-700 hover:bg-green-50"
             )}
           >
-            <Clock className="h-2.5 w-2.5" />
-            {daysEmpty}d
-          </span>
-        ) : (
-          <span className="text-xs text-foreground-muted">—</span>
-        )}
+            <PoundSterling className="h-3 w-3" />
+            Paid
+          </button>
+        </div>
       </div>
 
-      {/* empty last cell */}
-      <div />
-    </button>
+      <MarkRentPaidDialog
+        unit={unit}
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onPaid={(year, month) => {
+          if (year === now.getFullYear() && month === now.getMonth() + 1) {
+            setPaidThisMonth(true);
+          }
+        }}
+      />
+    </>
   );
 }
 
@@ -220,7 +391,8 @@ function PropertyGroup({
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Available</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Price PCM</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Tenant</div>
-          <div className="col-span-2 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-center">Empty</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-center">Empty</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-right">Rent</div>
         </div>
       )}
 

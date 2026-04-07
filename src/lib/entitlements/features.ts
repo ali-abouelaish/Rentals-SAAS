@@ -19,6 +19,7 @@ export type FeatureKey =
   | "contracts"
   | "profitability"
   | "maintenance"
+  | "acquisition_insights"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -42,6 +43,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "contracts",
   "profitability",
   "maintenance",
+  "acquisition_insights",
   "admin",
 ];
 
@@ -98,6 +100,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   maintenance: {
     label: "Maintenance",
     description: "Maintenance job tracking, cost logging, and profitability integration."
+  },
+  acquisition_insights: {
+    label: "Acquisition Insights",
+    description: "AI-powered property evaluation tool with break-even calculator and portfolio-based recommendations."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

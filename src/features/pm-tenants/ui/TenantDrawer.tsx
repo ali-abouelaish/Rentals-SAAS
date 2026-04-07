@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { RightToRentBadge } from "./RightToRentBadge";
-import { updatePmTenant, deletePmTenant } from "../actions/pm-tenants";
+import { updatePmTenant, deletePmTenant, uploadPmTenantDocument } from "../actions/pm-tenants";
 import { createGuarantor, deleteGuarantor } from "../actions/guarantors";
 import { pmTenantSchema, guarantorSchema, type PmTenantFormValues, type GuarantorFormValues } from "../domain/schemas";
 import {
@@ -433,10 +433,34 @@ function EmergencyContactContent({ tenant, isEditing, onSaved }: { tenant: PmTen
   );
 }
 
-function DocumentsContent({ tenant }: { tenant: PmTenant }) {
+function DocumentsContent({
+  tenant,
+  onTenantUpdated,
+}: {
+  tenant: PmTenant;
+  onTenantUpdated: (t: PmTenant) => void;
+}) {
+  const [uploading, setUploading] = useState<"passport_photo" | "passport_scan" | null>(null);
+
+  const handleUpload = (docType: "passport_photo" | "passport_scan", file: File) => {
+    setUploading(docType);
+    const formData = new FormData();
+    formData.set("pm_tenant_id", tenant.id);
+    formData.set("doc_type", docType);
+    formData.set("file", file);
+    uploadPmTenantDocument(formData)
+      .then((updated) => {
+        toast.success("Document uploaded");
+        onTenantUpdated(updated as unknown as PmTenant);
+      })
+      .catch(() => toast.error("Failed to upload document"))
+      .finally(() => setUploading(null));
+  };
+
   return (
     <div className="space-y-4 py-1">
-      <div className="rounded-lg border border-border bg-surface-inset p-4 space-y-2">
+      {/* Passport Photo */}
+      <div className="rounded-lg border border-border bg-surface-inset p-4 space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">Passport Photo</p>
         {tenant.passport_photo_url ? (
           <a href={tenant.passport_photo_url} target="_blank" rel="noopener noreferrer">
@@ -446,8 +470,28 @@ function DocumentsContent({ tenant }: { tenant: PmTenant }) {
         ) : (
           <p className="text-sm text-foreground-secondary">No passport photo uploaded.</p>
         )}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-foreground-muted" htmlFor="passport-photo-input">
+            {tenant.passport_photo_url ? "Replace photo" : "Upload photo"}
+          </label>
+          <input
+            id="passport-photo-input"
+            type="file"
+            accept="image/*"
+            disabled={uploading === "passport_photo"}
+            className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleUpload("passport_photo", file);
+              e.target.value = "";
+            }}
+          />
+          {uploading === "passport_photo" && <p className="text-xs text-foreground-muted">Uploading…</p>}
+        </div>
       </div>
-      <div className="rounded-lg border border-border bg-surface-inset p-4 space-y-2">
+
+      {/* Passport Scan */}
+      <div className="rounded-lg border border-border bg-surface-inset p-4 space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">Passport Scan</p>
         {tenant.passport_scan_url ? (
           <a
@@ -461,10 +505,25 @@ function DocumentsContent({ tenant }: { tenant: PmTenant }) {
         ) : (
           <p className="text-sm text-foreground-secondary">No passport scan uploaded.</p>
         )}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-foreground-muted" htmlFor="passport-scan-input">
+            {tenant.passport_scan_url ? "Replace scan" : "Upload scan"}
+          </label>
+          <input
+            id="passport-scan-input"
+            type="file"
+            accept="image/*,application/pdf"
+            disabled={uploading === "passport_scan"}
+            className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleUpload("passport_scan", file);
+              e.target.value = "";
+            }}
+          />
+          {uploading === "passport_scan" && <p className="text-xs text-foreground-muted">Uploading…</p>}
+        </div>
       </div>
-      <p className="text-xs text-foreground-muted">
-        Document uploads can be managed directly in Supabase Storage (pm-tenant-docs bucket).
-      </p>
     </div>
   );
 }
@@ -509,7 +568,7 @@ export function TenantDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <SheetContent side="right" className="flex flex-col p-0 w-full max-w-[896px]">
+      <SheetContent side="right" className="flex flex-col p-0 w-full sm:max-w-[874px]">
         {/* Header */}
         <SheetHeader className="shrink-0">
           <div className="flex items-start justify-between gap-3">
@@ -562,7 +621,12 @@ export function TenantDrawer({
           {activeTab === "guarantors" && (
             <GuarantorsContent tenant={localTenant} onTenantUpdated={(t) => { setLocalTenant(t); onTenantUpdated(t); }} />
           )}
-          {activeTab === "documents" && <DocumentsContent tenant={localTenant} />}
+          {activeTab === "documents" && (
+            <DocumentsContent
+              tenant={localTenant}
+              onTenantUpdated={(t) => { setLocalTenant(t); onTenantUpdated(t); }}
+            />
+          )}
           {activeTab === "rtr" && (
             <RightToRentContent tenant={localTenant} isEditing={isEditing} onSaved={handleSaved} />
           )}

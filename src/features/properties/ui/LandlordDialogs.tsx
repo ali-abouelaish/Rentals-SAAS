@@ -118,41 +118,6 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Contract start">
-              <input type="date" {...register("contract_start_date")} className={inputCls} />
-            </Field>
-            <Field label="Contract expiry">
-              <input type="date" {...register("contract_expiry_date")} className={inputCls} />
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Monthly rent owed (£)" error={errors.monthly_rent_owed?.message}>
-              <input type="number" {...register("monthly_rent_owed")} className={inputCls} placeholder="1200" />
-            </Field>
-            <Field label="Payment schedule">
-              <select {...register("payment_schedule")} className={selectCls}>
-                <option value="">— Select —</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="biannual">Biannual</option>
-                <option value="annual">Annual</option>
-              </select>
-            </Field>
-          </div>
-
-          <div className="flex gap-4 pt-1">
-            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-              <input type="checkbox" {...register("alert_60_days")} className="rounded border-border" />
-              Alert 60 days before expiry
-            </label>
-            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-              <input type="checkbox" {...register("alert_30_days")} className="rounded border-border" />
-              Alert 30 days before expiry
-            </label>
-          </div>
-
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} disabled={isPending}>
               Cancel

@@ -34,7 +34,18 @@ export async function updateContract(id: string, values: Partial<ContractFormVal
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
-  const updates: Record<string, unknown> = { ...values, updated_at: new Date().toISOString() };
+  // Convert empty strings to null for nullable columns so Postgres doesn't reject them
+  const nullify = (v: unknown) => (v === "" ? null : v);
+
+  const updates: Record<string, unknown> = {
+    ...values,
+    updated_at: new Date().toISOString(),
+    deposit_scheme_ref: nullify(values.deposit_scheme_ref),
+    deposit_protected_date: nullify(values.deposit_protected_date),
+    document_url: nullify(values.document_url),
+    notes: nullify(values.notes),
+    collection_date: values.collection_date || null,
+  };
 
   // Re-compute deadline if start_date changed
   if (values.start_date) {

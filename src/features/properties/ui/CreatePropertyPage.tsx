@@ -413,7 +413,7 @@ function PhotoZone({
   category: UnitPhoto["category"];
   label: string;
   photos: StagedPhoto[];
-  onAdd: (file: File) => void;
+  onAdd: (files: File[]) => void;
   onRemove: (idx: number) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -450,10 +450,11 @@ function PhotoZone({
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        multiple
         className="sr-only"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onAdd(file);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) onAdd(files);
           e.target.value = "";
         }}
       />
@@ -671,7 +672,27 @@ export function CreatePropertyPage({
       {/* Two-column layout */}
       <form
         id="create-property-form"
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, (fieldErrors) => {
+          const labels: Record<string, string> = {
+            name: "Property name",
+            address_line_1: "Address",
+            postcode: "Postcode",
+            total_rooms: "Total rooms",
+            total_bathrooms: "Bathrooms",
+            monthly_rent_owed: "Monthly rent owed",
+          };
+          const names = Object.keys(fieldErrors);
+          const readable = names
+            .map((k) => labels[k] ?? k)
+            .slice(0, 3)
+            .join(", ");
+          toast.error(`Fix required fields: ${readable}`);
+          const first = document.querySelector<HTMLElement>(
+            names.map((n) => `[name="${n}"]`).join(",")
+          );
+          first?.scrollIntoView({ behavior: "smooth", block: "center" });
+          first?.focus({ preventScroll: true });
+        })}
         className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
       >
         {/* ── Left: form sections (2 of 3 cols) ── */}
@@ -729,7 +750,7 @@ export function CreatePropertyPage({
                 <Field label="Line 2">
                   <input {...register("address_line_2")} className={inputCls} placeholder="Flat, floor…" />
                 </Field>
-                <Field label="Postcode">
+                <Field label="Postcode" required error={errors.postcode?.message}>
                   <input {...register("postcode")} className={inputCls} placeholder="E14 9UB" />
                 </Field>
               </div>
@@ -936,10 +957,10 @@ export function CreatePropertyPage({
                     category={value}
                     label={label}
                     photos={stagedPhotos}
-                    onAdd={(file) => {
+                    onAdd={(files) => {
                       setStagedPhotos((prev) => [
                         ...prev,
-                        { file, category: value, preview: URL.createObjectURL(file) },
+                        ...files.map((file) => ({ file, category: value, preview: URL.createObjectURL(file) })),
                       ]);
                     }}
                     onRemove={(idx) => {

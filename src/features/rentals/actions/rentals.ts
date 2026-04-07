@@ -99,7 +99,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   const paymentMethod = String(formData.get("payment_method") ?? "cash");
   const propertyAddress = String(formData.get("property_address") ?? "");
   const licensorName = String(formData.get("licensor_name") ?? "");
-  const marketingAgentNames = (formData.getAll("marketing_agent_name") as string[]).filter(Boolean);
+  const marketingAgentIdList = (formData.getAll("marketing_agent_id_list") as string[]).filter(Boolean);
   const assistedByOverride = String(formData.get("assisted_by_agent_id") ?? "");
 
   // Extract files
@@ -128,22 +128,9 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     payment_method: paymentMethod as "cash" | "transfer" | "card",
     property_address: propertyAddress,
     licensor_name: licensorName,
-    marketing_agent_name: marketingAgentNames[0] || null
   });
 
-  // Resolve all marketing agent names to IDs
-  const resolvedMarketingAgentIds: string[] = [];
-  for (const name of marketingAgentNames) {
-    if (!name) continue;
-    const { data: agentMatch } = await supabase
-      .from("user_profiles")
-      .select("id")
-      .eq("tenant_id", profile.tenant_id)
-      .ilike("display_name", name)
-      .limit(1)
-      .single();
-    if (agentMatch?.id) resolvedMarketingAgentIds.push(agentMatch.id);
-  }
+  const resolvedMarketingAgentIds = [...new Set(marketingAgentIdList)];
   const marketingAgentId = resolvedMarketingAgentIds[0] ?? null;
 
   // Get client data — use admin client so agents can fetch any client in the
@@ -292,7 +279,7 @@ export async function updateRentalCode(formData: FormData) {
     throw new Error("Only pending rentals can be edited.");
   }
 
-  const marketingAgentNames = (formData.getAll("marketing_agent_name") as string[]).filter(Boolean);
+  const marketingAgentIdList = (formData.getAll("marketing_agent_id_list") as string[]).filter(Boolean);
   const overrideValueRaw = formData.get("marketing_fee_override_gbp");
   const overrideReason = String(formData.get("marketing_fee_override_reason") ?? "");
 
@@ -302,22 +289,9 @@ export async function updateRentalCode(formData: FormData) {
     payment_method: String(formData.get("payment_method") ?? "cash"),
     property_address: String(formData.get("property_address") ?? ""),
     licensor_name: String(formData.get("licensor_name") ?? ""),
-    marketing_agent_name: marketingAgentNames[0] || null
   });
 
-  // Resolve all marketing agent names to IDs
-  const resolvedMarketingAgentIds: string[] = [];
-  for (const name of marketingAgentNames) {
-    if (!name) continue;
-    const { data: agentMatch } = await supabase
-      .from("user_profiles")
-      .select("id")
-      .eq("tenant_id", rental.tenant_id)
-      .ilike("display_name", name)
-      .limit(1)
-      .single();
-    if (agentMatch?.id) resolvedMarketingAgentIds.push(agentMatch.id);
-  }
+  const resolvedMarketingAgentIds = [...new Set(marketingAgentIdList)];
   const marketingAgentId = resolvedMarketingAgentIds[0] ?? null;
 
   // Parse override if provided

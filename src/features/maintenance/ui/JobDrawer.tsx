@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,7 +34,8 @@ import {
   JOB_CATEGORY_LABELS,
 } from "../domain/types";
 import type { MaintenanceJob, JobStatus, MaintenanceCost } from "../domain/types";
-import { updateJobStatus, addJobCost, deleteJobCost, deleteJobPhoto } from "../actions";
+import { updateJobStatus, addJobCost, deleteJobCost, deleteJobPhoto, uploadJobPhoto } from "../actions";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // ──────────────────────────────────────────────────────────
 // Helpers
@@ -243,6 +244,8 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
   const [showAddCost, setShowAddCost] = useState(false);
   const [deletingCostId, setDeletingCostId] = useState<string | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   if (!job) return null;
 
@@ -278,6 +281,26 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
       }
     } finally {
       setDeletingPhotoId(null);
+    }
+  }
+
+  async function handlePhotoUpload(file: File) {
+    setUploadingPhoto(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${job!.tenant_id}/maintenance/${job!.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("property_photos").upload(path, file);
+      if (uploadError) { toast.error("Failed to upload photo"); return; }
+      const { data: urlData } = supabase.storage.from("property_photos").getPublicUrl(path);
+      const result = await uploadJobPhoto(job!.id, urlData.publicUrl);
+      if (result?.error) { toast.error(result.error); return; }
+      toast.success("Photo added");
+      const newPhotos = [...(job!.photos ?? []), result.photo!];
+      onJobUpdated({ id: job!.id, photos: newPhotos });
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
     }
   }
 
@@ -482,13 +505,23 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
                   {photos.length} photo{photos.length !== 1 ? "s" : ""}
                 </p>
                 <button
-                  disabled
-                  title="Connect Supabase Storage to enable photo upload"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-border px-4 py-2 text-sm text-foreground-muted cursor-not-allowed"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-border px-4 py-2 text-sm text-foreground-secondary hover:text-foreground hover:border-foreground-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus size={14} />
-                  Upload Photo
+                  {uploadingPhoto ? "Uploading…" : "Upload Photo"}
                 </button>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handlePhotoUpload(file);
+                  }}
+                />
               </div>
 
               {photos.length > 0 ? (
@@ -520,7 +553,7 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
                 <div className="py-12 text-center">
                   <Image size={32} className="mx-auto text-foreground-muted mb-3" strokeWidth={1.5} />
                   <p className="text-sm text-foreground-secondary">No photos attached</p>
-                  <p className="text-xs text-foreground-muted mt-1">Upload via Supabase Storage to enable this feature.</p>
+                  <p className="text-xs text-foreground-muted mt-1">Click &ldquo;Upload Photo&rdquo; to add before/after or progress photos.</p>
                 </div>
               )}
             </TabsContent>

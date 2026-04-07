@@ -7,9 +7,8 @@ export const rentalCodeSchema = z.object({
   client_id: z.string().uuid(),
   consultation_fee_amount: z.coerce.number().min(0),
   payment_method: paymentMethodEnum,
-  // Optional fields: allow empty strings
-  property_address: z.string(),
-  licensor_name: z.string(),
+  property_address: z.string().optional().default(""),
+  licensor_name: z.string().optional().default(""),
   marketing_agent_id: z.string().uuid().optional().nullable().or(z.literal("")),
   marketing_agent_name: z.string().optional().nullable().or(z.literal(""))
 });

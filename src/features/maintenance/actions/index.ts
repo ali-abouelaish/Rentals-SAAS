@@ -64,13 +64,14 @@ async function recomputeJobTotal(supabase: ReturnType<typeof createSupabaseServe
 // ──────────────────────────────────────────────────────────
 
 export async function createMaintenanceJob(raw: z.infer<typeof NewJobSchema>) {
-  await requireRole([...ADMIN_ROLES]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const parsed = NewJobSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
   const d = parsed.data;
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("maintenance_jobs").insert({
+    tenant_id: profile.tenant_id,
     property_id: d.property_id,
     unit_id: d.unit_id ?? null,
     title: d.title,
@@ -94,7 +95,8 @@ export async function updateMaintenanceJob(
   id: string,
   raw: z.infer<typeof UpdateJobSchema>
 ) {
-  await requireRole([...ADMIN_ROLES]);
+  const profile = await requireRole([...ADMIN_ROLES]);
+  void profile; // tenant scoping enforced by RLS
   const parsed = UpdateJobSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
   const d = parsed.data;
@@ -175,7 +177,7 @@ export async function deleteMaintenanceJob(jobId: string) {
 // ──────────────────────────────────────────────────────────
 
 export async function addJobCost(raw: z.infer<typeof JobCostSchema>) {
-  await requireRole([...ADMIN_ROLES]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const parsed = JobCostSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
   const d = parsed.data;
@@ -186,6 +188,7 @@ export async function addJobCost(raw: z.infer<typeof JobCostSchema>) {
   const { data: propCost, error: propCostErr } = await supabase
     .from("property_costs")
     .insert({
+      tenant_id: profile.tenant_id,
       property_id: d.property_id,
       cost_type: "maintenance",
       cost_label: d.description,
@@ -203,6 +206,7 @@ export async function addJobCost(raw: z.infer<typeof JobCostSchema>) {
 
   // Step 2: Create the maintenance_costs record
   const { error: maintCostErr } = await supabase.from("maintenance_costs").insert({
+    tenant_id: profile.tenant_id,
     job_id: d.job_id,
     property_cost_id: propCost.id,
     description: d.description,
@@ -264,9 +268,43 @@ export async function deleteJobCost(
 // Photo
 // ──────────────────────────────────────────────────────────
 
+const MAINTENANCE_BUCKET = "property_photos";
+
+export async function uploadJobPhoto(jobId: string, url: string, caption?: string) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("maintenance_photos")
+    .insert({ tenant_id: profile.tenant_id, job_id: jobId, url, caption: caption ?? null })
+    .select("*")
+    .single();
+  if (error) return { error: error.message };
+
+  revalidatePath("/maintenance");
+  return { success: true, photo: data };
+}
+
 export async function deleteJobPhoto(photoId: string) {
   await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
+
+  // Fetch URL to remove from storage too
+  const { data: photo } = await supabase
+    .from("maintenance_photos")
+    .select("url")
+    .eq("id", photoId)
+    .single();
+
+  if (photo?.url) {
+    const marker = `/${MAINTENANCE_BUCKET}/`;
+    const idx = photo.url.indexOf(marker);
+    if (idx !== -1) {
+      const storagePath = photo.url.slice(idx + marker.length).split("?")[0];
+      await supabase.storage.from(MAINTENANCE_BUCKET).remove([storagePath]);
+    }
+  }
+
   const { error } = await supabase.from("maintenance_photos").delete().eq("id", photoId);
   if (error) return { error: error.message };
   revalidatePath("/maintenance");
