@@ -71,8 +71,8 @@ export default function RoomEnhancerPage() {
   const [mode, setMode] = useState<Mode>("edit");
   const [prompt, setPrompt] = useState("");
   const [count, setCount] = useState("1");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [results, setResults] = useState<ApiImage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,15 +136,16 @@ export default function RoomEnhancerPage() {
   }, [supabase.auth]);
 
   useEffect(() => {
-    if (!imageFile) {
-      setPreviewUrl(null);
+    if (imageFiles.length === 0) {
+      setPreviewUrls([]);
       return;
     }
+    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    setPreviewUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [imageFiles]);
 
-    const url = URL.createObjectURL(imageFile);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [imageFile]);
+  const primaryPreviewUrl = previewUrls[0] ?? null;
 
   useEffect(() => {
     setDrawnPoints([]);
@@ -153,7 +154,7 @@ export default function RoomEnhancerPage() {
     setShowMaskEditor(false);
     setOriginalImageSize(null);
 
-    if (!previewUrl) return;
+    if (!primaryPreviewUrl) return;
     const img = new window.Image();
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
@@ -163,8 +164,8 @@ export default function RoomEnhancerPage() {
       visualFeedbackCanvasRef.current.width = img.width;
       visualFeedbackCanvasRef.current.height = img.height;
     };
-    img.src = previewUrl;
-  }, [previewUrl]);
+    img.src = primaryPreviewUrl;
+  }, [primaryPreviewUrl]);
 
   useEffect(() => {
     const displayCanvas = canvasRef.current;
@@ -310,16 +311,18 @@ export default function RoomEnhancerPage() {
 
     try {
       if (mode === "edit") {
-        if (!imageFile) {
-          throw new Error("Please upload an image first.");
+        if (imageFiles.length === 0) {
+          throw new Error("Please upload at least one image.");
         }
 
-        if (imageFile.size > MAX_IMAGE_BYTES) {
+        const oversized = imageFiles.find((f) => f.size > MAX_IMAGE_BYTES);
+        if (oversized) {
           const mb = (MAX_IMAGE_BYTES / (1024 * 1024)).toFixed(0);
-          throw new Error(`Image file is too large. Please upload an image under ${mb} MB.`);
+          throw new Error(`"${oversized.name}" is too large. Please upload images under ${mb} MB each.`);
         }
 
         if (
+          imageFiles.length === 1 &&
           originalImageSize &&
           (originalImageSize.width > MAX_IMAGE_DIMENSION ||
             originalImageSize.height > MAX_IMAGE_DIMENSION)
@@ -336,10 +339,10 @@ export default function RoomEnhancerPage() {
       form.append("n", count);
 
       if (mode === "edit") {
-        if (!imageFile) {
-          throw new Error("Please upload an image first.");
+        if (imageFiles.length === 0) {
+          throw new Error("Please upload at least one image.");
         }
-        form.append("image", imageFile, imageFile.name);
+        imageFiles.forEach((f) => form.append("image", f, f.name));
         if (maskFile) {
           form.append("mask", maskFile, maskFile.name);
         }
@@ -538,15 +541,16 @@ export default function RoomEnhancerPage() {
               {mode === "edit" && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <label className="block text-xs font-medium text-foreground-muted">Source image</label>
-                    {previewUrl && (
+                    <label className="block text-xs font-medium text-foreground-muted">
+                      Source image{imageFiles.length > 1 ? "s" : ""}
+                    </label>
+                    {imageFiles.length > 0 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setImageFile(null);
-                          setPreviewUrl(null);
+                          setImageFiles([]);
                           clearMask();
                           setShowMaskEditor(false);
                           setOriginalImageSize(null);
@@ -555,17 +559,47 @@ export default function RoomEnhancerPage() {
                         className="text-foreground-muted hover:text-foreground"
                       >
                         <X className="h-4 w-4 mr-1" />
-                        Dismiss image
+                        Clear all
                       </Button>
                     )}
                   </div>
                   <Input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    multiple
+                    onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))}
                     disabled={loading}
                   />
-                  {previewUrl && (
+
+                  {imageFiles.length > 1 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {imageFiles.map((file, idx) => (
+                        <div key={idx} className="relative group rounded-lg overflow-hidden border border-border bg-surface-inset">
+                          {previewUrls[idx] && (
+                            <Image
+                              src={previewUrls[idx]}
+                              alt={file.name}
+                              width={200}
+                              height={150}
+                              className="w-full h-20 object-cover"
+                              unoptimized
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setImageFiles((prev) => prev.filter((_, i) => i !== idx))}
+                            disabled={loading}
+                            className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                          <p className="truncate px-1.5 py-1 text-[10px] text-foreground-muted">{file.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {imageFiles.length === 1 && primaryPreviewUrl && (
                     <div className="space-y-2 rounded-xl border border-border bg-surface-inset p-3">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-medium text-foreground-secondary">Brush Mask Editor</p>
@@ -592,7 +626,7 @@ export default function RoomEnhancerPage() {
                           }}
                         >
                           <Image
-                            src={previewUrl}
+                            src={primaryPreviewUrl}
                             alt="Uploaded room preview"
                             width={originalImageSize?.width ?? 640}
                             height={originalImageSize?.height ?? 360}

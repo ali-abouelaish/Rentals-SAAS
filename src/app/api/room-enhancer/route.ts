@@ -86,10 +86,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ images, usage: result.usage ?? null });
     }
 
-    const image = formData.get("image");
-    if (!(image instanceof File)) {
+    const inputImages = formData.getAll("image").filter((f): f is File => f instanceof File);
+    if (inputImages.length === 0) {
       return NextResponse.json(
-        { error: "Image file is required in edit mode." },
+        { error: "At least one image file is required in edit mode." },
         { status: 400 }
       );
     }
@@ -100,24 +100,39 @@ export async function POST(request: NextRequest) {
     const referenceImage = formData.get("reference");
     const hasReference = referenceImage instanceof File;
 
-    const result = await openai.images.edit({
-      model,
-      prompt,
-      image: hasReference ? [referenceImage as File, image] : [image],
-      ...(hasMask ? { mask } : {}),
-      n,
-      size: "auto",
-      quality: "auto",
-    });
+    const editResults = await Promise.all(
+      inputImages.map((img) =>
+        openai.images.edit({
+          model,
+          prompt,
+          image: hasReference ? [referenceImage as File, img] : [img],
+          ...(hasMask ? { mask } : {}),
+          n,
+          size: "auto",
+          quality: "auto",
+        })
+      )
+    );
 
-    const images = (result.data ?? [])
-      .filter((item) => !!item.b64_json)
-      .map((item) => ({
-        b64_json: item.b64_json!,
-        output_format: "png" as const,
-      }));
+    const images = editResults.flatMap((result) =>
+      (result.data ?? [])
+        .filter((item) => !!item.b64_json)
+        .map((item) => ({
+          b64_json: item.b64_json!,
+          output_format: "png" as const,
+        }))
+    );
 
-    return NextResponse.json({ images, usage: result.usage ?? null });
+    const usage = editResults.reduce<Record<string, number> | null>((acc, r) => {
+      if (!r.usage) return acc;
+      const u = r.usage as Record<string, number>;
+      if (!acc) return { ...u };
+      return Object.fromEntries(
+        Object.keys(u).map((k) => [k, (acc[k] ?? 0) + (u[k] ?? 0)])
+      );
+    }, null);
+
+    return NextResponse.json({ images, usage });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unexpected Room Enhancer error.";
     return NextResponse.json({ error: message }, { status: 500 });
