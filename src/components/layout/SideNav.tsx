@@ -142,14 +142,23 @@ function SideNavInner({ profile, branding, moduleConfig }: SideNavProps) {
   // Logo block — differs between RA and PM
   const logoBlock = isPm ? (
     <div className="flex items-center gap-3 px-5 pt-6 pb-5">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
-        <Layers size={18} />
-      </div>
+      {raLogoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={raLogoUrl}
+          alt=""
+          className="h-10 w-10 rounded-xl object-contain bg-white/10 p-1 shrink-0"
+        />
+      ) : (
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
+          <Layers size={18} />
+        </div>
+      )}
       <div className="flex flex-col min-w-0">
         <span className="text-sm font-bold tracking-tight text-white truncate">
-          Harbor Ops
+          {raBrandName}
         </span>
-        <span className="text-[11px] text-sidebar-text">Tenant Management</span>
+        <span className="text-[11px] text-sidebar-text">Property Management</span>
       </div>
     </div>
   ) : (
@@ -188,11 +197,12 @@ function SideNavInner({ profile, branding, moduleConfig }: SideNavProps) {
         ).map((item) => {
           if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
           const active = isActive(item.href);
+          const linkHref = isPm && item.href === "/dashboard" ? "/dashboard?view=pm" : item.href;
 
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={linkHref}
               prefetch={false}
               onClick={() => {
                 setMobileOpen(false);

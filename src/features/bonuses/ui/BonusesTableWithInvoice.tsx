@@ -118,6 +118,7 @@ export function BonusesTableWithInvoice({ bonuses, isAdmin }: { bonuses: BonusRo
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggle(bonus)}
+                  onClick={(e) => e.stopPropagation()}
                   disabled={!["approved", "pending"].includes(bonus.status)}
                   className="h-4 w-4 rounded border-border text-brand focus:ring-brand shrink-0"
                 />

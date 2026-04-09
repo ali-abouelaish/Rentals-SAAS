@@ -5,7 +5,6 @@ import {
   createBillingProfile,
   updateBillingProfile,
   deleteBillingProfile,
-  uploadBillingLogo
 } from "@/features/invoices/actions/billingProfiles";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
@@ -56,7 +55,6 @@ export default async function BillingProfilesPage() {
             isAdmin={isAdmin}
             onUpdate={updateBillingProfile}
             onDelete={deleteBillingProfile}
-            onUploadLogo={uploadBillingLogo}
           />
         </CardContent>
       </Card>

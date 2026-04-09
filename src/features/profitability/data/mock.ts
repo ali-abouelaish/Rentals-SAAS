@@ -1,6 +1,6 @@
 /**
- * Realistic mock data for the Profitability module.
- * Used as a fallback when Phase 3 DB migrations have not yet been applied.
+ * Mock data for the Profitability module — Horizon Dreams & AP portfolios.
+ * Dev-mode fallback when Phase 3 DB migrations have not yet been applied.
  * All monetary amounts in pence unless noted.
  */
 
@@ -15,7 +15,7 @@ import type {
 } from "../domain/types";
 
 // ──────────────────────────────────────────────────────────
-// Costs
+// Cost factory
 // ──────────────────────────────────────────────────────────
 
 const makeCost = (
@@ -40,45 +40,116 @@ const makeCost = (
   ...overrides,
 });
 
-const prop1Costs: PropertyCost[] = [
-  makeCost("prop1", { id: "c1a", cost_type: "owner_rent", amount: 350000, date_incurred: "2025-10-01" }),
-  makeCost("prop1", { id: "c1b", cost_type: "council_tax", amount: 18000, date_incurred: "2025-10-01" }),
-  makeCost("prop1", { id: "c1c", cost_type: "insurance", amount: 9500, date_incurred: "2025-10-01" }),
-  makeCost("prop1", { id: "c1d", cost_type: "cleaning", cost_label: "Fortnightly clean", amount: 24000, date_incurred: "2025-10-01" }),
-  makeCost("prop1", { id: "c1e", cost_type: "bills", cost_label: "Broadband", amount: 6000, date_incurred: "2025-10-01" }),
+// ──────────────────────────────────────────────────────────
+// Costs — Horizon Dreams
+// ──────────────────────────────────────────────────────────
+
+const stMichaelsCosts: PropertyCost[] = [
+  makeCost("h_stmichaels", { id: "h1a", cost_type: "owner_rent", amount: 360000, date_incurred: "2025-10-01" }),
+  makeCost("h_stmichaels", { id: "h1b", cost_type: "council_tax", amount: 18000, date_incurred: "2025-10-01" }),
+  makeCost("h_stmichaels", { id: "h1c", cost_type: "insurance", amount: 9500, date_incurred: "2025-10-01" }),
+  makeCost("h_stmichaels", { id: "h1d", cost_type: "cleaning", cost_label: "Fortnightly clean", amount: 20000, date_incurred: "2025-10-01" }),
+  makeCost("h_stmichaels", { id: "h1e", cost_type: "bills", cost_label: "Broadband", amount: 8000, date_incurred: "2025-10-01" }),
 ];
 
-const prop2Costs: PropertyCost[] = [
-  makeCost("prop2", { id: "c2a", cost_type: "owner_rent", amount: 280000, date_incurred: "2025-07-01" }),
-  makeCost("prop2", { id: "c2b", cost_type: "council_tax", amount: 18000, date_incurred: "2025-07-01" }),
-  makeCost("prop2", { id: "c2c", cost_type: "insurance", amount: 9000, date_incurred: "2025-07-01" }),
-  makeCost("prop2", { id: "c2d", cost_type: "cleaning", amount: 18000, date_incurred: "2025-07-01" }),
-  makeCost("prop2", { id: "c2e", cost_type: "bills", cost_label: "Garden maintenance", amount: 8500, date_incurred: "2025-07-01" }),
+const chargrovesCosts: PropertyCost[] = [
+  makeCost("h_chargrove", { id: "h2a", cost_type: "owner_rent", amount: 320000, date_incurred: "2025-09-01" }),
+  makeCost("h_chargrove", { id: "h2b", cost_type: "council_tax", amount: 18000, date_incurred: "2025-09-01" }),
+  makeCost("h_chargrove", { id: "h2c", cost_type: "insurance", amount: 9500, date_incurred: "2025-09-01" }),
+  makeCost("h_chargrove", { id: "h2d", cost_type: "cleaning", amount: 18000, date_incurred: "2025-09-01" }),
+  makeCost("h_chargrove", { id: "h2e", cost_type: "bills", cost_label: "Utilities & Broadband", amount: 12000, date_incurred: "2025-09-01" }),
 ];
 
-const prop3Costs: PropertyCost[] = [
-  makeCost("prop3", { id: "c3a", cost_type: "owner_rent", amount: 210000, date_incurred: "2025-11-01" }),
-  makeCost("prop3", { id: "c3b", cost_type: "council_tax", amount: 15000, date_incurred: "2025-11-01" }),
-  makeCost("prop3", { id: "c3c", cost_type: "insurance", amount: 7500, date_incurred: "2025-11-01" }),
-  makeCost("prop3", { id: "c3d", cost_type: "cleaning", amount: 16000, date_incurred: "2025-11-01" }),
-  makeCost("prop3", {
-    id: "c3e", cost_type: "maintenance", cost_label: "Emergency boiler repair",
-    amount: 180000, cost_mode: "one_off", recurrence_day: null,
-    date_incurred: "2026-03-30",
+const bushRoadCosts: PropertyCost[] = [
+  makeCost("h_bush", { id: "h3a", cost_type: "owner_rent", amount: 280000, date_incurred: "2025-11-01" }),
+  makeCost("h_bush", { id: "h3b", cost_type: "council_tax", amount: 16000, date_incurred: "2025-11-01" }),
+  makeCost("h_bush", { id: "h3c", cost_type: "insurance", amount: 9500, date_incurred: "2025-11-01" }),
+  makeCost("h_bush", { id: "h3d", cost_type: "cleaning", amount: 16000, date_incurred: "2025-11-01" }),
+];
+
+const boundariesCosts: PropertyCost[] = [
+  makeCost("h_boundaries", { id: "h4a", cost_type: "owner_rent", amount: 380000, date_incurred: "2025-08-01" }),
+  makeCost("h_boundaries", { id: "h4b", cost_type: "council_tax", amount: 20000, date_incurred: "2025-08-01" }),
+  makeCost("h_boundaries", { id: "h4c", cost_type: "insurance", amount: 12000, date_incurred: "2025-08-01" }),
+  makeCost("h_boundaries", { id: "h4d", cost_type: "cleaning", cost_label: "Weekly clean", amount: 22000, date_incurred: "2025-08-01" }),
+  makeCost("h_boundaries", { id: "h4e", cost_type: "bills", cost_label: "Utilities package", amount: 30000, date_incurred: "2025-08-01" }),
+];
+
+const everardCosts: PropertyCost[] = [
+  makeCost("h_everard", { id: "h5a", cost_type: "owner_rent", amount: 250000, date_incurred: "2026-01-01" }),
+  makeCost("h_everard", { id: "h5b", cost_type: "council_tax", amount: 15000, date_incurred: "2026-01-01" }),
+  makeCost("h_everard", { id: "h5c", cost_type: "insurance", amount: 8500, date_incurred: "2026-01-01" }),
+  makeCost("h_everard", { id: "h5d", cost_type: "cleaning", amount: 16000, date_incurred: "2026-01-01" }),
+  makeCost("h_everard", {
+    id: "h5e",
+    cost_type: "maintenance",
+    cost_label: "Communal area repaint",
+    amount: 95000,
+    cost_mode: "one_off",
+    recurrence_day: null,
+    date_incurred: "2026-04-02",
   }),
 ];
 
-const prop6Costs: PropertyCost[] = [
-  makeCost("prop6", { id: "c6a", cost_type: "owner_rent", amount: 380000, date_incurred: "2025-09-01" }),
-  makeCost("prop6", { id: "c6b", cost_type: "council_tax", amount: 18000, date_incurred: "2025-09-01" }),
-  makeCost("prop6", { id: "c6c", cost_type: "insurance", amount: 11000, date_incurred: "2025-09-01" }),
-  makeCost("prop6", { id: "c6d", cost_type: "cleaning", cost_label: "Weekly clean", amount: 25000, date_incurred: "2025-09-01" }),
-  makeCost("prop6", { id: "c6e", cost_type: "bills", cost_label: "Broadband & Sky", amount: 8000, date_incurred: "2025-09-01" }),
-  makeCost("prop6", {
-    id: "c6f", cost_type: "furniture", cost_label: "Living room furniture refresh",
-    amount: 350000, cost_mode: "amortised", amortise_months: 24,
-    amortise_start_date: "2025-08-01", purchase_date: "2025-07-28",
-    date_incurred: "2025-07-28", recurrence_day: null,
+const parkWestCosts: PropertyCost[] = [
+  makeCost("h_parkwest", { id: "h6a", cost_type: "owner_rent", amount: 240000, date_incurred: "2025-12-01" }),
+  makeCost("h_parkwest", { id: "h6b", cost_type: "council_tax", amount: 18000, date_incurred: "2025-12-01" }),
+  makeCost("h_parkwest", { id: "h6c", cost_type: "insurance", amount: 11000, date_incurred: "2025-12-01" }),
+  makeCost("h_parkwest", { id: "h6d", cost_type: "cleaning", cost_label: "Professional clean", amount: 16000, date_incurred: "2025-12-01" }),
+  makeCost("h_parkwest", {
+    id: "h6e",
+    cost_type: "furniture",
+    cost_label: "Bedroom furniture upgrade",
+    amount: 280000,
+    cost_mode: "amortised",
+    amortise_months: 18,
+    amortise_start_date: "2026-01-01",
+    purchase_date: "2025-12-20",
+    date_incurred: "2025-12-20",
+    recurrence_day: null,
+  }),
+];
+
+// ──────────────────────────────────────────────────────────
+// Costs — AP
+// ──────────────────────────────────────────────────────────
+
+const apVictoriaCosts: PropertyCost[] = [
+  makeCost("ap_victoria", { id: "a1a", cost_type: "owner_rent", amount: 310000, date_incurred: "2025-07-01" }),
+  makeCost("ap_victoria", { id: "a1b", cost_type: "council_tax", amount: 17000, date_incurred: "2025-07-01" }),
+  makeCost("ap_victoria", { id: "a1c", cost_type: "insurance", amount: 9000, date_incurred: "2025-07-01" }),
+  makeCost("ap_victoria", { id: "a1d", cost_type: "cleaning", cost_label: "Fortnightly clean", amount: 19000, date_incurred: "2025-07-01" }),
+  makeCost("ap_victoria", { id: "a1e", cost_type: "bills", cost_label: "Broadband", amount: 6000, date_incurred: "2025-07-01" }),
+];
+
+const apFinsburyCosts: PropertyCost[] = [
+  makeCost("ap_finsbury", { id: "a2a", cost_type: "owner_rent", amount: 275000, date_incurred: "2025-06-01" }),
+  makeCost("ap_finsbury", { id: "a2b", cost_type: "council_tax", amount: 16000, date_incurred: "2025-06-01" }),
+  makeCost("ap_finsbury", { id: "a2c", cost_type: "insurance", amount: 8500, date_incurred: "2025-06-01" }),
+  makeCost("ap_finsbury", { id: "a2d", cost_type: "cleaning", amount: 17000, date_incurred: "2025-06-01" }),
+];
+
+const apCamdenCosts: PropertyCost[] = [
+  makeCost("ap_camden", { id: "a3a", cost_type: "owner_rent", amount: 340000, date_incurred: "2025-10-01" }),
+  makeCost("ap_camden", { id: "a3b", cost_type: "council_tax", amount: 19000, date_incurred: "2025-10-01" }),
+  makeCost("ap_camden", { id: "a3c", cost_type: "insurance", amount: 10000, date_incurred: "2025-10-01" }),
+  makeCost("ap_camden", { id: "a3d", cost_type: "cleaning", cost_label: "Weekly clean", amount: 24000, date_incurred: "2025-10-01" }),
+  makeCost("ap_camden", { id: "a3e", cost_type: "bills", cost_label: "Broadband & Sky", amount: 7500, date_incurred: "2025-10-01" }),
+];
+
+const apWappingCosts: PropertyCost[] = [
+  makeCost("ap_wapping", { id: "a4a", cost_type: "owner_rent", amount: 260000, date_incurred: "2025-09-01" }),
+  makeCost("ap_wapping", { id: "a4b", cost_type: "council_tax", amount: 16500, date_incurred: "2025-09-01" }),
+  makeCost("ap_wapping", { id: "a4c", cost_type: "insurance", amount: 8000, date_incurred: "2025-09-01" }),
+  makeCost("ap_wapping", { id: "a4d", cost_type: "cleaning", amount: 16000, date_incurred: "2025-09-01" }),
+  makeCost("ap_wapping", {
+    id: "a4e",
+    cost_type: "maintenance",
+    cost_label: "Bathroom refurbishment",
+    amount: 220000,
+    cost_mode: "one_off",
+    recurrence_day: null,
+    date_incurred: "2026-04-05",
   }),
 ];
 
@@ -87,268 +158,261 @@ const prop6Costs: PropertyCost[] = [
 // ──────────────────────────────────────────────────────────
 
 export const MOCK_PROPERTIES: PropertyProfitability[] = [
+  // ── HORIZON DREAMS ──────────────────────────────────────
+  // [0] All occupied — best Horizon performer
   {
-    property_id: "prop1",
-    property_name: "14 Mastmaker Road",
-    portfolio_id: "fen",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    total_units: 6,
+    property_id: "h_stmichaels",
+    property_name: "81 St Michael's Street",
+    portfolio_id: "horizon",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    total_units: 4,
     occupied_units: 4,
-    total_income: 420000, // 4 rooms × avg £1,050
-    total_costs: 407500, // £3,500 owner rent + others
-    vacancy_loss: 30000, // Room 4 vacant 9 days × £33/day
-    net_profit: -17500, // below target of £800
-    target_profit: 80000, // £800 in pence
-    vs_target: -97500,
+    total_income: 548000,   // 1300+1280+1250+1650
+    total_costs: 415500,
+    vacancy_loss: 0,
+    net_profit: 132500,     // £1,325/mo
+    target_profit: 100000,
+    vs_target: 32500,
+    last_month_net_profit: 115000,
+    trend: "up",
+    unit_breakdown: [
+      { unit_id: "h1_C",    unit_label: "Room C · Double",   tenant_name: "Michael Briggs",  rent_pcm: 130000, days_vacant: 0, vacancy_loss: 0, net_contribution: 130000, status: "move_out" },
+      { unit_id: "h1_D",    unit_label: "Room D · Double",   tenant_name: "Sotiria Zve",     rent_pcm: 128000, days_vacant: 0, vacancy_loss: 0, net_contribution: 128000, status: "occupied" },
+      { unit_id: "h1_B",    unit_label: "Room B · Double",   tenant_name: "Songying Liu",    rent_pcm: 125000, days_vacant: 0, vacancy_loss: 0, net_contribution: 125000, status: "occupied" },
+      { unit_id: "h1_ENSA", unit_label: "Room A · En-suite", tenant_name: "Sohini Mallick",  rent_pcm: 165000, days_vacant: 0, vacancy_loss: 0, net_contribution: 165000, status: "occupied" },
+    ],
+    costs: stMichaelsCosts,
+  },
+  // [1] 2 vacancies — below target
+  {
+    property_id: "h_chargrove",
+    property_name: "7 Chargrove Close",
+    portfolio_id: "horizon",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    total_units: 5,
+    occupied_units: 3,
+    total_income: 347500,   // Sean 1400 + Zunaid 1075 + Michelle 1000
+    total_costs: 377500,
+    vacancy_loss: 50500,    // ENS2 8d (34,667) + D1 5d (15,833)
+    net_profit: -80500,     // -£805/mo
+    target_profit: 80000,
+    vs_target: -160500,
+    last_month_net_profit: 28000,
+    trend: "down",
+    unit_breakdown: [
+      { unit_id: "h2_ENS5", unit_label: "Room 5 · En-suite", tenant_name: "Sean Hamill",     rent_pcm: 140000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 140000,  status: "move_out" },
+      { unit_id: "h2_ENS2", unit_label: "Room 2 · En-suite", tenant_name: null,              rent_pcm: 0,      days_vacant: 8, vacancy_loss: 34667, net_contribution: -34667,  status: "available" },
+      { unit_id: "h2_D4",   unit_label: "Room 4 · Double",   tenant_name: "Zunaid Rafique",  rent_pcm: 107500, days_vacant: 0, vacancy_loss: 0,     net_contribution: 107500,  status: "occupied" },
+      { unit_id: "h2_D3",   unit_label: "Room 3 · Double",   tenant_name: "Jerlin Immanuel", rent_pcm: 100000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 100000,  status: "occupied" },
+      { unit_id: "h2_D1",   unit_label: "Room 1 · Double",   tenant_name: null,              rent_pcm: 0,      days_vacant: 5, vacancy_loss: 15833, net_contribution: -15833,  status: "available" },
+    ],
+    costs: chargrovesCosts,
+  },
+  // [2] 1 vacancy — just below target
+  {
+    property_id: "h_bush",
+    property_name: "9 Bush Road",
+    portfolio_id: "horizon",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    total_units: 5,
+    occupied_units: 4,
+    total_income: 436500,   // Riddhima 1240 + Abi 1000 + Mudit 950 + Kretika 1175
+    total_costs: 321500,
+    vacancy_loss: 38600,    // D2 (965) 12 days
+    net_profit: 76400,      // £764/mo — just below £800 target
+    target_profit: 80000,
+    vs_target: -3600,
+    last_month_net_profit: 85000,
+    trend: "down",
+    unit_breakdown: [
+      { unit_id: "h3_ENS5", unit_label: "Room 5 · En-suite", tenant_name: "Riddhima Duggal",  rent_pcm: 124000, days_vacant: 0,  vacancy_loss: 0,     net_contribution: 124000,  status: "renewal" },
+      { unit_id: "h3_D2",   unit_label: "Room 2 · Double",   tenant_name: null,               rent_pcm: 0,      days_vacant: 12, vacancy_loss: 38600, net_contribution: -38600,  status: "available" },
+      { unit_id: "h3_D1",   unit_label: "Room 1 · Double",   tenant_name: "Abi Malster",      rent_pcm: 100000, days_vacant: 0,  vacancy_loss: 0,     net_contribution: 100000,  status: "booked" },
+      { unit_id: "h3_D4",   unit_label: "Room 4 · Double",   tenant_name: "Mudit Maheshwari", rent_pcm: 95000,  days_vacant: 0,  vacancy_loss: 0,     net_contribution: 95000,   status: "occupied" },
+      { unit_id: "h3_ENS3", unit_label: "Room 3 · En-suite", tenant_name: "Kretika Arora",    rent_pcm: 117500, days_vacant: 0,  vacancy_loss: 0,     net_contribution: 117500,  status: "occupied" },
+    ],
+    costs: bushRoadCosts,
+  },
+  // [3] 5/6 occupied — modest profit
+  {
+    property_id: "h_boundaries",
+    property_name: "129 Boundaries Road",
+    portfolio_id: "horizon",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    total_units: 6,
+    occupied_units: 5,
+    total_income: 517000,   // 1025+975+1050+1030+1090
+    total_costs: 464000,
+    vacancy_loss: 25333,    // D4 (950) 8 days
+    net_profit: 27667,      // £277/mo
+    target_profit: 100000,
+    vs_target: -72333,
+    last_month_net_profit: 45000,
+    trend: "down",
+    unit_breakdown: [
+      { unit_id: "h4_D3", unit_label: "Room 3 · Double", tenant_name: "Maisie Boardman",    rent_pcm: 102500, days_vacant: 0, vacancy_loss: 0,     net_contribution: 102500,  status: "occupied" },
+      { unit_id: "h4_D2", unit_label: "Room 2 · Double", tenant_name: "Batuhan",            rent_pcm: 97500,  days_vacant: 0, vacancy_loss: 0,     net_contribution: 97500,   status: "occupied" },
+      { unit_id: "h4_D1", unit_label: "Room 1 · Double", tenant_name: "David Knox",         rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 105000,  status: "occupied" },
+      { unit_id: "h4_D6", unit_label: "Room 6 · Double", tenant_name: "Grace Plummer",      rent_pcm: 103000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 103000,  status: "occupied" },
+      { unit_id: "h4_M5", unit_label: "Room 5 · Master", tenant_name: "Georgios Pekaridis", rent_pcm: 109000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 109000,  status: "occupied" },
+      { unit_id: "h4_D4", unit_label: "Room 4 · Double", tenant_name: null,                 rent_pcm: 0,      days_vacant: 8, vacancy_loss: 25333, net_contribution: -25333,  status: "available" },
+    ],
+    costs: boundariesCosts,
+  },
+  // [4] 3/4 occupied + one-off maintenance cost spike
+  {
+    property_id: "h_everard",
+    property_name: "15 Everard House",
+    portfolio_id: "horizon",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    total_units: 4,
+    occupied_units: 3,
+    total_income: 286000,   // Diya 950 + Hamza 870 + Sofiia 1040
+    total_costs: 384500,    // recurring + £950 communal repaint (one-off)
+    vacancy_loss: 24000,    // M4 (1200) 6 days
+    net_profit: -122500,    // -£1,225/mo
+    target_profit: 60000,
+    vs_target: -182500,
     last_month_net_profit: 42000,
     trend: "down",
     unit_breakdown: [
-      { unit_id: "u1a", unit_label: "Room 1 · Double", tenant_name: "Marcus Chen", rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0, net_contribution: 105000, status: "occupied" },
-      { unit_id: "u1b", unit_label: "Room 2 · Single", tenant_name: "Priya Sharma", rent_pcm: 80000, days_vacant: 4, vacancy_loss: 10667, net_contribution: 69333, status: "move_out" },
-      { unit_id: "u1c", unit_label: "Room 3 · Master", tenant_name: "James O'Brien", rent_pcm: 125000, days_vacant: 0, vacancy_loss: 0, net_contribution: 125000, status: "renewal" },
-      { unit_id: "u1d", unit_label: "Room 4 · Double", tenant_name: null, rent_pcm: 0, days_vacant: 9, vacancy_loss: 30000, net_contribution: -30000, status: "available" },
-      { unit_id: "u1e", unit_label: "Room 5 · En-suite", tenant_name: "Emma Thompson", rent_pcm: 115000, days_vacant: 0, vacancy_loss: 0, net_contribution: 115000, status: "booked" },
-      { unit_id: "u1f", unit_label: "Room 6 · Single", tenant_name: "Sofia Martinez", rent_pcm: 85000, days_vacant: 0, vacancy_loss: 0, net_contribution: 85000, status: "occupied" },
+      { unit_id: "h5_D1", unit_label: "Room 1 · Double", tenant_name: "Diya Raja",            rent_pcm: 95000,  days_vacant: 0, vacancy_loss: 0,     net_contribution: 95000,   status: "occupied" },
+      { unit_id: "h5_M4", unit_label: "Room 4 · Master", tenant_name: null,                   rent_pcm: 0,      days_vacant: 6, vacancy_loss: 24000, net_contribution: -24000,  status: "available" },
+      { unit_id: "h5_D3", unit_label: "Room 3 · Double", tenant_name: "Hamza Ahmed",          rent_pcm: 87000,  days_vacant: 0, vacancy_loss: 0,     net_contribution: 87000,   status: "occupied" },
+      { unit_id: "h5_D2", unit_label: "Room 2 · Double", tenant_name: "Sofiia Alieksieienko", rent_pcm: 104000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 104000,  status: "occupied" },
     ],
-    costs: prop1Costs,
+    costs: everardCosts,
   },
+  // [5] 1/3 occupied — 2 rooms between tenants (booked, arriving end of month)
   {
-    property_id: "prop2",
-    property_name: "37 Sussex Gardens",
-    portfolio_id: "jms",
-    portfolio_name: "JMS",
-    portfolio_color: "#2563eb",
-    total_units: 5,
-    occupied_units: 2,
-    total_income: 222000, // 2 rooms occupied
-    total_costs: 333500,
-    vacancy_loss: 83333, // 3 rooms vacant various days
-    net_profit: -194833,
-    target_profit: 50000,
-    vs_target: -244833,
-    last_month_net_profit: -152000,
+    property_id: "h_parkwest",
+    property_name: "20 Park West",
+    portfolio_id: "horizon",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    total_units: 3,
+    occupied_units: 1,
+    total_income: 147500,   // Louis only
+    total_costs: 300556,    // recurring + amortised furniture (£280k ÷ 18 = £15,556/mo)
+    vacancy_loss: 112083,   // D2 10d (38,333) + M1 15d (73,750)
+    net_profit: -265139,    // -£2,651/mo
+    target_profit: 80000,
+    vs_target: -345139,
+    last_month_net_profit: 62000,
     trend: "down",
     unit_breakdown: [
-      { unit_id: "u2a", unit_label: "Room 1 · Master", tenant_name: "Kwame Asante", rent_pcm: 135000, days_vacant: 0, vacancy_loss: 0, net_contribution: 135000, status: "occupied" },
-      { unit_id: "u2b", unit_label: "Room 2 · Double", tenant_name: null, rent_pcm: 0, days_vacant: 15, vacancy_loss: 55000, net_contribution: -55000, status: "available" },
-      { unit_id: "u2c", unit_label: "Room 3 · Double", tenant_name: null, rent_pcm: 0, days_vacant: 7, vacancy_loss: 25667, net_contribution: -25667, status: "on_hold" },
-      { unit_id: "u2d", unit_label: "Room 4 · Single", tenant_name: "Amelia Turner", rent_pcm: 87000, days_vacant: 0, vacancy_loss: 0, net_contribution: 87000, status: "occupied" },
-      { unit_id: "u2e", unit_label: "Room 5 · En-suite", tenant_name: null, rent_pcm: 0, days_vacant: 2, vacancy_loss: 8000, net_contribution: -8000, status: "replacement" },
+      { unit_id: "h6_M3", unit_label: "Room 3 · Master", tenant_name: "Louis Renelier",    rent_pcm: 147500, days_vacant: 0,  vacancy_loss: 0,     net_contribution: 147500,  status: "occupied" },
+      { unit_id: "h6_D2", unit_label: "Room 2 · Double", tenant_name: "Edouard de Pouilly", rent_pcm: 115000, days_vacant: 10, vacancy_loss: 38333, net_contribution: -38333, status: "replacement" },
+      { unit_id: "h6_M1", unit_label: "Room 1 · Master", tenant_name: "Marie Croppi",      rent_pcm: 147500, days_vacant: 15, vacancy_loss: 73750, net_contribution: -73750, status: "replacement" },
     ],
-    costs: prop2Costs,
+    costs: parkWestCosts,
   },
+
+  // ── AP ──────────────────────────────────────────────────
+  // [6] Fully occupied — best AP performer
   {
-    property_id: "prop3",
-    property_name: "22 Balham High Road",
-    portfolio_id: "ss",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
+    property_id: "ap_victoria",
+    property_name: "14 Victoria Road",
+    portfolio_id: "ap",
+    portfolio_name: "AP",
+    portfolio_color: "#f59e0b",
     total_units: 4,
-    occupied_units: 3,
-    total_income: 292500,
-    total_costs: 428500, // includes £1,800 boiler repair
-    vacancy_loss: 27500, // Room 2 vacant 11 days
-    net_profit: -163500,
+    occupied_units: 4,
+    total_income: 432000,   // 1250+1050+1050+970
+    total_costs: 361000,
+    vacancy_loss: 0,
+    net_profit: 71000,      // £710/mo
     target_profit: 60000,
-    vs_target: -223500,
-    last_month_net_profit: 48000,
-    trend: "down",
+    vs_target: 11000,
+    last_month_net_profit: 68000,
+    trend: "up",
     unit_breakdown: [
-      { unit_id: "u3a", unit_label: "Room 1 · Double", tenant_name: "David Kowalski", rent_pcm: 97500, days_vacant: 0, vacancy_loss: 0, net_contribution: 97500, status: "occupied" },
-      { unit_id: "u3b", unit_label: "Room 2 · Single", tenant_name: null, rent_pcm: 0, days_vacant: 11, vacancy_loss: 27500, net_contribution: -27500, status: "available" },
-      { unit_id: "u3c", unit_label: "Room 3 · Double", tenant_name: "Daniel Chen", rent_pcm: 97500, days_vacant: 0, vacancy_loss: 0, net_contribution: 97500, status: "occupied" },
-      { unit_id: "u3d", unit_label: "Room 4 · Master", tenant_name: "Kevin O'Brien", rent_pcm: 115000, days_vacant: 0, vacancy_loss: 0, net_contribution: 115000, status: "occupied" },
+      { unit_id: "a1_M",  unit_label: "Room 1 · Master", tenant_name: "Ayesha Rahman",    rent_pcm: 125000, days_vacant: 0, vacancy_loss: 0, net_contribution: 125000, status: "occupied" },
+      { unit_id: "a1_D1", unit_label: "Room 2 · Double", tenant_name: "Tom Gallagher",    rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0, net_contribution: 105000, status: "occupied" },
+      { unit_id: "a1_D2", unit_label: "Room 3 · Double", tenant_name: "Niamh O'Sullivan", rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0, net_contribution: 105000, status: "occupied" },
+      { unit_id: "a1_S",  unit_label: "Room 4 · Single", tenant_name: "Dmitri Volkov",    rent_pcm: 97000,  days_vacant: 0, vacancy_loss: 0, net_contribution: 97000,  status: "occupied" },
     ],
-    costs: prop3Costs,
+    costs: apVictoriaCosts,
   },
+  // [7] Fully occupied — meets target
   {
-    property_id: "prop4",
-    property_name: "8 Rope Street",
-    portfolio_id: "fen",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    total_units: 1,
-    occupied_units: 0,
-    total_income: 0,
-    total_costs: 145000,
-    vacancy_loss: 65000, // 13 days × £50/day
-    net_profit: -210000,
-    target_profit: 30000,
-    vs_target: -240000,
-    last_month_net_profit: 25000,
-    trend: "down",
-    unit_breakdown: [
-      { unit_id: "u4a", unit_label: "Studio", tenant_name: null, rent_pcm: 0, days_vacant: 13, vacancy_loss: 65000, net_contribution: -65000, status: "available" },
-    ],
-    costs: [
-      makeCost("prop4", { id: "c4a", cost_type: "owner_rent", amount: 120000, date_incurred: "2025-08-01" }),
-      makeCost("prop4", { id: "c4b", cost_type: "council_tax", amount: 14000, date_incurred: "2025-08-01" }),
-      makeCost("prop4", { id: "c4c", cost_type: "insurance", amount: 6500, date_incurred: "2025-08-01" }),
-      makeCost("prop4", { id: "c4d", cost_type: "bills", cost_label: "Broadband", amount: 4500, date_incurred: "2025-08-01" }),
-    ],
-  },
-  {
-    property_id: "prop5",
-    property_name: "91 Cambridge Heath Road",
-    portfolio_id: "jms",
-    portfolio_name: "JMS",
-    portfolio_color: "#2563eb",
-    total_units: 1,
-    occupied_units: 1,
-    total_income: 235000,
-    total_costs: 209500,
+    property_id: "ap_finsbury",
+    property_name: "22 Finsbury Square",
+    portfolio_id: "ap",
+    portfolio_name: "AP",
+    portfolio_color: "#f59e0b",
+    total_units: 3,
+    occupied_units: 3,
+    total_income: 357000,   // 1350+1150+1070
+    total_costs: 316500,
     vacancy_loss: 0,
-    net_profit: 25500, // below target of £400
+    net_profit: 40500,      // £405/mo
     target_profit: 40000,
-    vs_target: -14500,
-    last_month_net_profit: 27000,
-    trend: "down",
+    vs_target: 500,
+    last_month_net_profit: 43000,
+    trend: "flat",
     unit_breakdown: [
-      { unit_id: "u5a", unit_label: "Whole Flat", tenant_name: "Aleksandra Kowalski", rent_pcm: 235000, days_vacant: 0, vacancy_loss: 0, net_contribution: 235000, status: "occupied" },
+      { unit_id: "a2_M",  unit_label: "Room 1 · Master", tenant_name: "Carlos Mendez", rent_pcm: 135000, days_vacant: 0, vacancy_loss: 0, net_contribution: 135000, status: "occupied" },
+      { unit_id: "a2_D1", unit_label: "Room 2 · Double", tenant_name: "Elena Pavlova", rent_pcm: 115000, days_vacant: 0, vacancy_loss: 0, net_contribution: 115000, status: "occupied" },
+      { unit_id: "a2_D2", unit_label: "Room 3 · Double", tenant_name: "Wei Zhang",     rent_pcm: 107000, days_vacant: 0, vacancy_loss: 0, net_contribution: 107000, status: "occupied" },
     ],
-    costs: [
-      makeCost("prop5", { id: "c5a", cost_type: "owner_rent", amount: 180000, date_incurred: "2026-01-01" }),
-      makeCost("prop5", { id: "c5b", cost_type: "council_tax", amount: 20000, date_incurred: "2026-01-01" }),
-      makeCost("prop5", { id: "c5c", cost_type: "insurance", amount: 9500, date_incurred: "2026-01-01" }),
-    ],
+    costs: apFinsburyCosts,
   },
+  // [8] Fully occupied — top performer across both portfolios
   {
-    property_id: "prop6",
-    property_name: "45 Clapham Common South Side",
-    portfolio_id: "fen",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
+    property_id: "ap_camden",
+    property_name: "5 Camden High Street",
+    portfolio_id: "ap",
+    portfolio_name: "AP",
+    portfolio_color: "#f59e0b",
     total_units: 5,
     occupied_units: 5,
-    total_income: 555000,
-    total_costs: 456625, // includes amortised furniture (£350k ÷ 24 = £14,583/mo)
+    total_income: 560000,   // 1300+1250+1100+1100+850
+    total_costs: 400500,
     vacancy_loss: 0,
-    net_profit: 98375,
-    target_profit: 70000,
-    vs_target: 28375,
-    last_month_net_profit: 93000,
+    net_profit: 159500,     // £1,595/mo
+    target_profit: 130000,
+    vs_target: 29500,
+    last_month_net_profit: 152000,
     trend: "up",
     unit_breakdown: [
-      { unit_id: "u6a", unit_label: "Room 1 · Master", tenant_name: "Mohammed Al-Rashid", rent_pcm: 125000, days_vacant: 0, vacancy_loss: 0, net_contribution: 125000, status: "occupied" },
-      { unit_id: "u6b", unit_label: "Room 2 · Double", tenant_name: "Sophie Laurent", rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0, net_contribution: 105000, status: "occupied" },
-      { unit_id: "u6c", unit_label: "Room 3 · En-suite", tenant_name: "Oleksandr Koval", rent_pcm: 125000, days_vacant: 0, vacancy_loss: 0, net_contribution: 125000, status: "occupied" },
-      { unit_id: "u6d", unit_label: "Room 4 · Double", tenant_name: "James Whitfield", rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0, net_contribution: 105000, status: "occupied" },
-      { unit_id: "u6e", unit_label: "Room 5 · Single", tenant_name: "Priya Sharma", rent_pcm: 95000, days_vacant: 0, vacancy_loss: 0, net_contribution: 95000, status: "occupied" },
+      { unit_id: "a3_ENS1", unit_label: "Room 1 · En-suite", tenant_name: "Fatima Al-Amin",  rent_pcm: 130000, days_vacant: 0, vacancy_loss: 0, net_contribution: 130000, status: "occupied" },
+      { unit_id: "a3_ENS2", unit_label: "Room 2 · En-suite", tenant_name: "Jack Donoghue",   rent_pcm: 125000, days_vacant: 0, vacancy_loss: 0, net_contribution: 125000, status: "occupied" },
+      { unit_id: "a3_D1",   unit_label: "Room 3 · Double",   tenant_name: "Yuki Tanaka",     rent_pcm: 110000, days_vacant: 0, vacancy_loss: 0, net_contribution: 110000, status: "occupied" },
+      { unit_id: "a3_D2",   unit_label: "Room 4 · Double",   tenant_name: "Olumide Adebayo", rent_pcm: 110000, days_vacant: 0, vacancy_loss: 0, net_contribution: 110000, status: "occupied" },
+      { unit_id: "a3_S",    unit_label: "Room 5 · Single",   tenant_name: "Clara Fischer",   rent_pcm: 85000,  days_vacant: 0, vacancy_loss: 0, net_contribution: 85000,  status: "occupied" },
     ],
-    costs: prop6Costs,
+    costs: apCamdenCosts,
   },
+  // [9] 3/4 occupied + large one-off bathroom refurb
   {
-    property_id: "prop7",
-    property_name: "12 Brixton Road",
-    portfolio_id: "ss",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
+    property_id: "ap_wapping",
+    property_name: "8 Wapping High Street",
+    portfolio_id: "ap",
+    portfolio_name: "AP",
+    portfolio_color: "#f59e0b",
     total_units: 4,
     occupied_units: 3,
-    total_income: 270000,
-    total_costs: 259000,
-    vacancy_loss: 28000, // Room 4 vacant 17 days
-    net_profit: -17000, // below target of £500
+    total_income: 315000,   // Master 1150 + Double2 1050 + Single 950
+    total_costs: 520500,    // recurring + £2,200 bathroom refurb (one-off)
+    vacancy_loss: 16000,    // Double1 (800) 6 days
+    net_profit: -221500,    // -£2,215/mo
     target_profit: 50000,
-    vs_target: -67000,
-    last_month_net_profit: 31000,
+    vs_target: -271500,
+    last_month_net_profit: 45000,
     trend: "down",
     unit_breakdown: [
-      { unit_id: "u7a", unit_label: "Room 1 · Double", tenant_name: "Natalia Koval", rent_pcm: 95000, days_vacant: 0, vacancy_loss: 0, net_contribution: 95000, status: "occupied" },
-      { unit_id: "u7b", unit_label: "Room 2 · Double", tenant_name: "Rajesh Sharma", rent_pcm: 95000, days_vacant: 0, vacancy_loss: 0, net_contribution: 95000, status: "occupied" },
-      { unit_id: "u7c", unit_label: "Room 3 · Single", tenant_name: "Emma Thompson", rent_pcm: 80000, days_vacant: 0, vacancy_loss: 0, net_contribution: 80000, status: "occupied" },
-      { unit_id: "u7d", unit_label: "Room 4 · Single", tenant_name: null, rent_pcm: 0, days_vacant: 17, vacancy_loss: 28000, net_contribution: -28000, status: "available" },
+      { unit_id: "a4_M",  unit_label: "Room 1 · Master", tenant_name: "Nadia Osei",    rent_pcm: 115000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 115000,  status: "occupied" },
+      { unit_id: "a4_D1", unit_label: "Room 2 · Double", tenant_name: null,             rent_pcm: 0,      days_vacant: 6, vacancy_loss: 16000, net_contribution: -16000,  status: "available" },
+      { unit_id: "a4_D2", unit_label: "Room 3 · Double", tenant_name: "Kieran Murphy",  rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0,     net_contribution: 105000,  status: "occupied" },
+      { unit_id: "a4_S",  unit_label: "Room 4 · Single", tenant_name: "Petra Novak",    rent_pcm: 95000,  days_vacant: 0, vacancy_loss: 0,     net_contribution: 95000,   status: "occupied" },
     ],
-    costs: [
-      makeCost("prop7", { id: "c7a", cost_type: "owner_rent", amount: 220000, date_incurred: "2025-09-01" }),
-      makeCost("prop7", { id: "c7b", cost_type: "council_tax", amount: 16000, date_incurred: "2025-09-01" }),
-      makeCost("prop7", { id: "c7c", cost_type: "insurance", amount: 8000, date_incurred: "2025-09-01" }),
-      makeCost("prop7", { id: "c7d", cost_type: "cleaning", amount: 15000, date_incurred: "2025-09-01" }),
-    ],
-  },
-  {
-    property_id: "prop8",
-    property_name: "3 Shoreditch High Street",
-    portfolio_id: "jms",
-    portfolio_name: "JMS",
-    portfolio_color: "#2563eb",
-    total_units: 6,
-    occupied_units: 5,
-    total_income: 595000,
-    total_costs: 482000,
-    vacancy_loss: 11333, // Room 6 renewal, minor overlap
-    net_profit: 101667,
-    target_profit: 90000,
-    vs_target: 11667,
-    last_month_net_profit: 96000,
-    trend: "up",
-    unit_breakdown: [
-      { unit_id: "u8a", unit_label: "Room 1 · Master", tenant_name: "Daniel Chen", rent_pcm: 135000, days_vacant: 0, vacancy_loss: 0, net_contribution: 135000, status: "occupied" },
-      { unit_id: "u8b", unit_label: "Room 2 · En-suite", tenant_name: "Kevin O'Brien", rent_pcm: 125000, days_vacant: 0, vacancy_loss: 0, net_contribution: 125000, status: "occupied" },
-      { unit_id: "u8c", unit_label: "Room 3 · Double", tenant_name: "Marcus Chen", rent_pcm: 115000, days_vacant: 0, vacancy_loss: 0, net_contribution: 115000, status: "occupied" },
-      { unit_id: "u8d", unit_label: "Room 4 · Double", tenant_name: "Priya Sharma", rent_pcm: 115000, days_vacant: 0, vacancy_loss: 0, net_contribution: 115000, status: "occupied" },
-      { unit_id: "u8e", unit_label: "Room 5 · Single", tenant_name: "Sophie Laurent", rent_pcm: 105000, days_vacant: 0, vacancy_loss: 0, net_contribution: 105000, status: "occupied" },
-      { unit_id: "u8f", unit_label: "Room 6 · Single", tenant_name: "James O'Brien", rent_pcm: 0, days_vacant: 3, vacancy_loss: 11333, net_contribution: -11333, status: "renewal" },
-    ],
-    costs: [
-      makeCost("prop8", { id: "c8a", cost_type: "owner_rent", amount: 420000, date_incurred: "2025-06-01" }),
-      makeCost("prop8", { id: "c8b", cost_type: "council_tax", amount: 20000, date_incurred: "2025-06-01" }),
-      makeCost("prop8", { id: "c8c", cost_type: "insurance", amount: 12000, date_incurred: "2025-06-01" }),
-      makeCost("prop8", { id: "c8d", cost_type: "cleaning", cost_label: "Weekly professional clean", amount: 30000, date_incurred: "2025-06-01" }),
-    ],
-  },
-  {
-    property_id: "prop9",
-    property_name: "78 Hackney Road",
-    portfolio_id: "fen",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    total_units: 1,
-    occupied_units: 1,
-    total_income: 145000, // occupied until notice period
-    total_costs: 128500,
-    vacancy_loss: 0,
-    net_profit: 16500, // below target of £350
-    target_profit: 35000,
-    vs_target: -18500,
-    last_month_net_profit: 21000,
-    trend: "down",
-    unit_breakdown: [
-      { unit_id: "u9a", unit_label: "Studio", tenant_name: "Mohammed Al-Rashid", rent_pcm: 145000, days_vacant: 0, vacancy_loss: 0, net_contribution: 145000, status: "move_out" },
-    ],
-    costs: [
-      makeCost("prop9", { id: "c9a", cost_type: "owner_rent", amount: 105000, date_incurred: "2025-07-01" }),
-      makeCost("prop9", { id: "c9b", cost_type: "council_tax", amount: 13000, date_incurred: "2025-07-01" }),
-      makeCost("prop9", { id: "c9c", cost_type: "insurance", amount: 6000, date_incurred: "2025-07-01" }),
-      makeCost("prop9", { id: "c9d", cost_type: "bills", cost_label: "Broadband", amount: 4500, date_incurred: "2025-07-01" }),
-    ],
-  },
-  {
-    property_id: "prop10",
-    property_name: "55 Dalston Lane",
-    portfolio_id: "ss",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
-    total_units: 1,
-    occupied_units: 1,
-    total_income: 195000,
-    total_costs: 176500,
-    vacancy_loss: 0,
-    net_profit: 18500, // below target of £500
-    target_profit: 50000,
-    vs_target: -31500,
-    last_month_net_profit: 23000,
-    trend: "down",
-    unit_breakdown: [
-      { unit_id: "u10a", unit_label: "Whole Flat", tenant_name: "Oleksandr Koval", rent_pcm: 195000, days_vacant: 0, vacancy_loss: 0, net_contribution: 195000, status: "move_out" },
-    ],
-    costs: [
-      makeCost("prop10", { id: "c10a", cost_type: "owner_rent", amount: 140000, date_incurred: "2025-08-01" }),
-      makeCost("prop10", { id: "c10b", cost_type: "council_tax", amount: 18000, date_incurred: "2025-08-01" }),
-      makeCost("prop10", { id: "c10c", cost_type: "insurance", amount: 8500, date_incurred: "2025-08-01" }),
-      makeCost("prop10", { id: "c10d", cost_type: "cleaning", cost_label: "Monthly deep clean", amount: 10000, date_incurred: "2025-08-01" }),
-    ],
+    costs: apWappingCosts,
   },
 ];
 
@@ -360,114 +424,98 @@ export const MOCK_ALERTS: ProfitabilityAlert[] = [
   {
     id: "al1",
     tenant_id: "mock",
-    property_id: "prop2",
-    unit_id: null,
-    alert_type: "profitability_below_target",
-    triggered_at: new Date(Date.now() - 65 * 86400000).toISOString(),
+    property_id: "h_chargrove",
+    unit_id: "h2_ENS2",
+    alert_type: "vacancy_running",
+    triggered_at: new Date(Date.now() - 8 * 86400000).toISOString(),
     resolved_at: null,
     is_resolved: false,
-    metadata: { months_below: 2, target_pcm: 500, actual_pcm: -985, shortfall: 1485 },
+    metadata: { days_vacant: 8, daily_rate: 4333, total_loss: 34667 },
     email_sent: true,
-    property_name: "37 Sussex Gardens",
-    portfolio_name: "JMS",
-    portfolio_color: "#2563eb",
-    unit_label: null,
+    property_name: "7 Chargrove Close",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    unit_label: "Room 2 · En-suite",
   },
   {
     id: "al2",
     tenant_id: "mock",
-    property_id: "prop1",
-    unit_id: "u1d",
-    alert_type: "vacancy_running",
-    triggered_at: new Date(Date.now() - 9 * 86400000).toISOString(),
+    property_id: "h_parkwest",
+    unit_id: null,
+    alert_type: "profitability_below_target",
+    triggered_at: new Date(Date.now() - 45 * 86400000).toISOString(),
     resolved_at: null,
     is_resolved: false,
-    metadata: { days_vacant: 9, daily_rate: 3333, total_loss: 30000 },
+    metadata: { months_below: 2, target_pcm: 800, actual_pcm: -2651, shortfall: 3451 },
     email_sent: true,
-    property_name: "14 Mastmaker Road",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    unit_label: "Room 4 · Double",
+    property_name: "20 Park West",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    unit_label: null,
   },
   {
     id: "al3",
     tenant_id: "mock",
-    property_id: "prop9",
-    unit_id: "u9a",
-    alert_type: "vacancy_upcoming",
-    triggered_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    property_id: "h_everard",
+    unit_id: null,
+    alert_type: "cost_spike",
+    triggered_at: new Date(Date.now() - 6 * 86400000).toISOString(),
     resolved_at: null,
     is_resolved: false,
-    metadata: { days_until_vacant: 12 },
+    metadata: { cost_type: "maintenance", cost_label: "Communal area repaint", amount: 95000, threshold_pct: 40 },
     email_sent: true,
-    property_name: "78 Hackney Road",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    unit_label: "Studio",
+    property_name: "15 Everard House",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    unit_label: null,
   },
   {
     id: "al4",
     tenant_id: "mock",
-    property_id: "prop3",
+    property_id: "ap_wapping",
     unit_id: null,
     alert_type: "cost_spike",
-    triggered_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+    triggered_at: new Date(Date.now() - 3 * 86400000).toISOString(),
     resolved_at: null,
     is_resolved: false,
-    metadata: { cost_type: "maintenance", cost_label: "Emergency boiler repair", amount: 180000, target_pcm: 600 },
+    metadata: { cost_type: "maintenance", cost_label: "Bathroom refurbishment", amount: 220000, threshold_pct: 85 },
     email_sent: true,
-    property_name: "22 Balham High Road",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
+    property_name: "8 Wapping High Street",
+    portfolio_name: "AP",
+    portfolio_color: "#f59e0b",
     unit_label: null,
   },
   {
     id: "al5",
     tenant_id: "mock",
-    property_id: "prop5",
-    unit_id: "u5a",
-    alert_type: "deposit_deadline",
-    triggered_at: new Date(Date.now() - 23 * 86400000).toISOString(),
+    property_id: "h_stmichaels",
+    unit_id: "h1_C",
+    alert_type: "notice_vacate_approaching",
+    triggered_at: new Date(Date.now() - 2 * 86400000).toISOString(),
     resolved_at: null,
     is_resolved: false,
-    metadata: { days_until_deadline: 6, deposit_scheme: "mydeposits" },
+    metadata: { days_until_vacate: 22, tenant_name: "Michael Briggs" },
     email_sent: true,
-    property_name: "91 Cambridge Heath Road",
-    portfolio_name: "JMS",
-    portfolio_color: "#2563eb",
-    unit_label: "Whole Flat",
+    property_name: "81 St Michael's Street",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    unit_label: "Room C · Double",
   },
   {
     id: "al6",
     tenant_id: "mock",
-    property_id: "prop1",
-    unit_id: null,
-    alert_type: "landlord_contract_expiry",
-    triggered_at: new Date(Date.now() - 15 * 86400000).toISOString(),
-    resolved_at: null,
-    is_resolved: false,
-    metadata: { days_until_expiry: 45, owner_landlord_name: "Hargreaves Estates Ltd" },
-    email_sent: true,
-    property_name: "14 Mastmaker Road",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    unit_label: null,
-  },
-  {
-    id: "al7",
-    tenant_id: "mock",
-    property_id: "prop10",
-    unit_id: "u10a",
+    property_id: "h_chargrove",
+    unit_id: "h2_ENS5",
     alert_type: "notice_vacate_approaching",
-    triggered_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+    triggered_at: new Date(Date.now() - 5 * 86400000).toISOString(),
     resolved_at: null,
     is_resolved: false,
-    metadata: { days_until_vacate: 10, tenant_name: "Oleksandr Koval" },
+    metadata: { days_until_vacate: 22, tenant_name: "Sean Hamill" },
     email_sent: true,
-    property_name: "55 Dalston Lane",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
-    unit_label: "Whole Flat",
+    property_name: "7 Chargrove Close",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    unit_label: "Room 5 · En-suite",
   },
 ];
 
@@ -477,95 +525,108 @@ export const MOCK_ALERTS: ProfitabilityAlert[] = [
 
 export const MOCK_VACANCY_UNITS: VacancyUnit[] = [
   {
-    unit_id: "u1d",
-    unit_label: "Room 4 · Double",
-    property_id: "prop1",
-    property_name: "14 Mastmaker Road",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
+    unit_id: "h2_ENS2",
+    unit_label: "Room 2 · En-suite",
+    property_id: "h_chargrove",
+    property_name: "7 Chargrove Close",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
     status: "vacant",
-    days_vacant: 9,
+    days_vacant: 8,
     days_until_vacant: null,
-    daily_loss: 33.33,
-    total_loss: 300,
+    daily_loss: 43.33,
+    total_loss: 347,
   },
   {
-    unit_id: "u2b",
-    unit_label: "Room 2 · Double",
-    property_id: "prop2",
-    property_name: "37 Sussex Gardens",
-    portfolio_name: "JMS",
-    portfolio_color: "#2563eb",
+    unit_id: "h2_D1",
+    unit_label: "Room 1 · Double",
+    property_id: "h_chargrove",
+    property_name: "7 Chargrove Close",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
     status: "vacant",
+    days_vacant: 5,
+    days_until_vacant: null,
+    daily_loss: 31.67,
+    total_loss: 158,
+  },
+  {
+    unit_id: "h3_D2",
+    unit_label: "Room 2 · Double",
+    property_id: "h_bush",
+    property_name: "9 Bush Road",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    status: "vacant",
+    days_vacant: 12,
+    days_until_vacant: null,
+    daily_loss: 32.17,
+    total_loss: 386,
+  },
+  {
+    unit_id: "h4_D4",
+    unit_label: "Room 4 · Double",
+    property_id: "h_boundaries",
+    property_name: "129 Boundaries Road",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    status: "vacant",
+    days_vacant: 8,
+    days_until_vacant: null,
+    daily_loss: 31.67,
+    total_loss: 253,
+  },
+  {
+    unit_id: "h5_M4",
+    unit_label: "Room 4 · Master",
+    property_id: "h_everard",
+    property_name: "15 Everard House",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    status: "vacant",
+    days_vacant: 6,
+    days_until_vacant: null,
+    daily_loss: 40.00,
+    total_loss: 240,
+  },
+  {
+    unit_id: "h6_D2",
+    unit_label: "Room 2 · Double",
+    property_id: "h_parkwest",
+    property_name: "20 Park West",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    status: "replacement",
+    days_vacant: 10,
+    days_until_vacant: null,
+    daily_loss: 38.33,
+    total_loss: 383,
+  },
+  {
+    unit_id: "h6_M1",
+    unit_label: "Room 1 · Master",
+    property_id: "h_parkwest",
+    property_name: "20 Park West",
+    portfolio_name: "Horizon",
+    portfolio_color: "#0ea5e9",
+    status: "replacement",
     days_vacant: 15,
     days_until_vacant: null,
-    daily_loss: 36.67,
-    total_loss: 550,
+    daily_loss: 49.17,
+    total_loss: 738,
   },
   {
-    unit_id: "u3b",
-    unit_label: "Room 2 · Single",
-    property_id: "prop3",
-    property_name: "22 Balham High Road",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
+    unit_id: "a4_D1",
+    unit_label: "Room 2 · Double",
+    property_id: "ap_wapping",
+    property_name: "8 Wapping High Street",
+    portfolio_name: "AP",
+    portfolio_color: "#f59e0b",
     status: "vacant",
-    days_vacant: 11,
+    days_vacant: 6,
     days_until_vacant: null,
-    daily_loss: 25,
-    total_loss: 275,
-  },
-  {
-    unit_id: "u4a",
-    unit_label: "Studio",
-    property_id: "prop4",
-    property_name: "8 Rope Street",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    status: "vacant",
-    days_vacant: 13,
-    days_until_vacant: null,
-    daily_loss: 50,
-    total_loss: 650,
-  },
-  {
-    unit_id: "u7d",
-    unit_label: "Room 4 · Single",
-    property_id: "prop7",
-    property_name: "12 Brixton Road",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
-    status: "vacant",
-    days_vacant: 17,
-    days_until_vacant: null,
-    daily_loss: 28.33,
-    total_loss: 481,
-  },
-  {
-    unit_id: "u9a",
-    unit_label: "Studio",
-    property_id: "prop9",
-    property_name: "78 Hackney Road",
-    portfolio_name: "FENIX",
-    portfolio_color: "#0d9488",
-    status: "move_out",
-    days_vacant: 0,
-    days_until_vacant: 12,
-    daily_loss: 50,
-    total_loss: 0,
-  },
-  {
-    unit_id: "u10a",
-    unit_label: "Whole Flat",
-    property_id: "prop10",
-    property_name: "55 Dalston Lane",
-    portfolio_name: "Smart Share",
-    portfolio_color: "#7c3aed",
-    status: "move_out",
-    days_vacant: 0,
-    days_until_vacant: 10,
-    daily_loss: 63.33,
-    total_loss: 0,
+    daily_loss: 26.67,
+    total_loss: 160,
   },
 ];
 
@@ -573,7 +634,7 @@ export const MOCK_VACANCY_UNITS: VacancyUnit[] = [
 // Upcoming Move-Outs (within 30 days)
 // ──────────────────────────────────────────────────────────
 
-const today = new Date("2026-04-04");
+const today = new Date("2026-04-08");
 const addDays = (d: Date, n: number) => {
   const r = new Date(d);
   r.setDate(r.getDate() + n);
@@ -582,39 +643,39 @@ const addDays = (d: Date, n: number) => {
 
 export const MOCK_UPCOMING_MOVE_OUTS: UpcomingMoveOut[] = [
   {
-    unit_id: "u9a",
-    unit_label: "Studio",
-    property_id: "prop9",
-    property_name: "78 Hackney Road",
-    tenant_name: "Mohammed Al-Rashid",
-    vacate_date: addDays(today, 12),
-    days_remaining: 12,
+    unit_id: "h1_C",
+    unit_label: "Room C · Double",
+    property_id: "h_stmichaels",
+    property_name: "81 St Michael's Street",
+    tenant_name: "Michael Briggs",
+    vacate_date: addDays(today, 22), // 2026-04-30
+    days_remaining: 22,
     contract_status: "notice_given",
   },
   {
-    unit_id: "u10a",
-    unit_label: "Whole Flat",
-    property_id: "prop10",
-    property_name: "55 Dalston Lane",
-    tenant_name: "Oleksandr Koval",
-    vacate_date: addDays(today, 10),
-    days_remaining: 10,
+    unit_id: "h2_ENS5",
+    unit_label: "Room 5 · En-suite",
+    property_id: "h_chargrove",
+    property_name: "7 Chargrove Close",
+    tenant_name: "Sean Hamill",
+    vacate_date: addDays(today, 22), // 2026-04-30
+    days_remaining: 22,
     contract_status: "notice_given",
   },
   {
-    unit_id: "u1b",
-    unit_label: "Room 2 · Single",
-    property_id: "prop1",
-    property_name: "14 Mastmaker Road",
-    tenant_name: "Priya Sharma",
-    vacate_date: addDays(today, 11),
-    days_remaining: 11,
-    contract_status: "notice_given",
+    unit_id: "h3_D2",
+    unit_label: "Room 2 · Double",
+    property_id: "h_bush",
+    property_name: "9 Bush Road",
+    tenant_name: "Saksham Dhingra",
+    vacate_date: addDays(today, 22), // 2026-04-30 contract end (already vacated early)
+    days_remaining: 22,
+    contract_status: "vacated_early",
   },
 ];
 
 // ──────────────────────────────────────────────────────────
-// Portfolio Graph Data (12 months)
+// Portfolio Graph Data (12 months — Apr '25 to Mar '26)
 // ──────────────────────────────────────────────────────────
 
 const monthLabels = [
@@ -622,50 +683,47 @@ const monthLabels = [
   "Oct '25", "Nov '25", "Dec '25", "Jan '26", "Feb '26", "Mar '26",
 ];
 
-// Realistic monthly net profits per portfolio (slight upward trend with variation)
-const fenixData = [620, 580, 710, 695, 740, 780, 650, 820, 890, 760, -85, 200];
-const jmsData   = [380, 420, 510, 480, 555, 530, 490, 580, 610, 545, -820, -760];
-const ssData    = [220, 265, 310, 290, 330, 370, 415, 390, 450, 480, 540, -160];
+// Horizon: strong summer, dip in Feb-Mar due to maintenance + Park West vacancies
+const horizonData = [3800, 3600, 4100, 3900, 4300, 4500, 4600, 4400, 4800, 4200, 2100, 1900];
+// AP: steady growth, Feb dip from Wapping bathroom refurb, recovers in Mar
+const apData     = [2800, 3000, 3100, 3300, 3200, 3500, 3700, 3600, 3900, 3800, 1800, 3100];
 
-export const MOCK_PORTFOLIO_GRAPH: PortfolioMonthPoint[] = monthLabels.map(
-  (month, i) => ({
-    month,
-    FENIX: fenixData[i],
-    JMS: jmsData[i],
-    "Smart Share": ssData[i],
-  })
-);
+export const MOCK_PORTFOLIO_GRAPH: PortfolioMonthPoint[] = monthLabels.map((month, i) => ({
+  month,
+  Horizon: horizonData[i],
+  AP: apData[i],
+}));
 
 // ──────────────────────────────────────────────────────────
 // Dashboard Summary
 // ──────────────────────────────────────────────────────────
 
 export const MOCK_DASHBOARD_DATA: DashboardData = {
-  total_units: 33,
-  occupied_units: 24,
-  vacant_units: 5,
-  daily_vacancy_loss: 231,
-  total_rent_roll: 3854, // £ PCM from occupied units
+  total_units: 43,          // Horizon: 4+5+5+6+4+3=27 | AP: 4+3+5+4=16
+  occupied_units: 35,       // Horizon: 4+3+4+5+3+1=20 | AP: 4+3+5+3=15
+  vacant_units: 8,
+  daily_vacancy_loss: 293,  // £/day across all 8 vacancies
+  total_rent_roll: 39465,   // £ PCM (Horizon: £22,825 | AP: £16,640)
   alerts: MOCK_ALERTS,
   vacancy_units: MOCK_VACANCY_UNITS,
   upcoming_move_outs: MOCK_UPCOMING_MOVE_OUTS,
   top_properties: [
-    MOCK_PROPERTIES[5], // Clapham Common  £983/mo
-    MOCK_PROPERTIES[7], // Shoreditch      £1,017/mo
-    MOCK_PROPERTIES[4], // Cambridge Heath £255/mo
+    MOCK_PROPERTIES[8],   // 5 Camden High Street  +£1,595
+    MOCK_PROPERTIES[0],   // 81 St Michael's Street +£1,325
+    MOCK_PROPERTIES[6],   // 14 Victoria Road       +£710
   ],
   worst_properties: [
-    MOCK_PROPERTIES[1], // Sussex Gardens -£1,949/mo
-    MOCK_PROPERTIES[2], // Balham         -£1,635/mo (cost spike)
-    MOCK_PROPERTIES[3], // Rope Street    -£2,100/mo (vacant)
+    MOCK_PROPERTIES[5],   // 20 Park West           -£2,651
+    MOCK_PROPERTIES[9],   // 8 Wapping High Street  -£2,215
+    MOCK_PROPERTIES[4],   // 15 Everard House       -£1,225
   ],
-  portfolio_net_profit_this_month: -280,
-  portfolio_net_profit_last_month: 349,
+  portfolio_net_profit_this_month: -1821, // Horizon: -£2,316 | AP: +£495
+  portfolio_net_profit_last_month: 6850,  // Horizon: +£3,770 | AP: +£3,080
   maintenance_summary: {
-    open_jobs: 5,
-    in_progress_jobs: 3,
-    critical_jobs: 2,
-    resolved_this_month: 2,
-    total_cost_this_month: 78000,
+    open_jobs: 4,
+    in_progress_jobs: 2,
+    critical_jobs: 1,
+    resolved_this_month: 3,
+    total_cost_this_month: 315000, // Everard repaint (£950) + Wapping bathroom (£2,200)
   },
 };

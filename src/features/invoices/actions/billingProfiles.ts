@@ -50,19 +50,22 @@ export async function createBillingProfile(formData: FormData) {
   revalidatePath("/settings/billing-profiles");
 }
 
-export async function updateBillingProfile(formData: FormData) {
-  const supabase = createSupabaseServerClient();
-  const profile = await requireRole([...ADMIN_ROLES]);
-  const billingProfileId = String(formData.get("billing_profile_id") ?? "");
-  const termsRaw = String(formData.get("default_payment_terms_days") ?? "");
-  const termsValue = Number(termsRaw);
-  const termsDays = Number.isFinite(termsValue) && termsValue > 0 ? termsValue : 7;
+export async function updateBillingProfile(
+  _prevState: { ok?: boolean; error?: string },
+  formData: FormData
+): Promise<{ ok?: boolean; error?: string }> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const admin = createSupabaseAdminClient();
+    const profile = await requireRole([...ADMIN_ROLES]);
+    const billingProfileId = String(formData.get("billing_profile_id") ?? "");
+    const termsRaw = String(formData.get("default_payment_terms_days") ?? "");
+    const termsValue = Number(termsRaw);
+    const termsDays = Number.isFinite(termsValue) && termsValue > 0 ? termsValue : 7;
 
-  if (!billingProfileId) throw new Error("Missing billing profile id.");
+    if (!billingProfileId) return { error: "Missing billing profile id." };
 
-  const { error } = await supabase
-    .from("billing_profiles")
-    .update({
+    const updates: Record<string, unknown> = {
       name: String(formData.get("name") ?? ""),
       sender_company_name: String(formData.get("sender_company_name") ?? ""),
       sender_address: String(formData.get("sender_address") ?? ""),
@@ -75,13 +78,35 @@ export async function updateBillingProfile(formData: FormData) {
       footer_thank_you_text: String(
         formData.get("footer_thank_you_text") ?? "Thank you for your business!"
       ),
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", billingProfileId)
-    .eq("tenant_id", profile.tenant_id);
-  if (error) throw new Error(error.message);
+      updated_at: new Date().toISOString(),
+    };
 
-  revalidatePath("/settings/billing-profiles");
+    const logoFile = formData.get("logo") as File | null;
+    if (logoFile && logoFile.size > 0) {
+      const bucketName = "billing-logos";
+      const { error: bucketError } = await admin.storage.getBucket(bucketName);
+      if (bucketError) await admin.storage.createBucket(bucketName, { public: false });
+      const path = `${profile.tenant_id}/${billingProfileId}/${logoFile.name}`;
+      const { error: uploadError } = await admin.storage
+        .from(bucketName)
+        .upload(path, logoFile, { upsert: true, contentType: logoFile.type || "image/png" });
+      if (uploadError) return { error: uploadError.message };
+      updates.logo_url = path;
+    }
+
+    const { error } = await supabase
+      .from("billing_profiles")
+      .update(updates)
+      .eq("id", billingProfileId)
+      .eq("tenant_id", profile.tenant_id);
+    if (error) return { error: error.message };
+
+    revalidatePath("/settings/billing-profiles");
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof Error) return { error: err.message };
+    return { error: "Failed to save profile." };
+  }
 }
 
 export async function deleteBillingProfile(profileId: string) {

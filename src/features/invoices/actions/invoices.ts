@@ -139,7 +139,7 @@ export async function createInvoiceFromBonuses(formData: FormData) {
 
   const { data: bonuses, error: bonusError } = await supabase
     .from("bonuses")
-    .select("id, landlord_id, amount_owed, code, landlords(name, billing_address)")
+    .select("id, landlord_id, amount_owed, code, client_name, landlords(name, billing_address)")
     .in("id", input.bonus_ids);
   if (bonusError) throw new Error(bonusError.message);
   if (!bonuses || bonuses.length === 0) {
@@ -176,7 +176,7 @@ export async function createInvoiceFromBonuses(formData: FormData) {
       } (${Array.isArray(bonus.landlords)
         ? bonus.landlords[0]?.billing_address
         : (bonus.landlords as any)?.billing_address ?? "Address"
-      }) - Client: Unknown`,
+      }) - Client: ${(bonus as any).client_name ?? "Unknown"}`,
     quantity: 1,
     rate: Number(bonus.amount_owed ?? 0),
     amount: Number(bonus.amount_owed ?? 0),

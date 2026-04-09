@@ -77,8 +77,11 @@ function computeMonthlyCosts(costs: PropertyCost[]): number {
 // Public API
 // ──────────────────────────────────────────────────────────
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 /** Fetch all property profitabilities for the current tenant, current month. */
 export async function getAllPropertyProfitabilities(): Promise<PropertyProfitability[]> {
+  if (IS_DEV) return MOCK_PROPERTIES;
   try {
     const supabase = createSupabaseServerClient();
 
@@ -208,6 +211,7 @@ export async function getPropertyProfitability(propertyId: string): Promise<Prop
 
 /** Fetch all unresolved alerts for this tenant. */
 export async function getProfitabilityAlerts(): Promise<ProfitabilityAlert[]> {
+  if (IS_DEV) return MOCK_ALERTS;
   try {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
@@ -250,6 +254,7 @@ export async function getProfitabilityAlerts(): Promise<ProfitabilityAlert[]> {
 
 /** Fetch costs for a single property. */
 export async function getPropertyCosts(propertyId: string): Promise<PropertyCost[]> {
+  if (IS_DEV) return MOCK_PROPERTIES.find((p) => p.property_id === propertyId)?.costs ?? [];
   try {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
@@ -270,6 +275,7 @@ export async function getPropertyCosts(propertyId: string): Promise<PropertyCost
 
 /** Build the portfolio line graph data for the past N months. */
 export async function getPortfolioGraphData(months = 12): Promise<PortfolioMonthPoint[]> {
+  if (IS_DEV) return MOCK_PORTFOLIO_GRAPH.slice(-months);
   try {
     const supabase = createSupabaseServerClient();
     // Check tables exist
@@ -289,6 +295,7 @@ export async function getPortfolioGraphData(months = 12): Promise<PortfolioMonth
 
 /** Dashboard aggregate data. */
 export async function getDashboardData(): Promise<DashboardData> {
+  if (IS_DEV) return MOCK_DASHBOARD_DATA;
   try {
     const supabase = createSupabaseServerClient();
 
