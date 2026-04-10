@@ -102,7 +102,7 @@ export default async function EarningsPage({
           {
             label: "Top Agent",
             value: topAgent
-              ? `${topAgent.agent_name} · £${(topAgent.agent_earnings ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`
+              ? `${topAgent.agent_name} · £${(topAgent.combined_earnings ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`
               : "—",
             icon: Award,
             color: "text-amber-600",

@@ -152,6 +152,7 @@ export default async function AgentEarningsPage({
             from={filters.from}
             to={filters.to}
             minAmount={minAmount}
+            isAdmin={isAdmin}
           />
         </CardContent>
       </Card>

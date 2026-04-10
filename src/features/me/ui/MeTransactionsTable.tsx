@@ -6,10 +6,11 @@ import { formatGBP, formatDate } from "@/lib/utils/formatters";
 import type { EarningsTransaction } from "@/features/earnings/domain/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PaidToggle } from "@/features/earnings/ui/PaidToggle";
 
 const PAGE_SIZE = 10;
 
-export function MeTransactionsTable({ transactions }: { transactions: EarningsTransaction[] }) {
+export function MeTransactionsTable({ transactions, isAdmin = false }: { transactions: EarningsTransaction[]; isAdmin?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get("search") ?? "";
@@ -92,11 +93,7 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
                       )}
                     </td>
                     <td className="py-3 pr-4">
-                      {t.status === "paid" ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">Paid</span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Unpaid</span>
-                      )}
+                      <PaidToggle rentalId={t.id} status={t.status} isAdmin={isAdmin} />
                     </td>
                     <td className="py-3 pr-4 text-right tabular-nums">{t.rent_amount != null ? formatGBP(t.rent_amount) : "—"}</td>
                     <td className="py-3 pl-4 text-right tabular-nums font-medium">{formatGBP(t.amount)}</td>

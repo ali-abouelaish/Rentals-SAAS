@@ -22,6 +22,8 @@ export type EarningsLeaderboardRow = {
   agent_earnings: number;
   agency_earnings: number;
   total_earnings: number;
+  bonus_earnings: number;
+  combined_earnings: number;
   last_activity: string | null;
   commission_percent: number | null;
   rank: number;

@@ -69,12 +69,14 @@ function PodiumCard({
 
       {/* Earnings */}
       <p className="text-lg font-bold text-foreground tabular-nums">
-        {formatGBP(row.agent_earnings)}
+        {formatGBP(row.combined_earnings)}
       </p>
 
-      {/* Commission */}
+      {/* Breakdown */}
       <p className="text-xs text-foreground-muted mt-1">
-        {row.commission_percent ? `${row.commission_percent}% commission` : "—"}
+        {row.bonus_earnings > 0
+          ? `${formatGBP(row.agent_earnings)} rentals + ${formatGBP(row.bonus_earnings)} bonuses`
+          : row.commission_percent ? `${row.commission_percent}% commission` : "—"}
       </p>
 
       {/* Place badge */}
@@ -120,16 +122,16 @@ function RunnerUpRow({
       <div className="flex items-center gap-6">
         <div className="text-right hidden sm:block">
           <p className="text-sm font-semibold text-foreground tabular-nums">
-            {formatGBP(row.agent_earnings)}
+            {formatGBP(row.combined_earnings)}
           </p>
-          {showAgencyTotals && (
+          {row.bonus_earnings > 0 && (
             <p className="text-xs text-foreground-muted">
-              Agency: {formatGBP(row.agency_earnings)}
+              {formatGBP(row.agent_earnings)} + {formatGBP(row.bonus_earnings)} bonus
             </p>
           )}
         </div>
         <p className="text-sm font-semibold text-foreground tabular-nums sm:hidden">
-          {formatGBP(row.agent_earnings)}
+          {formatGBP(row.combined_earnings)}
         </p>
         {row.last_activity && (
           <span className="text-xs text-foreground-muted hidden lg:block">

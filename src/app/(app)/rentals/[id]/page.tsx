@@ -15,7 +15,7 @@ import { RentalEditPanel } from "@/features/rentals/ui/RentalEditPanel";
 import { RentalDocumentsViewer } from "@/features/rentals/ui/RentalDocumentsViewer";
 import { RentalPayoutSummary } from "@/features/rentals/ui/RentalPayoutSummary";
 import { RentalStatusSelect } from "@/features/rentals/ui/RentalStatusSelect";
-import { DollarSign } from "lucide-react";
+import { PoundSterling } from "lucide-react";
 
 export default async function RentalDetailPage({
   params
@@ -195,33 +195,33 @@ export default async function RentalDetailPage({
 
         {/* Admin status shortcuts (same behavior as list view) */}
         {profile.role.toLowerCase() === "admin" && rental.status === "approved" && (
-          <form
-            action={async (formData) => {
-              "use server";
-              await updateRentalStatus(formData);
-            }}
-          >
-            <input type="hidden" name="rental_id" value={rental.id} />
-            <input type="hidden" name="status" value="paid" />
-            <Button type="submit" variant="success" size="sm">
-              <DollarSign className="h-3 w-3 mr-1" />
-              Mark as paid
-            </Button>
-          </form>
-        )}
-        {profile.role.toLowerCase() === "admin" && rental.status === "paid" && (
-          <form
-            action={async (formData) => {
-              "use server";
-              await updateRentalStatus(formData);
-            }}
-          >
-            <input type="hidden" name="rental_id" value={rental.id} />
-            <input type="hidden" name="status" value="refunded" />
-            <Button type="submit" variant="outline" size="sm">
-              Refund
-            </Button>
-          </form>
+          <>
+            <form
+              action={async (formData) => {
+                "use server";
+                await updateRentalStatus(formData);
+              }}
+            >
+              <input type="hidden" name="rental_id" value={rental.id} />
+              <input type="hidden" name="status" value="paid" />
+              <Button type="submit" variant="success" size="sm">
+                <PoundSterling className="h-3 w-3 mr-1" />
+                Mark as paid
+              </Button>
+            </form>
+            <form
+              action={async (formData) => {
+                "use server";
+                await updateRentalStatus(formData);
+              }}
+            >
+              <input type="hidden" name="rental_id" value={rental.id} />
+              <input type="hidden" name="status" value="refunded" />
+              <Button type="submit" variant="outline" size="sm">
+                Refund
+              </Button>
+            </form>
+          </>
         )}
       </div>
 

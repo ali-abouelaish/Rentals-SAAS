@@ -75,6 +75,7 @@ export default async function MePage({
 
   const displayName = profile.display_name ?? agentProfile?.user_profiles?.display_name ?? "Agent";
   const role = profile.role ?? agentProfile?.user_profiles?.role ?? "agent";
+  const isAdmin = profile.role.toLowerCase() === "admin";
 
   const hasBusinessCard = entitlements.has("digital_business_card");
 
@@ -124,7 +125,7 @@ export default async function MePage({
                 </Button>
               </div>
             ) : (
-              <MeTransactionsTable transactions={transactions} />
+              <MeTransactionsTable transactions={transactions} isAdmin={isAdmin} />
             )}
           </div>
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
@@ -157,7 +158,7 @@ export default async function MePage({
                 </Button>
               </div>
             ) : (
-              <MeTransactionsTable transactions={transactions} />
+              <MeTransactionsTable transactions={transactions} isAdmin={isAdmin} />
             )}
           </div>
         </TabsContent>

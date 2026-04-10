@@ -312,7 +312,8 @@ export async function getEarningsLeaderboard(
   });
 
   if (!rpcError && rpcData) {
-    return rpcData as EarningsLeaderboardRow[];
+    // RPC doesn't return bonus fields — fall through to buildLeaderboard
+    // so bonuses are always included
   }
 
   return buildLeaderboard(supabase, profile.tenant_id, fromDate, toDate, 10);
@@ -327,16 +328,6 @@ export async function getEarningsLeaderboardAll(
   const fromDate = new Date(filters.from);
   const toDate = new Date(filters.to);
 
-  const { data: rpcData, error: rpcError } = await supabase.rpc("get_earnings_leaderboard", {
-    p_tenant_id: profile.tenant_id,
-    p_from: fromDate.toISOString(),
-    p_to: endOfDay(filters.to)
-  });
-
-  if (!rpcError && rpcData) {
-    return rpcData as EarningsLeaderboardRow[];
-  }
-
   return buildLeaderboard(supabase, profile.tenant_id, fromDate, toDate, null);
 }
 
@@ -347,14 +338,15 @@ async function buildLeaderboard(
   toDate: Date,
   limit: number | null
 ): Promise<EarningsLeaderboardRow[]> {
-  const [{ data: rentals }, { data: agents }, { data: activities }] = await Promise.all([
+  const toStr = toDate.toISOString().slice(0, 10);
+  const [{ data: rentals }, { data: agents }, { data: activities }, { data: bonuses }] = await Promise.all([
     supabase
       .from("rental_codes")
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
       .eq("tenant_id", tenantId)
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
-      .lte("date", endOfDay(toDate.toISOString().slice(0, 10))),
+      .lte("date", endOfDay(toStr)),
     supabase
       .from("user_profiles")
       .select("id, display_name, agent_profiles(avatar_url, commission_percent)")
@@ -364,7 +356,13 @@ async function buildLeaderboard(
       .select("actor_user_id, created_at")
       .eq("tenant_id", tenantId)
       .gte("created_at", fromDate.toISOString())
-      .lte("created_at", endOfDay(toDate.toISOString().slice(0, 10)))
+      .lte("created_at", endOfDay(toStr)),
+    supabase
+      .from("bonuses")
+      .select("agent_id, amount_owed, payout_mode")
+      .eq("tenant_id", tenantId)
+      .gte("bonus_date", fromDate.toISOString().slice(0, 10))
+      .lte("bonus_date", toStr)
   ]);
 
   // Batch-fetch marketing agent profiles for primary fee lookup
@@ -424,6 +422,8 @@ async function buildLeaderboard(
       agent_earnings: 0,
       agency_earnings: 0,
       total_earnings: 0,
+      bonus_earnings: 0,
+      combined_earnings: 0,
       last_activity: activityMap.get(agentId) ?? null,
       commission_percent: Array.isArray(agent?.agent_profiles)
         ? agent.agent_profiles[0]?.commission_percent
@@ -464,11 +464,26 @@ async function buildLeaderboard(
     }
   }
 
+  // Add bonus earnings per agent
+  for (const bonus of bonuses ?? []) {
+    if (!bonus.agent_id) continue;
+    const row = getOrCreate(bonus.agent_id);
+    const commPct = commPctMap.get(bonus.agent_id) ?? (row.commission_percent ?? 0);
+    const bonusShare = bonus.payout_mode === "full"
+      ? Number(bonus.amount_owed)
+      : Math.round(Number(bonus.amount_owed) * (commPct / 100) * 100) / 100;
+    row.bonus_earnings += bonusShare;
+  }
+
   const sorted = Array.from(rows.values())
-    .sort((a, b) => b.agent_earnings - a.agent_earnings)
-    .map((row, index) => ({
+    .map((row) => ({
       ...row,
       agency_earnings: row.total_earnings - row.agent_earnings,
+      combined_earnings: Math.round((row.agent_earnings + row.bonus_earnings) * 100) / 100,
+    }))
+    .sort((a, b) => b.combined_earnings - a.combined_earnings)
+    .map((row, index) => ({
+      ...row,
       rank: index + 1
     }));
 

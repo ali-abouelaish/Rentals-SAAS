@@ -22,7 +22,9 @@ export function AllAgentsTable({ rows }: { rows: EarningsLeaderboardRow[] }) {
             <th className="pb-3 pr-4 w-14">Rank</th>
             <th className="pb-3 pr-4">Agent</th>
             <th className="pb-3 pr-4 text-right tabular-nums">Rentals</th>
-            <th className="pb-3 pr-4 text-right tabular-nums">Earnings</th>
+            <th className="pb-3 pr-4 text-right tabular-nums">Rental Earnings</th>
+            <th className="pb-3 pr-4 text-right tabular-nums">Bonuses</th>
+            <th className="pb-3 pr-4 text-right tabular-nums">Total Income</th>
             <th className="pb-3 pr-4 text-right tabular-nums">Commission</th>
             <th className="pb-3 pl-4 text-right">Last Active</th>
           </tr>
@@ -45,8 +47,14 @@ export function AllAgentsTable({ rows }: { rows: EarningsLeaderboardRow[] }) {
                 </Link>
               </td>
               <td className="py-3 pr-4 text-right tabular-nums">{row.transactions_count}</td>
-              <td className="py-3 pr-4 text-right tabular-nums font-medium">
+              <td className="py-3 pr-4 text-right tabular-nums">
                 {formatGBP(row.agent_earnings)}
+              </td>
+              <td className="py-3 pr-4 text-right tabular-nums">
+                {row.bonus_earnings > 0 ? formatGBP(row.bonus_earnings) : "—"}
+              </td>
+              <td className="py-3 pr-4 text-right tabular-nums font-medium">
+                {formatGBP(row.combined_earnings)}
               </td>
               <td className="py-3 pr-4 text-right tabular-nums text-foreground-muted">
                 {row.commission_percent != null ? `${row.commission_percent}%` : "—"}
