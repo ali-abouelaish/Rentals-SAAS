@@ -13,6 +13,12 @@ function getBucket(from: Date, to: Date) {
   return diffDays <= 45 ? "day" : "week";
 }
 
+/** Turn a date-only string like "2026-04-10" into an end-of-day ISO string
+ *  so that `.lte("date", ...)` includes records created during that day. */
+function endOfDay(dateStr: string): string {
+  return `${dateStr}T23:59:59.999Z`;
+}
+
 function paymentFeeRate(method: string): number {
   if (method === "cash") return 0;
   if (method === "transfer") return 0.2;
@@ -65,7 +71,7 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
       .eq("tenant_id", profile.tenant_id)
       .in("status", ["approved", "paid"])
       .gte("date", from)
-      .lte("date", to)
+      .lte("date", endOfDay(to))
   ]);
 
   const totalEarnings = (rentals ?? []).reduce(
@@ -114,7 +120,7 @@ export async function getEarningsStatsForAgent(
       ].join(","))
       .in("status", ["approved", "paid"])
       .gte("date", from)
-      .lte("date", to)
+      .lte("date", endOfDay(to))
   ]);
 
   const selfCommissionPct = agentProfile?.commission_percent ?? 0;
@@ -153,6 +159,7 @@ export async function getEarningsStatsForAgent(
       const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
       totalEarnings += Math.round((gross - totalMktFee) * 100) / 100;
     } else if (isMarketingAgent) {
+      rentalsCount++;
       totalEarnings += splitFee;
     }
   }
@@ -175,7 +182,7 @@ export async function getEarningsTrend(filters: EarningsFilterValues): Promise<E
   const { data: rpcData, error: rpcError } = await supabase.rpc("get_earnings_trend", {
     p_tenant_id: profile.tenant_id,
     p_from: fromDate.toISOString(),
-    p_to: toDate.toISOString(),
+    p_to: endOfDay(filters.to),
     p_bucket: bucket
   });
 
@@ -190,7 +197,7 @@ export async function getEarningsTrend(filters: EarningsFilterValues): Promise<E
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["approved", "paid"])
     .gte("date", fromDate.toISOString())
-    .lte("date", toDate.toISOString());
+    .lte("date", endOfDay(filters.to));
 
   const buckets = new Map<string, EarningsTrendPoint>();
   (rentals ?? []).forEach((r) => {
@@ -236,7 +243,7 @@ export async function getEarningsTrendForAgent(
       ].join(","))
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
-      .lte("date", toDate.toISOString())
+      .lte("date", endOfDay(filters.to))
   ]);
 
   const selfCommissionPct = agentProfile?.commission_percent ?? 0;
@@ -301,7 +308,7 @@ export async function getEarningsLeaderboard(
   const { data: rpcData, error: rpcError } = await supabase.rpc("get_earnings_leaderboard", {
     p_tenant_id: profile.tenant_id,
     p_from: fromDate.toISOString(),
-    p_to: toDate.toISOString()
+    p_to: endOfDay(filters.to)
   });
 
   if (!rpcError && rpcData) {
@@ -323,7 +330,7 @@ export async function getEarningsLeaderboardAll(
   const { data: rpcData, error: rpcError } = await supabase.rpc("get_earnings_leaderboard", {
     p_tenant_id: profile.tenant_id,
     p_from: fromDate.toISOString(),
-    p_to: toDate.toISOString()
+    p_to: endOfDay(filters.to)
   });
 
   if (!rpcError && rpcData) {
@@ -347,7 +354,7 @@ async function buildLeaderboard(
       .eq("tenant_id", tenantId)
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
-      .lte("date", toDate.toISOString()),
+      .lte("date", endOfDay(toDate.toISOString().slice(0, 10))),
     supabase
       .from("user_profiles")
       .select("id, display_name, agent_profiles(avatar_url, commission_percent)")
@@ -357,7 +364,7 @@ async function buildLeaderboard(
       .select("actor_user_id, created_at")
       .eq("tenant_id", tenantId)
       .gte("created_at", fromDate.toISOString())
-      .lte("created_at", toDate.toISOString())
+      .lte("created_at", endOfDay(toDate.toISOString().slice(0, 10)))
   ]);
 
   // Batch-fetch marketing agent profiles for primary fee lookup
@@ -490,11 +497,11 @@ export async function getTransactions(
 
   let query = supabase
     .from("rental_codes")
-    .select("id, code, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
+    .select("id, code, status, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["approved", "paid"])
     .gte("date", fromDate.toISOString())
-    .lte("date", toDate.toISOString())
+    .lte("date", endOfDay(filters.to))
     .order("date", { ascending: false });
 
   if (options?.agentId) {
@@ -559,6 +566,7 @@ export async function getTransactions(
       rent_amount: rentalNet,
       created_at: rental.date,
       role,
+      status: rental.status,
     });
   }
 
@@ -601,7 +609,7 @@ export async function getEarningsTrendByAgents(
       .or(orParts.join(","))
       .in("status", ["approved", "paid"])
       .gte("date", fromDate.toISOString())
-      .lte("date", toDate.toISOString()),
+      .lte("date", endOfDay(filters.to)),
     supabase
       .from("agent_profiles")
       .select("user_id, commission_percent, marketing_fee")

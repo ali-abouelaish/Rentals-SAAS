@@ -37,6 +37,7 @@ export type EarningsTransaction = {
   rent_amount?: number;
   created_at: string;
   role?: "assisted" | "marketing";
+  status?: string;
 };
 
 /** Trend point with optional per-agent breakdown for Compare Agents chart */

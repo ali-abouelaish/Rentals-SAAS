@@ -71,6 +71,7 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
                   <th className="pb-3 pr-4">Rental Code</th>
                   <th className="pb-3 pr-4">Client</th>
                   <th className="pb-3 pr-4">Role</th>
+                  <th className="pb-3 pr-4">Paid</th>
                   <th className="pb-3 pr-4 text-right tabular-nums">Rent</th>
                   <th className="pb-3 pl-4 text-right tabular-nums">Earnings</th>
                 </tr>
@@ -88,6 +89,13 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
                         <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Assisted</span>
                       ) : (
                         <span className="text-foreground-muted">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {t.status === "paid" ? (
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">Paid</span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Unpaid</span>
                       )}
                     </td>
                     <td className="py-3 pr-4 text-right tabular-nums">{t.rent_amount != null ? formatGBP(t.rent_amount) : "—"}</td>
