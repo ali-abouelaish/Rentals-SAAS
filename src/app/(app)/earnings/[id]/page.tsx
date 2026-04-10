@@ -70,13 +70,12 @@ export default async function AgentEarningsPage({
       ? (stats.totalEarnings ?? 0) / (stats.totalTransactions ?? 1)
       : 0;
 
-  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonusAmount;
-
   const commissionPercent = agent.commission_percent ?? 50;
   const bonusAgentShare = (b: { amount_owed: number; payout_mode?: string | null }) =>
     b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
 
   const totalBonusAmount = bonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
+  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonusAmount;
   const totalBonusCount = bonuses.length;
   const pendingBonusAmount = bonuses
     .filter((b) => ["pending", "approved", "sent"].includes(b.status))
