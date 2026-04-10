@@ -254,6 +254,16 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
       .update({ status: "registered" })
       .eq("id", clientId);
     if (clientUpdateError) console.error("[rental] client status update failed:", clientUpdateError.message);
+  } catch (docErr) {
+    // Rental row was already committed — notify caller so the UI can
+    // guide the user to re-upload documents instead of re-submitting.
+    console.error("[rental] post-insert error for", rentalCode.code, docErr);
+    return {
+      ok: false,
+      partial: true,
+      rentalCode,
+      error: docErr instanceof Error ? docErr.message : "Document upload failed",
+    };
   } finally {
     // Always revalidate so the rental shows on the dashboard even if
     // document upload failed (the rental row is already committed).

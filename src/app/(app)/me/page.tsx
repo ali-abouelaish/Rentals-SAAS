@@ -67,6 +67,7 @@ export default async function MePage({
   const bonusAgentShare = (b: { amount_owed: number; payout_mode?: string | null }) =>
     b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
   const totalBonuses = bonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
+  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonuses;
   const avgPerRental =
     (stats.totalTransactions ?? 0) > 0
       ? (stats.totalEarnings ?? 0) / (stats.totalTransactions ?? 1)
@@ -86,7 +87,7 @@ export default async function MePage({
         joinedAt={(profile as { created_at?: string }).created_at}
         editSupported={true}
         totalRentals={stats.totalTransactions ?? 0}
-        totalEarnings={stats.totalEarnings ?? 0}
+        totalEarnings={totalCombinedEarnings}
         avgPerRental={avgPerRental}
         cardUrl={cardUrl}
         hasBusinessCard={hasBusinessCard}
@@ -105,14 +106,14 @@ export default async function MePage({
 
         <TabsContent value="overview" className="space-y-8 mt-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <StatCard label="Total Earnings" value={formatGBP(stats.totalEarnings ?? 0)} icon={TrendingUp} />
-            <StatCard label="Earnings (period)" value={formatGBP(stats.totalEarnings ?? 0)} icon={Receipt} iconColor="text-violet-600" iconBg="bg-violet-50" />
+            <StatCard label="Total Earnings" value={formatGBP(totalCombinedEarnings)} icon={TrendingUp} />
+            <StatCard label="Earnings (period)" value={formatGBP(totalCombinedEarnings)} icon={Receipt} iconColor="text-violet-600" iconBg="bg-violet-50" />
             <StatCard label="Total Rentals" value={stats.totalTransactions ?? 0} icon={ClipboardList} iconColor="text-blue-600" iconBg="bg-blue-50" />
             <StatCard label="Rentals (period)" value={stats.totalTransactions ?? 0} icon={ClipboardList} iconColor="text-slate-600" iconBg="bg-slate-50" />
             <StatCard label="Conversion" value="—" icon={Percent} iconColor="text-amber-600" iconBg="bg-amber-50" />
             <StatCard label="Avg per Rental" value={formatGBP(avgPerRental)} icon={Calculator} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
           </div>
-          <MeTrendChart trend={trend} transactions={transactions} />
+          <MeTrendChart trend={trend} transactions={transactions} bonuses={bonuses} commissionPercent={commissionPercent} />
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Transactions</h3>
             {transactions.length === 0 ? (
@@ -134,11 +135,11 @@ export default async function MePage({
 
         <TabsContent value="earnings" className="space-y-8 mt-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Total Earnings" value={formatGBP(stats.totalEarnings ?? 0)} icon={TrendingUp} />
-            <StatCard label="Earnings (period)" value={formatGBP(stats.totalEarnings ?? 0)} icon={Receipt} iconColor="text-violet-600" iconBg="bg-violet-50" />
+            <StatCard label="Total Earnings" value={formatGBP(totalCombinedEarnings)} icon={TrendingUp} />
+            <StatCard label="Earnings (period)" value={formatGBP(totalCombinedEarnings)} icon={Receipt} iconColor="text-violet-600" iconBg="bg-violet-50" />
             <StatCard label="Avg per Rental" value={formatGBP(avgPerRental)} icon={Calculator} />
           </div>
-          <MeTrendChart trend={trend} transactions={transactions} />
+          <MeTrendChart trend={trend} transactions={transactions} bonuses={bonuses} commissionPercent={commissionPercent} />
         </TabsContent>
 
         <TabsContent value="rentals" className="space-y-8 mt-8">

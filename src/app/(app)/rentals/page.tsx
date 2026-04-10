@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { AvatarCircle } from "@/components/shared/AvatarCircle";
 import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
 import { getRentalCodes } from "@/features/rentals/data/rentals";
+import { getAgents } from "@/features/agents/data/agents";
 import { formatDate, formatCurrency } from "@/lib/utils/formatters";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { updateRentalStatus } from "@/features/rentals/actions/rentals";
@@ -17,23 +18,39 @@ import {
   Plus,
 } from "lucide-react";
 import { RealtimeRefresher } from "@/components/shared/RealtimeRefresher";
+import { AgentFilterDropdown } from "@/features/rentals/ui/AgentFilterDropdown";
+
+const statusLabels: Record<string, string> = {
+  all: "All",
+  pending: "Pending",
+  approved: "Approved",
+  paid: "Paid",
+  refunded: "Refunded",
+  need_more_info: "Need More Info",
+};
 
 export default async function RentalsPage({
   searchParams,
 }: {
-  searchParams?: { q?: string; status?: string; page?: string };
+  searchParams?: { q?: string; status?: string; page?: string; agent?: string };
 }) {
   const profile = await requireUserProfile();
   const activeStatus = searchParams?.status ?? "all";
+  const activeAgent = searchParams?.agent ?? "all";
   const currentPage = parseInt(searchParams?.page ?? "1", 10);
 
-  const { rentals, total, page, totalPages } = await getRentalCodes({
-    search: searchParams?.q,
-    status: activeStatus,
-    page: currentPage,
-  });
-
   const isAdmin = profile.role.toLowerCase() === "admin";
+
+  const [{ rentals, total, page, totalPages }, agents] = await Promise.all([
+    getRentalCodes({
+      search: searchParams?.q,
+      status: activeStatus,
+      agentId: activeAgent !== "all" ? activeAgent : undefined,
+      page: currentPage,
+    }),
+    isAdmin ? getAgents() : Promise.resolve([]),
+  ]);
+
   const methodEmoji: Record<string, string> = {
     cash: "💵",
     transfer: "⚡",
@@ -48,8 +65,10 @@ export default async function RentalsPage({
     const q = overrides.q ?? searchParams?.q;
     const s = overrides.status ?? activeStatus;
     const p = overrides.page ?? String(page);
+    const a = overrides.agent ?? activeAgent;
     if (q) params.set("q", q);
     if (s && s !== "all") params.set("status", s);
+    if (a && a !== "all") params.set("agent", a);
     if (p && p !== "1") params.set("page", p);
     const qs = params.toString();
     return `/rentals${qs ? `?${qs}` : ""}`;
@@ -91,8 +110,23 @@ export default async function RentalsPage({
             placeholder="Code, client name..."
             initialQuery={searchParams?.q ?? ""}
             preserveStatus={activeStatus !== "all" ? activeStatus : undefined}
+            preserveAgent={activeAgent !== "all" ? activeAgent : undefined}
           />
         </div>
+
+        {/* Agent filter (admin only) */}
+        {isAdmin && agents.length > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            <label className="text-xs text-foreground-secondary">Agent:</label>
+            <AgentFilterDropdown
+              agents={agents.map((a: any) => ({
+                id: a.user_id as string,
+                name: ((a.user_profiles as { display_name?: string } | null)?.display_name ?? "Agent"),
+              }))}
+              activeAgentId={activeAgent}
+            />
+          </div>
+        )}
 
         {/* Pill filters */}
         <div className="flex flex-wrap gap-2">
@@ -105,7 +139,7 @@ export default async function RentalsPage({
                   : "bg-surface-inset text-foreground-secondary hover:bg-surface-highlight"
                 }`}
             >
-              {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+              {statusLabels[s] ?? s}
             </Link>
           ))}
         </div>

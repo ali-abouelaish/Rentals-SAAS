@@ -98,22 +98,43 @@ export function RentalCodeForm({
 
     startTransition(async () => {
       try {
-        await createRentalCodeWithDocuments(formData);
-        toast.success("Rental code created successfully");
-        const form = document.getElementById("rental-code-form") as HTMLFormElement;
-        form?.reset();
-        setSourcingFiles([]);
-        setPaymentFiles([]);
-        setClientIdFiles([]);
-        setMarketingAgentIds([]);
-        setFee("");
-        setPaymentMethod("");
-        // Bust the Next.js Router Cache so /rentals shows the new record
-        router.refresh();
-        // Refresh the next code preview
-        loadCode();
+        const result = await createRentalCodeWithDocuments(formData);
+
+        if (result.ok) {
+          // Full success — reset form
+          toast.success("Rental code created successfully");
+          const form = document.getElementById("rental-code-form") as HTMLFormElement;
+          form?.reset();
+          setSourcingFiles([]);
+          setPaymentFiles([]);
+          setClientIdFiles([]);
+          setMarketingAgentIds([]);
+          setFee("");
+          setPaymentMethod("");
+          router.refresh();
+          loadCode();
+        } else if (result.partial) {
+          // Rental was created but document upload failed — don't reset,
+          // guide the user to the rental page to re-upload documents.
+          toast.error(
+            `Rental ${result.rentalCode?.code} was created but documents failed to upload. Please go to the rental and re-upload your documents.`,
+            { duration: 10000 }
+          );
+        }
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to create rental code");
+        // Pre-insert failure — form state is preserved so the user can fix
+        // the issue and retry without re-entering everything.
+        const msg = error instanceof Error ? error.message : "Something went wrong";
+
+        if (msg.toLowerCase().includes("client")) {
+          toast.error(`Client error: ${msg}. Please go back and re-select the client.`, { duration: 8000 });
+        } else if (msg.toLowerCase().includes("storage") || msg.toLowerCase().includes("upload")) {
+          toast.error(`File upload failed: ${msg}. Please check your files are not too large and try again.`, { duration: 8000 });
+        } else if (msg.toLowerCase().includes("rental code") || msg.toLowerCase().includes("code")) {
+          toast.error(`${msg}. Please try submitting again.`, { duration: 8000 });
+        } else {
+          toast.error(`Failed to create rental: ${msg}. Your entries have been kept — please review and try again.`, { duration: 8000 });
+        }
       }
     });
   };

@@ -3,10 +3,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function getRentalCodes({
   search,
   status,
+  agentId,
   page = 1
 }: {
   search?: string;
   status?: string;
+  agentId?: string;
   page?: number;
 }) {
   const supabase = createSupabaseServerClient();
@@ -27,6 +29,9 @@ export async function getRentalCodes({
   }
   if (status && status !== "all") {
     query = query.eq("status", status);
+  }
+  if (agentId) {
+    query = query.eq("assisted_by_agent_id", agentId);
   }
 
   query = query.range(from, to);
