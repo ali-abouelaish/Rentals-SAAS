@@ -65,6 +65,11 @@ const statusConfig: Record<string, StatusConfig> = {
     icon: XCircle,
     label: "Void",
   },
+  need_more_info: {
+    className: "bg-warning-bg text-warning-fg border-warning-border",
+    icon: AlertCircle,
+    label: "More Information Needed",
+  },
   on_hold: {
     className: "bg-warning-bg text-warning-fg border-warning-border",
     icon: Pause,

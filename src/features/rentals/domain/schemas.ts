@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const paymentMethodEnum = z.enum(["cash", "transfer", "card"]);
-export const rentalStatusEnum = z.enum(["pending", "approved", "paid", "refunded"]);
+export const rentalStatusEnum = z.enum(["pending", "approved", "paid", "refunded", "need_more_info"]);
 
 export const rentalCodeSchema = z.object({
   client_id: z.string().uuid(),

@@ -40,7 +40,7 @@ export default async function RentalsPage({
     card: "💳",
   };
 
-  const statusFilters = ["all", "pending", "approved", "paid", "refunded"];
+  const statusFilters = ["all", "pending", "approved", "paid", "refunded", "need_more_info"];
 
   // Build URL helper
   const makeHref = (overrides: Record<string, string | undefined>) => {

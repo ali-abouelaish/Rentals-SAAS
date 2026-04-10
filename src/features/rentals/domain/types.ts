@@ -12,7 +12,7 @@ export type RentalCode = {
   marketing_agent_id: string | null;
   marketing_fee_override_gbp: number | null;
   marketing_fee_override_reason: string | null;
-  status: "pending" | "approved" | "paid" | "refunded";
+  status: "pending" | "approved" | "paid" | "refunded" | "need_more_info";
   client_snapshot: {
     full_name: string;
     phone: string;

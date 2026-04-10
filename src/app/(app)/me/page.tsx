@@ -63,7 +63,10 @@ export default async function MePage({
     getEntitlements(),
   ]);
 
-  const totalBonuses = bonuses.reduce((sum, b) => sum + (b.amount_owed ?? 0), 0);
+  const commissionPercent = agentProfile?.commission_percent ?? 50;
+  const bonusAgentShare = (b: { amount_owed: number; payout_mode?: string | null }) =>
+    b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
+  const totalBonuses = bonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
   const avgPerRental =
     (stats.totalTransactions ?? 0) > 0
       ? (stats.totalEarnings ?? 0) / (stats.totalTransactions ?? 1)
@@ -125,7 +128,7 @@ export default async function MePage({
           </div>
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Bonuses</h3>
-            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} />
+            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} commissionPercent={commissionPercent} />
           </div>
         </TabsContent>
 
@@ -162,7 +165,7 @@ export default async function MePage({
           <StatCard label="Total Bonuses (period)" value={formatGBP(totalBonuses)} icon={Gift} iconColor="text-amber-600" iconBg="bg-amber-50" />
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Bonuses</h3>
-            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} />
+            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} commissionPercent={commissionPercent} />
           </div>
         </TabsContent>
 

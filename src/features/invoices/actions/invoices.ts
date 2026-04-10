@@ -139,7 +139,7 @@ export async function createInvoiceFromBonuses(formData: FormData) {
 
   const { data: bonuses, error: bonusError } = await supabase
     .from("bonuses")
-    .select("id, landlord_id, amount_owed, code, client_name, landlords(name, billing_address)")
+    .select("id, landlord_id, amount_owed, code, client_name, property_address, landlords(name, billing_address)")
     .in("id", input.bonus_ids);
   if (bonusError) throw new Error(bonusError.message);
   if (!bonuses || bonuses.length === 0) {
@@ -173,10 +173,7 @@ export async function createInvoiceFromBonuses(formData: FormData) {
     description: `Landlord Bonus - ${bonus.code ?? bonus.id} - Landlord: ${Array.isArray(bonus.landlords)
       ? bonus.landlords[0]?.name
       : (bonus.landlords as any)?.name ?? "Landlord"
-      } (${Array.isArray(bonus.landlords)
-        ? bonus.landlords[0]?.billing_address
-        : (bonus.landlords as any)?.billing_address ?? "Address"
-      }) - Client: ${(bonus as any).client_name ?? "Unknown"}`,
+      } (${(bonus as any).property_address ?? "Address"}) - Client: ${(bonus as any).client_name ?? "Unknown"}`,
     quantity: 1,
     rate: Number(bonus.amount_owed ?? 0),
     amount: Number(bonus.amount_owed ?? 0),
@@ -261,10 +258,11 @@ export async function updateInvoiceDraft(formData: FormData) {
     .eq("id", invoiceId)
     .single();
   if (invoiceError) throw new Error(invoiceError.message);
-  if (invoice.status !== "draft") {
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  const editableStatus = invoice.status === "draft" || (isAdmin && invoice.status === "submitted");
+  if (!editableStatus) {
     throw new Error("Only draft invoices can be edited.");
   }
-  const isAdmin = profile.role.toLowerCase() === "admin";
   if (!isAdmin && invoice.created_by_user_id !== profile.id) {
     throw new Error("You do not have access to edit this invoice.");
   }
@@ -300,8 +298,8 @@ export async function deleteInvoice(invoiceId: string) {
     .eq("id", invoiceId)
     .single();
   if (invoiceError) throw new Error(invoiceError.message);
-  if (invoice.status !== "draft") {
-    throw new Error("Only draft invoices can be deleted.");
+  if (!["draft", "submitted"].includes(invoice.status)) {
+    throw new Error("Only draft or submitted invoices can be deleted.");
   }
 
   await supabase.from("invoice_bonus_links").delete().eq("invoice_id", invoiceId);
@@ -325,9 +323,9 @@ async function deleteInvoicesByIds(invoiceIds: string[]) {
     .in("id", invoiceIds);
   if (error) throw new Error(error.message);
 
-  const invalid = (invoices ?? []).filter((invoice) => invoice.status !== "draft");
+  const invalid = (invoices ?? []).filter((invoice) => !["draft", "submitted"].includes(invoice.status));
   if (invalid.length > 0) {
-    throw new Error("Only draft invoices can be deleted.");
+    throw new Error("Only draft or submitted invoices can be deleted.");
   }
 
   await supabase.from("invoice_bonus_links").delete().in("invoice_id", invoiceIds);

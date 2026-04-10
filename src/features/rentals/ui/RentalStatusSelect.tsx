@@ -10,6 +10,7 @@ const STATUS_OPTIONS = [
   { label: "Approved", value: "approved" },
   { label: "Paid", value: "paid" },
   { label: "Refunded", value: "refunded" },
+  { label: "More Information Needed", value: "need_more_info" },
 ];
 
 export function RentalStatusSelect({

@@ -9,7 +9,6 @@ import {
   deleteInvoice,
   markInvoiceDeclined,
   markInvoicePaid,
-  updateInvoiceDraft,
   submitInvoice,
   viewInvoicePdf
 } from "@/features/invoices/actions/invoices";
@@ -17,10 +16,9 @@ import { requireUserProfile } from "@/lib/auth/requireRole";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
 import { Button } from "@/components/ui/button";
 import { InvoiceSendForm } from "@/features/invoices/ui/InvoiceSendForm";
+import { InvoiceEditSection } from "@/features/invoices/ui/InvoiceEditSection";
 import { getEmailTemplate } from "@/features/invoices/actions/billingProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
 
 export default async function InvoiceDetailPage({
@@ -34,7 +32,11 @@ export default async function InvoiceDetailPage({
   ]);
   const { invoice, items } = invoiceResult;
   const isAdmin = profile.role.toLowerCase() === "admin";
-  const canEdit = invoice.status === "draft" && (isAdmin || invoice.created_by_user_id === profile.id);
+  const canEdit = (invoice.status === "draft" && (isAdmin || invoice.created_by_user_id === profile.id)) ||
+    (isAdmin && invoice.status === "submitted");
+  const canDelete = isAdmin
+    ? ["draft", "submitted"].includes(invoice.status)
+    : invoice.status === "draft" && invoice.created_by_user_id === profile.id;
 
   const supabase = createSupabaseServerClient();
   const [billingResult, landlordsResult, template] = await Promise.all([
@@ -102,13 +104,13 @@ export default async function InvoiceDetailPage({
                 </Button>
               </form>
             ) : null}
-            {canEdit ? (
+            {canDelete ? (
               <ConfirmDeleteForm
                 action={deleteInvoice.bind(null, invoice.id)}
-                message="Delete this draft invoice? This cannot be undone."
+                message="Delete this invoice? This cannot be undone."
               >
                 <Button type="submit" variant="outline">
-                  Delete draft
+                  Delete invoice
                 </Button>
               </ConfirmDeleteForm>
             ) : null}
@@ -132,18 +134,18 @@ export default async function InvoiceDetailPage({
               </form>
             ) : null}
             {isAdmin && invoice.status === "sent" ? (
-              <>
-                <form action={markInvoicePaid.bind(null, invoice.id)}>
-                  <Button type="submit" variant="secondary">
-                    Mark paid
-                  </Button>
-                </form>
-                <form action={markInvoiceDeclined.bind(null, invoice.id)}>
-                  <Button type="submit" variant="outline">
-                    Decline
-                  </Button>
-                </form>
-              </>
+              <form action={markInvoicePaid.bind(null, invoice.id)}>
+                <Button type="submit" variant="secondary">
+                  Mark paid
+                </Button>
+              </form>
+            ) : null}
+            {isAdmin && ["submitted", "approved", "sent"].includes(invoice.status) ? (
+              <form action={markInvoiceDeclined.bind(null, invoice.id)}>
+                <Button type="submit" variant="destructive">
+                  Decline
+                </Button>
+              </form>
             ) : null}
           </div>
         </CardContent>
@@ -158,63 +160,11 @@ export default async function InvoiceDetailPage({
       ) : null}
 
       {canEdit ? (
-        <Card>
-          <CardContent className="space-y-3">
-            <p className="text-sm font-medium text-brand">Edit draft invoice</p>
-            <form action={updateInvoiceDraft} className="grid gap-3 md:grid-cols-2">
-              <input type="hidden" name="invoice_id" value={invoice.id} />
-              <div>
-                <label className="text-xs text-foreground-secondary">Billing profile</label>
-                <select
-                  name="billing_profile_id"
-                  defaultValue={invoice.billing_profile_id}
-                  className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm"
-                >
-                  {(billingProfiles ?? []).map((profileItem) => (
-                    <option key={profileItem.id} value={profileItem.id}>
-                      {profileItem.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-foreground-secondary">Landlord</label>
-                <select
-                  name="landlord_id"
-                  defaultValue={invoice.landlord_id}
-                  className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm"
-                >
-                  {(landlords ?? []).map((landlord) => (
-                    <option key={landlord.id} value={landlord.id}>
-                      {landlord.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-foreground-secondary">Issue date</label>
-                <Input name="issue_date" type="date" defaultValue={invoice.issue_date} />
-              </div>
-              <div>
-                <label className="text-xs text-foreground-secondary">Payment terms (days)</label>
-                <Input
-                  name="payment_terms_days"
-                  type="number"
-                  defaultValue={invoice.payment_terms_days}
-                  placeholder="7"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Textarea name="notes" defaultValue={invoice.notes ?? ""} placeholder="Notes" />
-              </div>
-              <div className="md:col-span-2">
-                <Button type="submit" variant="secondary">
-                  Save changes
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <InvoiceEditSection
+          invoice={invoice}
+          billingProfiles={billingProfiles ?? []}
+          landlords={landlords ?? []}
+        />
       ) : null}
     </div>
   );

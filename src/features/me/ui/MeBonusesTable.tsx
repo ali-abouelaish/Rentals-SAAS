@@ -5,6 +5,7 @@ type BonusRow = {
   bonus_date: string;
   client_name: string;
   amount_owed: number;
+  payout_mode?: string | null;
   status: string;
   created_at: string;
 };
@@ -12,9 +13,15 @@ type BonusRow = {
 type MeBonusesTableProps = {
   bonuses: BonusRow[];
   totalBonuses: number;
+  commissionPercent: number;
 };
 
-export function MeBonusesTable({ bonuses, totalBonuses }: MeBonusesTableProps) {
+function agentShare(b: BonusRow, commissionPercent: number): number {
+  if (b.payout_mode === "full") return b.amount_owed;
+  return b.amount_owed * (commissionPercent / 100);
+}
+
+export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent }: MeBonusesTableProps) {
   if (bonuses.length === 0) {
     return (
       <p className="text-sm text-foreground-muted py-8 text-center">No bonuses in this period.</p>
@@ -44,7 +51,7 @@ export function MeBonusesTable({ bonuses, totalBonuses }: MeBonusesTableProps) {
                   {b.client_name ? ` · ${b.client_name}` : ""}
                 </td>
                 <td className="py-3 pl-4 text-right tabular-nums font-medium">
-                  {formatGBP(b.amount_owed)}
+                  {formatGBP(agentShare(b, commissionPercent))}
                 </td>
               </tr>
             ))}

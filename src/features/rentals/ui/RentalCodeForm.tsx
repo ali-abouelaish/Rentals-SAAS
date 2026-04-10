@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createRentalCodeWithDocuments } from "../actions/rentals";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export function RentalCodeForm({
   isAdmin?: boolean;
   currentUserId?: string;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [sourcingFiles, setSourcingFiles] = useState<File[]>([]);
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
@@ -57,8 +59,21 @@ export function RentalCodeForm({
   }, [loadCode]);
 
   const handleSubmit = async (formData: FormData) => {
+    if (!clientId) {
+      toast.error("Client is missing. Please go back and select a client.");
+      return;
+    }
     formData.append("client_id", clientId);
 
+    const feeValue = Number(fee);
+    if (!fee || isNaN(feeValue) || feeValue <= 0) {
+      toast.error("Please enter a valid consultation fee");
+      return;
+    }
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
     if (sourcingFiles.length === 0) {
       toast.error("Please upload sourcing agreement documents");
       return;
@@ -93,6 +108,8 @@ export function RentalCodeForm({
         setMarketingAgentIds([]);
         setFee("");
         setPaymentMethod("");
+        // Bust the Next.js Router Cache so /rentals shows the new record
+        router.refresh();
         // Refresh the next code preview
         loadCode();
       } catch (error) {
@@ -156,6 +173,7 @@ export function RentalCodeForm({
           name="payment_method"
           value={paymentMethod}
           onChange={(val: string) => setPaymentMethod(val)}
+          required
           options={[
             { label: "Select payment method", value: "" },
             { label: "💵 Cash", value: "cash" },

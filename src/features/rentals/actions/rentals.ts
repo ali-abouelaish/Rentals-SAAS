@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rentalCodeSchema, type RentalCodeFormValues } from "../domain/schemas";
 import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 
 export async function createRentalCode(values: RentalCodeFormValues) {
   const supabase = createSupabaseServerClient();
@@ -86,14 +87,12 @@ export async function createRentalCode(values: RentalCodeFormValues) {
 }
 
 export async function createRentalCodeWithDocuments(formData: FormData) {
-  try {
   console.log("[rental] action called");
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
   console.log("[rental] profile ok, user:", profile?.id, "tenant:", profile?.tenant_id);
 
   // Extract form values
-  const codeFromForm = String(formData.get("code") ?? "");
   const clientId = String(formData.get("client_id") ?? "");
   const consultationFeeAmount = Number(formData.get("consultation_fee_amount") ?? 0);
   const paymentMethod = String(formData.get("payment_method") ?? "cash");
@@ -186,76 +185,83 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   if (rentalError) throw new Error(`Failed to insert rental record: ${rentalError.message} (code: ${rentalError.code})`);
   console.log("[rental] inserted ok, id:", rentalCode.id, "code:", rentalCode.code);
 
-  // Insert junction table rows for all marketing agents
-  if (resolvedMarketingAgentIds.length > 0) {
-    const uniqueIds = [...new Set(resolvedMarketingAgentIds)];
-    await supabase.from("rental_marketing_agents").insert(
-      uniqueIds.map((agentId) => ({
-        tenant_id: profile.tenant_id,
-        rental_id: rentalCode.id,
-        agent_id: agentId
-      }))
-    );
-  }
-
-  // Upload documents
-  const uploadDocumentSet = async (setType: "sourcing_agreement" | "client_id" | "payment_proof", files: File[]) => {
-    const { data: setData, error: setError } = await supabase
-      .from("document_sets")
-      .insert({
-        tenant_id: profile.tenant_id,
-        rental_code_id: rentalCode.id,
-        set_type: setType
-      })
-      .select("*")
-      .single();
-    if (setError) throw new Error(setError.message);
-
-    for (const file of files) {
-      const filePath = `${profile.tenant_id}/${rentalCode.id}/${setType}/${crypto.randomUUID()}-${file.name}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("rental_docs")
-        .upload(filePath, file);
-      if (uploadError) throw new Error(uploadError.message);
-
-      const { error: docError } = await supabase.from("documents").insert({
-        tenant_id: profile.tenant_id,
-        document_set_id: setData.id,
-        file_path: filePath,
-        file_name: file.name
-      });
-      if (docError) throw new Error(docError.message);
+  // From this point on, the rental row exists in the DB. Ensure cache is
+  // always invalidated (even if document upload fails) so the dashboard
+  // reflects the new record regardless of downstream errors.
+  try {
+    // Insert junction table rows for all marketing agents
+    if (resolvedMarketingAgentIds.length > 0) {
+      const uniqueIds = [...new Set(resolvedMarketingAgentIds)];
+      const { error: junctionError } = await supabase.from("rental_marketing_agents").insert(
+        uniqueIds.map((agentId) => ({
+          tenant_id: profile.tenant_id,
+          rental_id: rentalCode.id,
+          agent_id: agentId
+        }))
+      );
+      if (junctionError) console.error("[rental] marketing agents insert failed:", junctionError.message);
     }
-  };
 
-  await uploadDocumentSet("sourcing_agreement", sourcingAgreementFiles);
-  await uploadDocumentSet("payment_proof", paymentProofFiles);
-  await uploadDocumentSet("client_id", clientIdFiles);
+    // Upload documents
+    const uploadDocumentSet = async (setType: "sourcing_agreement" | "client_id" | "payment_proof", files: File[]) => {
+      const { data: setData, error: setError } = await supabase
+        .from("document_sets")
+        .insert({
+          tenant_id: profile.tenant_id,
+          rental_code_id: rentalCode.id,
+          set_type: setType
+        })
+        .select("*")
+        .single();
+      if (setError) throw new Error(setError.message);
 
-  await supabase.from("activity_log").insert({
-    tenant_id: profile.tenant_id,
-    actor_user_id: profile.id,
-    action: "rental_created",
-    entity_type: "rental",
-    entity_id: rentalCode.id,
-    metadata: { code: rentalCode.code }
-  });
+      for (const file of files) {
+        const filePath = `${profile.tenant_id}/${rentalCode.id}/${setType}/${crypto.randomUUID()}-${file.name}`;
 
-  revalidatePath("/rentals");
-  revalidatePath(`/clients/${clientId}`);
+        const { error: uploadError } = await supabase.storage
+          .from("rental_docs")
+          .upload(filePath, file);
+        if (uploadError) throw new Error(`Storage upload failed for ${file.name}: ${uploadError.message}`);
 
-  // Mark client as registered after rental creation
-  await supabase
-    .from("clients")
-    .update({ status: "registered" })
-    .eq("id", clientId);
+        const { error: docError } = await supabase.from("documents").insert({
+          tenant_id: profile.tenant_id,
+          document_set_id: setData.id,
+          file_path: filePath,
+          file_name: file.name
+        });
+        if (docError) throw new Error(docError.message);
+      }
+    };
+
+    await uploadDocumentSet("sourcing_agreement", sourcingAgreementFiles);
+    await uploadDocumentSet("payment_proof", paymentProofFiles);
+    await uploadDocumentSet("client_id", clientIdFiles);
+    console.log("[rental] documents uploaded ok for", rentalCode.code);
+
+    const { error: activityError } = await supabase.from("activity_log").insert({
+      tenant_id: profile.tenant_id,
+      actor_user_id: profile.id,
+      action: "rental_created",
+      entity_type: "rental",
+      entity_id: rentalCode.id,
+      metadata: { code: rentalCode.code }
+    });
+    if (activityError) console.error("[rental] activity log insert failed:", activityError.message);
+
+    // Mark client as registered after rental creation
+    const { error: clientUpdateError } = await supabase
+      .from("clients")
+      .update({ status: "registered" })
+      .eq("id", clientId);
+    if (clientUpdateError) console.error("[rental] client status update failed:", clientUpdateError.message);
+  } finally {
+    // Always revalidate so the rental shows on the dashboard even if
+    // document upload failed (the rental row is already committed).
+    revalidatePath("/rentals");
+    revalidatePath(`/clients/${clientId}`);
+  }
 
   return { ok: true, rentalCode };
-  } catch (err) {
-    console.error("[createRentalCodeWithDocuments] error:", err);
-    throw err;
-  }
 }
 
 export async function updateRentalCode(formData: FormData) {
@@ -522,7 +528,7 @@ export async function updateRentalStatus(formData: FormData) {
   const status = String(formData.get("status") ?? "");
 
   if (!rentalId) throw new Error("Missing rental id.");
-  if (!["pending", "approved", "paid", "refunded"].includes(status)) {
+  if (!["pending", "approved", "paid", "refunded", "need_more_info"].includes(status)) {
     throw new Error("Unsupported status update.");
   }
 

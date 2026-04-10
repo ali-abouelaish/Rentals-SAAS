@@ -70,6 +70,8 @@ export default async function AgentEarningsPage({
       ? (stats.totalEarnings ?? 0) / (stats.totalTransactions ?? 1)
       : 0;
 
+  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonusAmount;
+
   const commissionPercent = agent.commission_percent ?? 50;
   const bonusAgentShare = (b: { amount_owed: number; payout_mode?: string | null }) =>
     b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
@@ -107,7 +109,7 @@ export default async function AgentEarningsPage({
           <div className="flex flex-wrap gap-3">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
               <TrendingUp className="h-3.5 w-3.5" />
-              {formatGBP(stats.totalEarnings ?? 0)} earnings
+              {formatGBP(totalCombinedEarnings)} earnings
             </span>
             <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
               {stats.totalTransactions ?? 0} rentals
