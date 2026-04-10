@@ -97,10 +97,19 @@ export function RentalCodeForm({
     });
 
     startTransition(async () => {
-      const result = await createRentalCodeWithDocuments(formData);
+      let result: Awaited<ReturnType<typeof createRentalCodeWithDocuments>> | null = null;
+      try {
+        result = await createRentalCodeWithDocuments(formData);
+      } catch {
+        // Network / proxy error (e.g. 413 Request Entity Too Large)
+        toast.error(
+          "Your files are too large to upload. Please reduce the file sizes or upload fewer files and try again.",
+          { duration: 10000 }
+        );
+        return;
+      }
 
       if (result.ok) {
-        // Full success — reset form
         toast.success("Rental code created successfully");
         const form = document.getElementById("rental-code-form") as HTMLFormElement;
         form?.reset();
@@ -113,15 +122,11 @@ export function RentalCodeForm({
         router.refresh();
         loadCode();
       } else if (result.partial) {
-        // Rental was created but document upload failed — don't reset,
-        // guide the user to the rental page to re-upload documents.
         toast.error(
           `Rental ${result.rentalCode?.code} was created but documents failed to upload. Please go to the rental and re-upload your documents.`,
           { duration: 10000 }
         );
       } else {
-        // Pre-insert failure — form state is preserved so the user can
-        // fix the issue and retry without re-entering everything.
         toast.error(
           `${result.error ?? "Something went wrong"}. Your entries have been kept — please review and try again.`,
           { duration: 8000 }
