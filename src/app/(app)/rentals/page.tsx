@@ -48,7 +48,7 @@ export default async function RentalsPage({
       agentId: activeAgent !== "all" ? activeAgent : undefined,
       page: currentPage,
     }),
-    isAdmin ? getAgents() : Promise.resolve([]),
+    getAgents(),
   ]);
 
   const methodEmoji: Record<string, string> = {
@@ -114,15 +114,15 @@ export default async function RentalsPage({
           />
         </div>
 
-        {/* Agent filter (admin only) */}
-        {isAdmin && agents.length > 0 && (
+        {/* Agent filter */}
+        {agents.length > 0 && (
           <div className="flex items-center gap-2 mb-4">
             <label className="text-xs text-foreground-secondary">Agent:</label>
             <AgentFilterDropdown
               agents={agents.map((a: any) => ({
                 id: a.user_id as string,
                 name: ((a.user_profiles as { display_name?: string } | null)?.display_name ?? "Agent"),
-              }))}
+              })).sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name))}
               activeAgentId={activeAgent}
             />
           </div>

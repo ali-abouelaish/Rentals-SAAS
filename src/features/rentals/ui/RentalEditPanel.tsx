@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 import { updateRentalCode } from "@/features/rentals/actions/rentals";
 import { formatGBP } from "@/lib/utils/formatters";
+import { toast } from "sonner";
 
 type AgentOption = {
   id: string;
@@ -34,6 +36,8 @@ export function RentalEditPanel({
   commissionPercent,
   agents,
 }: RentalEditPanelProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [marketingAgentIds, setMarketingAgentIds] = useState<string[]>(initialMarketingAgentIds);
   const [overrideFee, setOverrideFee] = useState<string>("");
@@ -62,8 +66,16 @@ export function RentalEditPanel({
       formData.append("marketing_fee_override_gbp", String(overrideValue));
       if (overrideReason) formData.append("marketing_fee_override_reason", overrideReason);
     }
-    await updateRentalCode(formData);
-    setIsEditing(false);
+    startTransition(async () => {
+      const result = await updateRentalCode(formData);
+      if (result.ok) {
+        toast.success("Rental updated");
+        setIsEditing(false);
+        router.refresh();
+      } else {
+        toast.error(result.error ?? "Failed to update rental");
+      }
+    });
   };
 
   return (
@@ -207,7 +219,9 @@ export function RentalEditPanel({
             </div>
           )}
 
-          <Button type="submit" variant="secondary">Save changes</Button>
+          <Button type="submit" variant="secondary" disabled={isPending}>
+            {isPending ? "Saving..." : "Save changes"}
+          </Button>
         </form>
       ) : null}
     </div>

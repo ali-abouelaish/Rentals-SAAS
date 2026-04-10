@@ -109,6 +109,7 @@ export async function getEarningsStatsForAgent(
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
       .or([
         `assisted_by_agent_id.eq.${agentId}`,
+        `marketing_agent_id.eq.${agentId}`,
         ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
       ].join(","))
       .in("status", ["approved", "paid"])
@@ -144,13 +145,14 @@ export async function getEarningsStatsForAgent(
       : 0;
     const agentCount = countMap.get(rental.id) ?? 1;
     const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
+    const isMarketingAgent = agentRentalIds.has(rental.id) || rental.marketing_agent_id === agentId;
 
     if (rental.assisted_by_agent_id === agentId) {
       rentalsCount++;
       const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
       const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
       totalEarnings += Math.round((gross - totalMktFee) * 100) / 100;
-    } else if (agentRentalIds.has(rental.id)) {
+    } else if (isMarketingAgent) {
       totalEarnings += splitFee;
     }
   }
@@ -229,6 +231,7 @@ export async function getEarningsTrendForAgent(
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
       .or([
         `assisted_by_agent_id.eq.${agentId}`,
+        `marketing_agent_id.eq.${agentId}`,
         ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
       ].join(","))
       .in("status", ["approved", "paid"])
@@ -268,13 +271,14 @@ export async function getEarningsTrendForAgent(
       : hasMarketing ? (mktFeeMap.get(r.marketing_agent_id!) ?? 0) : 0;
     const agentCount = countMap.get(r.id) ?? 1;
     const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
+    const isMarketingAgent = agentRentalIds.has(r.id) || r.marketing_agent_id === agentId;
 
     let earned = 0;
     if (r.assisted_by_agent_id === agentId) {
       const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
       const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
       earned = Math.round((gross - totalMktFee) * 100) / 100;
-    } else if (agentRentalIds.has(r.id)) {
+    } else if (isMarketingAgent) {
       earned = splitFee;
     }
 
@@ -494,7 +498,10 @@ export async function getTransactions(
     .order("date", { ascending: false });
 
   if (options?.agentId) {
-    const orParts = [`assisted_by_agent_id.eq.${options.agentId}`];
+    const orParts = [
+      `assisted_by_agent_id.eq.${options.agentId}`,
+      `marketing_agent_id.eq.${options.agentId}`,
+    ];
     if (mktRentalIds.length > 0) orParts.push(`id.in.(${mktRentalIds.join(",")})`);
     query = query.or(orParts.join(","));
   }
@@ -530,10 +537,14 @@ export async function getTransactions(
     const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
 
     let amount: number;
-    if (options?.agentId && options.agentId !== rental.assisted_by_agent_id && agentRentalIds.has(rental.id)) {
+    let role: "assisted" | "marketing" | undefined;
+    const isMarketingAgent = agentRentalIds.has(rental.id) || (rental.marketing_agent_id === options?.agentId);
+    if (options?.agentId && options.agentId !== rental.assisted_by_agent_id && isMarketingAgent) {
       amount = splitFee;
+      role = "marketing";
     } else if (options?.agentId && options.agentId === rental.assisted_by_agent_id) {
       amount = Math.round((gross - totalMktFee) * 100) / 100;
+      role = "assisted";
     } else {
       // All-agents view: total agent payout = gross
       amount = gross;
@@ -546,7 +557,8 @@ export async function getTransactions(
       client_name: (rental.client_snapshot as { full_name?: string } | null)?.full_name ?? "—",
       amount,
       rent_amount: rentalNet,
-      created_at: rental.date
+      created_at: rental.date,
+      role,
     });
   }
 

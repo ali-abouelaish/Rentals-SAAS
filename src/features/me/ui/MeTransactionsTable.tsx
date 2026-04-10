@@ -70,6 +70,7 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
                   <th className="pb-3 pr-4">Date</th>
                   <th className="pb-3 pr-4">Rental Code</th>
                   <th className="pb-3 pr-4">Client</th>
+                  <th className="pb-3 pr-4">Role</th>
                   <th className="pb-3 pr-4 text-right tabular-nums">Rent</th>
                   <th className="pb-3 pl-4 text-right tabular-nums">Earnings</th>
                 </tr>
@@ -80,6 +81,15 @@ export function MeTransactionsTable({ transactions }: { transactions: EarningsTr
                     <td className="py-3 pr-4 text-foreground-muted">{formatDate(t.created_at)}</td>
                     <td className="py-3 pr-4 font-mono text-xs">{t.code}</td>
                     <td className="py-3 pr-4">{t.client_name}</td>
+                    <td className="py-3 pr-4">
+                      {t.role === "marketing" ? (
+                        <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">Marketing</span>
+                      ) : t.role === "assisted" ? (
+                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Assisted</span>
+                      ) : (
+                        <span className="text-foreground-muted">—</span>
+                      )}
+                    </td>
                     <td className="py-3 pr-4 text-right tabular-nums">{t.rent_amount != null ? formatGBP(t.rent_amount) : "—"}</td>
                     <td className="py-3 pl-4 text-right tabular-nums font-medium">{formatGBP(t.amount)}</td>
                   </tr>

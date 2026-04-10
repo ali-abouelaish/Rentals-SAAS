@@ -284,89 +284,97 @@ export async function createRentalCodeWithDocuments(formData: FormData): Promise
   }
 }
 
-export async function updateRentalCode(formData: FormData) {
-  const supabase = createSupabaseServerClient();
-  const profile = await requireUserProfile();
-  const rentalId = String(formData.get("rental_id") ?? "");
-  if (!rentalId) throw new Error("Missing rental id.");
+export async function updateRentalCode(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const profile = await requireUserProfile();
+    const rentalId = String(formData.get("rental_id") ?? "");
+    if (!rentalId) return { ok: false, error: "Missing rental id." };
 
-  const { data: rental, error: rentalError } = await supabase
-    .from("rental_codes")
-    .select("id, status, assisted_by_agent_id, tenant_id")
-    .eq("id", rentalId)
-    .single();
-  if (rentalError) throw new Error(rentalError.message);
+    const { data: rental, error: rentalError } = await supabase
+      .from("rental_codes")
+      .select("id, status, assisted_by_agent_id, tenant_id, property_address, licensor_name")
+      .eq("id", rentalId)
+      .single();
+    if (rentalError) return { ok: false, error: rentalError.message };
 
-  const isAdmin = profile.role.toLowerCase() === "admin";
-  if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
-    throw new Error("You do not have access to edit this rental.");
+    const isAdmin = profile.role.toLowerCase() === "admin";
+    if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
+      return { ok: false, error: "You do not have access to edit this rental." };
+    }
+    if (!isAdmin && rental.status !== "pending") {
+      return { ok: false, error: "Only pending rentals can be edited." };
+    }
+
+    const marketingAgentIdList = (formData.getAll("marketing_agent_id_list") as string[]).filter(Boolean);
+    const overrideValueRaw = formData.get("marketing_fee_override_gbp");
+    const overrideReason = String(formData.get("marketing_fee_override_reason") ?? "");
+
+    const feeAmount = Number(formData.get("consultation_fee_amount") ?? 0);
+    const paymentMethod = String(formData.get("payment_method") ?? "cash");
+
+    // Only update property_address / licensor_name if the form actually sent them
+    const propertyAddressRaw = formData.get("property_address");
+    const licensorNameRaw = formData.get("licensor_name");
+
+    const resolvedMarketingAgentIds = [...new Set(marketingAgentIdList)];
+    const marketingAgentId = resolvedMarketingAgentIds[0] ?? null;
+
+    // Parse override if provided
+    const parsedOverride =
+      typeof overrideValueRaw === "string" && overrideValueRaw.length > 0
+        ? Number(overrideValueRaw)
+        : null;
+    const hasValidOverride = parsedOverride !== null && !Number.isNaN(parsedOverride);
+
+    const { error } = await supabase
+      .from("rental_codes")
+      .update({
+        consultation_fee_amount: feeAmount,
+        rental_amount_gbp: feeAmount,
+        payment_method: paymentMethod,
+        ...(propertyAddressRaw !== null ? { property_address: String(propertyAddressRaw) } : {}),
+        ...(licensorNameRaw !== null ? { licensor_name: String(licensorNameRaw) } : {}),
+        marketing_agent_id: marketingAgentId,
+        ...(hasValidOverride
+          ? {
+              marketing_fee_override_gbp: roundMoney(parsedOverride!),
+              marketing_fee_override_reason: overrideReason || null
+            }
+          : marketingAgentId === null
+          ? { marketing_fee_override_gbp: null, marketing_fee_override_reason: null }
+          : {})
+      })
+      .eq("id", rentalId);
+    if (error) return { ok: false, error: error.message };
+
+    // Sync junction table: delete old rows, insert new ones
+    const { error: delError } = await supabase
+      .from("rental_marketing_agents")
+      .delete()
+      .eq("rental_id", rentalId);
+    if (delError) console.error("[rental] junction delete failed:", delError.message);
+
+    if (resolvedMarketingAgentIds.length > 0) {
+      const uniqueIds = [...new Set(resolvedMarketingAgentIds)];
+      const { error: insError } = await supabase.from("rental_marketing_agents").insert(
+        uniqueIds.map((agentId) => ({
+          tenant_id: rental.tenant_id,
+          rental_id: rentalId,
+          agent_id: agentId
+        }))
+      );
+      if (insError) console.error("[rental] junction insert failed:", insError.message);
+    }
+
+    revalidatePath("/earnings", "layout");
+    revalidatePath("/me");
+    revalidatePath(`/rentals/${rentalId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("[updateRentalCode] unexpected error:", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
   }
-  if (!isAdmin && rental.status !== "pending") {
-    throw new Error("Only pending rentals can be edited.");
-  }
-
-  const marketingAgentIdList = (formData.getAll("marketing_agent_id_list") as string[]).filter(Boolean);
-  const overrideValueRaw = formData.get("marketing_fee_override_gbp");
-  const overrideReason = String(formData.get("marketing_fee_override_reason") ?? "");
-
-  const payload = rentalCodeSchema.parse({
-    client_id: String(formData.get("client_id") ?? ""),
-    consultation_fee_amount: Number(formData.get("consultation_fee_amount") ?? 0),
-    payment_method: String(formData.get("payment_method") ?? "cash"),
-    property_address: String(formData.get("property_address") ?? ""),
-    licensor_name: String(formData.get("licensor_name") ?? ""),
-  });
-
-  const resolvedMarketingAgentIds = [...new Set(marketingAgentIdList)];
-  const marketingAgentId = resolvedMarketingAgentIds[0] ?? null;
-
-  // Parse override if provided
-  const parsedOverride =
-    typeof overrideValueRaw === "string" && overrideValueRaw.length > 0
-      ? Number(overrideValueRaw)
-      : null;
-  const hasValidOverride = parsedOverride !== null && !Number.isNaN(parsedOverride);
-
-  const { error } = await supabase
-    .from("rental_codes")
-    .update({
-      consultation_fee_amount: payload.consultation_fee_amount,
-      rental_amount_gbp: payload.consultation_fee_amount,
-      payment_method: payload.payment_method,
-      property_address: payload.property_address,
-      licensor_name: payload.licensor_name,
-      marketing_agent_id: marketingAgentId,
-      ...(hasValidOverride
-        ? {
-            marketing_fee_override_gbp: roundMoney(parsedOverride!),
-            marketing_fee_override_reason: overrideReason || null
-          }
-        : marketingAgentId === null
-        ? { marketing_fee_override_gbp: null, marketing_fee_override_reason: null }
-        : {})
-    })
-    .eq("id", rentalId);
-  if (error) throw new Error(error.message);
-
-  // Sync junction table: delete old rows, insert new ones
-  await supabase
-    .from("rental_marketing_agents")
-    .delete()
-    .eq("rental_id", rentalId);
-
-  if (resolvedMarketingAgentIds.length > 0) {
-    const uniqueIds = [...new Set(resolvedMarketingAgentIds)];
-    await supabase.from("rental_marketing_agents").insert(
-      uniqueIds.map((agentId) => ({
-        tenant_id: rental.tenant_id,
-        rental_id: rentalId,
-        agent_id: agentId
-      }))
-    );
-  }
-
-  revalidatePath("/earnings");
-  revalidatePath(`/rentals/${rentalId}`);
 }
 
 export async function deleteRentalCode(formData: FormData) {
@@ -538,6 +546,8 @@ export async function approveRentalCode(formData: FormData) {
   });
 
   revalidatePath(`/rentals/${rentalId}`);
+  revalidatePath("/earnings", "layout");
+  revalidatePath("/me");
   return { ok: true };
 }
 
@@ -560,6 +570,7 @@ export async function updateRentalStatus(formData: FormData) {
 
   revalidatePath("/rentals");
   revalidatePath(`/rentals/${rentalId}`);
-  revalidatePath("/earnings");
+  revalidatePath("/earnings", "layout");
+  revalidatePath("/me");
   return { ok: true };
 }
