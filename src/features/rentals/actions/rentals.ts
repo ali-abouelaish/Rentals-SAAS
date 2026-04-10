@@ -185,9 +185,10 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
   if (rentalError) throw new Error(`Failed to insert rental record: ${rentalError.message} (code: ${rentalError.code})`);
   console.log("[rental] inserted ok, id:", rentalCode.id, "code:", rentalCode.code);
 
-  // From this point on, the rental row exists in the DB. Ensure cache is
-  // always invalidated (even if document upload fails) so the dashboard
-  // reflects the new record regardless of downstream errors.
+  // From this point on, the rental row exists in the DB. Subsequent failures
+  // (documents, junction table, etc.) must NOT mask the successful insert.
+  let documentUploadWarning: string | null = null;
+
   try {
     // Insert junction table rows for all marketing agents
     if (resolvedMarketingAgentIds.length > 0) {
@@ -254,6 +255,12 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
       .update({ status: "registered" })
       .eq("id", clientId);
     if (clientUpdateError) console.error("[rental] client status update failed:", clientUpdateError.message);
+  } catch (docErr) {
+    // The rental row was already committed — do NOT re-throw or the client
+    // will think the entire submission failed and may retry, creating duplicates.
+    const msg = docErr instanceof Error ? docErr.message : String(docErr);
+    console.error("[rental] post-insert error (rental still saved):", msg);
+    documentUploadWarning = msg;
   } finally {
     // Always revalidate so the rental shows on the dashboard even if
     // document upload failed (the rental row is already committed).
@@ -261,7 +268,7 @@ export async function createRentalCodeWithDocuments(formData: FormData) {
     revalidatePath(`/clients/${clientId}`);
   }
 
-  return { ok: true, rentalCode };
+  return { ok: true, rentalCode, documentUploadWarning };
 }
 
 export async function updateRentalCode(formData: FormData) {

@@ -98,8 +98,12 @@ export function RentalCodeForm({
 
     startTransition(async () => {
       try {
-        await createRentalCodeWithDocuments(formData);
-        toast.success("Rental code created successfully");
+        const result = await createRentalCodeWithDocuments(formData);
+        if (result.documentUploadWarning) {
+          toast.warning("Rental created but document upload failed. Please re-upload documents from the rental details page.");
+        } else {
+          toast.success("Rental code created successfully");
+        }
         const form = document.getElementById("rental-code-form") as HTMLFormElement;
         form?.reset();
         setSourcingFiles([]);

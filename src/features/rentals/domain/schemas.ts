@@ -5,7 +5,7 @@ export const rentalStatusEnum = z.enum(["pending", "approved", "paid", "refunded
 
 export const rentalCodeSchema = z.object({
   client_id: z.string().uuid(),
-  consultation_fee_amount: z.coerce.number().min(0),
+  consultation_fee_amount: z.coerce.number().positive(),
   payment_method: paymentMethodEnum,
   property_address: z.string().optional().default(""),
   licensor_name: z.string().optional().default(""),
