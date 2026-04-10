@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+const MAX_TOTAL_SIZE_MB = 15;
+
 export function RentalCodeForm({
   clientId,
   agents,
@@ -58,13 +60,17 @@ export function RentalCodeForm({
     loadCode();
   }, [loadCode]);
 
+  function totalFileSize() {
+    const all = [...sourcingFiles, ...paymentFiles, ...clientIdFiles];
+    return all.reduce((sum, f) => sum + f.size, 0);
+  }
+
   const handleSubmit = async (formData: FormData) => {
+    // ── Client-side validation ──
     if (!clientId) {
       toast.error("Client is missing. Please go back and select a client.");
       return;
     }
-    formData.append("client_id", clientId);
-
     const feeValue = Number(fee);
     if (!fee || isNaN(feeValue) || feeValue <= 0) {
       toast.error("Please enter a valid consultation fee");
@@ -87,23 +93,39 @@ export function RentalCodeForm({
       return;
     }
 
+    // Check total file size before sending
+    const sizeMB = totalFileSize() / (1024 * 1024);
+    if (sizeMB > MAX_TOTAL_SIZE_MB) {
+      toast.error(
+        `Total file size is ${sizeMB.toFixed(1)}MB which exceeds the ${MAX_TOTAL_SIZE_MB}MB limit. Please use smaller or fewer files.`,
+        { duration: 8000 }
+      );
+      return;
+    }
+
+    // ── Build FormData ──
+    formData.append("client_id", clientId);
     sourcingFiles.forEach((file) => formData.append("sourcing_agreement", file));
     paymentFiles.forEach((file) => formData.append("payment_proof", file));
     clientIdFiles.forEach((file) => formData.append("client_id_doc", file));
-
-    // Append marketing agent IDs as individual form fields
     marketingAgentIds.filter(Boolean).forEach((id) => {
       formData.append("marketing_agent_id_list", id);
     });
 
+    // ── Submit ──
     startTransition(async () => {
-      let result: Awaited<ReturnType<typeof createRentalCodeWithDocuments>> | null = null;
+      let result: { ok: boolean; partial?: boolean; rentalCode?: any; error?: string } | undefined;
+
       try {
         result = await createRentalCodeWithDocuments(formData);
       } catch {
-        // Network / proxy error (e.g. 413 Request Entity Too Large)
+        // falls through to the !result check below
+      }
+
+      // Handle network / proxy failures (413, timeout, etc.)
+      if (!result) {
         toast.error(
-          "Your files are too large to upload. Please reduce the file sizes or upload fewer files and try again.",
+          "Upload failed — your files may be too large. Please reduce file sizes and try again. Your entries have been kept.",
           { duration: 10000 }
         );
         return;
