@@ -130,7 +130,7 @@ export default async function MePage({
           </div>
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Bonuses</h3>
-            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} commissionPercent={commissionPercent} />
+            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} commissionPercent={commissionPercent} isAdmin={isAdmin} />
           </div>
         </TabsContent>
 
@@ -167,7 +167,7 @@ export default async function MePage({
           <StatCard label="Total Bonuses (period)" value={formatGBP(totalBonuses)} icon={Gift} iconColor="text-amber-600" iconBg="bg-amber-50" />
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Bonuses</h3>
-            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} commissionPercent={commissionPercent} />
+            <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} commissionPercent={commissionPercent} isAdmin={isAdmin} />
           </div>
         </TabsContent>
 

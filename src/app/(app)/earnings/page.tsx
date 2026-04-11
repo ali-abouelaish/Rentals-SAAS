@@ -15,8 +15,10 @@ import {
   getEarningsTrend,
   getEarningsTrendForAgent,
   getEarningsTrendByAgents,
-  getTransactions
+  getTransactions,
+  getPayments,
 } from "@/features/earnings/data/queries";
+import { PaymentsTracker } from "@/features/earnings/ui/PaymentsTracker";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import {
   Users,
@@ -42,7 +44,7 @@ function getDefaultRange() {
 export default async function EarningsPage({
   searchParams
 }: {
-  searchParams?: { from?: string; to?: string };
+  searchParams?: { from?: string; to?: string; tab?: string; status?: string };
 }) {
   const profile = await requireUserProfile();
   const defaults = getDefaultRange();
@@ -54,12 +56,18 @@ export default async function EarningsPage({
 
   try {
     const isAdmin = profile.role.toLowerCase() === "admin";
-    const [stats, trend, leaderboard, leaderboardAll, transactions] = await Promise.all([
+    const statusFilter = (["all", "paid", "unpaid"].includes(searchParams?.status ?? "")
+      ? searchParams!.status
+      : "all") as "all" | "paid" | "unpaid";
+    const activeTab = searchParams?.tab ?? "overview";
+
+    const [stats, trend, leaderboard, leaderboardAll, transactions, payments] = await Promise.all([
       isAdmin ? getEarningsStats(filters) : getEarningsStatsForAgent(filters, profile.id),
       isAdmin ? getEarningsTrend(filters) : getEarningsTrendForAgent(filters, profile.id),
       getEarningsLeaderboard(filters),
       isAdmin ? getEarningsLeaderboardAll(filters) : Promise.resolve([]),
-      isAdmin ? getTransactions(filters) : getTransactions(filters, { agentId: profile.id })
+      isAdmin ? getTransactions(filters) : getTransactions(filters, { agentId: profile.id }),
+      getPayments(filters, statusFilter),
     ]);
 
     const trendByAgents =
@@ -172,87 +180,124 @@ export default async function EarningsPage({
           <EarningsFilters from={filters.from} to={filters.to} />
         </div>
 
-        {/* ── Stat Tiles — Bento Row ─────────── */}
-        <div className={`grid gap-[var(--gap-bento)] ${isAdmin ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-5" : "grid-cols-2 xl:grid-cols-4"}`}>
-          {statTiles.map((stat) => (
-            <div
-              key={stat.label}
-              className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5"
+        {/* ── Tab navigation ───── */}
+        <div className="flex gap-1 border-b border-border">
+          {[
+            { key: "overview", label: "Overview" },
+            { key: "payments", label: "Payments" },
+          ].map((t) => (
+            <Link
+              key={t.key}
+              href={`/earnings?from=${filters.from}&to=${filters.to}&tab=${t.key}`}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === t.key
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-foreground-muted hover:text-foreground"
+              }`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">
-                    {stat.label}
-                  </p>
-                  <p className="text-2xl font-bold text-foreground mt-2 tabular-nums">
-                    {stat.value}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-xl ${stat.bg}`}>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} strokeWidth={1.8} />
-                </div>
-              </div>
-            </div>
+              {t.label}
+            </Link>
           ))}
         </div>
 
-        {/* ── Chart (Total / Compare Agents) or single trend ─── */}
-        {!hasData ? (
-          <div className="rounded-bento bg-surface-card shadow-bento p-8 text-center">
-            <p className="text-foreground-muted mb-4">No earnings data in this date range.</p>
-            <Button variant="outline" asChild>
-              <Link href="/earnings">Clear filters</Link>
-            </Button>
-          </div>
-        ) : (
+        {activeTab === "overview" && (
           <>
-            {isAdmin && trend.length > 0 && (
-              <Suspense fallback={<div className="rounded-bento bg-surface-card shadow-bento p-6 h-80 animate-pulse" />}>
-                <EarningsChartSection
-                  trend={trend}
-                  trendByAgents={trendByAgents}
-                  topAgents={leaderboard}
-                />
-              </Suspense>
-            )}
-            {!isAdmin && trend.length > 0 && (
-              <div className="rounded-bento bg-surface-card shadow-bento p-6">
-                <div className="flex items-center gap-2.5 mb-5">
-                  <div className="p-2 rounded-lg bg-emerald-50">
-                    <TrendingUp className="h-4 w-4 text-emerald-600" strokeWidth={2} />
+            {/* ── Stat Tiles — Bento Row ─────────── */}
+            <div className={`grid gap-[var(--gap-bento)] ${isAdmin ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-5" : "grid-cols-2 xl:grid-cols-4"}`}>
+              {statTiles.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">
+                        {stat.label}
+                      </p>
+                      <p className="text-2xl font-bold text-foreground mt-2 tabular-nums">
+                        {stat.value}
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-xl ${stat.bg}`}>
+                      <stat.icon className={`h-5 w-5 ${stat.color}`} strokeWidth={1.8} />
+                    </div>
                   </div>
-                  <h2 className="text-base font-semibold text-foreground">Earnings Over Time</h2>
                 </div>
-                <EarningsTrendChart data={trend} />
-              </div>
-            )}
-
-            {/* ── Top 3 Leaderboard ───────────────── */}
-            <div className="rounded-bento bg-surface-card shadow-bento p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-amber-50">
-                    <Trophy className="h-4 w-4 text-amber-600" strokeWidth={2} />
-                  </div>
-                  <h2 className="text-base font-semibold text-foreground">Top 3 Agents</h2>
-                </div>
-                {!isAdmin && (
-                  <span className="text-xs text-foreground-muted bg-surface-inset px-2.5 py-1 rounded-full">
-                    Showing top 10
-                  </span>
-                )}
-              </div>
-              <LeaderboardTable rows={leaderboard.slice(0, 10)} showAgencyTotals={isAdmin} />
+              ))}
             </div>
 
-            {/* ── All Agents table (admin only) ────────────────── */}
-            {isAdmin && leaderboardAll.length > 0 && (
-              <div className="rounded-bento bg-surface-card shadow-bento p-6">
-                <h2 className="text-base font-semibold text-foreground mb-5">All Agents</h2>
-                <AllAgentsTable rows={leaderboardAll} />
+            {/* ── Chart (Total / Compare Agents) or single trend ─── */}
+            {!hasData ? (
+              <div className="rounded-bento bg-surface-card shadow-bento p-8 text-center">
+                <p className="text-foreground-muted mb-4">No earnings data in this date range.</p>
+                <Button variant="outline" asChild>
+                  <Link href="/earnings">Clear filters</Link>
+                </Button>
               </div>
+            ) : (
+              <>
+                {isAdmin && trend.length > 0 && (
+                  <Suspense fallback={<div className="rounded-bento bg-surface-card shadow-bento p-6 h-80 animate-pulse" />}>
+                    <EarningsChartSection
+                      trend={trend}
+                      trendByAgents={trendByAgents}
+                      topAgents={leaderboard}
+                    />
+                  </Suspense>
+                )}
+                {!isAdmin && trend.length > 0 && (
+                  <div className="rounded-bento bg-surface-card shadow-bento p-6">
+                    <div className="flex items-center gap-2.5 mb-5">
+                      <div className="p-2 rounded-lg bg-emerald-50">
+                        <TrendingUp className="h-4 w-4 text-emerald-600" strokeWidth={2} />
+                      </div>
+                      <h2 className="text-base font-semibold text-foreground">Earnings Over Time</h2>
+                    </div>
+                    <EarningsTrendChart data={trend} />
+                  </div>
+                )}
+
+                {/* ── Top 3 Leaderboard ───────────────── */}
+                <div className="rounded-bento bg-surface-card shadow-bento p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-amber-50">
+                        <Trophy className="h-4 w-4 text-amber-600" strokeWidth={2} />
+                      </div>
+                      <h2 className="text-base font-semibold text-foreground">Top 3 Agents</h2>
+                    </div>
+                    {!isAdmin && (
+                      <span className="text-xs text-foreground-muted bg-surface-inset px-2.5 py-1 rounded-full">
+                        Showing top 10
+                      </span>
+                    )}
+                  </div>
+                  <LeaderboardTable rows={leaderboard.slice(0, 10)} showAgencyTotals={isAdmin} />
+                </div>
+
+                {/* ── All Agents table (admin only) ────────────────── */}
+                {isAdmin && leaderboardAll.length > 0 && (
+                  <div className="rounded-bento bg-surface-card shadow-bento p-6">
+                    <h2 className="text-base font-semibold text-foreground mb-5">All Agents</h2>
+                    <AllAgentsTable rows={leaderboardAll} />
+                  </div>
+                )}
+              </>
             )}
           </>
+        )}
+
+        {activeTab === "payments" && (
+          <div className="rounded-bento bg-surface-card shadow-bento p-6">
+            <h2 className="text-base font-semibold text-foreground mb-4">Outstanding Payments</h2>
+            <PaymentsTracker
+              payments={payments}
+              statusFilter={statusFilter}
+              from={filters.from}
+              to={filters.to}
+              isAdmin={isAdmin}
+            />
+          </div>
         )}
       </div>
     );

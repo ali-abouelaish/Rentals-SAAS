@@ -1,4 +1,7 @@
+"use client";
+
 import { formatGBP, formatDate } from "@/lib/utils/formatters";
+import { BonusPaidToggle } from "@/features/bonuses/ui/BonusPaidToggle";
 
 type BonusRow = {
   id: string;
@@ -14,6 +17,7 @@ type MeBonusesTableProps = {
   bonuses: BonusRow[];
   totalBonuses: number;
   commissionPercent: number;
+  isAdmin?: boolean;
 };
 
 function agentShare(b: BonusRow, commissionPercent: number): number {
@@ -21,7 +25,7 @@ function agentShare(b: BonusRow, commissionPercent: number): number {
   return b.amount_owed * (commissionPercent / 100);
 }
 
-export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent }: MeBonusesTableProps) {
+export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent, isAdmin = false }: MeBonusesTableProps) {
   if (bonuses.length === 0) {
     return (
       <p className="text-sm text-foreground-muted py-8 text-center">No bonuses in this period.</p>
@@ -39,6 +43,7 @@ export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent }: MeB
             <tr className="border-b border-border text-left text-foreground-muted font-medium">
               <th className="pb-3 pr-4">Date</th>
               <th className="pb-3 pr-4">Type / Client</th>
+              <th className="pb-3 pr-4">Status</th>
               <th className="pb-3 pl-4 text-right tabular-nums">Amount</th>
             </tr>
           </thead>
@@ -47,8 +52,10 @@ export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent }: MeB
               <tr key={b.id} className="border-b border-border/60">
                 <td className="py-3 pr-4 text-foreground-muted">{formatDate(b.bonus_date)}</td>
                 <td className="py-3 pr-4">
-                  <span className="capitalize">{b.status}</span>
-                  {b.client_name ? ` · ${b.client_name}` : ""}
+                  {b.client_name || "—"}
+                </td>
+                <td className="py-3 pr-4">
+                  <BonusPaidToggle bonusId={b.id} status={b.status} isAdmin={isAdmin} />
                 </td>
                 <td className="py-3 pl-4 text-right tabular-nums font-medium">
                   {formatGBP(agentShare(b, commissionPercent))}

@@ -6,6 +6,7 @@ import type {
   EarningsStats,
   EarningsTrendPoint,
   EarningsTransaction,
+  PaymentRow,
 } from "../domain/types";
 
 function getBucket(from: Date, to: Date) {
@@ -709,4 +710,74 @@ export async function getEarningsTrendByAgents(
   }
 
   return Array.from(buckets.values()).sort((a, b) => a.bucket_date.localeCompare(b.bucket_date));
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  Outstanding Payments                                                      */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export async function getPayments(
+  filters: EarningsFilterValues,
+  statusFilter: "all" | "paid" | "unpaid" = "all",
+): Promise<PaymentRow[]> {
+  const profile = await requireUserProfile();
+  const supabase = await createSupabaseServerClient();
+  const isAdmin = profile.role.toLowerCase() === "admin";
+  const toEnd = endOfDay(filters.to);
+
+  // ── Rentals ──────────────────────────────────────────────────────────
+  let rentalQuery = supabase
+    .from("rental_codes")
+    .select("id, code, client_name, assisted_by_agent_id, consultation_fee_amount, date, status, agent_profiles!rental_codes_assisted_by_agent_id_fkey(user_profiles(display_name))")
+    .gte("date", filters.from)
+    .lte("date", toEnd);
+
+  if (statusFilter === "paid") rentalQuery = rentalQuery.eq("status", "paid");
+  else if (statusFilter === "unpaid") rentalQuery = rentalQuery.neq("status", "paid");
+
+  if (!isAdmin) rentalQuery = rentalQuery.eq("assisted_by_agent_id", profile.id);
+
+  const { data: rentals } = await rentalQuery;
+
+  const rentalRows: PaymentRow[] = (rentals ?? []).map((r: any) => ({
+    id: r.id,
+    type: "rental" as const,
+    code: r.code ?? "",
+    client_name: r.client_name ?? "",
+    agent_name: r.agent_profiles?.user_profiles?.display_name ?? "Unknown",
+    agent_id: r.assisted_by_agent_id,
+    amount: Number(r.consultation_fee_amount ?? 0),
+    date: r.date,
+    status: r.status ?? "approved",
+  }));
+
+  // ── Bonuses ──────────────────────────────────────────────────────────
+  let bonusQuery = supabase
+    .from("bonuses")
+    .select("id, client_name, amount_owed, bonus_date, status, agent_id, agent_profiles(user_profiles(display_name))")
+    .gte("bonus_date", filters.from)
+    .lte("bonus_date", toEnd);
+
+  if (statusFilter === "paid") bonusQuery = bonusQuery.eq("status", "paid");
+  else if (statusFilter === "unpaid") bonusQuery = bonusQuery.neq("status", "paid");
+
+  if (!isAdmin) bonusQuery = bonusQuery.eq("agent_id", profile.id);
+
+  const { data: bonuses } = await bonusQuery;
+
+  const bonusRows: PaymentRow[] = (bonuses ?? []).map((b: any) => ({
+    id: b.id,
+    type: "bonus" as const,
+    code: "",
+    client_name: b.client_name ?? "",
+    agent_name: b.agent_profiles?.user_profiles?.display_name ?? "Unknown",
+    agent_id: b.agent_id,
+    amount: Number(b.amount_owed ?? 0),
+    date: b.bonus_date,
+    status: b.status ?? "pending",
+  }));
+
+  return [...rentalRows, ...bonusRows].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 }

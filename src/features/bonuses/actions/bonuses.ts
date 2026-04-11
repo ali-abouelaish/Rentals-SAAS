@@ -182,3 +182,26 @@ export async function approveBonus(bonusId: string) {
   revalidatePath(`/bonuses`);
   return { ok: true };
 }
+
+export async function updateBonusStatus(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  await requireRole([...ADMIN_ROLES]);
+  const bonusId = String(formData.get("bonus_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+
+  if (!bonusId) throw new Error("Missing bonus id.");
+  if (!["pending", "approved", "paid", "declined"].includes(status)) {
+    throw new Error("Unsupported status.");
+  }
+
+  const { error } = await supabase
+    .from("bonuses")
+    .update({ status })
+    .eq("id", bonusId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/bonuses");
+  revalidatePath("/earnings", "layout");
+  revalidatePath("/me");
+  return { ok: true };
+}

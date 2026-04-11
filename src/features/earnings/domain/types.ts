@@ -42,6 +42,19 @@ export type EarningsTransaction = {
   status?: string;
 };
 
+/** Unified payment row for the outstanding payments tracker */
+export type PaymentRow = {
+  id: string;
+  type: "rental" | "bonus";
+  code: string;
+  client_name: string;
+  agent_name: string;
+  agent_id: string;
+  amount: number;
+  date: string;
+  status: string;
+};
+
 /** Trend point with optional per-agent breakdown for Compare Agents chart */
 export type EarningsTrendPointWithAgents = EarningsTrendPoint & {
   by_agent?: Record<string, number>;

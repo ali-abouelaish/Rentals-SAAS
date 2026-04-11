@@ -1,4 +1,7 @@
+"use client";
+
 import { formatGBP, formatDate } from "@/lib/utils/formatters";
+import { BonusPaidToggle } from "./BonusPaidToggle";
 
 type BonusRow = {
   id: string;
@@ -14,14 +17,6 @@ function agentShare(b: BonusRow, commissionPercent: number): number {
   if (b.payout_mode === "full") return b.amount_owed;
   return b.amount_owed * (commissionPercent / 100);
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700",
-  approved: "bg-blue-50 text-blue-700",
-  sent: "bg-blue-50 text-blue-700",
-  paid: "bg-emerald-50 text-emerald-700",
-  declined: "bg-red-50 text-red-700",
-};
 
 export function AgentBonusesTable({
   bonuses,
@@ -66,11 +61,7 @@ export function AgentBonusesTable({
                 {formatGBP(agentShare(b, commissionPercent))}
               </td>
               <td className="py-3 pl-4">
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[b.status] ?? "bg-surface-inset text-foreground-muted"}`}
-                >
-                  {b.status}
-                </span>
+                <BonusPaidToggle bonusId={b.id} status={b.status} isAdmin={isAdmin} />
               </td>
             </tr>
           ))}
