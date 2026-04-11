@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
 
     const usage = editResults.reduce<Record<string, number> | null>((acc, r) => {
       if (!r.usage) return acc;
-      const u = r.usage as Record<string, number>;
+      const u = r.usage as unknown as Record<string, number>;
       if (!acc) return { ...u };
       return Object.fromEntries(
         Object.keys(u).map((k) => [k, (acc[k] ?? 0) + (u[k] ?? 0)])
