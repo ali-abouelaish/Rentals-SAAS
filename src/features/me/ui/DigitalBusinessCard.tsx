@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Phone, Mail, Globe } from "lucide-react";
+import { Phone, Mail, Globe, MessageCircle } from "lucide-react";
 import type { PublicCardData } from "../domain/types";
 
 interface DigitalBusinessCardProps {
@@ -276,6 +276,22 @@ export function DigitalBusinessCard({ data, enquiryUrl }: DigitalBusinessCardPro
                 >
                   <Phone className="h-5 w-5 shrink-0 text-white/80" />
                   <span className="flex-1 text-center tracking-wide">Phone</span>
+                </a>
+              )}
+              {data.phone && (
+                <a
+                  href={`https://wa.me/${data.phone.replace(/[^0-9]/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center gap-4 rounded-2xl px-6 py-4 text-base font-semibold text-white transition-all hover:bg-white/20 active:scale-[0.98]"
+                  style={{
+                    background: "rgba(255,255,255,0.12)",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  <MessageCircle className="h-5 w-5 shrink-0 text-white/80" />
+                  <span className="flex-1 text-center tracking-wide">WhatsApp</span>
                 </a>
               )}
               {data.contactEmail && (
