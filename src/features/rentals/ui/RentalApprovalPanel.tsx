@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatGBP } from "@/lib/utils/formatters";
 import { approveRentalCode } from "@/features/rentals/actions/rentals";
+import { toast } from "sonner";
 
 type Props = {
   rentalId: string;
@@ -61,7 +62,12 @@ export function RentalApprovalPanel({
   return (
     <form
       action={async (formData) => {
-        await approveRentalCode(formData);
+        const result = await approveRentalCode(formData);
+        if (!result.ok) {
+          toast.error(result.error ?? "Failed to approve rental.");
+        } else {
+          toast.success("Rental approved successfully.");
+        }
       }}
       className="space-y-4"
     >

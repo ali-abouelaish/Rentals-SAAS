@@ -406,149 +406,152 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export async function approveRentalCode(formData: FormData) {
-  const supabase = createSupabaseServerClient();
-  const profile = await requireRole([...ADMIN_ROLES]);
-  const rentalId = String(formData.get("rental_id") ?? "");
-  const overrideValueRaw = formData.get("marketing_fee_override_gbp");
-  const overrideReason = String(formData.get("marketing_fee_override_reason") ?? "");
+export async function approveRentalCode(formData: FormData): Promise<{ ok: boolean; error?: string; status?: string }> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const profile = await requireRole([...ADMIN_ROLES]);
+    const rentalId = String(formData.get("rental_id") ?? "");
+    const overrideValueRaw = formData.get("marketing_fee_override_gbp");
+    const overrideReason = String(formData.get("marketing_fee_override_reason") ?? "");
 
-  if (!rentalId) {
-    throw new Error("Missing rental id.");
-  }
-
-  const { data: rental, error: rentalError } = await supabase
-    .from("rental_codes")
-    .select("*")
-    .eq("id", rentalId)
-    .single();
-  if (rentalError) throw new Error(rentalError.message);
-
-  const { data: documentSets, error: docsError } = await supabase
-    .from("document_sets")
-    .select("set_type, documents(id)")
-    .eq("rental_code_id", rentalId);
-  if (docsError) throw new Error(docsError.message);
-
-  const counts = (documentSets ?? []).reduce(
-    (acc, set) => {
-      const count = set.documents?.length ?? 0;
-      acc[set.set_type as keyof typeof acc] = count;
-      return acc;
-    },
-    {
-      sourcing_agreement: 0,
-      client_id: 0,
-      payment_proof: 0
+    if (!rentalId) {
+      return { ok: false, error: "Missing rental id." };
     }
-  );
 
-  // Require at least 1 document in each set; allow any count >= 1 for sourcing agreements.
-  const missing: string[] = [];
-  if (counts.sourcing_agreement < 1) missing.push("sourcing agreement");
-  if (counts.client_id < 1) missing.push("client ID");
-  if (counts.payment_proof < 1) missing.push("payment proof");
-  if (missing.length > 0) {
-    const list =
-      missing.length === 1
-        ? missing[0]
-        : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
-    throw new Error(`Missing required documents: ${list}.`);
-  }
+    const { data: rental, error: rentalError } = await supabase
+      .from("rental_codes")
+      .select("*")
+      .eq("id", rentalId)
+      .single();
+    if (rentalError) return { ok: false, error: rentalError.message };
 
-  const { data: assistedAgent } = await supabase
-    .from("agent_profiles")
-    .select("commission_percent")
-    .eq("user_id", rental.assisted_by_agent_id)
-    .single();
+    const { data: documentSets, error: docsError } = await supabase
+      .from("document_sets")
+      .select("set_type, documents(id)")
+      .eq("rental_code_id", rentalId);
+    if (docsError) return { ok: false, error: docsError.message };
 
-  const { data: marketingAgent } = await supabase
-    .from("agent_profiles")
-    .select("marketing_fee")
-    .eq("user_id", rental.marketing_agent_id)
-    .single();
+    const counts = (documentSets ?? []).reduce(
+      (acc, set) => {
+        const count = set.documents?.length ?? 0;
+        acc[set.set_type as keyof typeof acc] = count;
+        return acc;
+      },
+      {
+        sourcing_agreement: 0,
+        client_id: 0,
+        payment_proof: 0
+      }
+    );
 
-  if (["approved", "paid"].includes(rental.status)) {
-    return { ok: true, status: "already_exists" };
-  }
+    // Require at least 1 document in each set; allow any count >= 1 for sourcing agreements.
+    const missing: string[] = [];
+    if (counts.sourcing_agreement < 1) missing.push("sourcing agreement");
+    if (counts.client_id < 1) missing.push("client ID");
+    if (counts.payment_proof < 1) missing.push("payment proof");
+    if (missing.length > 0) {
+      const list =
+        missing.length === 1
+          ? missing[0]
+          : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+      return { ok: false, error: `Missing required documents: ${list}.` };
+    }
 
-  const commissionPercent =
-    assistedAgent?.commission_percent ?? 0;
-  const paymentFee =
-    rental.payment_method === "cash"
-      ? 0
-      : rental.payment_method === "transfer"
-      ? 0.2
-      : 0.0175;
+    const { data: assistedAgent } = await supabase
+      .from("agent_profiles")
+      .select("commission_percent")
+      .eq("user_id", rental.assisted_by_agent_id)
+      .single();
 
-  const base = roundMoney(rental.consultation_fee_amount * (1 - paymentFee));
-  const assistedGross = roundMoney(base * (commissionPercent / 100));
-  const defaultMarketingFee = marketingAgent?.marketing_fee ?? 0;
-  const threshold = roundMoney(base * 0.45);
+    const { data: marketingAgent } = await supabase
+      .from("agent_profiles")
+      .select("marketing_fee")
+      .eq("user_id", rental.marketing_agent_id)
+      .single();
 
-  const hasMarketingAgent =
-    rental.marketing_agent_id &&
-    rental.marketing_agent_id !== rental.assisted_by_agent_id;
+    if (["approved", "paid"].includes(rental.status)) {
+      return { ok: true, status: "already_exists" };
+    }
 
-  let marketingFeeValue = 0;
-  let overrideValue: number | null = null;
+    const commissionPercent =
+      assistedAgent?.commission_percent ?? 0;
+    const paymentFee =
+      rental.payment_method === "cash"
+        ? 0
+        : rental.payment_method === "transfer"
+        ? 0.2
+        : 0.0175;
 
-  if (hasMarketingAgent) {
-    const parsedOverride =
-      typeof overrideValueRaw === "string" && overrideValueRaw.length > 0
-        ? Number(overrideValueRaw)
-        : null;
-    if (defaultMarketingFee > threshold) {
-      overrideValue = parsedOverride;
-      if (overrideValue !== null && !Number.isNaN(overrideValue)) {
-        if (overrideValue > defaultMarketingFee) {
-          throw new Error("Override cannot exceed default marketing fee.");
+    const base = roundMoney(rental.consultation_fee_amount * (1 - paymentFee));
+    const assistedGross = roundMoney(base * (commissionPercent / 100));
+    const defaultMarketingFee = marketingAgent?.marketing_fee ?? 0;
+    const threshold = roundMoney(base * 0.45);
+
+    const hasMarketingAgent =
+      rental.marketing_agent_id &&
+      rental.marketing_agent_id !== rental.assisted_by_agent_id;
+
+    let marketingFeeValue = 0;
+    let overrideValue: number | null = null;
+
+    if (hasMarketingAgent) {
+      const parsedOverride =
+        typeof overrideValueRaw === "string" && overrideValueRaw.length > 0
+          ? Number(overrideValueRaw)
+          : null;
+      if (defaultMarketingFee > threshold) {
+        overrideValue = parsedOverride;
+        if (overrideValue !== null && !Number.isNaN(overrideValue)) {
+          if (overrideValue > defaultMarketingFee) {
+            return { ok: false, error: "Override cannot exceed default marketing fee." };
+          }
+          marketingFeeValue = overrideValue;
+        } else {
+          marketingFeeValue = defaultMarketingFee;
         }
-        marketingFeeValue = overrideValue;
       } else {
         marketingFeeValue = defaultMarketingFee;
       }
-    } else {
-      marketingFeeValue = defaultMarketingFee;
     }
-  }
 
-  const assistedNet = roundMoney(assistedGross - marketingFeeValue);
-  if (assistedNet < 0) {
-    throw new Error(
-      "Marketing fee exceeds agent earnings. Enter a lower custom amount."
-    );
-  }
+    const assistedNet = roundMoney(assistedGross - marketingFeeValue);
+    if (assistedNet < 0) {
+      return { ok: false, error: "Marketing fee exceeds agent earnings. Enter a lower custom amount." };
+    }
 
-  if (overrideValue !== null && !Number.isNaN(overrideValue)) {
-    await supabase
+    if (overrideValue !== null && !Number.isNaN(overrideValue)) {
+      await supabase
+        .from("rental_codes")
+        .update({
+          marketing_fee_override_gbp: roundMoney(overrideValue),
+          marketing_fee_override_reason: overrideReason || null
+        })
+        .eq("id", rental.id);
+    }
+
+    const { error: updateError } = await supabase
       .from("rental_codes")
-      .update({
-        marketing_fee_override_gbp: roundMoney(overrideValue),
-        marketing_fee_override_reason: overrideReason || null
-      })
-      .eq("id", rental.id);
+      .update({ status: "approved" })
+      .eq("id", rentalId);
+    if (updateError) return { ok: false, error: updateError.message };
+
+    await supabase.from("activity_log").insert({
+      tenant_id: profile.tenant_id,
+      actor_user_id: profile.id,
+      action: "rental_approved",
+      entity_type: "rental",
+      entity_id: rental.id,
+      metadata: { code: rental.code }
+    });
+
+    revalidatePath(`/rentals/${rentalId}`);
+    revalidatePath("/earnings", "layout");
+    revalidatePath("/me");
+    return { ok: true };
+  } catch (err) {
+    console.error("[approveRentalCode] unexpected error:", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong. Please try again." };
   }
-
-  const { error: updateError } = await supabase
-    .from("rental_codes")
-    .update({ status: "approved" })
-    .eq("id", rentalId);
-  if (updateError) throw new Error(updateError.message);
-
-  await supabase.from("activity_log").insert({
-    tenant_id: profile.tenant_id,
-    actor_user_id: profile.id,
-    action: "rental_approved",
-    entity_type: "rental",
-    entity_id: rental.id,
-    metadata: { code: rental.code }
-  });
-
-  revalidatePath(`/rentals/${rentalId}`);
-  revalidatePath("/earnings", "layout");
-  revalidatePath("/me");
-  return { ok: true };
 }
 
 export async function updateRentalStatus(formData: FormData) {

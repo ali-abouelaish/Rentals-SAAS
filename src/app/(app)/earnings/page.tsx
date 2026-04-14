@@ -28,6 +28,7 @@ import {
   BarChart3,
   Trophy,
   Award,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -106,6 +107,13 @@ export default async function EarningsPage({
             icon: Receipt,
             color: "text-blue-600",
             bg: "bg-blue-50"
+          },
+          {
+            label: "Pending Approval",
+            value: stats.totalRentalsPending ?? 0,
+            icon: Clock,
+            color: "text-amber-600",
+            bg: "bg-amber-50"
           },
           {
             label: "Top Agent",
@@ -203,7 +211,7 @@ export default async function EarningsPage({
         {activeTab === "overview" && (
           <>
             {/* ── Stat Tiles — Bento Row ─────────── */}
-            <div className={`grid gap-[var(--gap-bento)] ${isAdmin ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-5" : "grid-cols-2 xl:grid-cols-4"}`}>
+            <div className={`grid gap-[var(--gap-bento)] ${isAdmin ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" : "grid-cols-2 xl:grid-cols-4"}`}>
               {statTiles.map((stat) => (
                 <div
                   key={stat.label}

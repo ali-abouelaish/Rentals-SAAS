@@ -31,7 +31,7 @@ export async function getRentalCodes({
     query = query.eq("status", status);
   }
   if (agentId) {
-    query = query.eq("assisted_by_agent_id", agentId);
+    query = query.or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`);
   }
 
   query = query.range(from, to);

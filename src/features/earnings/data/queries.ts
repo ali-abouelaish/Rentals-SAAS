@@ -60,7 +60,7 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
   const profile = await requireUserProfile();
   const { from, to } = filters;
 
-  const [{ count: totalAgents }, { data: rentals }] = await Promise.all([
+  const [{ count: totalAgents }, { data: rentals }, { count: totalRentalsPending }] = await Promise.all([
     supabase
       .from("agent_profiles")
       .select("user_id", { count: "exact", head: true })
@@ -71,6 +71,13 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
       .select("consultation_fee_amount, payment_method")
       .eq("tenant_id", profile.tenant_id)
       .in("status", ["approved", "paid"])
+      .gte("date", from)
+      .lte("date", endOfDay(to)),
+    supabase
+      .from("rental_codes")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", profile.tenant_id)
+      .eq("status", "pending")
       .gte("date", from)
       .lte("date", endOfDay(to))
   ]);
@@ -87,6 +94,7 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
     totalEarnings,
     totalTransactions,
     totalRentalsClosed: totalTransactions,
+    totalRentalsPending: totalRentalsPending ?? 0,
     avgPerAgent
   };
 }
@@ -105,7 +113,13 @@ export async function getEarningsStatsForAgent(
     .eq("agent_id", agentId);
   const mktRentalIds = (mktJunctionRows ?? []).map(r => r.rental_id);
 
-  const [{ data: agentProfile }, { data: rentals }] = await Promise.all([
+  const agentOrFilter = [
+    `assisted_by_agent_id.eq.${agentId}`,
+    `marketing_agent_id.eq.${agentId}`,
+    ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
+  ].join(",");
+
+  const [{ data: agentProfile }, { data: rentals }, { count: totalRentalsPending }] = await Promise.all([
     supabase
       .from("agent_profiles")
       .select("commission_percent, marketing_fee")
@@ -114,12 +128,15 @@ export async function getEarningsStatsForAgent(
     supabase
       .from("rental_codes")
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
-      .or([
-        `assisted_by_agent_id.eq.${agentId}`,
-        `marketing_agent_id.eq.${agentId}`,
-        ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
-      ].join(","))
+      .or(agentOrFilter)
       .in("status", ["approved", "paid"])
+      .gte("date", from)
+      .lte("date", endOfDay(to)),
+    supabase
+      .from("rental_codes")
+      .select("id", { count: "exact", head: true })
+      .or(agentOrFilter)
+      .eq("status", "pending")
       .gte("date", from)
       .lte("date", endOfDay(to))
   ]);
@@ -169,6 +186,7 @@ export async function getEarningsStatsForAgent(
     totalAgents: 1,
     totalEarnings,
     totalTransactions: rentalsCount,
+    totalRentalsPending: totalRentalsPending ?? 0,
     avgPerAgent: totalEarnings
   };
 }

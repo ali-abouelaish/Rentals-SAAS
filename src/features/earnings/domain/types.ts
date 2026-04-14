@@ -3,6 +3,7 @@ export type EarningsStats = {
   totalEarnings: number;
   totalTransactions: number;
   totalRentalsClosed?: number;
+  totalRentalsPending?: number;
   avgPerAgent: number;
   topAgentName?: string | null;
   topAgentEarnings?: number | null;

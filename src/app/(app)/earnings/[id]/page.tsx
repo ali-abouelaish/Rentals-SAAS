@@ -13,7 +13,7 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { canAccessRoute } from "@/lib/auth/roles";
 import { AvatarCircle } from "@/components/shared/AvatarCircle";
 import { formatGBP } from "@/lib/utils/formatters";
-import { ArrowLeft, TrendingUp, Home, Gift } from "lucide-react";
+import { ArrowLeft, TrendingUp, Home, Gift, Clock } from "lucide-react";
 import { AgentProfileCharts } from "@/features/earnings/ui/AgentProfileCharts";
 import { AgentTransactionsTable } from "@/features/earnings/ui/AgentTransactionsTable";
 import { AgentBonusesTable } from "@/features/bonuses/ui/AgentBonusesTable";
@@ -112,6 +112,10 @@ export default async function AgentEarningsPage({
             </span>
             <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
               {stats.totalTransactions ?? 0} rentals
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">
+              <Clock className="h-3.5 w-3.5" />
+              {stats.totalRentalsPending ?? 0} pending approval
             </span>
             <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700">
               {formatGBP(avgPerRental)} avg / rental
