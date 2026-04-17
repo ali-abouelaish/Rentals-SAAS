@@ -302,8 +302,8 @@ export async function updateRentalCode(formData: FormData): Promise<{ ok: boolea
     if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
       return { ok: false, error: "You do not have access to edit this rental." };
     }
-    if (!isAdmin && rental.status !== "pending") {
-      return { ok: false, error: "Only pending rentals can be edited." };
+    if (!isAdmin && rental.status === "paid") {
+      return { ok: false, error: "Paid rentals can no longer be edited." };
     }
 
     const marketingAgentIdList = (formData.getAll("marketing_agent_id_list") as string[]).filter(Boolean);

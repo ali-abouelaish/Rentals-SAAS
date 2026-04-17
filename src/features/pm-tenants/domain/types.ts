@@ -66,9 +66,6 @@ export type Guarantor = {
 
 export type PmTenantFilters = {
   search: string;
-  nationality: string;
-  employment_status: EmploymentStatus | "";
-  rtr_status: "verified" | "unverified" | "expired" | "";
 };
 
 export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {

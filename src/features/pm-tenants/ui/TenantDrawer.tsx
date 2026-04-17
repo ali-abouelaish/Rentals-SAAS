@@ -102,8 +102,38 @@ function OverviewContent({
   };
 
   if (!isEditing) {
+    const unit = tenant.current_unit;
+    const contract = tenant.current_contract;
+    const unitLabel = unit
+      ? unit.unit_type === "room"
+        ? unit.room_number
+          ? `Room ${unit.room_number}`
+          : "Room"
+        : unit.unit_type === "studio"
+        ? "Studio"
+        : "Whole Flat"
+      : null;
+
     return (
       <div className="space-y-5 py-1">
+        {(unit || contract) && (
+          <section>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Current Tenancy</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <InfoRow label="Property" value={unit?.property?.name} />
+              <InfoRow label="Unit" value={unitLabel} />
+              <InfoRow label="Address" value={unit?.property?.address_line_1} />
+              <InfoRow
+                label="Contract start"
+                value={contract?.start_date ? new Date(contract.start_date).toLocaleDateString("en-GB") : null}
+              />
+              <InfoRow
+                label="Contract status"
+                value={contract?.status ? contract.status.replace("_", " ") : null}
+              />
+            </div>
+          </section>
+        )}
         <section>
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Personal</h3>
           <div className="grid grid-cols-2 gap-3">

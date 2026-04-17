@@ -252,7 +252,8 @@ export default async function RentalDetailPage({
         </Card>
       ) : null}
 
-      {(profile.role.toLowerCase() === "admin" || rental.assisted_by_agent_id === profile.id) && (
+      {(profile.role.toLowerCase() === "admin" ||
+        (rental.assisted_by_agent_id === profile.id && rental.status !== "paid")) && (
         <Card>
           <CardContent className="space-y-3">
             <RentalEditPanel

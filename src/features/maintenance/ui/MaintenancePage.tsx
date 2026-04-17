@@ -11,6 +11,7 @@ import {
   User,
   ChevronRight,
   DollarSign,
+  MessageSquareText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
@@ -23,10 +24,13 @@ import {
   KANBAN_COLUMNS,
 } from "../domain/types";
 import type { MaintenanceJob, JobStatus } from "../domain/types";
+import type { MaintenanceTicketListItem } from "../domain/ticket-types";
 import { updateJobStatus } from "../actions";
 import { KanbanBoard } from "./KanbanBoard";
 import { JobDrawer } from "./JobDrawer";
 import { RaiseJobModal } from "./RaiseJobModal";
+import { TicketsList } from "./TicketsList";
+import { TicketDrawer } from "./TicketDrawer";
 
 // ──────────────────────────────────────────────────────────
 // Helpers
@@ -156,26 +160,47 @@ const STATUS_FILTERS: Array<{ label: string; value: JobStatus | "all" }> = [
 
 interface MaintenancePageProps {
   jobs: MaintenanceJob[];
+  tickets: MaintenanceTicketListItem[];
   properties: { id: string; name: string }[];
   initialJobId?: string;
+  initialTicketId?: string;
 }
 
-export function MaintenancePage({ jobs: initialJobs, properties, initialJobId }: MaintenancePageProps) {
+export function MaintenancePage({
+  jobs: initialJobs,
+  tickets: initialTickets,
+  properties,
+  initialJobId,
+  initialTicketId,
+}: MaintenancePageProps) {
   const [jobs, setJobs] = useState<MaintenanceJob[]>(initialJobs);
+  const [tickets, setTickets] = useState<MaintenanceTicketListItem[]>(initialTickets);
+  const [activeTab, setActiveTab] = useState<"jobs" | "tickets">(
+    initialTicketId ? "tickets" : "jobs"
+  );
   const [view, setView] = useState<"list" | "kanban">("list");
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [raiseOpen, setRaiseOpen] = useState(false);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
 
-  // Auto-open job from URL query param
+  // Auto-open job or ticket from URL query param
   useEffect(() => {
     if (initialJobId) {
       const job = jobs.find((j) => j.id === initialJobId);
       if (job) {
         setSelectedJobId(initialJobId);
         setDrawerOpen(true);
+      }
+    }
+    if (initialTicketId) {
+      const t = tickets.find((x) => x.id === initialTicketId);
+      if (t) {
+        setSelectedTicketId(initialTicketId);
+        setTicketDrawerOpen(true);
       }
     }
     // Only run on mount
@@ -235,6 +260,24 @@ export function MaintenancePage({ jobs: initialJobs, properties, initialJobId }:
     resolved: jobs.filter((j) => j.status === "resolved").length,
   }), [jobs]);
 
+  const unreadTickets = useMemo(
+    () => tickets.filter((t) => !t.seen_by_landlord).length,
+    [tickets]
+  );
+
+  function openTicket(ticket: MaintenanceTicketListItem) {
+    setSelectedTicketId(ticket.id);
+    setTicketDrawerOpen(true);
+  }
+
+  function handleTicketUpdated(
+    updated: Partial<MaintenanceTicketListItem> & { id: string }
+  ) {
+    setTickets((prev) =>
+      prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t))
+    );
+  }
+
   return (
     <div className="space-y-5">
 
@@ -242,35 +285,105 @@ export function MaintenancePage({ jobs: initialJobs, properties, initialJobId }:
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">Maintenance</h1>
-          <p className="text-sm text-foreground-secondary mt-0.5">{jobs.length} jobs total</p>
+          <p className="text-sm text-foreground-secondary mt-0.5">
+            {activeTab === "jobs"
+              ? `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"} total`
+              : `${tickets.length} ${tickets.length === 1 ? "ticket" : "tickets"} from tenants`}
+          </p>
         </div>
+        {activeTab === "jobs" && (
+          <button
+            onClick={() => setRaiseOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity self-start sm:self-auto"
+          >
+            <Plus size={16} />
+            Raise New Job
+          </button>
+        )}
+      </div>
+
+      {/* ── Tab switcher ── */}
+      <div className="flex items-center gap-1 rounded-xl border border-border bg-surface-card p-1 w-fit">
         <button
-          onClick={() => setRaiseOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity self-start sm:self-auto"
+          onClick={() => setActiveTab("jobs")}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+            activeTab === "jobs"
+              ? "bg-brand text-brand-fg shadow-sm"
+              : "text-foreground-secondary hover:text-foreground"
+          )}
         >
-          <Plus size={16} />
-          Raise New Job
+          <Wrench size={14} />
+          Jobs
+          <span
+            className={cn(
+              "ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[20px] h-5 text-[10px] font-semibold",
+              activeTab === "jobs"
+                ? "bg-brand-fg/20 text-brand-fg"
+                : "bg-surface-inset text-foreground-secondary"
+            )}
+          >
+            {jobs.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("tickets")}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors relative",
+            activeTab === "tickets"
+              ? "bg-brand text-brand-fg shadow-sm"
+              : "text-foreground-secondary hover:text-foreground"
+          )}
+        >
+          <MessageSquareText size={14} />
+          Tickets
+          {unreadTickets > 0 ? (
+            <span
+              className={cn(
+                "ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[20px] h-5 text-[10px] font-bold",
+                activeTab === "tickets"
+                  ? "bg-brand-fg text-brand"
+                  : "bg-red-500 text-white"
+              )}
+            >
+              {unreadTickets}
+            </span>
+          ) : (
+            <span
+              className={cn(
+                "ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[20px] h-5 text-[10px] font-semibold",
+                activeTab === "tickets"
+                  ? "bg-brand-fg/20 text-brand-fg"
+                  : "bg-surface-inset text-foreground-secondary"
+              )}
+            >
+              {tickets.length}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* ── Summary stat chips ── */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { label: "Open", value: counts.open, color: "text-slate-700 bg-slate-100" },
-          { label: "In Progress", value: counts.in_progress, color: "text-blue-700 bg-blue-100" },
-          { label: "Critical", value: counts.critical, color: "text-red-700 bg-red-100" },
-          { label: "Resolved", value: counts.resolved, color: "text-emerald-700 bg-emerald-100" },
-        ].map((c) => (
-          <span
-            key={c.label}
-            className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", c.color)}
-          >
-            {c.value} {c.label}
-          </span>
-        ))}
-      </div>
+      {/* ── Summary stat chips (jobs only) ── */}
+      {activeTab === "jobs" && (
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: "Open", value: counts.open, color: "text-slate-700 bg-slate-100" },
+            { label: "In Progress", value: counts.in_progress, color: "text-blue-700 bg-blue-100" },
+            { label: "Critical", value: counts.critical, color: "text-red-700 bg-red-100" },
+            { label: "Resolved", value: counts.resolved, color: "text-emerald-700 bg-emerald-100" },
+          ].map((c) => (
+            <span
+              key={c.label}
+              className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", c.color)}
+            >
+              {c.value} {c.label}
+            </span>
+          ))}
+        </div>
+      )}
 
-      {/* ── Filter bar ── */}
+      {/* ── Filter bar (jobs only) ── */}
+      {activeTab === "jobs" && (
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 min-w-0 sm:max-w-xs">
@@ -325,9 +438,10 @@ export function MaintenancePage({ jobs: initialJobs, properties, initialJobId }:
           </button>
         </div>
       </div>
+      )}
 
       {/* ── List View ── */}
-      {view === "list" && (
+      {activeTab === "jobs" && view === "list" && (
         <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -376,7 +490,7 @@ export function MaintenancePage({ jobs: initialJobs, properties, initialJobId }:
       )}
 
       {/* ── Kanban View ── */}
-      {view === "kanban" && (
+      {activeTab === "jobs" && view === "kanban" && (
         <div className="rounded-bento bg-surface-card shadow-bento p-5">
           <KanbanBoard
             jobs={filtered}
@@ -386,12 +500,25 @@ export function MaintenancePage({ jobs: initialJobs, properties, initialJobId }:
         </div>
       )}
 
+      {/* ── Tickets View ── */}
+      {activeTab === "tickets" && (
+        <TicketsList tickets={tickets} onOpen={openTicket} />
+      )}
+
       {/* ── Job Drawer ── */}
       <JobDrawer
         job={selectedJob}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onJobUpdated={handleJobUpdated}
+      />
+
+      {/* ── Ticket Drawer ── */}
+      <TicketDrawer
+        ticketId={selectedTicketId}
+        open={ticketDrawerOpen}
+        onClose={() => setTicketDrawerOpen(false)}
+        onTicketUpdated={handleTicketUpdated}
       />
 
       {/* ── Raise Job Modal ── */}

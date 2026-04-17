@@ -1,6 +1,31 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { PmTenant, PmTenantFilters } from "../domain/types";
 
+const ACTIVE_CONTRACT_STATUSES = ["active", "signed", "notice_given"];
+
+function pickCurrentContract(
+  contracts: Array<{ start_date: string; status: string }> | null | undefined
+) {
+  if (!contracts || contracts.length === 0) return null;
+  const active = contracts.find((c) => ACTIVE_CONTRACT_STATUSES.includes(c.status));
+  if (active) return active;
+  return [...contracts].sort((a, b) => (a.start_date < b.start_date ? 1 : -1))[0] ?? null;
+}
+
+function flattenTenantRelations<T extends { current_unit?: unknown; current_contract?: unknown }>(
+  row: T
+): T {
+  const unitRel = row.current_unit as unknown;
+  const contractRel = row.current_contract as unknown;
+  return {
+    ...row,
+    current_unit: Array.isArray(unitRel) ? unitRel[0] ?? null : unitRel ?? null,
+    current_contract: Array.isArray(contractRel)
+      ? pickCurrentContract(contractRel as Array<{ start_date: string; status: string }>)
+      : contractRel ?? null,
+  } as T;
+}
+
 export async function getPmTenants(
   filters: Partial<PmTenantFilters> = {}
 ): Promise<PmTenant[]> {
@@ -21,43 +46,16 @@ export async function getPmTenants(
 
   if (error) throw new Error(error.message);
 
-  let result = (data ?? []) as PmTenant[];
+  const result = ((data ?? []) as PmTenant[]).map(flattenTenantRelations);
 
-  if (filters.search) {
-    const s = filters.search.toLowerCase();
-    result = result.filter(
-      (t) =>
-        t.full_name.toLowerCase().includes(s) ||
-        t.email.toLowerCase().includes(s) ||
-        t.phone.includes(s)
-    );
-  }
-
-  if (filters.nationality) {
-    const n = filters.nationality.toLowerCase();
-    result = result.filter((t) => t.nationality?.toLowerCase() === n);
-  }
-
-  if (filters.employment_status) {
-    result = result.filter((t) => t.employment_status === filters.employment_status);
-  }
-
-  if (filters.rtr_status) {
-    const today = new Date().toISOString().slice(0, 10);
-    result = result.filter((t) => {
-      if (filters.rtr_status === "verified") return t.right_to_rent_verified;
-      if (filters.rtr_status === "expired")
-        return t.right_to_rent_expiry && t.right_to_rent_expiry < today;
-      if (filters.rtr_status === "unverified")
-        return (
-          !t.right_to_rent_verified &&
-          (!t.right_to_rent_expiry || t.right_to_rent_expiry >= today)
-        );
-      return true;
-    });
-  }
-
-  return result;
+  if (!filters.search) return result;
+  const s = filters.search.toLowerCase();
+  return result.filter(
+    (t) =>
+      t.full_name.toLowerCase().includes(s) ||
+      t.email.toLowerCase().includes(s) ||
+      t.phone.includes(s)
+  );
 }
 
 export async function getPmTenantById(id: string): Promise<PmTenant | null> {
@@ -78,7 +76,7 @@ export async function getPmTenantById(id: string): Promise<PmTenant | null> {
     .single();
 
   if (error) return null;
-  return data as PmTenant;
+  return flattenTenantRelations(data as PmTenant);
 }
 
 export async function getPmTenantFormResponses(pmTenantId: string) {

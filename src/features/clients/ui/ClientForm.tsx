@@ -85,22 +85,37 @@ export function ClientForm({
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Phone *</label>
             <Input placeholder="Phone" required {...form.register("phone")} />
+            {form.formState.errors.phone && (
+              <p className="text-xs text-red-500">{form.formState.errors.phone.message}</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Email *</label>
             <Input placeholder="Email" required {...form.register("email")} />
+            {form.formState.errors.email && (
+              <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Date of birth *</label>
             <Input type="date" required {...form.register("dob")} />
+            {form.formState.errors.dob && (
+              <p className="text-xs text-red-500">{form.formState.errors.dob.message}</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Nationality *</label>
             <Input placeholder="Nationality" required {...form.register("nationality")} />
+            {form.formState.errors.nationality && (
+              <p className="text-xs text-red-500">{form.formState.errors.nationality.message}</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Current address *</label>
             <Input placeholder="Current address" required {...form.register("current_address")} />
+            {form.formState.errors.current_address && (
+              <p className="text-xs text-red-500">{form.formState.errors.current_address.message}</p>
+            )}
           </div>
         </div>
       </div>
@@ -112,14 +127,23 @@ export function ClientForm({
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Company / University name *</label>
             <Input placeholder="Company / University name" required {...form.register("company_or_university_name")} />
+            {form.formState.errors.company_or_university_name && (
+              <p className="text-xs text-red-500">{form.formState.errors.company_or_university_name.message}</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Company / University address *</label>
             <Input placeholder="Company / University address" required {...form.register("company_address")} />
+            {form.formState.errors.company_address && (
+              <p className="text-xs text-red-500">{form.formState.errors.company_address.message}</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Occupation *</label>
             <Input placeholder="Occupation" required {...form.register("occupation")} />
+            {form.formState.errors.occupation && (
+              <p className="text-xs text-red-500">{form.formState.errors.occupation.message}</p>
+            )}
           </div>
         </div>
       </div>

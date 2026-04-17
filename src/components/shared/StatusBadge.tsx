@@ -7,7 +7,7 @@ import {
   Pause,
   Send,
   FileText,
-  DollarSign,
+  PoundSterling,
   Bell,
   Eye,
   type LucideIcon,
@@ -47,7 +47,7 @@ const statusConfig: Record<string, StatusConfig> = {
   },
   paid: {
     className: "bg-success-bg text-success-fg border-success-border",
-    icon: DollarSign,
+    icon: PoundSterling,
     label: "Paid",
   },
   declined: {

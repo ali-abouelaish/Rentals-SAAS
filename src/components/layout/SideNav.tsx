@@ -118,10 +118,11 @@ function SideNavInner({ profile, branding, moduleConfig }: SideNavProps) {
   // Determine which sidebar context is active
   const activeModule: "ra" | "pm" = (() => {
     if (!hasBoth) return hasPmOnly ? "pm" : "ra";
-    // "Both" agency — derive from route or dashboard view param
-    if (pathname === "/dashboard") {
-      return searchParams.get("view") === "pm" ? "pm" : "ra";
-    }
+    // "Both" agency — derive from route or ?view= param.
+    // Shared routes (like /settings) use ?view=pm to stay in PM mode.
+    if (searchParams.get("view") === "pm") return "pm";
+    if (searchParams.get("view") === "ra") return "ra";
+    if (pathname === "/dashboard") return "ra";
     return isPmRoute(pathname) ? "pm" : "ra";
   })();
 
@@ -197,7 +198,11 @@ function SideNavInner({ profile, branding, moduleConfig }: SideNavProps) {
         ).map((item) => {
           if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
           const active = isActive(item.href);
-          const linkHref = isPm && item.href === "/dashboard" ? "/dashboard?view=pm" : item.href;
+          // For shared routes (dashboard + settings), carry ?view=pm so the
+          // sidebar stays in PM mode for tenants with both modules enabled.
+          const needsViewParam =
+            isPm && hasBoth && (item.href === "/dashboard" || item.href.startsWith("/settings"));
+          const linkHref = needsViewParam ? `${item.href}?view=pm` : item.href;
 
           return (
             <Link
