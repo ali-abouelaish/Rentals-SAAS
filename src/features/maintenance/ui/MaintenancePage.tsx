@@ -12,6 +12,8 @@ import {
   ChevronRight,
   DollarSign,
   MessageSquareText,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
@@ -299,6 +301,18 @@ export function MaintenancePage({
             <Plus size={16} />
             Raise New Job
           </button>
+        )}
+        {activeTab === "tickets" && (
+          <a
+            href="/support"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity self-start sm:self-auto"
+          >
+            <Sparkles size={16} />
+            Open AI Triage
+            <ExternalLink size={13} className="opacity-70" />
+          </a>
         )}
       </div>
 

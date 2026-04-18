@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const emptyToNull = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((val) => (val === "" ? null : val), schema);
+
 export const portfolioSchema = z.object({
   name: z.string().min(1, "Name is required"),
   color: z.string().min(1, "Color is required"),
@@ -7,7 +10,7 @@ export const portfolioSchema = z.object({
 export type PortfolioFormValues = z.infer<typeof portfolioSchema>;
 
 export const propertySchema = z.object({
-  portfolio_id: z.string().uuid().nullable().optional().or(z.literal("")),
+  portfolio_id: emptyToNull(z.string().uuid().nullable().optional()),
   property_type: z.enum(["hmo", "studio", "whole_flat"]),
   name: z.string().min(1, "Name is required"),
   address_line_1: z.string().min(1, "Address is required"),
@@ -46,10 +49,10 @@ export const propertySchema = z.object({
     z.coerce.number().int().positive().optional()
   ),
   floor_plan_url: z.string().url().nullable().optional().or(z.literal("")),
-  owner_landlord_id: z.string().uuid().nullable().optional().or(z.literal("")),
-  manager_landlord_id: z.string().uuid().nullable().optional().or(z.literal("")),
-  contract_start_date: z.string().nullable().optional().or(z.literal("")),
-  contract_expiry_date: z.string().nullable().optional().or(z.literal("")),
+  owner_landlord_id: emptyToNull(z.string().uuid().nullable().optional()),
+  manager_landlord_id: emptyToNull(z.string().uuid().nullable().optional()),
+  contract_start_date: emptyToNull(z.string().nullable().optional()),
+  contract_expiry_date: emptyToNull(z.string().nullable().optional()),
   monthly_rent_owed: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? undefined : val),
     z.coerce.number().positive().optional()

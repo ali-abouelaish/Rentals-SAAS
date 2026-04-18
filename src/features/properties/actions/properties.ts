@@ -50,10 +50,11 @@ export async function createProperty(values: PropertyFormValues) {
 export async function updateProperty(id: string, values: Partial<PropertyFormValues>) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
+  const payload = propertySchema.partial().parse(values);
 
   const { data, error } = await supabase
     .from("properties")
-    .update({ ...values, updated_at: new Date().toISOString() })
+    .update({ ...payload, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id)
     .select("*")
