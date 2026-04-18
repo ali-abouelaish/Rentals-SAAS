@@ -3,8 +3,10 @@ import type { PmTenant, PmTenantFilters } from "../domain/types";
 
 const ACTIVE_CONTRACT_STATUSES = ["active", "signed", "notice_given"];
 
+type CurrentContractRow = { id: string; start_date: string; status: string; document_url: string | null };
+
 function pickCurrentContract(
-  contracts: Array<{ start_date: string; status: string }> | null | undefined
+  contracts: CurrentContractRow[] | null | undefined
 ) {
   if (!contracts || contracts.length === 0) return null;
   const active = contracts.find((c) => ACTIVE_CONTRACT_STATUSES.includes(c.status));
@@ -21,7 +23,7 @@ function flattenTenantRelations<T extends { current_unit?: unknown; current_cont
     ...row,
     current_unit: Array.isArray(unitRel) ? unitRel[0] ?? null : unitRel ?? null,
     current_contract: Array.isArray(contractRel)
-      ? pickCurrentContract(contractRel as Array<{ start_date: string; status: string }>)
+      ? pickCurrentContract(contractRel as CurrentContractRow[])
       : contractRel ?? null,
   } as T;
 }
@@ -40,7 +42,7 @@ export async function getPmTenants(
         id, room_number, unit_type,
         property:properties(name, address_line_1)
       ),
-      current_contract:property_contracts(start_date, status)`
+      current_contract:property_contracts(id, start_date, status, document_url)`
     )
     .order("full_name", { ascending: true });
 
@@ -70,7 +72,7 @@ export async function getPmTenantById(id: string): Promise<PmTenant | null> {
         id, room_number, unit_type,
         property:properties(name, address_line_1)
       ),
-      current_contract:property_contracts(start_date, status)`
+      current_contract:property_contracts(id, start_date, status, document_url)`
     )
     .eq("id", id)
     .single();

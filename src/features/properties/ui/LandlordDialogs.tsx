@@ -13,12 +13,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createOwnerLandlord } from "../actions/landlords";
+import { createOwnerLandlord, createPropertyManager } from "../actions/landlords";
 import {
   ownerLandlordSchema,
+  propertyManagerSchema,
   type OwnerLandlordFormValues,
+  type PropertyManagerFormValues,
 } from "../domain/schemas";
-import type { OwnerLandlord } from "../domain/types";
+import type { OwnerLandlord, PropertyManager } from "../domain/types";
 
 const inputCls =
   "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
@@ -124,6 +126,116 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
             </Button>
             <Button type="submit" variant="secondary" size="sm" loading={isPending}>
               Create landlord
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Property Manager Dialog ─────────────────────────────── */
+
+interface CreatePropertyManagerDialogProps {
+  onCreated: (manager: PropertyManager) => void;
+}
+
+export function CreatePropertyManagerDialog({ onCreated }: CreatePropertyManagerDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<PropertyManagerFormValues>({
+    resolver: zodResolver(propertyManagerSchema),
+  });
+
+  const onSubmit = (values: PropertyManagerFormValues) => {
+    startTransition(async () => {
+      try {
+        const manager = await createPropertyManager(values);
+        toast.success("Property manager created");
+        onCreated(manager);
+        reset();
+        setOpen(false);
+      } catch (err) {
+        toast.error("Failed to create property manager", {
+          description: err instanceof Error ? err.message : "Something went wrong.",
+        });
+      }
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-xs text-brand hover:underline"
+        >
+          <Plus className="h-3 w-3" />
+          New
+        </button>
+      </DialogTrigger>
+
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add property manager</DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-foreground-muted -mt-1">
+          Someone who gets notified about maintenance tickets for this property.
+        </p>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 pt-1">
+          <Field label="Full name" error={errors.full_name?.message}>
+            <input
+              {...register("full_name")}
+              className={inputCls}
+              placeholder="e.g. Jane Doe"
+              autoFocus
+            />
+          </Field>
+
+          <Field label="Company (optional)">
+            <input
+              {...register("company_name")}
+              className={inputCls}
+              placeholder="e.g. Harbor Ops Management"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Phone">
+              <input {...register("phone")} className={inputCls} placeholder="+44 7700 000000" />
+            </Field>
+            <Field label="Email" error={errors.email?.message}>
+              <input
+                {...register("email")}
+                type="email"
+                className={inputCls}
+                placeholder="manager@example.com"
+              />
+            </Field>
+          </div>
+
+          <Field label="Notes">
+            <textarea
+              {...register("notes")}
+              rows={2}
+              className={inputCls + " min-h-[60px] py-2"}
+              placeholder="Optional notes"
+            />
+          </Field>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="secondary" size="sm" loading={isPending}>
+              Create property manager
             </Button>
           </div>
         </form>

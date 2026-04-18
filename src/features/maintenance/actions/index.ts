@@ -265,6 +265,68 @@ export async function deleteJobCost(
 }
 
 // ──────────────────────────────────────────────────────────
+// Ticket → Job promotion
+// ──────────────────────────────────────────────────────────
+
+export async function promoteTicketToJob(ticketId: string) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  if (!z.string().uuid().safeParse(ticketId).success) {
+    return { error: "Invalid ticket id" };
+  }
+  const supabase = createSupabaseServerClient();
+
+  const { data: ticket, error: loadErr } = await supabase
+    .from("maintenance_tickets")
+    .select(
+      `id, reference, description, priority, property_id, unit_id, job_id, status,
+       pm_tenants(full_name)`
+    )
+    .eq("id", ticketId)
+    .maybeSingle();
+  if (loadErr) return { error: loadErr.message };
+  if (!ticket) return { error: "Ticket not found" };
+  if (ticket.job_id) return { error: "Ticket already linked to a job" };
+
+  const pm = Array.isArray(ticket.pm_tenants) ? ticket.pm_tenants[0] : ticket.pm_tenants;
+  const firstLine = ticket.description.split("\n")[0].trim();
+  const title = (firstLine || `Ticket ${ticket.reference}`).slice(0, 255);
+
+  const { data: job, error: jobErr } = await supabase
+    .from("maintenance_jobs")
+    .insert({
+      tenant_id: profile.tenant_id,
+      property_id: ticket.property_id,
+      unit_id: ticket.unit_id,
+      title,
+      description: ticket.description,
+      category: "other",
+      priority: ticket.priority,
+      status: "open",
+      reported_by: pm?.full_name ?? null,
+      total_cost: 0,
+    })
+    .select("id")
+    .single();
+  if (jobErr) return { error: jobErr.message };
+
+  const ticketUpdates: Record<string, unknown> = { job_id: job.id };
+  if (ticket.status === "open") ticketUpdates.status = "acknowledged";
+
+  const { error: linkErr } = await supabase
+    .from("maintenance_tickets")
+    .update(ticketUpdates)
+    .eq("id", ticketId);
+  if (linkErr) {
+    await supabase.from("maintenance_jobs").delete().eq("id", job.id);
+    return { error: linkErr.message };
+  }
+
+  revalidatePath("/maintenance");
+  revalidatePath("/dashboard");
+  return { success: true, jobId: job.id };
+}
+
+// ──────────────────────────────────────────────────────────
 // Photo
 // ──────────────────────────────────────────────────────────
 

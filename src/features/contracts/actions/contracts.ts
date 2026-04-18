@@ -116,6 +116,43 @@ export async function giveNotice(id: string, values: GiveNoticeValues) {
   revalidatePath("/tenants");
 }
 
+export async function uploadContractDocument(formData: FormData) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const contractId = String(formData.get("contract_id") ?? "");
+  const file = formData.get("file") as File;
+
+  if (!contractId || !file?.size) {
+    throw new Error("Missing required fields.");
+  }
+
+  const ext = file.name.split(".").pop() ?? "bin";
+  const path = `${profile.tenant_id}/${contractId}/${crypto.randomUUID()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("property_contracts")
+    .upload(path, file);
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data: urlData } = supabase.storage
+    .from("property_contracts")
+    .getPublicUrl(path);
+
+  const { data, error } = await supabase
+    .from("property_contracts")
+    .update({ document_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+    .eq("id", contractId)
+    .eq("tenant_id", profile.tenant_id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/contracts");
+  revalidatePath("/tenants");
+  return data;
+}
+
 export async function deleteContract(id: string) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();

@@ -12,6 +12,7 @@ import { createTicket } from "@/features/support/data/tickets";
 import {
   sendTicketConfirmation,
   sendLandlordP0Alert,
+  sendPropertyManagerTicketNotification,
 } from "@/features/support/data/notifications";
 
 export const runtime = "nodejs";
@@ -94,6 +95,15 @@ export async function POST(
           await sendTicketConfirmation(ticket.id);
         } catch (emailErr) {
           console.error("[support.emergency.confirmation-email]", emailErr);
+        }
+        try {
+          await sendPropertyManagerTicketNotification({
+            ticketId: ticket.id,
+            isEmergency: true,
+            emergencyType: result.type,
+          });
+        } catch (emailErr) {
+          console.error("[support.emergency.pm-email]", emailErr);
         }
         try {
           await sendLandlordP0Alert({

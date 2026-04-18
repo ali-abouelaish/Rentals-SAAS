@@ -34,9 +34,9 @@ import { createProperty, updateProperty } from "../actions/properties";
 import { saveUnitPhoto } from "../actions/photos";
 import { propertySchema, type PropertyFormValues } from "../domain/schemas";
 import { LONDON_AREAS } from "../domain/types";
-import type { Portfolio, Property, UnitPhoto, OwnerLandlord } from "../domain/types";
+import type { Portfolio, Property, UnitPhoto, OwnerLandlord, PropertyManager } from "../domain/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { CreateOwnerLandlordDialog } from "./LandlordDialogs";
+import { CreateOwnerLandlordDialog, CreatePropertyManagerDialog } from "./LandlordDialogs";
 
 /* ─── primitives ─────────────────────────────────────────── */
 
@@ -468,16 +468,19 @@ export function CreatePropertyPage({
   portfolios,
   initialProperty,
   ownerLandlords: initialOwnerLandlords = [],
+  propertyManagers: initialPropertyManagers = [],
 }: {
   portfolios: Portfolio[];
   initialProperty?: Property;
   ownerLandlords?: OwnerLandlord[];
+  propertyManagers?: PropertyManager[];
 }) {
   const isEditMode = !!initialProperty;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([]);
   const [ownerLandlords, setOwnerLandlords] = useState<OwnerLandlord[]>(initialOwnerLandlords);
+  const [propertyManagers, setPropertyManagers] = useState<PropertyManager[]>(initialPropertyManagers);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const contractFileRef = useRef<HTMLInputElement>(null);
 
@@ -833,6 +836,30 @@ export function CreatePropertyPage({
                 ))}
               </select>
               <p className="text-xs text-foreground-muted">The person or company you pay rent to (rent-to-rent).</p>
+            </div>
+
+            {/* Property Manager */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-foreground">Property manager</label>
+                <CreatePropertyManagerDialog
+                  onCreated={(manager) => {
+                    setPropertyManagers((prev) => [...prev, manager]);
+                  }}
+                />
+              </div>
+              <select {...register("manager_landlord_id")} className={selectCls}>
+                <option value="">— None —</option>
+                {propertyManagers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.full_name}
+                    {m.company_name ? ` · ${m.company_name}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-foreground-muted">
+                Gets emailed whenever a tenant raises a maintenance ticket here.
+              </p>
             </div>
 
             {/* Contract dates */}

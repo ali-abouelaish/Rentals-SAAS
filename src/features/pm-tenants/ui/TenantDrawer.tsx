@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils/cn";
 import { RightToRentBadge } from "./RightToRentBadge";
 import { updatePmTenant, deletePmTenant, uploadPmTenantDocument } from "../actions/pm-tenants";
 import { createGuarantor, deleteGuarantor } from "../actions/guarantors";
+import { uploadContractDocument } from "@/features/contracts/actions/contracts";
 import { pmTenantSchema, guarantorSchema, type PmTenantFormValues, type GuarantorFormValues } from "../domain/schemas";
 import {
   EMPLOYMENT_STATUS_LABELS,
@@ -131,6 +132,23 @@ function OverviewContent({
                 label="Contract status"
                 value={contract?.status ? contract.status.replace("_", " ") : null}
               />
+              <div className="col-span-2">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Contract document</span>
+                {contract?.document_url ? (
+                  <a
+                    href={contract.document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-sm text-brand hover:underline mt-0.5"
+                  >
+                    View / download contract
+                  </a>
+                ) : (
+                  <p className="text-sm text-foreground-muted mt-0.5">
+                    {contract ? "No document uploaded — add one in the Documents tab." : "—"}
+                  </p>
+                )}
+              </div>
             </div>
           </section>
         )}
@@ -470,7 +488,7 @@ function DocumentsContent({
   tenant: PmTenant;
   onTenantUpdated: (t: PmTenant) => void;
 }) {
-  const [uploading, setUploading] = useState<"passport_photo" | "passport_scan" | null>(null);
+  const [uploading, setUploading] = useState<"passport_photo" | "passport_scan" | "contract" | null>(null);
 
   const handleUpload = (docType: "passport_photo" | "passport_scan", file: File) => {
     setUploading(docType);
@@ -487,8 +505,75 @@ function DocumentsContent({
       .finally(() => setUploading(null));
   };
 
+  const contract = tenant.current_contract;
+
+  const handleContractUpload = (file: File) => {
+    if (!contract?.id) return;
+    setUploading("contract");
+    const formData = new FormData();
+    formData.set("contract_id", contract.id);
+    formData.set("file", file);
+    uploadContractDocument(formData)
+      .then((updated) => {
+        toast.success("Contract uploaded");
+        const updatedContract = updated as { id: string; start_date: string; status: string; document_url: string | null };
+        onTenantUpdated({
+          ...tenant,
+          current_contract: {
+            id: updatedContract.id,
+            start_date: updatedContract.start_date,
+            status: updatedContract.status,
+            document_url: updatedContract.document_url,
+          },
+        });
+      })
+      .catch(() => toast.error("Failed to upload contract"))
+      .finally(() => setUploading(null));
+  };
+
   return (
     <div className="space-y-4 py-1">
+      {/* Tenancy Contract */}
+      <div className="rounded-lg border border-border bg-surface-inset p-4 space-y-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">Tenancy Contract</p>
+        {!contract ? (
+          <p className="text-sm text-foreground-secondary">No active contract on file for this tenant.</p>
+        ) : (
+          <>
+            {contract.document_url ? (
+              <a
+                href={contract.document_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-brand hover:underline"
+              >
+                View tenancy contract
+              </a>
+            ) : (
+              <p className="text-sm text-foreground-secondary">No contract document uploaded.</p>
+            )}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-foreground-muted" htmlFor="contract-doc-input">
+                {contract.document_url ? "Replace contract" : "Upload contract"}
+              </label>
+              <input
+                id="contract-doc-input"
+                type="file"
+                accept="application/pdf,image/*"
+                disabled={uploading === "contract"}
+                className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleContractUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              {uploading === "contract" && <p className="text-xs text-foreground-muted">Uploading…</p>}
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Passport Photo */}
       <div className="rounded-lg border border-border bg-surface-inset p-4 space-y-3">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">Passport Photo</p>

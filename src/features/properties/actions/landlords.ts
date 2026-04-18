@@ -6,9 +6,11 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import {
   ownerLandlordSchema,
+  propertyManagerSchema,
   type OwnerLandlordFormValues,
+  type PropertyManagerFormValues,
 } from "../domain/schemas";
-import type { OwnerLandlord } from "../domain/types";
+import type { OwnerLandlord, PropertyManager } from "../domain/types";
 
 export async function createOwnerLandlord(
   values: OwnerLandlordFormValues
@@ -37,6 +39,44 @@ export async function updateOwnerLandlord(
 
   const { data, error } = await supabase
     .from("owner_landlords")
+    .update(values)
+    .eq("id", id)
+    .eq("tenant_id", profile.tenant_id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/properties");
+  return data;
+}
+
+export async function createPropertyManager(
+  values: PropertyManagerFormValues
+): Promise<PropertyManager> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+  const payload = propertyManagerSchema.parse(values);
+
+  const { data, error } = await supabase
+    .from("manager_landlords")
+    .insert({ ...payload, tenant_id: profile.tenant_id })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/properties");
+  return data;
+}
+
+export async function updatePropertyManager(
+  id: string,
+  values: Partial<PropertyManagerFormValues>
+): Promise<PropertyManager> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("manager_landlords")
     .update(values)
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id)

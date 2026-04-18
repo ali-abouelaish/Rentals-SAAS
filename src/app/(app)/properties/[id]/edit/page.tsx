@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getPropertyById } from "@/features/properties/data/properties";
 import { getPortfolios } from "@/features/properties/data/portfolios";
-import { getOwnerLandlords } from "@/features/properties/data/landlords";
+import { getOwnerLandlords, getPropertyManagers } from "@/features/properties/data/landlords";
 import { CreatePropertyPage } from "@/features/properties/ui/CreatePropertyPage";
 
 export default async function PropertyEditRoute({
@@ -13,10 +13,11 @@ export default async function PropertyEditRoute({
 }) {
   await requireRole([...ADMIN_ROLES]);
 
-  const [property, portfolios, ownerLandlords] = await Promise.all([
+  const [property, portfolios, ownerLandlords, propertyManagers] = await Promise.all([
     getPropertyById(params.id),
     getPortfolios(),
     getOwnerLandlords().catch(() => []),
+    getPropertyManagers().catch(() => []),
   ]);
 
   if (!property) notFound();
@@ -26,6 +27,7 @@ export default async function PropertyEditRoute({
       portfolios={portfolios}
       initialProperty={property}
       ownerLandlords={ownerLandlords}
+      propertyManagers={propertyManagers}
     />
   );
 }

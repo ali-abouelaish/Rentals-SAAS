@@ -235,3 +235,100 @@ ${linkHtml}
 
   return { subject, html, text };
 }
+
+// ───────────────────────────────────────────────────────────────
+// Property manager new-ticket notification (every ticket)
+// ───────────────────────────────────────────────────────────────
+
+export type PropertyManagerTicketParams = {
+  reference: string;
+  priority: "critical" | "high" | "medium" | "low";
+  propertyAddress: string;
+  roomLabel: string;
+  pmTenantFullName: string;
+  pmTenantPhone: string | null;
+  pmTenantEmail: string | null;
+  managerFirstName: string | null;
+  descriptionPreview: string;
+  ticketUrl: string | null;
+  isEmergency: boolean;
+  emergencyType: string | null;
+};
+
+export function generatePropertyManagerTicketEmail(
+  p: PropertyManagerTicketParams
+): { subject: string; html: string; text: string } {
+  const priorityLine = PRIORITY_LABEL[p.priority] ?? "Priority: Normal";
+  const emergencyLabel =
+    p.isEmergency && p.emergencyType
+      ? EMERGENCY_LABEL[p.emergencyType] ?? p.emergencyType
+      : null;
+  const summary = truncate(p.descriptionPreview);
+  const greeting = p.managerFirstName ? `Hi ${p.managerFirstName},` : "Hi,";
+  const subject = p.isEmergency
+    ? `⚠️ New maintenance ticket — ${p.propertyAddress} (${p.reference})`
+    : `New maintenance ticket — ${p.propertyAddress} (${p.reference})`;
+
+  const phoneLine = p.pmTenantPhone ? `Tenant phone: ${p.pmTenantPhone}\n` : "";
+  const emailLine = p.pmTenantEmail ? `Tenant email: ${p.pmTenantEmail}\n` : "";
+  const linkLine = p.ticketUrl ? `\nView ticket: ${p.ticketUrl}` : "";
+  const emergencyIntro = emergencyLabel
+    ? `EMERGENCY — ${emergencyLabel}\n\n`
+    : "";
+
+  const text = `${greeting}
+
+${emergencyIntro}A new maintenance ticket has been raised for a property you manage.
+
+Reference: ${p.reference}
+${priorityLine}
+Property: ${p.propertyAddress}
+Room: ${p.roomLabel}
+Tenant: ${p.pmTenantFullName}
+${phoneLine}${emailLine}
+Reported:
+${summary}
+${linkLine}
+
+— Maintenance Team`;
+
+  const emergencyBanner = emergencyLabel
+    ? `<div style="background:#dc2626;color:#fff;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+  <p style="margin:0;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Emergency</p>
+  <p style="margin:4px 0 0;font-size:18px;font-weight:700;">${emergencyLabel}</p>
+</div>`
+    : "";
+
+  const phoneRow = p.pmTenantPhone
+    ? `<tr><td style="padding:4px 12px 4px 0;color:#666;">Phone</td><td><a href="tel:${p.pmTenantPhone.replace(/\s+/g, "")}">${p.pmTenantPhone}</a></td></tr>`
+    : "";
+  const emailRow = p.pmTenantEmail
+    ? `<tr><td style="padding:4px 12px 4px 0;color:#666;">Email</td><td><a href="mailto:${p.pmTenantEmail}">${p.pmTenantEmail}</a></td></tr>`
+    : "";
+
+  const linkHtml = p.ticketUrl
+    ? `<p style="margin:16px 0;"><a href="${p.ticketUrl}" style="display:inline-block;background:#111827;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:600;">View ticket in Maintenance</a></p>`
+    : "";
+
+  const html = wrapHtml(
+    subject,
+    `<p>${greeting}</p>
+${emergencyBanner}
+<p>A new maintenance ticket has been raised for a property you manage.</p>
+<table style="border-collapse:collapse;margin:16px 0;font-size:14px;">
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">Reference</td><td><strong>${p.reference}</strong></td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">${priorityLine.split(":")[0]}</td><td>${priorityLine.split(":").slice(1).join(":").trim()}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">Property</td><td>${p.propertyAddress}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">Room</td><td>${p.roomLabel}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">Tenant</td><td>${p.pmTenantFullName}</td></tr>
+  ${phoneRow}
+  ${emailRow}
+</table>
+<p style="color:#333;"><strong>Reported</strong></p>
+<blockquote style="margin:0;padding:12px 16px;border-left:3px solid #e5e7eb;background:#f9fafb;color:#333;">${summary}</blockquote>
+${linkHtml}
+<p style="color:#666;font-size:14px;margin-top:32px;">— Maintenance Team</p>`
+  );
+
+  return { subject, html, text };
+}

@@ -46,6 +46,7 @@ type TicketRow = {
   property_id: string;
   unit_id: string;
   conversation_id: string | null;
+  job_id: string | null;
   properties: { name: string } | { name: string }[] | null;
   units:
     | { unit_type: string; room_number: number | null; room_type: string | null }
@@ -77,6 +78,7 @@ function mapListRow(r: TicketRow, attachmentCount: number): MaintenanceTicketLis
     property_id: r.property_id,
     unit_id: r.unit_id,
     conversation_id: r.conversation_id,
+    job_id: r.job_id,
     property_name: prop?.name ?? "Unknown",
     unit_label: buildUnitLabel(unit),
     pm_tenant_name: pm?.full_name ?? "Unknown",
@@ -94,7 +96,7 @@ export async function getAllMaintenanceTickets(): Promise<MaintenanceTicketListI
       .from("maintenance_tickets")
       .select(
         `id, reference, description, priority, status, seen_by_landlord,
-         created_at, resolved_at, property_id, unit_id, conversation_id,
+         created_at, resolved_at, property_id, unit_id, conversation_id, job_id,
          properties(name),
          units(unit_type, room_number, room_type),
          pm_tenants(full_name, email, phone),
@@ -134,7 +136,7 @@ export async function getMaintenanceTicket(
     .from("maintenance_tickets")
     .select(
       `id, reference, description, priority, status, seen_by_landlord,
-       created_at, resolved_at, property_id, unit_id, conversation_id, tenant_id,
+       created_at, resolved_at, property_id, unit_id, conversation_id, job_id, tenant_id,
        properties(name),
        units(unit_type, room_number, room_type),
        pm_tenants(full_name, email, phone),

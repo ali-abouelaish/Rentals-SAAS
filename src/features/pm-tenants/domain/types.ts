@@ -48,7 +48,12 @@ export type PmTenant = {
     unit_type: string;
     property: { name: string; address_line_1: string };
   } | null;
-  current_contract?: { start_date: string; status: string } | null;
+  current_contract?: {
+    id: string;
+    start_date: string;
+    status: string;
+    document_url: string | null;
+  } | null;
 };
 
 export type Guarantor = {

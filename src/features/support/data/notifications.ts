@@ -4,6 +4,7 @@ import {
   generateTicketConfirmationEmail,
   generateTicketStatusChangeEmail,
   generateLandlordP0AlertEmail,
+  generatePropertyManagerTicketEmail,
 } from "@/lib/email/templates/maintenance";
 
 function buildUnitLabel(unit: {
@@ -185,6 +186,82 @@ export async function sendLandlordP0Alert(args: {
   await enqueueEmail({
     tenantId: bundle.ticket.tenantId,
     to: bundle.company.alertEmail,
+    subject,
+    html,
+    text,
+  });
+}
+
+/**
+ * Queue a new-ticket notification to the property's assigned manager.
+ * Looks up manager_landlord via properties.manager_landlord_id. No-op if the
+ * property has no assigned manager or the manager row has no email.
+ */
+export async function sendPropertyManagerTicketNotification(args: {
+  ticketId: string;
+  isEmergency: boolean;
+  emergencyType: string | null;
+}): Promise<void> {
+  const bundle = await loadTicketBundle(args.ticketId);
+  if (!bundle) {
+    console.warn("[notifications.pmTicket] ticket not found", args.ticketId);
+    return;
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: ticketRow } = await admin
+    .from("maintenance_tickets")
+    .select("property_id")
+    .eq("id", args.ticketId)
+    .maybeSingle();
+  if (!ticketRow?.property_id) return;
+
+  const { data: property } = await admin
+    .from("properties")
+    .select("manager_landlord_id")
+    .eq("id", ticketRow.property_id)
+    .maybeSingle();
+  if (!property?.manager_landlord_id) {
+    console.warn(
+      "[notifications.pmTicket] property has no manager_landlord assigned",
+      ticketRow.property_id
+    );
+    return;
+  }
+
+  const { data: manager } = await admin
+    .from("manager_landlords")
+    .select("full_name, email")
+    .eq("id", property.manager_landlord_id)
+    .maybeSingle();
+  if (!manager?.email) {
+    console.warn(
+      "[notifications.pmTicket] manager_landlord has no email",
+      property.manager_landlord_id
+    );
+    return;
+  }
+
+  const ticketUrl = buildTicketUrl(bundle.company.slug, bundle.ticket.id);
+
+  const { subject, html, text } = generatePropertyManagerTicketEmail({
+    reference: bundle.ticket.reference,
+    priority: bundle.ticket.priority,
+    propertyAddress: bundle.propertyAddress,
+    roomLabel: bundle.roomLabel,
+    pmTenantFullName: bundle.pmTenant.fullName,
+    pmTenantPhone: bundle.pmTenant.phone,
+    pmTenantEmail: bundle.pmTenant.email,
+    managerFirstName: manager.full_name ? firstNameOf(manager.full_name) : null,
+    descriptionPreview: bundle.ticket.description,
+    ticketUrl,
+    isEmergency: args.isEmergency,
+    emergencyType: args.emergencyType,
+  });
+
+  await enqueueEmail({
+    tenantId: bundle.ticket.tenantId,
+    to: manager.email,
     subject,
     html,
     text,

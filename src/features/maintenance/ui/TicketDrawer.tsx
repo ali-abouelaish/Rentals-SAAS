@@ -14,6 +14,8 @@ import {
   X,
   Loader2,
   Check,
+  Wrench,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -22,7 +24,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+import { promoteTicketToJob } from "../actions";
 import type {
   MaintenanceTicketDetail,
   MaintenanceTicketListItem,
@@ -88,6 +92,7 @@ export function TicketDrawer({
   const [ticket, setTicket] = useState<MaintenanceTicketDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [promoting, setPromoting] = useState(false);
 
   // Fetch ticket + mark as seen on open
   useEffect(() => {
@@ -156,6 +161,36 @@ export function TicketDrawer({
       toast.error(msg);
     } finally {
       setStatusSaving(false);
+    }
+  }
+
+  async function handlePromote() {
+    if (!ticket || ticket.job_id || promoting) return;
+    if (
+      !window.confirm(
+        "Convert this ticket into a maintenance job? You'll be able to track costs, photos, and assignment on the job."
+      )
+    ) {
+      return;
+    }
+    setPromoting(true);
+    try {
+      const result = await promoteTicketToJob(ticket.id);
+      if (result?.error || !result?.jobId) {
+        throw new Error(result?.error || "Promotion failed");
+      }
+      const nextStatus: TicketStatus =
+        ticket.status === "open" ? "acknowledged" : ticket.status;
+      setTicket((prev) =>
+        prev ? { ...prev, job_id: result.jobId!, status: nextStatus } : prev
+      );
+      onTicketUpdated({ id: ticket.id, job_id: result.jobId, status: nextStatus });
+      toast.success("Job created from ticket");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Promotion failed";
+      toast.error(msg);
+    } finally {
+      setPromoting(false);
     }
   }
 
@@ -270,6 +305,39 @@ export function TicketDrawer({
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Job link / Convert to Job */}
+              <div className="px-6 py-4 border-b border-border">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted mb-2">
+                  Work order
+                </p>
+                {ticket.job_id ? (
+                  <a
+                    href={`/maintenance?job=${ticket.job_id}`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2 text-sm font-medium text-foreground hover:border-brand/40 hover:bg-surface-inset transition-colors"
+                  >
+                    <Wrench size={14} className="text-brand" />
+                    View linked job
+                    <ArrowRight size={13} className="text-foreground-muted" />
+                  </a>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handlePromote}
+                      loading={promoting}
+                      disabled={promoting}
+                    >
+                      <Wrench size={14} />
+                      {promoting ? "Converting…" : "Convert to Job"}
+                    </Button>
+                    <p className="text-xs text-foreground-muted">
+                      Creates a maintenance job so you can track costs, photos, and assignment.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

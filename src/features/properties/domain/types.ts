@@ -23,6 +23,17 @@ export type OwnerLandlord = {
   created_at: string;
 };
 
+export type PropertyManager = {
+  id: string;
+  tenant_id: string;
+  full_name: string;
+  company_name: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 
 export type PropertyType = "hmo" | "studio" | "whole_flat";
 export type BillsType = "all_included" | "top_up_gas_elec" | "top_up_elec" | "top_up_gas";
@@ -120,6 +131,15 @@ export type Unit = {
   property?: Property & { portfolio?: Portfolio | null };
   resident?: PropertyResident | null;
   pm_tenant?: { id: string; full_name: string; email: string; phone: string } | null;
+  current_contract?: {
+    id: string;
+    start_date: string;
+    status: string;
+    document_url: string | null;
+    rent_pcm: number | null;
+    deposit: number | null;
+    pm_tenant_id: string | null;
+  } | null;
 };
 
 export type UnitPhoto = {

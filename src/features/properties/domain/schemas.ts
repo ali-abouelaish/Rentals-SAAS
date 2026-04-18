@@ -100,6 +100,15 @@ export const ownerLandlordSchema = z.object({
 });
 export type OwnerLandlordFormValues = z.infer<typeof ownerLandlordSchema>;
 
+export const propertyManagerSchema = z.object({
+  full_name: z.string().min(1, "Full name is required"),
+  company_name: z.string().nullable().optional().or(z.literal("")),
+  phone: z.string().nullable().optional().or(z.literal("")),
+  email: z.string().email("Invalid email").nullable().optional().or(z.literal("")),
+  notes: z.string().nullable().optional().or(z.literal("")),
+});
+export type PropertyManagerFormValues = z.infer<typeof propertyManagerSchema>;
+
 
 export const residentSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),

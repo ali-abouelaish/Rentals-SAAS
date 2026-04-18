@@ -8,10 +8,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { cn } from "@/lib/utils/cn";
 import { updateUnit } from "../actions/units";
-import { createContract } from "@/features/contracts/actions/contracts";
+import { createContract, uploadContractDocument } from "@/features/contracts/actions/contracts";
 import { contractSchema, type ContractFormValues } from "@/features/contracts/domain/schemas";
-import { DEPOSIT_SCHEME_LABELS, SIGNING_METHOD_LABELS } from "@/features/contracts/domain/types";
+import { CONTRACT_STATUS_CONFIG, DEPOSIT_SCHEME_LABELS, SIGNING_METHOD_LABELS } from "@/features/contracts/domain/types";
 import type { Unit } from "../domain/types";
 
 interface PmTenantOption {
@@ -155,6 +156,130 @@ function CreateContractDialog({
   );
 }
 
+function ContractCard({
+  unit,
+  onUnitUpdated,
+  onCreateContract,
+}: {
+  unit: Unit;
+  onUnitUpdated: (unit: Unit) => void;
+  onCreateContract: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const contract = unit.current_contract ?? null;
+
+  const handleUpload = (file: File) => {
+    if (!contract?.id) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.set("contract_id", contract.id);
+    formData.set("file", file);
+    uploadContractDocument(formData)
+      .then((updated) => {
+        toast.success("Contract uploaded");
+        const c = updated as {
+          id: string;
+          start_date: string;
+          status: string;
+          document_url: string | null;
+          rent_pcm: number | null;
+          deposit: number | null;
+          pm_tenant_id: string | null;
+        };
+        onUnitUpdated({
+          ...unit,
+          current_contract: {
+            id: c.id,
+            start_date: c.start_date,
+            status: c.status,
+            document_url: c.document_url,
+            rent_pcm: c.rent_pcm,
+            deposit: c.deposit,
+            pm_tenant_id: c.pm_tenant_id,
+          },
+        });
+      })
+      .catch(() => toast.error("Failed to upload contract"))
+      .finally(() => setUploading(false));
+  };
+
+  if (!contract) {
+    return (
+      <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Contract</p>
+          <p className="text-xs text-foreground-secondary mt-0.5">
+            No contract yet for this tenant and unit.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onCreateContract}
+          className="w-full"
+        >
+          <FileSignature className="h-3.5 w-3.5 mr-1.5" />
+          New Contract
+        </Button>
+      </div>
+    );
+  }
+
+  const statusCfg = CONTRACT_STATUS_CONFIG[contract.status as keyof typeof CONTRACT_STATUS_CONFIG];
+
+  return (
+    <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Contract</p>
+          <p className="text-xs text-foreground-secondary mt-0.5">
+            From {new Date(contract.start_date).toLocaleDateString("en-GB")}
+            {contract.rent_pcm ? ` · £${contract.rent_pcm}/mo` : ""}
+          </p>
+        </div>
+        {statusCfg && (
+          <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", statusCfg.bg, statusCfg.fg)}>
+            {statusCfg.label}
+          </span>
+        )}
+      </div>
+
+      {contract.document_url ? (
+        <a
+          href={contract.document_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-sm text-brand hover:underline"
+        >
+          View contract document
+        </a>
+      ) : (
+        <p className="text-sm text-foreground-secondary">No document uploaded.</p>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-foreground-muted" htmlFor="unit-contract-doc-input">
+          {contract.document_url ? "Replace contract" : "Upload contract"}
+        </label>
+        <input
+          id="unit-contract-doc-input"
+          type="file"
+          accept="application/pdf,image/*"
+          disabled={uploading}
+          className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleUpload(file);
+            e.target.value = "";
+          }}
+        />
+        {uploading && <p className="text-xs text-foreground-muted">Uploading…</p>}
+      </div>
+    </div>
+  );
+}
+
 export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
   const [isPending, startTransition] = useTransition();
   const [linking, setLinking] = useState(false);
@@ -226,25 +351,11 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
             </button>
           </div>
 
-          {/* Contract shortcut */}
-          <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Contract</p>
-              <p className="text-xs text-foreground-secondary mt-0.5">
-                Create a contract for this tenant and unit, or manage existing contracts in the Contracts module.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setContractDialogOpen(true)}
-              className="w-full"
-            >
-              <FileSignature className="h-3.5 w-3.5 mr-1.5" />
-              New Contract
-            </Button>
-          </div>
+          <ContractCard
+            unit={unit}
+            onUnitUpdated={onUnitUpdated}
+            onCreateContract={() => setContractDialogOpen(true)}
+          />
 
           <Button
             type="button"

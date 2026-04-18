@@ -29,6 +29,7 @@ export type MaintenanceTicketListItem = {
   emergency_type: string | null;
   attachment_count: number;
   conversation_id: string | null;
+  job_id: string | null;
 };
 
 export type MaintenanceTicketAttachment = {

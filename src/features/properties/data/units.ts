@@ -8,8 +8,36 @@ const UNIT_SELECT = `
     portfolio:portfolios(id, name, color)
   ),
   resident:property_residents(*),
-  pm_tenant:pm_tenants(id, full_name, email, phone)
+  pm_tenant:pm_tenants(id, full_name, email, phone),
+  current_contract:property_contracts(id, start_date, status, document_url, rent_pcm, deposit, pm_tenant_id)
 ` as const;
+
+const ACTIVE_CONTRACT_STATUSES = ["active", "signed", "notice_given"];
+
+type UnitContractRow = {
+  id: string;
+  start_date: string;
+  status: string;
+  document_url: string | null;
+  rent_pcm: number | null;
+  deposit: number | null;
+  pm_tenant_id: string | null;
+};
+
+function pickUnitContract(rows: UnitContractRow[] | null | undefined) {
+  if (!rows || rows.length === 0) return null;
+  const active = rows.find((c) => ACTIVE_CONTRACT_STATUSES.includes(c.status));
+  if (active) return active;
+  return [...rows].sort((a, b) => (a.start_date < b.start_date ? 1 : -1))[0] ?? null;
+}
+
+function flattenUnit<T extends { current_contract?: unknown }>(row: T): T {
+  const rel = row.current_contract as unknown;
+  return {
+    ...row,
+    current_contract: Array.isArray(rel) ? pickUnitContract(rel as UnitContractRow[]) : rel ?? null,
+  } as T;
+}
 
 export type UnitsResult = {
   units: Unit[];
@@ -80,7 +108,7 @@ export async function getUnits(
 
   const total = count ?? 0;
   return {
-    units: (data ?? []) as Unit[],
+    units: ((data ?? []) as Unit[]).map(flattenUnit),
     total,
     page,
     pageSize,
@@ -96,7 +124,7 @@ export async function getUnitById(id: string): Promise<Unit | null> {
     .eq("id", id)
     .single();
   if (error) return null;
-  return data as Unit;
+  return flattenUnit(data as Unit);
 }
 
 export async function getUnitsByProperty(propertyId: string): Promise<Unit[]> {
@@ -107,5 +135,5 @@ export async function getUnitsByProperty(propertyId: string): Promise<Unit[]> {
     .eq("property_id", propertyId)
     .order("room_number", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as Unit[];
+  return ((data ?? []) as Unit[]).map(flattenUnit);
 }
