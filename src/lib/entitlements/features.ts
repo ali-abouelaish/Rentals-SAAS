@@ -20,6 +20,7 @@ export type FeatureKey =
   | "profitability"
   | "maintenance"
   | "acquisition_insights"
+  | "property_shares"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -44,6 +45,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "profitability",
   "maintenance",
   "acquisition_insights",
+  "property_shares",
   "admin",
 ];
 
@@ -104,6 +106,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   acquisition_insights: {
     label: "Acquisition Insights",
     description: "AI-powered property evaluation tool with break-even calculator and portfolio-based recommendations."
+  },
+  property_shares: {
+    label: "Property Shares",
+    description: "Public token-gated share links for external partners to view a live, filtered unit inventory with images, commission, and tenant contact."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

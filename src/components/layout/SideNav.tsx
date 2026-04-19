@@ -26,11 +26,13 @@ import {
   Users2,
   FileSignature,
   Banknote,
+  Landmark,
   Wrench,
   Megaphone,
   TrendingUp,
   Layers,
   Search,
+  Share2,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -81,6 +83,8 @@ const PM_NAV_ITEMS: NavItem[] = [
   { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
   { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
   { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
+  { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Settings", icon: Settings, allowedRoles: ADMIN_ROLES },
 ];
 
@@ -94,6 +98,7 @@ const PM_ROUTE_PREFIXES = [
   "/maintenance",
   "/acquisition-insights",
   "/marketing",
+  "/shares",
 ];
 
 function isPmRoute(pathname: string) {

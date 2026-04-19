@@ -16,7 +16,9 @@ const PUBLIC_PATHS = [
   "/api/gmail/callback",
   "/api/support",
   "/support",
-  "/auth/error"
+  "/auth/error",
+  "/s",
+  "/api/shares"
 ];
 
 function getTenantFromHost(host: string | null): string | null {
@@ -92,6 +94,11 @@ export async function middleware(request: NextRequest) {
   // Attach tenant slug so server components / API routes can read it via headers().get("x-tenant")
   if (tenantSlug) {
     response.headers.set("x-tenant", tenantSlug);
+  }
+
+  // Property share links must never be indexed by crawlers.
+  if (pathname.startsWith("/s/") || pathname === "/s") {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 
   return response;

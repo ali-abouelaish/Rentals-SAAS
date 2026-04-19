@@ -22,6 +22,7 @@ const addRoomSchema = z.object({
   room_type: z.enum(["single", "double", "master", "ensuite"]).optional(),
   min_price_pcm: z.coerce.number().int().positive().optional(),
   max_price_pcm: z.coerce.number().int().positive().optional(),
+  holding_deposit: z.coerce.number().int().nonnegative().optional(),
   available_date: z.string().optional().or(z.literal("")),
 });
 type AddRoomValues = z.infer<typeof addRoomSchema>;
@@ -81,6 +82,7 @@ export function AddRoomDialog({ property, onCreated }: AddRoomDialogProps) {
           status: "available",
           min_price_pcm: values.min_price_pcm ?? null,
           max_price_pcm: values.max_price_pcm ?? null,
+          holding_deposit: values.holding_deposit ?? null,
           available_date: values.available_date || null,
           notice_given: false,
           couples_allowed: false,
@@ -182,6 +184,16 @@ export function AddRoomDialog({ property, onCreated }: AddRoomDialogProps) {
               />
             </Field>
           </div>
+
+          <Field label="Holding deposit (£)" error={errors.holding_deposit?.message}>
+            <input
+              type="number"
+              min="0"
+              {...register("holding_deposit")}
+              className={inputCls}
+              placeholder="e.g. 1 week of rent"
+            />
+          </Field>
 
           <Field label="Available from">
             <input type="date" {...register("available_date")} className={inputCls} />

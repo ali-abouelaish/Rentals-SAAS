@@ -75,6 +75,7 @@ export const unitSchema = z.object({
   couples_allowed: z.boolean().default(false),
   couples_price_pcm: z.coerce.number().int().positive().nullable().optional(),
   deposit: z.coerce.number().int().positive().nullable().optional(),
+  holding_deposit: z.coerce.number().int().nonnegative().nullable().optional(),
   furnishings: z.enum(["furnished", "unfurnished", "part_furnished"]).default("furnished"),
   drive_folder_url: z.string().nullable().optional().or(z.literal("")),
   resident_id: z.string().uuid().nullable().optional().or(z.literal("")),

@@ -123,6 +123,7 @@ export type Unit = {
   couples_allowed: boolean;
   couples_price_pcm: number | null;
   deposit: number | null;
+  holding_deposit: number | null;
   pm_tenant_id: string | null;
   furnishings: FurnishingsType;
   drive_folder_url: string | null;

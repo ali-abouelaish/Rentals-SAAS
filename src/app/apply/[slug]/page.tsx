@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { Info } from "lucide-react";
 import { getPublicBookingForm } from "@/features/booking-forms/data/booking-forms";
-import { PublicBookingForm } from "./PublicBookingForm";
 
 interface PageProps {
   params: { slug: string };
@@ -13,36 +13,28 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!form) return {};
 
   const brandName = form.tenant?.branding?.brand_name ?? form.tenant?.name ?? "Rental Application";
-  const title = `${form.name} — ${brandName}`;
-  const description = form.description ?? `Apply now via ${brandName}`;
-  const logoUrl = form.tenant?.branding?.logo_url;
-
   return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      ...(logoUrl ? { images: [{ url: logoUrl }] } : {}),
-    },
-    twitter: {
-      card: "summary",
-      title,
-      description,
-      ...(logoUrl ? { images: [logoUrl] } : {}),
-    },
+    title: `${form.name} — ${brandName}`,
+    description: form.description ?? `Apply now via ${brandName}`,
   };
 }
 
-export default async function ApplyPage({ params, searchParams }: PageProps) {
+export default async function ApplyFallbackPage({ params, searchParams }: PageProps) {
   const form = await getPublicBookingForm(params.slug);
   if (!form) notFound();
 
+  // Preserve the legacy ?unit= query param by redirecting to the new per-room URL.
+  if (searchParams.unit) {
+    redirect(`/apply/${params.slug}/${searchParams.unit}`);
+  }
+
   return (
-    <PublicBookingForm
-      form={form}
-      slug={params.slug}
-      preselectedUnitId={searchParams.unit}
-    />
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-10 text-center space-y-3">
+      <Info className="h-10 w-10 text-amber-600 mx-auto" />
+      <h2 className="text-xl font-bold text-amber-900">Room-specific link required</h2>
+      <p className="text-sm text-amber-800">
+        Applications are accepted per room. Please use the booking link your agent sent you for the specific room you&apos;re interested in.
+      </p>
+    </div>
   );
 }

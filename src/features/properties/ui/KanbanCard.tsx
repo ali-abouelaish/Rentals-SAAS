@@ -114,10 +114,12 @@ export function KanbanCard({ unit, onClick, isDragging: isDraggingProp }: Kanban
             </span>
           )}
 
-          {unit.resident && (
+          {(unit.pm_tenant || unit.resident) && (
             <span className="flex items-center gap-1 text-[10px] text-foreground-muted ml-auto">
               <User className="h-2.5 w-2.5" />
-              <span className="truncate max-w-[80px]">{unit.resident.full_name}</span>
+              <span className="truncate max-w-[80px]">
+                {unit.pm_tenant?.full_name ?? unit.resident?.full_name}
+              </span>
             </span>
           )}
         </div>

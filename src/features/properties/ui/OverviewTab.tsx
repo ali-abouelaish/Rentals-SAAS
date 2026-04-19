@@ -10,6 +10,7 @@ import { updateUnit } from "../actions/units";
 import { unitSchema, type UnitFormValues } from "../domain/schemas";
 import { LONDON_AREAS, type Unit } from "../domain/types";
 import { toast } from "sonner";
+import { CopyBookingLinkButton } from "./CopyBookingLinkButton";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
       couples_allowed: unit.couples_allowed,
       couples_price_pcm: unit.couples_price_pcm ?? undefined,
       deposit: unit.deposit ?? undefined,
+      holding_deposit: unit.holding_deposit ?? undefined,
       furnishings: unit.furnishings,
       drive_folder_url: unit.drive_folder_url ?? "",
     },
@@ -141,10 +143,20 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
             <ReadField label="Min PCM" value={unit.min_price_pcm ? `£${unit.min_price_pcm.toLocaleString()}` : null} />
             <ReadField label="Max PCM" value={unit.max_price_pcm ? `£${unit.max_price_pcm.toLocaleString()}` : null} />
             <ReadField label="Deposit" value={unit.deposit ? `£${unit.deposit.toLocaleString()}` : null} />
+            <ReadField label="Holding deposit" value={unit.holding_deposit ? `£${unit.holding_deposit.toLocaleString()}` : null} />
             {unit.couples_allowed && (
               <ReadField label="Couples price" value={unit.couples_price_pcm ? `£${unit.couples_price_pcm.toLocaleString()}` : null} />
             )}
           </div>
+        </section>
+
+        {/* Booking link (for public applications) */}
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted mb-3">Booking link</h3>
+          <CopyBookingLinkButton unitId={unit.id} />
+          <p className="text-[11px] text-foreground-muted mt-1.5">
+            Share this link with prospective tenants to apply for this specific room.
+          </p>
         </section>
 
         {/* Drive folder link */}
@@ -270,6 +282,9 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
         </FormField>
         <FormField label="Deposit (£)">
           <input type="number" {...register("deposit")} className={inputCls} />
+        </FormField>
+        <FormField label="Holding deposit (£)">
+          <input type="number" {...register("holding_deposit")} className={inputCls} placeholder="e.g. 1 week of rent" />
         </FormField>
       </div>
 

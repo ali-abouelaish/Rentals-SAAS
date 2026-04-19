@@ -244,12 +244,14 @@ function UnitRow({
 
         {/* Tenant */}
         <div className="flex items-center min-w-0">
-          {unit.resident ? (
+          {unit.pm_tenant || unit.resident ? (
             <div className="flex items-center gap-1.5 min-w-0">
               <div className="h-5 w-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
                 <User className="h-3 w-3 text-brand" />
               </div>
-              <span className="text-xs text-foreground truncate">{unit.resident.full_name}</span>
+              <span className="text-xs text-foreground truncate">
+                {unit.pm_tenant?.full_name ?? unit.resident?.full_name}
+              </span>
             </div>
           ) : (
             <span className="text-xs text-foreground-muted">Vacant</span>

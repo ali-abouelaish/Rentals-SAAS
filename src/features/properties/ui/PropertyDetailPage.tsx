@@ -172,9 +172,9 @@ function RoomCard({ unit, photos }: { unit: Unit; photos: UnitPhoto[] }) {
                 · Available {new Date(unit.available_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </span>
             )}
-            {unit.resident && (
+            {(unit.pm_tenant || unit.resident) && (
               <span className="flex items-center gap-1 text-xs text-foreground-muted">
-                · <User className="h-3 w-3" /> {unit.resident.full_name}
+                · <User className="h-3 w-3" /> {unit.pm_tenant?.full_name ?? unit.resident?.full_name}
               </span>
             )}
           </div>

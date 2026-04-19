@@ -7,7 +7,8 @@ export type QuestionType =
   | "select"
   | "checkbox"
   | "file_upload"
-  | "number";
+  | "number"
+  | "info";
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   text: "Short text",
@@ -19,6 +20,7 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   checkbox: "Checkbox (yes/no)",
   file_upload: "File upload",
   number: "Number",
+  info: "Info / note block",
 };
 
 export type BookingForm = {
@@ -37,6 +39,16 @@ export type BookingForm = {
     name: string;
     branding: { brand_name: string | null; logo_url: string | null } | null;
   } | null;
+};
+
+export type TenantBankDetails = {
+  tenant_id: string;
+  account_holder_name: string | null;
+  account_number: string | null;
+  sort_code: string | null;
+  bank_name: string | null;
+  payment_reference_hint: string | null;
+  updated_at: string;
 };
 
 export type FormQuestion = {
