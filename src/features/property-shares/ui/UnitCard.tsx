@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { ArrowUpRight, Home, Images } from "lucide-react";
 import type { PublicShareUnit } from "../data/public";
 import { STATUS_CONFIG } from "@/features/properties/domain/types";
@@ -66,12 +65,13 @@ export function UnitCard({ unit, commissionPct, onOpenInfo }: UnitCardProps) {
     >
       <div className="relative block w-full aspect-[4/3] bg-surface-inset overflow-hidden">
         {hero ? (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={hero}
             alt={`${unit.property.name} - ${label}`}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-            className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-foreground-muted">

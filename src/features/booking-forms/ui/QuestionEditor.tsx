@@ -5,8 +5,29 @@ import { Plus, Trash2, GripVertical, Check, Info as InfoIcon } from "lucide-reac
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { createFormQuestion, deleteFormQuestion } from "../actions/form-questions";
+import {
+  createFormQuestion,
+  deleteFormQuestion,
+  reorderFormQuestions,
+} from "../actions/form-questions";
 import { formQuestionSchema, type FormQuestionValues } from "../domain/schemas";
 import { QUESTION_TYPE_LABELS, type FormQuestion } from "../domain/types";
 
@@ -149,13 +170,22 @@ function AddQuestionForm({ formId, nextSortOrder, onAdded, onCancel }: AddQuesti
   );
 }
 
-interface QuestionItemProps {
+interface SortableQuestionItemProps {
   question: FormQuestion;
   onDeleted: () => void;
 }
 
-function QuestionItem({ question, onDeleted }: QuestionItemProps) {
+function SortableQuestionItem({ question, onDeleted }: SortableQuestionItemProps) {
   const [isPending, startTransition] = useTransition();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: question.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : "auto",
+  };
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -173,11 +203,21 @@ function QuestionItem({ question, onDeleted }: QuestionItemProps) {
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={`flex items-start gap-3 rounded-xl border p-3 group ${
         isInfo ? "border-brand/30 bg-brand/[0.04]" : "border-border bg-surface-card"
-      }`}
+      } ${isDragging ? "shadow-lg" : ""}`}
     >
-      <GripVertical className="h-4 w-4 text-foreground-muted mt-0.5 shrink-0 cursor-grab" />
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none mt-0.5 shrink-0 text-foreground-muted hover:text-foreground"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
       <div className="flex-1 min-w-0">
         {isInfo ? (
           <>
@@ -226,6 +266,33 @@ interface QuestionEditorProps {
 export function QuestionEditor({ formId, questions, onQuestionsChange }: QuestionEditorProps) {
   const [adding, setAdding] = useState(false);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = questions.findIndex((q) => q.id === active.id);
+    const newIndex = questions.findIndex((q) => q.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(questions, oldIndex, newIndex).map((q, idx) => ({
+      ...q,
+      sort_order: idx,
+    }));
+
+    onQuestionsChange(reordered);
+
+    reorderFormQuestions(reordered.map((q) => ({ id: q.id, sort_order: q.sort_order })))
+      .catch(() => {
+        toast.error("Failed to save order");
+        onQuestionsChange(questions);
+      });
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -244,15 +311,21 @@ export function QuestionEditor({ formId, questions, onQuestionsChange }: Questio
         </p>
       )}
 
-      <div className="space-y-2">
-        {questions.map((q) => (
-          <QuestionItem
-            key={q.id}
-            question={q}
-            onDeleted={() => onQuestionsChange(questions.filter((x) => x.id !== q.id))}
-          />
-        ))}
-      </div>
+      {questions.length > 0 && (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {questions.map((q) => (
+                <SortableQuestionItem
+                  key={q.id}
+                  question={q}
+                  onDeleted={() => onQuestionsChange(questions.filter((x) => x.id !== q.id))}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
 
       {adding && (
         <AddQuestionForm

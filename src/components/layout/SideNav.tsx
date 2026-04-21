@@ -9,6 +9,7 @@ import {
   Sparkles,
   Users,
   ClipboardList,
+  ClipboardEdit,
   Building2,
   Home,
   Settings,
@@ -84,6 +85,7 @@ const PM_NAV_ITEMS: NavItem[] = [
   { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
   { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
   { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Settings", icon: Settings, allowedRoles: ADMIN_ROLES },
 ];
@@ -99,6 +101,8 @@ const PM_ROUTE_PREFIXES = [
   "/acquisition-insights",
   "/marketing",
   "/shares",
+  "/settings/booking-forms",
+  "/settings/bank-details",
 ];
 
 function isPmRoute(pathname: string) {
