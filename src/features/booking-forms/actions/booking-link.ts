@@ -7,7 +7,11 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { buildTenantAppUrl } from "@/lib/urls";
 
 export type RoomBookingLinkResult =
-  | { url: string }
+  | {
+      url: string;
+      minPrice: number | null;
+      maxPrice: number | null;
+    }
   | {
       error: string;
       reason: "no_portfolio" | "no_form_for_portfolio" | "unit_not_found";
@@ -21,11 +25,13 @@ export async function getRoomBookingLink(unitId: string): Promise<RoomBookingLin
 
   const { data: unit } = await supabase
     .from("units")
-    .select("id, property:properties(portfolio_id, portfolio:portfolios(id, name))")
+    .select("id, min_price_pcm, max_price_pcm, property:properties(portfolio_id, portfolio:portfolios(id, name))")
     .eq("id", unitId)
     .eq("tenant_id", profile.tenant_id)
     .maybeSingle<{
       id: string;
+      min_price_pcm: number | null;
+      max_price_pcm: number | null;
       property: {
         portfolio_id: string | null;
         portfolio: { id: string; name: string } | null;
@@ -66,5 +72,9 @@ export async function getRoomBookingLink(unitId: string): Promise<RoomBookingLin
   }
 
   const appUrl = buildTenantAppUrl(headers());
-  return { url: `${appUrl}/apply/${form.public_slug}/${unitId}` };
+  return {
+    url: `${appUrl}/apply/${form.public_slug}/${unitId}`,
+    minPrice: unit.min_price_pcm ?? null,
+    maxPrice: unit.max_price_pcm ?? null,
+  };
 }

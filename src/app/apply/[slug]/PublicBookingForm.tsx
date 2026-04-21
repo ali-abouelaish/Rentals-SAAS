@@ -22,6 +22,7 @@ interface PublicBookingFormProps {
   slug: string;
   unit: PublicUnitForBooking;
   bankDetails: FormBankDetails | null;
+  agreedPrice?: number | null;
 }
 
 const SERIF: React.CSSProperties = {
@@ -139,7 +140,7 @@ function SectionHeader({
   );
 }
 
-export function PublicBookingForm({ form, slug, unit, bankDetails }: PublicBookingFormProps) {
+export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice }: PublicBookingFormProps) {
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -157,7 +158,7 @@ export function PublicBookingForm({ form, slug, unit, bankDetails }: PublicBooki
   const addressLines = property
     ? [property.address_line_1, property.address_line_2, property.postcode].filter(Boolean)
     : [];
-  const rentLabel = formatGBP(unit.min_price_pcm);
+  const rentLabel = formatGBP(agreedPrice ?? unit.min_price_pcm);
   const holdingDepositLabel = formatGBP(unit.holding_deposit);
 
   const hasAnyBank =

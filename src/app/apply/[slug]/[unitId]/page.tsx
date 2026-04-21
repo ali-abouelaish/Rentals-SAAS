@@ -7,6 +7,7 @@ import { PublicBookingForm } from "../PublicBookingForm";
 
 interface PageProps {
   params: { slug: string; unitId: string };
+  searchParams: { price?: string };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ApplyForRoomPage({ params }: PageProps) {
+export default async function ApplyForRoomPage({ params, searchParams }: PageProps) {
   const form = await getPublicBookingForm(params.slug);
   if (!form) notFound();
 
@@ -44,12 +45,22 @@ export default async function ApplyForRoomPage({ params }: PageProps) {
 
   const bankDetails = await getPublicBankDetailsForForm(form.id);
 
+  const parsedPrice = searchParams.price ? Number(searchParams.price) : NaN;
+  const agreedPrice =
+    Number.isFinite(parsedPrice) &&
+    parsedPrice > 0 &&
+    (unit.min_price_pcm === null || parsedPrice >= unit.min_price_pcm) &&
+    (unit.max_price_pcm === null || parsedPrice <= unit.max_price_pcm)
+      ? Math.round(parsedPrice)
+      : null;
+
   return (
     <PublicBookingForm
       form={form}
       slug={params.slug}
       unit={unit}
       bankDetails={bankDetails}
+      agreedPrice={agreedPrice}
     />
   );
 }

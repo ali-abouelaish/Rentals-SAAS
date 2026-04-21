@@ -19,8 +19,8 @@ const fraunces = Fraunces({
 export default async function PublicShareLayout({ children, params }: LayoutProps) {
   const brand = await getPublicShareBrandContext(params.token);
 
-  const brandName = brand?.brand_name ?? "Property selection";
-  const logoUrl = brand?.logo_url ?? null;
+  const brandName = brand?.brand_name?.trim() || "Property selection";
+  const logoUrl = brand?.logo_url?.trim() || null;
 
   const brandingForVars = brand
     ? {

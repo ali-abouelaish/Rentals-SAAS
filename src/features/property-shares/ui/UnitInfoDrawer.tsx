@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import {
   MapPin,
   Calendar,
@@ -64,7 +63,7 @@ export function UnitInfoDrawer({
 }: UnitInfoDrawerProps) {
   if (!unit) return null;
 
-  const hero = unit.photos[0]?.url ?? null;
+  const hero = unit.photos[0]?.url || null;
   const hasPhotos = unit.photos.length > 0;
   const fullAddress = [unit.property.address_line_1, unit.property.address_line_2]
     .filter(Boolean)
@@ -90,12 +89,13 @@ export function UnitInfoDrawer({
               className="relative block w-full aspect-[16/9] bg-surface-inset overflow-hidden group"
               aria-label="Open photo gallery"
             >
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={hero}
                 alt={`${unit.property.name} - ${unitLabel(unit)}`}
-                fill
-                sizes="(max-width: 640px) 100vw, 520px"
-                className="object-cover transition-transform group-hover:scale-[1.02]"
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
               />
               {unit.photos.length > 1 && (
                 <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white">
