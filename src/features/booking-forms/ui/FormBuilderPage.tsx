@@ -69,6 +69,13 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
     [forms, selectedFormId]
   );
 
+  const portfoliosMissingActiveForm = useMemo(() => {
+    const coveredPortfolioIds = new Set(
+      forms.filter((f) => f.is_active && f.portfolio_id).map((f) => f.portfolio_id as string)
+    );
+    return portfolios.filter((p) => !coveredPortfolioIds.has(p.id));
+  }, [forms, portfolios]);
+
   const createFormHook = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: { is_active: true, portfolio_id: portfolios[0]?.id ?? "" },
@@ -192,6 +199,35 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
       {portfolios.length === 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           Create a portfolio first — every booking form must belong to one so applications route correctly.
+        </div>
+      )}
+
+      {portfolios.length > 0 && portfoliosMissingActiveForm.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="flex items-start gap-2">
+            <InfoIcon className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="space-y-1.5">
+              <p className="font-medium">
+                {portfoliosMissingActiveForm.length === 1
+                  ? "1 portfolio has no active booking form"
+                  : `${portfoliosMissingActiveForm.length} portfolios have no active booking form`}
+              </p>
+              <p className="text-amber-800">
+                Booking links for units in these portfolios are blocked until a form exists:
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {portfoliosMissingActiveForm.map((p) => (
+                  <span
+                    key={p.id}
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    style={{ backgroundColor: p.color + "22", color: p.color }}
+                  >
+                    {p.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Home, Images } from "lucide-react";
+import { ArrowUpRight, Home, Images } from "lucide-react";
 import type { PublicShareUnit } from "../data/public";
 import { STATUS_CONFIG } from "@/features/properties/domain/types";
 import type { UnitStatus } from "@/features/properties/domain/types";
@@ -14,6 +14,10 @@ interface UnitCardProps {
 }
 
 const MONTH_DAY = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" });
+
+const SERIF: React.CSSProperties = {
+  fontFamily: "var(--font-fraunces), Georgia, serif",
+};
 
 function availabilityLabel(unit: PublicShareUnit): { label: string; tone: "green" | "amber" | "slate" } {
   if (unit.notice_given && unit.available_date) {
@@ -36,12 +40,19 @@ export function UnitCard({ unit, commissionPct, onOpenInfo }: UnitCardProps) {
     .filter(Boolean)
     .join(", ");
 
-  const toneClass =
+  const badgeClass =
     avail.tone === "green"
-      ? "bg-emerald-100 text-emerald-800"
+      ? "bg-emerald-50/95 text-emerald-800 ring-emerald-600/10"
       : avail.tone === "amber"
-      ? "bg-amber-100 text-amber-800"
-      : "bg-slate-100 text-slate-700";
+      ? "bg-amber-50/95 text-amber-800 ring-amber-600/10"
+      : "bg-white/95 text-slate-700 ring-slate-900/10";
+
+  const dotClass =
+    avail.tone === "green"
+      ? "bg-emerald-500"
+      : avail.tone === "amber"
+      ? "bg-amber-500"
+      : "bg-slate-400";
 
   const label = unitLabel(unit);
   const hasPhotos = unit.photos.length > 0;
@@ -51,7 +62,7 @@ export function UnitCard({ unit, commissionPct, onOpenInfo }: UnitCardProps) {
     <button
       type="button"
       onClick={() => onOpenInfo(unit)}
-      className="group text-left rounded-2xl border border-border bg-surface-card overflow-hidden shadow-sm hover:shadow-md hover:border-brand/40 transition-all focus:outline-none focus:ring-2 focus:ring-brand"
+      className="group relative flex w-full flex-col overflow-hidden rounded-3xl border border-border bg-surface-card text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand/40"
     >
       <div className="relative block w-full aspect-[4/3] bg-surface-inset overflow-hidden">
         {hero ? (
@@ -60,53 +71,86 @@ export function UnitCard({ unit, commissionPct, onOpenInfo }: UnitCardProps) {
             alt={`${unit.property.name} - ${label}`}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-            className="object-cover transition-transform group-hover:scale-[1.02]"
+            className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-foreground-muted">
             <Home className="h-10 w-10" />
           </div>
         )}
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 via-black/10 to-transparent"
+        />
+
         <span
-          className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-medium ${toneClass}`}
+          className={`absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] ring-1 backdrop-blur ${badgeClass}`}
         >
+          <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
           {avail.label}
         </span>
+
         {hasPhotos && unit.photos.length > 1 && (
-          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white">
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
             <Images className="h-3 w-3" />
             {unit.photos.length}
           </span>
         )}
       </div>
 
-      <div className="p-5 space-y-3">
-        <div>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="font-semibold text-foreground truncate">{unit.property.name}</h3>
-              <p className="text-sm text-foreground-muted truncate">{label}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="font-semibold text-foreground tabular-nums">{priceRange}</p>
-              {unit.couples_allowed && unit.couples_price_pcm && (
-                <p className="text-xs text-foreground-muted tabular-nums">
-                  Couples £{unit.couples_price_pcm.toLocaleString("en-GB")}
-                </p>
-              )}
-            </div>
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+              {label}
+            </p>
+            <h3
+              className="mt-1 truncate text-[1.2rem] leading-tight tracking-[-0.01em] text-foreground"
+              style={{ ...SERIF, fontWeight: 500 }}
+            >
+              {unit.property.name}
+            </h3>
           </div>
-          <p className="mt-1 text-sm text-foreground-muted truncate">
+          <div className="shrink-0 text-right">
+            <p
+              className="text-[1.05rem] leading-none tracking-[-0.005em] text-foreground tabular-nums"
+              style={{ ...SERIF, fontWeight: 500 }}
+            >
+              {priceRange}
+            </p>
+            {unit.couples_allowed && unit.couples_price_pcm && (
+              <p className="mt-1 text-[11px] text-foreground-muted tabular-nums">
+                Couples £{unit.couples_price_pcm.toLocaleString("en-GB")}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {(fullAddress || unit.property.postcode) && (
+          <p className="mt-2 truncate text-sm text-foreground-secondary">
             {fullAddress}
             {unit.property.postcode ? ` · ${unit.property.postcode}` : ""}
           </p>
-        </div>
+        )}
 
-        <div className="flex items-center justify-between rounded-lg bg-surface-inset px-3 py-2 text-sm">
-          <span className="text-foreground-muted">
-            Commission <span className="font-medium text-foreground">{commissionPct}%</span>
+        <div
+          className="mt-5 flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-sm"
+          style={{
+            backgroundImage:
+              "linear-gradient(120deg, color-mix(in oklab, var(--brand-primary) 8%, transparent), color-mix(in oklab, var(--brand-primary) 2%, transparent))",
+          }}
+        >
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+            Commission
+            <span className="ml-1.5 text-sm font-semibold normal-case tracking-normal text-foreground tabular-nums">
+              {commissionPct}%
+            </span>
           </span>
-          <span className="text-xs font-medium text-brand">View details →</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.14em] text-brand">
+            View details
+            <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </span>
         </div>
       </div>
     </button>

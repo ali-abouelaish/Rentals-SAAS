@@ -154,9 +154,6 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
         <section>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted mb-3">Booking link</h3>
           <CopyBookingLinkButton unitId={unit.id} />
-          <p className="text-[11px] text-foreground-muted mt-1.5">
-            Share this link with prospective tenants to apply for this specific room.
-          </p>
         </section>
 
         {/* Drive folder link */}

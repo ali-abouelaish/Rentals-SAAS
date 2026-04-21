@@ -86,7 +86,7 @@ export default async function ClientDetailPage({
 
       <div className="flex items-center gap-3 flex-wrap">
         <CopyProfileButton text={profileText} />
-        {profile.role === "admin" && (
+        {(profile.role === "admin" || client.assigned_agent_id === profile.id) && (
           <DeleteClientButton
             clientId={client.id}
             clientName={client.full_name ?? "this client"}
