@@ -6,15 +6,26 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { bankDetailsSchema, type BankDetailsValues } from "../domain/schemas";
 
-export async function updateBankDetails(values: BankDetailsValues) {
+export async function updateBankDetailsForForm(formId: string, values: BankDetailsValues) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
   const payload = bankDetailsSchema.parse(values);
 
+  const { data: form, error: formError } = await supabase
+    .from("booking_forms")
+    .select("id")
+    .eq("id", formId)
+    .eq("tenant_id", profile.tenant_id)
+    .maybeSingle();
+
+  if (formError) throw new Error(formError.message);
+  if (!form) throw new Error("Form not found");
+
   const { error } = await supabase
-    .from("tenant_bank_details")
+    .from("booking_form_bank_details")
     .upsert(
       {
+        form_id: formId,
         tenant_id: profile.tenant_id,
         account_holder_name: payload.account_holder_name ?? null,
         account_number: payload.account_number ?? null,
@@ -23,7 +34,7 @@ export async function updateBankDetails(values: BankDetailsValues) {
         payment_reference_hint: payload.payment_reference_hint ?? null,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "tenant_id" }
+      { onConflict: "form_id" }
     );
 
   if (error) throw new Error(error.message);

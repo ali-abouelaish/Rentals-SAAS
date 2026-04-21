@@ -48,6 +48,62 @@ export async function getPublicShareByToken(token: string): Promise<PropertyShar
   return data as PropertyShare;
 }
 
+export type PublicShareBrandContext = {
+  tenant_slug: string;
+  tenant_name: string;
+  brand_name: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  accent_color: string | null;
+};
+
+export async function getPublicShareBrandContext(
+  token: string
+): Promise<PublicShareBrandContext | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("property_shares")
+    .select(
+      "tenant:tenants(slug, name, branding:tenant_branding_settings(brand_name, logo_url, primary_color, secondary_color, accent_color))"
+    )
+    .eq("token", token)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const tenant = (Array.isArray((data as any).tenant) ? (data as any).tenant[0] : (data as any).tenant) as
+    | {
+        slug: string;
+        name: string;
+        branding:
+          | {
+              brand_name: string | null;
+              logo_url: string | null;
+              primary_color: string | null;
+              secondary_color: string | null;
+              accent_color: string | null;
+            }
+          | Array<any>
+          | null;
+      }
+    | null;
+
+  if (!tenant) return null;
+
+  const branding = (Array.isArray(tenant.branding) ? tenant.branding[0] : tenant.branding) ?? null;
+
+  return {
+    tenant_slug: tenant.slug,
+    tenant_name: tenant.name,
+    brand_name: branding?.brand_name ?? tenant.name,
+    logo_url: branding?.logo_url ?? null,
+    primary_color: branding?.primary_color ?? null,
+    secondary_color: branding?.secondary_color ?? null,
+    accent_color: branding?.accent_color ?? null,
+  };
+}
+
 export async function getPublicShareUnits(share: PropertyShare): Promise<PublicShareUnit[]> {
   const supabase = createSupabaseAdminClient();
 

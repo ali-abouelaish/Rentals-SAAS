@@ -14,14 +14,14 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { submitBookingForm } from "@/features/booking-forms/actions/form-responses";
-import type { BookingForm, FormQuestion, TenantBankDetails } from "@/features/booking-forms/domain/types";
+import type { BookingForm, FormQuestion, FormBankDetails } from "@/features/booking-forms/domain/types";
 import type { PublicUnitForBooking } from "@/features/booking-forms/data/public-unit";
 
 interface PublicBookingFormProps {
   form: BookingForm;
   slug: string;
   unit: PublicUnitForBooking;
-  bankDetails: TenantBankDetails | null;
+  bankDetails: FormBankDetails | null;
 }
 
 const SERIF: React.CSSProperties = {

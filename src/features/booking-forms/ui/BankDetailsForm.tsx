@@ -1,57 +1,131 @@
 "use client";
 
-import { useTransition } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Landmark, ShieldCheck, Save } from "lucide-react";
+import { Landmark, ShieldCheck, Save, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { bankDetailsSchema, type BankDetailsValues } from "../domain/schemas";
-import { updateBankDetails } from "../actions/bank-details";
-import type { TenantBankDetails } from "../domain/types";
+import { updateBankDetailsForForm } from "../actions/bank-details";
+import type { BookingForm, FormBankDetails } from "../domain/types";
 
 const inputCls =
   "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
 
+const selectCls =
+  "h-10 w-full rounded-xl border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50";
+
 interface BankDetailsFormProps {
-  initial: TenantBankDetails | null;
+  forms: BookingForm[];
+  detailsByFormId: Record<string, FormBankDetails>;
 }
 
-export function BankDetailsForm({ initial }: BankDetailsFormProps) {
+function emptyValues(): BankDetailsValues {
+  return {
+    account_holder_name: "",
+    account_number: "",
+    sort_code: "",
+    bank_name: "",
+    payment_reference_hint: "",
+  };
+}
+
+function toValues(d: FormBankDetails | undefined): BankDetailsValues {
+  if (!d) return emptyValues();
+  return {
+    account_holder_name: d.account_holder_name ?? "",
+    account_number: d.account_number ?? "",
+    sort_code: d.sort_code ?? "",
+    bank_name: d.bank_name ?? "",
+    payment_reference_hint: d.payment_reference_hint ?? "",
+  };
+}
+
+export function BankDetailsForm({ forms, detailsByFormId }: BankDetailsFormProps) {
   const [isPending, startTransition] = useTransition();
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(forms[0]?.id ?? null);
+  const [localDetails, setLocalDetails] =
+    useState<Record<string, FormBankDetails | undefined>>(detailsByFormId);
+
+  const selectedForm = useMemo(
+    () => forms.find((f) => f.id === selectedFormId) ?? null,
+    [forms, selectedFormId]
+  );
+
+  const selectedDetails = selectedFormId ? localDetails[selectedFormId] : undefined;
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<BankDetailsValues>({
     resolver: zodResolver(bankDetailsSchema),
-    defaultValues: {
-      account_holder_name: initial?.account_holder_name ?? "",
-      account_number: initial?.account_number ?? "",
-      sort_code: initial?.sort_code ?? "",
-      bank_name: initial?.bank_name ?? "",
-      payment_reference_hint: initial?.payment_reference_hint ?? "",
-    },
+    defaultValues: toValues(selectedDetails),
   });
 
+  useEffect(() => {
+    reset(toValues(selectedDetails));
+  }, [selectedFormId, selectedDetails, reset]);
+
   const configured = Boolean(
-    initial?.account_holder_name ||
-      initial?.account_number ||
-      initial?.sort_code ||
-      initial?.bank_name
+    selectedDetails?.account_holder_name ||
+      selectedDetails?.account_number ||
+      selectedDetails?.sort_code ||
+      selectedDetails?.bank_name
   );
 
   const onSubmit = (values: BankDetailsValues) => {
+    if (!selectedFormId) return;
     startTransition(async () => {
       try {
-        await updateBankDetails(values);
+        await updateBankDetailsForForm(selectedFormId, values);
+        setLocalDetails((prev) => ({
+          ...prev,
+          [selectedFormId]: {
+            form_id: selectedFormId,
+            tenant_id: selectedDetails?.tenant_id ?? "",
+            account_holder_name: values.account_holder_name ?? null,
+            account_number: values.account_number ?? null,
+            sort_code: values.sort_code ?? null,
+            bank_name: values.bank_name ?? null,
+            payment_reference_hint: values.payment_reference_hint ?? null,
+            updated_at: new Date().toISOString(),
+          },
+        }));
         toast.success("Bank details saved");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to save bank details");
       }
     });
   };
+
+  if (forms.length === 0) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">Bank Details</h1>
+          <p className="text-sm text-foreground-secondary mt-0.5">
+            Bank details attach to each booking form, so every portfolio can point to its own account.
+          </p>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium">No booking forms yet</p>
+            <p className="mt-0.5 text-amber-800">
+              Create a booking form first, then come back here to set its bank details.{" "}
+              <Link href="/settings/booking-forms" className="underline font-medium hover:text-amber-950">
+                Open booking forms →
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -60,7 +134,7 @@ export function BankDetailsForm({ initial }: BankDetailsFormProps) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">Bank Details</h1>
           <p className="text-sm text-foreground-secondary mt-0.5">
-            Shown on every room&apos;s booking form so applicants know where to send their holding deposit.
+            Bank details attach to each booking form — applicants see the account that matches the portfolio they&apos;re applying through.
           </p>
         </div>
         <span
@@ -74,6 +148,35 @@ export function BankDetailsForm({ initial }: BankDetailsFormProps) {
           <ShieldCheck size={12} />
           {configured ? "Configured" : "Not configured yet"}
         </span>
+      </div>
+
+      {/* ── Form picker ── */}
+      <div className="rounded-bento bg-surface-card shadow-bento p-5">
+        <label
+          htmlFor="bank-details-form-picker"
+          className="block text-sm font-medium text-foreground mb-1.5"
+        >
+          Booking form
+        </label>
+        <select
+          id="bank-details-form-picker"
+          className={selectCls}
+          value={selectedFormId ?? ""}
+          onChange={(e) => setSelectedFormId(e.target.value || null)}
+        >
+          {forms.map((f) => {
+            const configuredMark = localDetails[f.id]?.account_number ? "✓" : "○";
+            const portfolio = f.portfolio?.name ? ` · ${f.portfolio.name}` : "";
+            return (
+              <option key={f.id} value={f.id}>
+                {configuredMark}  {f.name}{portfolio}
+              </option>
+            );
+          })}
+        </select>
+        <p className="text-xs text-foreground-secondary mt-1.5">
+          Pick the form you want to edit bank details for. ✓ means bank details are already saved; ○ means empty.
+        </p>
       </div>
 
       {/* ── Info banner ── */}
@@ -96,7 +199,14 @@ export function BankDetailsForm({ initial }: BankDetailsFormProps) {
         className="rounded-bento bg-surface-card shadow-bento overflow-hidden"
       >
         <div className="px-6 py-5 border-b border-border">
-          <h2 className="text-base font-semibold text-foreground">Account</h2>
+          <h2 className="text-base font-semibold text-foreground">
+            Account for {selectedForm?.name ?? "form"}
+            {selectedForm?.portfolio?.name && (
+              <span className="ml-2 text-xs font-normal text-foreground-secondary">
+                · {selectedForm.portfolio.name}
+              </span>
+            )}
+          </h2>
           <p className="text-xs text-foreground-secondary mt-0.5">
             All fields are optional — fill in whichever you want applicants to see.
           </p>
@@ -193,7 +303,7 @@ export function BankDetailsForm({ initial }: BankDetailsFormProps) {
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-surface-inset/40">
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || !selectedFormId}
             className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             <Save size={14} />

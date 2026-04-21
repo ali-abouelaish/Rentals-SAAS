@@ -41,7 +41,8 @@ export type BookingForm = {
   } | null;
 };
 
-export type TenantBankDetails = {
+export type FormBankDetails = {
+  form_id: string;
   tenant_id: string;
   account_holder_name: string | null;
   account_number: string | null;

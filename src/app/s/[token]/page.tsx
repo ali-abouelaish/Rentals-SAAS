@@ -64,11 +64,11 @@ export default async function PublicSharePage({ params }: PageProps) {
   const unitsLabel = `${units.length} unit${units.length === 1 ? "" : "s"} available`;
 
   return (
-    <div className="min-h-screen bg-surface-page">
+    <>
       <ViewTracker token={share.token} />
 
-      <header className="mx-auto max-w-6xl px-4 pt-10 pb-6 sm:pt-14">
-        <section
+      <section className="mx-auto max-w-6xl px-4 pt-6 pb-6 sm:px-6 sm:pt-8">
+        <div
           className="relative overflow-hidden rounded-3xl border border-border bg-surface-card p-7 shadow-sm sm:p-9"
           style={{
             backgroundImage:
@@ -101,16 +101,16 @@ export default async function PublicSharePage({ params }: PageProps) {
               </div>
             </div>
           </div>
-        </section>
-      </header>
+        </div>
+      </section>
 
-      <main className="mx-auto max-w-6xl px-4 pb-14">
+      <div className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
         <ShareBody
           units={units}
           commissionPct={share.commission_override_pct}
           token={share.token}
         />
-      </main>
-    </div>
+      </div>
+    </>
   );
 }

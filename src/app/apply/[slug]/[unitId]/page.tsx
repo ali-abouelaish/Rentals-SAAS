@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicBookingForm } from "@/features/booking-forms/data/booking-forms";
-import { getPublicBankDetails } from "@/features/booking-forms/data/bank-details";
+import { getPublicBankDetailsForForm } from "@/features/booking-forms/data/bank-details";
 import { getPublicUnitForBooking } from "@/features/booking-forms/data/public-unit";
 import { PublicBookingForm } from "../PublicBookingForm";
 
@@ -42,7 +42,7 @@ export default async function ApplyForRoomPage({ params }: PageProps) {
   const unit = await getPublicUnitForBooking(form.tenant_id, params.unitId);
   if (!unit) notFound();
 
-  const bankDetails = await getPublicBankDetails(form.tenant_id);
+  const bankDetails = await getPublicBankDetailsForForm(form.id);
 
   return (
     <PublicBookingForm

@@ -34,7 +34,7 @@ function availabilityLabel(unit: PublicShareUnit): { label: string; tone: "green
 }
 
 export function UnitCard({ unit, commissionPct, onOpenInfo }: UnitCardProps) {
-  const hero = unit.photos[0]?.url ?? null;
+  const hero = unit.photos[0]?.url || null;
   const avail = availabilityLabel(unit);
   const fullAddress = [unit.property.address_line_1, unit.property.address_line_2]
     .filter(Boolean)

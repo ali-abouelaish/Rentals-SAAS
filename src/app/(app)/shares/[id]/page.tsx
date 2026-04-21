@@ -10,6 +10,7 @@ import { deriveShareStatus, deriveShareScope } from "@/features/property-shares/
 import { STATUS_CONFIG } from "@/features/properties/domain/types";
 import type { UnitStatus } from "@/features/properties/domain/types";
 import { ShareDetailActions } from "@/features/property-shares/ui/ShareDetailActions";
+import { buildTenantAppUrl } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +23,10 @@ const DATE_TIME_FMT = new Intl.DateTimeFormat("en-GB", {
 });
 
 function buildShareUrl(token: string): string {
-  const h = headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  const origin = envUrl ?? (host ? `${proto}://${host}` : "");
+  // Admin generates the share URL while on `{slug}.harborops.co.uk`,
+  // so the request host already carries the tenant subdomain — prefer it
+  // over NEXT_PUBLIC_APP_URL (apex), which would strip the tenant brand.
+  const origin = buildTenantAppUrl(headers());
   return `${origin}/s/${token}`;
 }
 

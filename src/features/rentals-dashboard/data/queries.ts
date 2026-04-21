@@ -50,9 +50,8 @@ export async function getRentalDashboardData(agentId?: string): Promise<RentalDa
   const revenueThisMonthPence = (thisMonth ?? [])
     .filter((r) => r.status === "approved" || r.status === "paid")
     .reduce((sum, r) => {
-      const fee = (r.consultation_fee_amount ?? 0) * 100;
-      const rental = ((r.rental_amount_gbp ?? 0) as number) * 100;
-      return sum + fee + rental;
+      const amount = Number(r.rental_amount_gbp ?? r.consultation_fee_amount ?? 0);
+      return sum + amount * 100;
     }, 0);
 
   // Status breakdown
@@ -85,7 +84,7 @@ export async function getRentalDashboardData(agentId?: string): Promise<RentalDa
     status: r.status,
     clientName: (r.client_snapshot as { full_name?: string })?.full_name ?? "Unknown",
     agentName: (r.user_profiles as { display_name?: string } | null)?.display_name ?? "—",
-    amount: ((r.consultation_fee_amount ?? 0) + ((r.rental_amount_gbp ?? 0) as number)) * 100,
+    amount: Number(r.rental_amount_gbp ?? r.consultation_fee_amount ?? 0) * 100,
     date: r.created_at,
   }));
 
@@ -104,7 +103,7 @@ export async function getRentalDashboardData(agentId?: string): Promise<RentalDa
       const name = profile?.display_name ?? "Unknown";
       const rev =
         r.status === "approved" || r.status === "paid"
-          ? ((r.consultation_fee_amount ?? 0) + ((r.rental_amount_gbp ?? 0) as number)) * 100
+          ? Number(r.rental_amount_gbp ?? r.consultation_fee_amount ?? 0) * 100
           : 0;
       const existing = agentMap.get(id) ?? { name, count: 0, revenue: 0 };
       agentMap.set(id, { name, count: existing.count + 1, revenue: existing.revenue + rev });
