@@ -48,9 +48,10 @@ export function RentalEditPanel({
   const hasMarketing = marketingAgentIds.some(Boolean);
 
   const paymentFee = currentPaymentMethod === "cash" ? 0 : currentPaymentMethod === "transfer" ? 0.2 : 0.0175;
+  const vatRate = currentPaymentMethod === "card" ? 0.2 : 0;
   const base = useMemo(
-    () => Math.round(Number(currentFeeAmount) * (1 - paymentFee) * 100) / 100,
-    [currentFeeAmount, paymentFee]
+    () => Math.round(Number(currentFeeAmount) * (1 - paymentFee) * (1 - vatRate) * 100) / 100,
+    [currentFeeAmount, paymentFee, vatRate]
   );
   const gross = useMemo(() => Math.round(base * (commissionPercent / 100) * 100) / 100, [base, commissionPercent]);
   const overrideValue = overrideFee ? Number(overrideFee) : null;

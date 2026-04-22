@@ -43,6 +43,19 @@ export type EarningsTransaction = {
   created_at: string;
   role?: "assisted" | "marketing";
   status?: string;
+  /** Payout breakdown for the hover-card preview on the Earnings cell. */
+  payout?: {
+    rental_amount: number;
+    payment_fee_rate: number;
+    vat_rate: number;
+    base_after_fee_and_vat: number;
+    commission_percent: number;
+    assisted_gross: number;
+    total_marketing_fee: number;
+    marketing_agent_count: number;
+    split_marketing_fee: number;
+    assisted_net: number;
+  };
 };
 
 /** Unified payment row for the outstanding payments tracker */

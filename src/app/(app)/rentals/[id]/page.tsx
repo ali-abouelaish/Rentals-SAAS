@@ -270,11 +270,14 @@ export default async function RentalDetailPage({
         </Card>
       )}
 
-      {rental.assisted_by_agent_id === profile.id &&
+      {(profile.role.toLowerCase() === "admin" ||
+        rental.assisted_by_agent_id === profile.id) &&
       !(profile.role.toLowerCase() === "admin" && rental.status === "pending") ? (
         <Card>
           <CardContent className="space-y-4">
-            <p className="text-sm font-medium text-navy">Your payout summary</p>
+            <p className="text-sm font-medium text-navy">
+              {rental.assisted_by_agent_id === profile.id ? "Your payout summary" : "Payout summary"}
+            </p>
             <RentalPayoutSummary
               rentalAmount={rental.consultation_fee_amount}
               paymentMethod={rental.payment_method}

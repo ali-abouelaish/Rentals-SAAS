@@ -35,7 +35,11 @@ export function RentalApprovalPanel({
   const [showOverride, setShowOverride] = useState(false);
 
   const paymentFee = paymentMethod === "cash" ? 0 : paymentMethod === "transfer" ? 0.2 : 0.0175;
-  const base = useMemo(() => rentalAmount * (1 - paymentFee), [rentalAmount, paymentFee]);
+  const vatRate = paymentMethod === "card" ? 0.2 : 0;
+  const base = useMemo(
+    () => rentalAmount * (1 - paymentFee) * (1 - vatRate),
+    [rentalAmount, paymentFee, vatRate]
+  );
   const assistedGross = useMemo(() => base * (commissionPercent / 100), [base, commissionPercent]);
   const threshold = useMemo(() => base * 0.45, [base]);
 

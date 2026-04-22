@@ -27,8 +27,16 @@ function paymentFeeRate(method: string): number {
   return 0;
 }
 
+/** VAT deducted after the payment fee. Currently only card-machine rentals
+ *  are subject to VAT (20%). */
+function vatRate(method: string): number {
+  return method === "card" ? 0.2 : 0;
+}
+
 function computeRentalNet(amount: number, method: string): number {
-  return Math.round(amount * (1 - paymentFeeRate(method)) * 100) / 100;
+  const afterFee = amount * (1 - paymentFeeRate(method));
+  const afterVat = afterFee * (1 - vatRate(method));
+  return Math.round(afterVat * 100) / 100;
 }
 
 /** Fetch junction table data for a set of rental IDs.
@@ -629,6 +637,8 @@ export async function getTransactions(
       rowStatus = paidAt ? "paid" : "approved";
     }
 
+    const assistedNet = Math.round((gross - totalMktFee) * 100) / 100;
+
     out.push({
       id: rental.id,
       agent_id: rental.assisted_by_agent_id,
@@ -641,6 +651,18 @@ export async function getTransactions(
       created_at: rental.date,
       role,
       status: rowStatus,
+      payout: {
+        rental_amount: Number(rental.consultation_fee_amount ?? 0),
+        payment_fee_rate: paymentFeeRate(rental.payment_method),
+        vat_rate: vatRate(rental.payment_method),
+        base_after_fee_and_vat: rentalNet,
+        commission_percent: Number(commPct),
+        assisted_gross: gross,
+        total_marketing_fee: totalMktFee,
+        marketing_agent_count: agentCount,
+        split_marketing_fee: splitFee,
+        assisted_net: assistedNet,
+      },
     });
   }
 

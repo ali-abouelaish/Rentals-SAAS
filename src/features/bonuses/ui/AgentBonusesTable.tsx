@@ -53,7 +53,7 @@ export function AgentBonusesTable({
             <th className="pb-3 pr-4">Client</th>
             <th className="pb-3 pr-4">Property</th>
             <th className="pb-3 pr-4 text-right tabular-nums">{isAdmin ? "Agent Share" : "Your Share"}</th>
-            <th className="pb-3 pl-4">Status</th>
+            <th className="pb-3 pl-4">Paid</th>
           </tr>
         </thead>
         <tbody>

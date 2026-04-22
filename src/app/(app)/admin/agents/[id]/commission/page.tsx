@@ -86,6 +86,7 @@ export default async function AgentCommissionPage({
     (acc, rental) => ({
       rental_amount: acc.rental_amount + rental.rental_amount,
       payment_fee: acc.payment_fee + rental.payment_fee,
+      vat: acc.vat + rental.vat,
       base_amount: acc.base_amount + rental.base_amount,
       marketing_fee_deducted: acc.marketing_fee_deducted + rental.marketing_fee_deducted,
       agent_earning: acc.agent_earning + rental.agent_earning
@@ -93,6 +94,7 @@ export default async function AgentCommissionPage({
     {
       rental_amount: 0,
       payment_fee: 0,
+      vat: 0,
       base_amount: 0,
       marketing_fee_deducted: 0,
       agent_earning: 0

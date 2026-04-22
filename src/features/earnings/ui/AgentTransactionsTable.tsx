@@ -7,6 +7,7 @@ import type { EarningsTransaction } from "../domain/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PaidToggle } from "./PaidToggle";
+import { EarningsPayoutHover } from "./EarningsPayoutHover";
 
 export function AgentTransactionsTable({
   transactions,
@@ -141,7 +142,9 @@ export function AgentTransactionsTable({
                     {t.consultation_fee != null ? formatGBP(t.consultation_fee) : "—"}
                   </td>
                   <td className="py-3 pr-4 text-right tabular-nums font-medium">
-                    {formatGBP(t.amount)}
+                    <EarningsPayoutHover transaction={t}>
+                      {formatGBP(t.amount)}
+                    </EarningsPayoutHover>
                   </td>
                   <td className="py-3 pl-4">
                     <PaidToggle

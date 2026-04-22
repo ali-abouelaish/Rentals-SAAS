@@ -484,8 +484,11 @@ export async function approveRentalCode(formData: FormData): Promise<{ ok: boole
         : rental.payment_method === "transfer"
         ? 0.2
         : 0.0175;
+    const vatRate = rental.payment_method === "card" ? 0.2 : 0;
 
-    const base = roundMoney(rental.consultation_fee_amount * (1 - paymentFee));
+    const base = roundMoney(
+      rental.consultation_fee_amount * (1 - paymentFee) * (1 - vatRate)
+    );
     const assistedGross = roundMoney(base * (commissionPercent / 100));
     const defaultMarketingFee = marketingAgent?.marketing_fee ?? 0;
     const threshold = roundMoney(base * 0.45);

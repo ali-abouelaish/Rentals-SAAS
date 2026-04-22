@@ -11,6 +11,7 @@ export type CommissionRentalRow = {
   payment_method: string;
   rental_amount: number;
   payment_fee: number;
+  vat: number;
   base_amount: number;
   commission_percent: number;
   marketing_agent_names: string;
@@ -137,7 +138,8 @@ export async function getCommissionFileData({
     const rentalAmount = Number(rental.rental_amount_gbp ?? rental.consultation_fee_amount ?? 0);
     const feeRate = paymentFeeRate(rental.payment_method);
     const paymentFee = roundMoney(rentalAmount * feeRate);
-    const baseAmount = roundMoney(rentalAmount - paymentFee);
+    const vat = rental.payment_method === "card" ? roundMoney((rentalAmount - paymentFee) * 0.2) : 0;
+    const baseAmount = roundMoney(rentalAmount - paymentFee - vat);
 
     const hasMarketingAgent =
       rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
@@ -180,6 +182,7 @@ export async function getCommissionFileData({
       payment_method: rental.payment_method,
       rental_amount: rentalAmount,
       payment_fee: paymentFee,
+      vat,
       base_amount: baseAmount,
       commission_percent: Number(commPct),
       marketing_agent_names: marketingAgentNames,

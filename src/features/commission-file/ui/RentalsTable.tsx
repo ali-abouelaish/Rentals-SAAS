@@ -17,6 +17,7 @@ export function RentalsTable({
   totals: {
     rental_amount: number;
     payment_fee: number;
+    vat: number;
     base_amount: number;
     marketing_fee_deducted: number;
     agent_earning: number;
@@ -56,6 +57,7 @@ export function RentalsTable({
           "Payment",
           "Rental",
           "Fee",
+          "VAT",
           "Base",
           "Commission %",
           "Marketing Agents",
@@ -87,6 +89,9 @@ export function RentalsTable({
             </span>,
             <span key={`${rental.id}-fee`} className="text-sm text-foreground-secondary">
               {formatGBP(rental.payment_fee)}
+            </span>,
+            <span key={`${rental.id}-vat`} className="text-sm text-foreground-secondary">
+              {rental.vat > 0 ? formatGBP(rental.vat) : "—"}
             </span>,
             <span key={`${rental.id}-base`} className="text-sm text-foreground-secondary">
               {formatGBP(rental.base_amount)}
@@ -121,6 +126,9 @@ export function RentalsTable({
             </span>,
             <span key="total-fee" className="text-sm font-medium text-navy">
               {formatGBP(totals.payment_fee)}
+            </span>,
+            <span key="total-vat" className="text-sm font-medium text-navy">
+              {formatGBP(totals.vat)}
             </span>,
             <span key="total-base" className="text-sm font-medium text-navy">
               {formatGBP(totals.base_amount)}

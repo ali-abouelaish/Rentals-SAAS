@@ -57,7 +57,7 @@ export function PaymentsTracker({ payments, statusFilter, from, to, isAdmin }: P
                   <th className="pb-3 pr-4">Agent</th>
                   <th className="pb-3 pr-4">Marketing agent</th>
                   <th className="pb-3 pr-4 text-right tabular-nums">Amount</th>
-                  <th className="pb-3 pl-4">Status</th>
+                  <th className="pb-3 pl-4">Paid</th>
                 </tr>
               </thead>
               <tbody>

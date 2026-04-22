@@ -45,7 +45,7 @@ export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent, isAdm
             <tr className="border-b border-border text-left text-foreground-muted font-medium">
               <th className="pb-3 pr-4">Date</th>
               <th className="pb-3 pr-4">Type / Client</th>
-              <th className="pb-3 pr-4">Status</th>
+              <th className="pb-3 pr-4">Paid</th>
               <th className="pb-3 pl-4 text-right tabular-nums">Amount</th>
             </tr>
           </thead>
