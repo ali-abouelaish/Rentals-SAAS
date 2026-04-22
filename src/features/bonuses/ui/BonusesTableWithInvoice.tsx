@@ -25,9 +25,14 @@ type BonusRow = {
   landlord_id: string;
   agent_id: string;
   notes?: string | null;
-  landlords?: { name: string | null }[] | null;
-  agent?: { display_name: string | null }[] | null;
+  landlords?: { name: string | null } | { name: string | null }[] | null;
+  agent?: { display_name: string | null } | { display_name: string | null }[] | null;
 };
+
+function pickOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
 
 function formatBonusCode(code: string | null, fallbackId: string) {
   if (!code) return fallbackId.slice(0, 8);
@@ -141,9 +146,9 @@ export function BonusesTableWithInvoice({ bonuses, isAdmin }: { bonuses: BonusRo
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-foreground-muted mt-0.5">
-                    <span className="truncate max-w-[120px] sm:max-w-none">{bonus.landlords?.[0]?.name ?? "—"}</span>
+                    <span className="truncate max-w-[120px] sm:max-w-none">{pickOne(bonus.landlords)?.name ?? "—"}</span>
                     <span>·</span>
-                    <span className="truncate">{bonus.agent?.[0]?.display_name ?? "—"}</span>
+                    <span className="truncate">{pickOne(bonus.agent)?.display_name ?? "—"}</span>
                   </div>
                 </div>
 
