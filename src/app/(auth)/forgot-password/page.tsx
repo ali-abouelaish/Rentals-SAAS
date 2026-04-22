@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AuthShell } from "@/components/auth/AuthShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function ForgotPasswordForm() {
@@ -37,59 +36,79 @@ function ForgotPasswordForm() {
     setOk(true);
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-app px-6">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-surface-card p-8 shadow-lg"
+  if (ok) {
+    return (
+      <AuthShell
+        pill="Check your inbox"
+        heading={<>Let&apos;s get you back <em>on site</em>.</>}
+        lede="If an account exists for this email, we've sent a reset link — valid for 10 minutes."
+        foot={<>Remembered it? <Link href="/login">Back to sign in</Link></>}
       >
-        <div>
-          <h1 className="font-heading text-2xl font-semibold text-foreground">Forgot password</h1>
-          <p className="text-sm text-foreground-secondary">
-            Enter your email and we&apos;ll send you a reset link.
+        <div className="success-state">
+          <div className="mark">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h2>Reset link <em>sent</em>.</h2>
+          <p>
+            Click the secure link in the email to set a new password. Didn&apos;t get it? Check your
+            spam folder, or request another link below.
           </p>
+          <div className="email">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            {email}
+          </div>
+          <div style={{ maxWidth: 280, margin: "0 auto" }}>
+            <button type="button" className="btn btn-secondary" onClick={() => { setOk(false); }}>
+              Send to a different email
+            </button>
+          </div>
         </div>
+      </AuthShell>
+    );
+  }
 
-        <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium text-foreground">
-            Email
-          </label>
-          <Input
-            id="email"
+  return (
+    <AuthShell
+      pill="Password reset"
+      heading={<>Let&apos;s get you back <em>on site</em>.</>}
+      lede="Enter the email tied to your workspace. We'll send a secure reset link — valid for 10 minutes."
+      foot={<>Remembered it? <Link href="/login">Back to sign in</Link></>}
+    >
+      <form onSubmit={handleSubmit}>
+        <div className="field">
+          <label className="lab" htmlFor="fp-email">Work email</label>
+          <input
+            id="fp-email"
+            className="input"
             name="email"
             type="email"
+            placeholder="operator@company.co.uk"
+            required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={pending || ok}
+            disabled={pending}
           />
         </div>
 
-        {error && <p className="text-sm text-error">{error}</p>}
-        {ok && (
-          <p className="text-sm text-success">
-            If this email exists, a reset link has been sent.
-          </p>
-        )}
+        {error ? <div className="alert err">{error}</div> : null}
 
-        <Button type="submit" className="w-full" disabled={pending || ok}>
-          {pending ? "Sending..." : "Send reset link"}
-        </Button>
-
-        <p className="text-xs text-foreground-muted text-center">
-          Remembered it?{" "}
-          <Link href="/login" className="text-brand hover:underline">
-            Back to login
-          </Link>
-        </p>
+        <button type="submit" className="btn btn-primary" disabled={pending}>
+          {pending ? "Sending…" : "Send reset link →"}
+        </button>
       </form>
-    </div>
+    </AuthShell>
   );
 }
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-surface-app"><p className="text-foreground-muted">Loading...</p></div>}>
+    <Suspense fallback={<div style={{ minHeight: "100vh" }} />}>
       <ForgotPasswordForm />
     </Suspense>
   );

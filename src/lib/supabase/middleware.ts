@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { getSharedCookieDomain } from "./cookie-domain";
 
 export function createSupabaseMiddlewareClient(request: NextRequest) {
   let response = NextResponse.next({
@@ -7,6 +8,8 @@ export function createSupabaseMiddlewareClient(request: NextRequest) {
       headers: request.headers
     }
   });
+
+  const sharedDomain = getSharedCookieDomain();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
@@ -23,9 +26,14 @@ export function createSupabaseMiddlewareClient(request: NextRequest) {
           });
           // Rebuild response with updated request headers so cookies propagate
           response = NextResponse.next({ request });
-          // Also set cookies on the response so the browser receives the new tokens
+          // Also set cookies on the response so the browser receives the new tokens.
+          // Domain=.<apex> makes the session visible across every tenant subdomain
+          // so apex-login → tenant-subdomain handoff doesn't lose the session.
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
+            const finalOptions = sharedDomain
+              ? { ...options, domain: sharedDomain }
+              : options;
+            response.cookies.set(name, value, finalOptions);
           });
         }
       }

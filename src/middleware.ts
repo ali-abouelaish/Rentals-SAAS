@@ -83,10 +83,14 @@ export async function middleware(request: NextRequest) {
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
   const isApiRoute = pathname.startsWith("/api/");
+  // Apex-domain landing page: harborops.co.uk/ (no subdomain) renders the
+  // marketing page. Tenant subdomain roots still fall through to the
+  // tenantSlug redirect above.
+  const isApexLanding = !tenantSlug && pathname === "/";
 
   const user = session?.user ?? null;
 
-  if (!user && !isPublic && !isApiRoute) {
+  if (!user && !isPublic && !isApiRoute && !isApexLanding) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     return NextResponse.redirect(redirectUrl);

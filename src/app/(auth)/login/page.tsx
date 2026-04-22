@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { signInWithEmail } from "@/features/auth/actions/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AuthShell, CheckIcon, EyeIcon } from "@/components/auth/AuthShell";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? "Signing in..." : "Sign In"}
-    </Button>
+    <button type="submit" className="btn btn-primary" disabled={pending}>
+      {pending ? "Signing in…" : "Sign in to workspace →"}
+    </button>
   );
 }
 
@@ -19,31 +19,69 @@ const initialState: { error?: string } = {};
 
 export default function LoginPage() {
   const [state, formAction] = useFormState(signInWithEmail, initialState);
+  const [showPw, setShowPw] = useState(false);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-app px-6">
-      <form
-        action={formAction}
-        className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-surface-card p-8 shadow-lg"
-      >
-        <div>
-          <h1 className="font-heading text-2xl font-semibold text-foreground">Login</h1>
-          <p className="text-sm text-foreground-secondary">Access your agency workspace</p>
+    <AuthShell
+      pill="Sign in"
+      heading={<>Welcome back to your <em>operations</em>.</>}
+      lede="Sign in to your Harbor Ops workspace. Rooms, tenancies and margin — right where you left them."
+      foot={
+        <>
+          Prefer to request a demo? <Link href="/signup">Get access</Link>
+        </>
+      }
+    >
+      <form action={formAction}>
+        <div className="field">
+          <label className="lab" htmlFor="login-email">Work email</label>
+          <input
+            id="login-email"
+            className="input"
+            name="email"
+            type="email"
+            placeholder="operator@company.co.uk"
+            required
+            autoComplete="email"
+          />
         </div>
-        <Input name="email" type="email" placeholder="Email" required />
-        <Input name="password" type="password" placeholder="Password" required />
-        {state?.error && (
-          <p className="text-sm text-error">
-            {state.error}
-          </p>
-        )}
-        <div className="text-right">
-          <Link href="/forgot-password" className="text-xs text-brand hover:underline">
-            Forgot password?
-          </Link>
+        <div className="field">
+          <label className="lab" htmlFor="login-password">
+            Password
+            <Link href="/forgot-password">Forgot?</Link>
+          </label>
+          <div className="input-wrap">
+            <input
+              id="login-password"
+              className="input"
+              name="password"
+              type={showPw ? "text" : "password"}
+              placeholder="••••••••••••"
+              required
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              className="eye"
+              onClick={() => setShowPw((v) => !v)}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              style={showPw ? { color: "var(--ink-900)" } : undefined}
+            >
+              <EyeIcon />
+            </button>
+          </div>
         </div>
+
+        <label className="check">
+          <input type="checkbox" name="stay_signed_in" defaultChecked />
+          <span className="box"><CheckIcon /></span>
+          <span>Keep me signed in on this device</span>
+        </label>
+
+        {state?.error ? <div className="alert err">{state.error}</div> : null}
+
         <SubmitButton />
       </form>
-    </div>
+    </AuthShell>
   );
 }
