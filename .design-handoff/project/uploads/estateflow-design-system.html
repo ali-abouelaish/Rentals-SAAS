@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EstateFlow — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    /* ============ COLOR TOKENS ============ */
+
+    /* Neutrals — the backbone */
+    --ink-950: #0a0a0a;
+    --ink-900: #111111;
+    --ink-800: #1a1a1a;
+    --ink-700: #2a2a2a;
+    --ink-600: #4a4a4a;
+    --ink-500: #6b7280;
+    --ink-400: #9ca3af;
+    --ink-300: #d1d5db;
+    --ink-200: #e5e7eb;
+    --ink-100: #f1f1f0;
+    --ink-50:  #f7f7f5;
+    --ink-25:  #fafaf8;
+    --paper:   #ffffff;
+
+    /* Semantic status colors (tint + fg) */
+    --success-bg: #e8f5ed;
+    --success-fg: #1a7f3e;
+    --warning-bg: #fdf3e3;
+    --warning-fg: #a56511;
+    --danger-bg:  #fde8e8;
+    --danger-fg:  #b42318;
+    --info-bg:    #e8eef9;
+    --info-fg:    #1d4ed8;
+    --neutral-bg: #f1f1f0;
+    --neutral-fg: #4a4a4a;
+
+    /* Priority tints (from the alerts card) */
+    --prio-high-bg:   #fbeaea;
+    --prio-high-accent: #c24848;
+    --prio-med-bg:    #fbf0dc;
+    --prio-med-accent: #b5812a;
+    --prio-low-bg:    #f1f1f0;
+    --prio-low-accent: #6b6b6b;
+
+    /* Data-viz palette */
+    --chart-1: #1f8a4c;  /* residential green */
+    --chart-2: #2f6bd9;  /* commercial blue */
+    --chart-3: #e8a33d;  /* industrial amber */
+    --chart-4: #9ca3af;  /* other gray */
+
+    /* ============ TYPOGRAPHY ============ */
+    --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-serif: 'Instrument Serif', 'Times New Roman', serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+    /* Type scale (modular, 1.2 ratio) */
+    --text-xs:   11px;
+    --text-sm:   13px;
+    --text-base: 15px;
+    --text-md:   17px;
+    --text-lg:   20px;
+    --text-xl:   24px;
+    --text-2xl:  32px;
+    --text-3xl:  42px;
+    --text-4xl:  56px;
+
+    /* ============ SPACING ============ */
+    --space-1:  4px;
+    --space-2:  8px;
+    --space-3:  12px;
+    --space-4:  16px;
+    --space-5:  20px;
+    --space-6:  24px;
+    --space-8:  32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
+    --space-24: 96px;
+
+    /* ============ RADIUS ============ */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    --radius-full: 999px;
+
+    /* ============ SHADOWS ============ */
+    --shadow-xs: 0 1px 2px rgba(10, 10, 10, 0.04);
+    --shadow-sm: 0 1px 3px rgba(10, 10, 10, 0.06), 0 1px 2px rgba(10, 10, 10, 0.04);
+    --shadow-md: 0 4px 8px -2px rgba(10, 10, 10, 0.06), 0 2px 4px -2px rgba(10, 10, 10, 0.04);
+    --shadow-lg: 0 12px 24px -8px rgba(10, 10, 10, 0.08), 0 4px 8px -4px rgba(10, 10, 10, 0.04);
+    --shadow-xl: 0 24px 48px -12px rgba(10, 10, 10, 0.12);
+
+    /* ============ BORDERS ============ */
+    --border-hairline: 1px solid var(--ink-200);
+    --border-subtle:   1px solid var(--ink-100);
+
+    /* ============ PATTERN ============ */
+    --dot-color: #d4d4d0;
+    --grid-color: #ececea;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: var(--font-sans);
+    color: var(--ink-900);
+    background: var(--ink-25);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0);
+    background-size: 24px 24px;
+    min-height: 100vh;
+  }
+
+  /* ====== LAYOUT ====== */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-16) var(--space-8);
+  }
+
+  .hero {
+    text-align: center;
+    padding: var(--space-24) var(--space-4) var(--space-16);
+    border-bottom: var(--border-hairline);
+    margin-bottom: var(--space-16);
+  }
+
+  .hero .eyebrow {
+    display: inline-block;
+    padding: 6px 14px;
+    border: var(--border-hairline);
+    border-radius: var(--radius-full);
+    background: var(--paper);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-600);
+    margin-bottom: var(--space-6);
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 5vw, var(--text-4xl));
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    font-weight: 500;
+    max-width: 18ch;
+    margin: 0 auto var(--space-5);
+  }
+  .hero h1 em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  .hero p.lede {
+    color: var(--ink-500);
+    font-size: var(--text-md);
+    max-width: 60ch;
+    margin: 0 auto;
+  }
+
+  /* ====== SECTIONS ====== */
+  section.block {
+    background: var(--paper);
+    border: var(--border-hairline);
+    border-radius: var(--radius-xl);
+    padding: var(--space-10);
+    margin-bottom: var(--space-8);
+    position: relative;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
+    padding-bottom: var(--space-5);
+    border-bottom: var(--border-subtle);
+  }
+
+  .section-num {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--ink-400);
+    letter-spacing: 0.05em;
+  }
+
+  .section-head h2 {
+    font-size: var(--text-xl);
+    letter-spacing: -0.02em;
+    font-weight: 500;
+  }
+
+  .section-head .desc {
+    margin-left: auto;
+    color: var(--ink-500);
+    font-size: var(--text-sm);
+    max-width: 38ch;
+    text-align: right;
+  }
+
+  h3.subhead {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-500);
+    font-weight: 500;
+    margin: var(--space-8) 0 var(--space-4);
+  }
+  h3.subhead:first-child { margin-top: 0; }
+
+  /* ====== COLOR GRID ====== */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .swatch {
+    background: var(--paper);
+    border: var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+    user-select: none;
+  }
+  .swatch:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  .swatch:active { transform: translateY(0); }
+
+  .swatch .chip {
+    height: 68px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0,0,0,0.04);
+    margin-bottom: var(--space-3);
+  }
+  .swatch .name {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--ink-900);
+  }
+  .swatch .hex {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-500);
+    margin-top: 2px;
+  }
+  .swatch.copied .hex::after {
+    content: "  ✓ copied";
+    color: var(--success-fg);
+  }
+
+  /* ====== TYPOGRAPHY DEMO ====== */
+  .type-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: var(--space-6);
+    padding: var(--space-5) 0;
+    border-bottom: var(--border-subtle);
+    align-items: baseline;
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .meta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-500);
+    line-height: 1.6;
+  }
+  .type-row .meta strong {
+    display: block;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    color: var(--ink-900);
+    font-size: var(--text-sm);
+    margin-bottom: 2px;
+  }
+
+  .d-display { font-size: var(--text-4xl); line-height: 1.05; letter-spacing: -0.035em; font-weight: 500; }
+  .d-display em { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
+  .d-h1 { font-size: var(--text-3xl); line-height: 1.1; letter-spacing: -0.03em; font-weight: 500; }
+  .d-h2 { font-size: var(--text-2xl); line-height: 1.15; letter-spacing: -0.025em; font-weight: 500; }
+  .d-h3 { font-size: var(--text-xl); line-height: 1.25; letter-spacing: -0.02em; font-weight: 500; }
+  .d-h4 { font-size: var(--text-lg); line-height: 1.3; letter-spacing: -0.015em; font-weight: 500; }
+  .d-body-lg { font-size: var(--text-md); line-height: 1.55; color: var(--ink-600); }
+  .d-body { font-size: var(--text-base); line-height: 1.55; color: var(--ink-700); }
+  .d-sm { font-size: var(--text-sm); line-height: 1.5; color: var(--ink-500); }
+  .d-xs { font-size: var(--text-xs); line-height: 1.5; color: var(--ink-500); letter-spacing: 0.02em; }
+  .d-label {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+    color: var(--ink-500);
+  }
+  .d-mono {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--ink-600);
+  }
+
+  /* ====== SPACING + RADIUS ====== */
+  .scale-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-subtle);
+  }
+  .scale-row:last-child { border-bottom: none; }
+  .scale-row .tok {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    width: 110px;
+    color: var(--ink-700);
+  }
+  .scale-row .val {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-500);
+    width: 60px;
+  }
+  .scale-row .bar {
+    height: 12px;
+    background: var(--ink-900);
+    border-radius: 2px;
+  }
+  .radius-demo {
+    display: inline-block;
+    width: 72px;
+    height: 72px;
+    background: var(--ink-900);
+    margin-right: var(--space-3);
+  }
+
+  /* ====== BUTTONS ====== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 10px 18px;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 120ms ease;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .btn-primary {
+    background: var(--ink-900);
+    color: var(--paper);
+  }
+  .btn-primary:hover { background: var(--ink-700); }
+
+  .btn-secondary {
+    background: var(--paper);
+    color: var(--ink-900);
+    border-color: var(--ink-200);
+  }
+  .btn-secondary:hover { background: var(--ink-50); border-color: var(--ink-300); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-700);
+  }
+  .btn-ghost:hover { background: var(--ink-100); color: var(--ink-900); }
+
+  .btn-sm { padding: 7px 12px; font-size: var(--text-xs); }
+  .btn-lg { padding: 13px 22px; font-size: var(--text-base); }
+
+  .btn-icon-only {
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+  }
+
+  /* ====== BADGES ====== */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.02em;
+  }
+  .badge-success { background: var(--success-bg); color: var(--success-fg); }
+  .badge-warning { background: var(--warning-bg); color: var(--warning-fg); }
+  .badge-danger  { background: var(--danger-bg);  color: var(--danger-fg); }
+  .badge-info    { background: var(--info-bg);    color: var(--info-fg); }
+  .badge-neutral { background: var(--neutral-bg); color: var(--neutral-fg); }
+
+  .badge-dot::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .priority-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: var(--radius-xs);
+  }
+  .prio-high { background: var(--prio-high-bg); color: var(--prio-high-accent); }
+  .prio-med  { background: var(--prio-med-bg);  color: var(--prio-med-accent); }
+  .prio-low  { background: var(--prio-low-bg);  color: var(--prio-low-accent); }
+
+  /* ====== CARDS ====== */
+  .card {
+    background: var(--paper);
+    border: var(--border-hairline);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+  }
+  .card-elevated { box-shadow: var(--shadow-sm); border-color: transparent; }
+  .card-interactive { cursor: pointer; transition: all 150ms ease; }
+  .card-interactive:hover {
+    border-color: var(--ink-300);
+    box-shadow: var(--shadow-md);
+  }
+
+  .metric-card {
+    background: var(--paper);
+    border: var(--border-hairline);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+  }
+  .metric-card .label {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-500);
+    margin-bottom: var(--space-3);
+  }
+  .metric-card .value {
+    font-size: var(--text-2xl);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .metric-card .trend {
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--success-fg);
+    font-family: var(--font-mono);
+  }
+
+  .feature-card {
+    background: var(--paper);
+    border: var(--border-hairline);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+  }
+  .feature-card .icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--ink-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-4);
+    color: var(--ink-900);
+  }
+  .feature-card h4 {
+    font-size: var(--text-base);
+    font-weight: 500;
+    margin-bottom: var(--space-2);
+  }
+  .feature-card p {
+    font-size: var(--text-sm);
+    color: var(--ink-500);
+    line-height: 1.55;
+  }
+
+  /* ====== FORM ELEMENTS ====== */
+  .input {
+    width: 100%;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    border: var(--border-hairline);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+    color: var(--ink-900);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--ink-700);
+    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+  }
+  .input::placeholder { color: var(--ink-400); }
+
+  /* ====== FEATURE INDEX ====== */
+  .feat-idx {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--ink-400);
+    letter-spacing: 0.05em;
+  }
+
+  /* ====== GRID HELPERS ====== */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); }
+
+  .row { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+
+  /* ====== CODE BLOCK ====== */
+  pre.code {
+    background: var(--ink-50);
+    border: var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.7;
+    color: var(--ink-800);
+  }
+
+  /* ====== PATTERN BOXES ====== */
+  .pattern-box {
+    height: 160px;
+    border-radius: var(--radius-md);
+    border: var(--border-hairline);
+    position: relative;
+    overflow: hidden;
+  }
+  .pat-dots {
+    background:
+      radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0);
+    background-size: 16px 16px;
+    background-color: var(--paper);
+  }
+  .pat-grid {
+    background:
+      linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-color: var(--paper);
+  }
+  .pat-crosshatch {
+    background:
+      linear-gradient(var(--paper), var(--paper)),
+      repeating-linear-gradient(45deg, var(--ink-100) 0 1px, transparent 1px 8px);
+    background-blend-mode: normal;
+    background-color: var(--paper);
+  }
+
+  /* ====== TOKEN TABLE ====== */
+  .token-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+  }
+  .token-table th {
+    text-align: left;
+    padding: var(--space-3);
+    border-bottom: var(--border-hairline);
+    font-weight: 500;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-500);
+  }
+  .token-table td {
+    padding: var(--space-3);
+    border-bottom: var(--border-subtle);
+    vertical-align: middle;
+  }
+  .token-table code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-700);
+    background: var(--ink-50);
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* ====== SHADOW DEMO ====== */
+  .shadow-demo {
+    width: 100%;
+    aspect-ratio: 1.6;
+    background: var(--paper);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-500);
+    margin-bottom: var(--space-2);
+  }
+
+  /* ====== FOOTER ====== */
+  footer {
+    text-align: center;
+    padding: var(--space-16) var(--space-4);
+    color: var(--ink-500);
+    font-size: var(--text-sm);
+    border-top: var(--border-hairline);
+    margin-top: var(--space-16);
+  }
+  footer .logo {
+    font-size: var(--text-lg);
+    font-weight: 500;
+    color: var(--ink-900);
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-2);
+  }
+
+  /* ====== COMPONENT EXAMPLE — TESTIMONIAL ====== */
+  .testimonial {
+    background: var(--paper);
+    border: var(--border-hairline);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+  }
+  .testimonial .head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .testimonial .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ink-200), var(--ink-300));
+    flex-shrink: 0;
+  }
+  .testimonial .name { font-size: var(--text-sm); font-weight: 500; }
+  .testimonial .role { font-size: var(--text-xs); color: var(--ink-500); }
+  .testimonial .quote { font-size: var(--text-sm); color: var(--ink-700); line-height: 1.6; }
+
+  /* ====== SECTION INTRO PILL ====== */
+  .pill {
+    display: inline-block;
+    padding: 5px 12px;
+    border: var(--border-hairline);
+    border-radius: var(--radius-full);
+    background: var(--paper);
+    font-size: var(--text-xs);
+    color: var(--ink-600);
+    letter-spacing: 0.02em;
+  }
+
+  /* toast for copy */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--ink-900);
+    color: var(--paper);
+    padding: 10px 18px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: all 220ms ease;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 720px) {
+    .section-head { flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+    .section-head .desc { margin-left: 0; text-align: left; }
+    .type-row { grid-template-columns: 1fr; }
+    section.block { padding: var(--space-6); }
+  }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- ===== HERO ===== -->
+  <header class="hero">
+    <span class="eyebrow">Design System · v1.0</span>
+    <h1>EstateFlow <em>design</em> foundations &amp; <em>components</em></h1>
+    <p class="lede">A refined, minimal design language built for property-management SaaS. Tokens, type, components, and patterns — everything needed to rebuild the template faithfully.</p>
+  </header>
+
+  <!-- ===== 01 COLORS ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>Color</h2>
+      <span class="desc">Neutrals do the heavy lifting. Accents appear only in data, status, and priority signals.</span>
+    </div>
+
+    <h3 class="subhead">Neutrals — Ink Scale</h3>
+    <div class="color-grid">
+      <div class="swatch" data-hex="#0a0a0a"><div class="chip" style="background:#0a0a0a"></div><div class="name">ink-950</div><div class="hex">#0a0a0a</div></div>
+      <div class="swatch" data-hex="#111111"><div class="chip" style="background:#111111"></div><div class="name">ink-900</div><div class="hex">#111111</div></div>
+      <div class="swatch" data-hex="#1a1a1a"><div class="chip" style="background:#1a1a1a"></div><div class="name">ink-800</div><div class="hex">#1a1a1a</div></div>
+      <div class="swatch" data-hex="#2a2a2a"><div class="chip" style="background:#2a2a2a"></div><div class="name">ink-700</div><div class="hex">#2a2a2a</div></div>
+      <div class="swatch" data-hex="#4a4a4a"><div class="chip" style="background:#4a4a4a"></div><div class="name">ink-600</div><div class="hex">#4a4a4a</div></div>
+      <div class="swatch" data-hex="#6b7280"><div class="chip" style="background:#6b7280"></div><div class="name">ink-500</div><div class="hex">#6b7280</div></div>
+      <div class="swatch" data-hex="#9ca3af"><div class="chip" style="background:#9ca3af"></div><div class="name">ink-400</div><div class="hex">#9ca3af</div></div>
+      <div class="swatch" data-hex="#d1d5db"><div class="chip" style="background:#d1d5db"></div><div class="name">ink-300</div><div class="hex">#d1d5db</div></div>
+      <div class="swatch" data-hex="#e5e7eb"><div class="chip" style="background:#e5e7eb"></div><div class="name">ink-200</div><div class="hex">#e5e7eb</div></div>
+      <div class="swatch" data-hex="#f1f1f0"><div class="chip" style="background:#f1f1f0"></div><div class="name">ink-100</div><div class="hex">#f1f1f0</div></div>
+      <div class="swatch" data-hex="#f7f7f5"><div class="chip" style="background:#f7f7f5"></div><div class="name">ink-50</div><div class="hex">#f7f7f5</div></div>
+      <div class="swatch" data-hex="#fafaf8"><div class="chip" style="background:#fafaf8"></div><div class="name">ink-25 · page bg</div><div class="hex">#fafaf8</div></div>
+      <div class="swatch" data-hex="#ffffff"><div class="chip" style="background:#ffffff"></div><div class="name">paper</div><div class="hex">#ffffff</div></div>
+    </div>
+
+    <h3 class="subhead">Status — Semantic</h3>
+    <div class="color-grid">
+      <div class="swatch" data-hex="#1a7f3e"><div class="chip" style="background:#e8f5ed; border:1px solid #cde6d5"></div><div class="name">success</div><div class="hex">bg #e8f5ed · fg #1a7f3e</div></div>
+      <div class="swatch" data-hex="#a56511"><div class="chip" style="background:#fdf3e3; border:1px solid #f0e0c2"></div><div class="name">warning</div><div class="hex">bg #fdf3e3 · fg #a56511</div></div>
+      <div class="swatch" data-hex="#b42318"><div class="chip" style="background:#fde8e8; border:1px solid #f2c9c9"></div><div class="name">danger</div><div class="hex">bg #fde8e8 · fg #b42318</div></div>
+      <div class="swatch" data-hex="#1d4ed8"><div class="chip" style="background:#e8eef9; border:1px solid #c9d4ef"></div><div class="name">info</div><div class="hex">bg #e8eef9 · fg #1d4ed8</div></div>
+      <div class="swatch" data-hex="#4a4a4a"><div class="chip" style="background:#f1f1f0; border:1px solid #e0e0dd"></div><div class="name">neutral</div><div class="hex">bg #f1f1f0 · fg #4a4a4a</div></div>
+    </div>
+
+    <h3 class="subhead">Data Visualization</h3>
+    <div class="color-grid">
+      <div class="swatch" data-hex="#1f8a4c"><div class="chip" style="background:#1f8a4c"></div><div class="name">chart-1 · residential</div><div class="hex">#1f8a4c</div></div>
+      <div class="swatch" data-hex="#2f6bd9"><div class="chip" style="background:#2f6bd9"></div><div class="name">chart-2 · commercial</div><div class="hex">#2f6bd9</div></div>
+      <div class="swatch" data-hex="#e8a33d"><div class="chip" style="background:#e8a33d"></div><div class="name">chart-3 · industrial</div><div class="hex">#e8a33d</div></div>
+      <div class="swatch" data-hex="#9ca3af"><div class="chip" style="background:#9ca3af"></div><div class="name">chart-4 · other</div><div class="hex">#9ca3af</div></div>
+    </div>
+
+    <div style="margin-top: var(--space-5); font-size: var(--text-xs); color: var(--ink-500);">
+      Click any swatch to copy its hex value.
+    </div>
+  </section>
+
+  <!-- ===== 02 TYPOGRAPHY ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>Typography</h2>
+      <span class="desc">Geist for UI. Instrument Serif italic for expressive accents in display copy.</span>
+    </div>
+
+    <h3 class="subhead">Font Families</h3>
+    <div class="grid-3" style="margin-bottom: var(--space-8);">
+      <div class="card">
+        <div class="d-label" style="margin-bottom: 8px;">Sans — UI</div>
+        <div style="font-family: var(--font-sans); font-size: 28px; font-weight: 500;">Geist</div>
+        <div class="d-sm" style="margin-top: 6px;">Aa Bb Cc · 0123456789</div>
+      </div>
+      <div class="card">
+        <div class="d-label" style="margin-bottom: 8px;">Serif — Accent</div>
+        <div style="font-family: var(--font-serif); font-size: 32px; font-style: italic;">Instrument Serif</div>
+        <div class="d-sm" style="margin-top: 6px; font-family: var(--font-serif); font-style: italic;">Aa Bb Cc · 0123456789</div>
+      </div>
+      <div class="card">
+        <div class="d-label" style="margin-bottom: 8px;">Mono — Code &amp; Data</div>
+        <div style="font-family: var(--font-mono); font-size: 24px; font-weight: 500;">Geist Mono</div>
+        <div class="d-sm" style="margin-top: 6px; font-family: var(--font-mono);">Aa Bb Cc · 0123456789</div>
+      </div>
+    </div>
+
+    <h3 class="subhead">Type Scale</h3>
+    <div class="type-row">
+      <div class="meta"><strong>Display</strong>56 / 1.05 / -3.5%<br>weight 500</div>
+      <div class="d-display">Manage <em>properties</em>. Simplify operations.</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>H1</strong>42 / 1.1 / -3%<br>weight 500</div>
+      <div class="d-h1">Everything you need to manage properties</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>H2</strong>32 / 1.15 / -2.5%<br>weight 500</div>
+      <div class="d-h2">What our users say about EstateFlow</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>H3</strong>24 / 1.25 / -2%<br>weight 500</div>
+      <div class="d-h3">Centralized Property Management</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>H4</strong>20 / 1.3 / -1.5%<br>weight 500</div>
+      <div class="d-h4">Real-Time Financial Insights</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>Body Large</strong>17 / 1.55<br>weight 400</div>
+      <div class="d-body-lg">Track and manage all your properties from a single dashboard. Organize assets, monitor occupancy, and stay in complete control of your growing portfolio.</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>Body</strong>15 / 1.55<br>weight 400</div>
+      <div class="d-body">Manage tenant data, lease agreements, and renewals without a single spreadsheet. Keep everything structured, searchable, and accessible in one place.</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>Small</strong>13 / 1.5<br>weight 400</div>
+      <div class="d-sm">Centralized tenant profiles &amp; history — accessible to every team member.</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>Label</strong>11 / 1.5 / +10%<br>weight 500, uppercase</div>
+      <div class="d-label">About EstateFlow</div>
+    </div>
+    <div class="type-row">
+      <div class="meta"><strong>Mono / Numeric</strong>13<br>Geist Mono</div>
+      <div class="d-mono">UNIT-304 · £12,450 · +15% MoM</div>
+    </div>
+  </section>
+
+  <!-- ===== 03 SPACING / RADIUS / SHADOW ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>Space, radius &amp; elevation</h2>
+      <span class="desc">4px base grid. Modest radii. Shadows stay subtle except on floating elements.</span>
+    </div>
+
+    <h3 class="subhead">Spacing Scale (4px base)</h3>
+    <div>
+      <div class="scale-row"><span class="tok">--space-1</span><span class="val">4px</span><span class="bar" style="width:4px"></span></div>
+      <div class="scale-row"><span class="tok">--space-2</span><span class="val">8px</span><span class="bar" style="width:8px"></span></div>
+      <div class="scale-row"><span class="tok">--space-3</span><span class="val">12px</span><span class="bar" style="width:12px"></span></div>
+      <div class="scale-row"><span class="tok">--space-4</span><span class="val">16px</span><span class="bar" style="width:16px"></span></div>
+      <div class="scale-row"><span class="tok">--space-5</span><span class="val">20px</span><span class="bar" style="width:20px"></span></div>
+      <div class="scale-row"><span class="tok">--space-6</span><span class="val">24px</span><span class="bar" style="width:24px"></span></div>
+      <div class="scale-row"><span class="tok">--space-8</span><span class="val">32px</span><span class="bar" style="width:32px"></span></div>
+      <div class="scale-row"><span class="tok">--space-10</span><span class="val">40px</span><span class="bar" style="width:40px"></span></div>
+      <div class="scale-row"><span class="tok">--space-12</span><span class="val">48px</span><span class="bar" style="width:48px"></span></div>
+      <div class="scale-row"><span class="tok">--space-16</span><span class="val">64px</span><span class="bar" style="width:64px"></span></div>
+      <div class="scale-row"><span class="tok">--space-20</span><span class="val">80px</span><span class="bar" style="width:80px"></span></div>
+      <div class="scale-row"><span class="tok">--space-24</span><span class="val">96px</span><span class="bar" style="width:96px"></span></div>
+    </div>
+
+    <h3 class="subhead">Border Radius</h3>
+    <div class="row">
+      <div style="text-align:center">
+        <div class="radius-demo" style="border-radius:4px"></div>
+        <div class="d-xs" style="margin-top:6px">xs · 4px</div>
+      </div>
+      <div style="text-align:center">
+        <div class="radius-demo" style="border-radius:6px"></div>
+        <div class="d-xs" style="margin-top:6px">sm · 6px</div>
+      </div>
+      <div style="text-align:center">
+        <div class="radius-demo" style="border-radius:8px"></div>
+        <div class="d-xs" style="margin-top:6px">md · 8px (buttons)</div>
+      </div>
+      <div style="text-align:center">
+        <div class="radius-demo" style="border-radius:12px"></div>
+        <div class="d-xs" style="margin-top:6px">lg · 12px (cards)</div>
+      </div>
+      <div style="text-align:center">
+        <div class="radius-demo" style="border-radius:16px"></div>
+        <div class="d-xs" style="margin-top:6px">xl · 16px (sections)</div>
+      </div>
+      <div style="text-align:center">
+        <div class="radius-demo" style="border-radius:999px"></div>
+        <div class="d-xs" style="margin-top:6px">full (pills)</div>
+      </div>
+    </div>
+
+    <h3 class="subhead">Elevation / Shadows</h3>
+    <div class="grid-3">
+      <div>
+        <div class="shadow-demo" style="box-shadow: var(--shadow-xs)">xs</div>
+        <div class="d-xs"><code style="font-family:var(--font-mono)">0 1px 2px rgba(10,10,10,.04)</code></div>
+      </div>
+      <div>
+        <div class="shadow-demo" style="box-shadow: var(--shadow-sm)">sm</div>
+        <div class="d-xs"><code style="font-family:var(--font-mono)">hairlines · default cards</code></div>
+      </div>
+      <div>
+        <div class="shadow-demo" style="box-shadow: var(--shadow-md)">md</div>
+        <div class="d-xs"><code style="font-family:var(--font-mono)">hover states</code></div>
+      </div>
+      <div>
+        <div class="shadow-demo" style="box-shadow: var(--shadow-lg)">lg</div>
+        <div class="d-xs"><code style="font-family:var(--font-mono)">popovers · dropdowns</code></div>
+      </div>
+      <div>
+        <div class="shadow-demo" style="box-shadow: var(--shadow-xl)">xl</div>
+        <div class="d-xs"><code style="font-family:var(--font-mono)">modals · floating dash</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 04 BUTTONS ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>Buttons</h2>
+      <span class="desc">Primary is pure ink. Secondary is the paper + hairline pair. Ghost for low-emphasis actions.</span>
+    </div>
+
+    <h3 class="subhead">Variants</h3>
+    <div class="row" style="margin-bottom: var(--space-6)">
+      <button class="btn btn-primary">Try Demo for Free</button>
+      <button class="btn btn-secondary">Book a Live Demo</button>
+      <button class="btn btn-ghost">Learn more →</button>
+    </div>
+
+    <h3 class="subhead">Sizes</h3>
+    <div class="row" style="margin-bottom: var(--space-6)">
+      <button class="btn btn-primary btn-sm">Small</button>
+      <button class="btn btn-primary">Default</button>
+      <button class="btn btn-primary btn-lg">Large</button>
+    </div>
+
+    <h3 class="subhead">With Icon</h3>
+    <div class="row" style="margin-bottom: var(--space-6)">
+      <button class="btn btn-secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Report
+      </button>
+      <button class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Property
+      </button>
+      <button class="btn btn-secondary btn-icon-only" aria-label="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ===== 05 BADGES & STATUS ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <h2>Badges &amp; status indicators</h2>
+      <span class="desc">Softly tinted pills for states. Sharp priority tags for alerts.</span>
+    </div>
+
+    <h3 class="subhead">Semantic Pills</h3>
+    <div class="row" style="margin-bottom: var(--space-6)">
+      <span class="badge badge-success badge-dot">Occupied</span>
+      <span class="badge badge-danger badge-dot">Vacant</span>
+      <span class="badge badge-warning badge-dot">Maintenance</span>
+      <span class="badge badge-info badge-dot">Pending</span>
+      <span class="badge badge-neutral">Archived</span>
+      <span class="badge badge-success">Paid</span>
+      <span class="badge badge-danger">Overdue</span>
+    </div>
+
+    <h3 class="subhead">Priority Tags</h3>
+    <div class="row" style="margin-bottom: var(--space-6)">
+      <span class="priority-tag prio-high">HIGH</span>
+      <span class="priority-tag prio-med">MEDIUM</span>
+      <span class="priority-tag prio-low">LOW</span>
+    </div>
+
+    <h3 class="subhead">Section Eyebrow Pill</h3>
+    <div class="row">
+      <span class="pill">About EstateFlow</span>
+      <span class="pill">Features</span>
+      <span class="pill">Testimonials</span>
+    </div>
+  </section>
+
+  <!-- ===== 06 CARDS ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <h2>Cards</h2>
+      <span class="desc">The default card is paper + hairline border. Elevate only when something needs to float.</span>
+    </div>
+
+    <h3 class="subhead">Metric Card</h3>
+    <div class="grid-4" style="margin-bottom: var(--space-8)">
+      <div class="metric-card">
+        <div class="label">Total Units</div>
+        <div class="value">16</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Occupancy Rate</div>
+        <div class="value">81%</div>
+        <div class="trend">↑ +5%</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Vacant Units</div>
+        <div class="value">3</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Monthly Revenue</div>
+        <div class="value">£12,450</div>
+        <div class="trend">↑ +15%</div>
+      </div>
+    </div>
+
+    <h3 class="subhead">Feature Card</h3>
+    <div class="grid-3" style="margin-bottom: var(--space-8)">
+      <div class="feature-card">
+        <div class="icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h4>Portfolio Dashboard</h4>
+        <p>Overview of all properties, occupancy rates, and portfolio-level performance in one glance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h4>Tenant Management</h4>
+        <p>Manage tenant records, communication history, and documents from one structured profile.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <h4>Payment Tracking</h4>
+        <p>Track rent payments, invoice status, and transaction history with automated reconciliation.</p>
+      </div>
+    </div>
+
+    <h3 class="subhead">Testimonial Card</h3>
+    <div class="grid-2">
+      <div class="testimonial">
+        <div class="head">
+          <div class="avatar"></div>
+          <div>
+            <div class="name">Daniel Wong</div>
+            <div class="role">Real Estate Operator</div>
+          </div>
+        </div>
+        <p class="quote">We reduced manual administrative work by more than 60% after switching to EstateFlow. The automation features — especially for payments — have transformed our day-to-day.</p>
+      </div>
+      <div class="testimonial">
+        <div class="head">
+          <div class="avatar"></div>
+          <div>
+            <div class="name">Sarah Lim</div>
+            <div class="role">Property Consultant</div>
+          </div>
+        </div>
+        <p class="quote">EstateFlow strikes the perfect balance between simplicity and power. It&rsquo;s intuitive enough that our entire team adopted it quickly, yet robust enough for complex portfolios.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 07 FORMS ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">07</span>
+      <h2>Inputs &amp; forms</h2>
+      <span class="desc">Quiet by default. Focus ring is a 3px soft ink halo, not a bright color.</span>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label class="d-label" style="display:block; margin-bottom: 6px;">Search</label>
+        <input class="input" placeholder="Search by type or location" />
+      </div>
+      <div>
+        <label class="d-label" style="display:block; margin-bottom: 6px;">Email</label>
+        <input class="input" type="email" placeholder="you@company.com" />
+      </div>
+      <div>
+        <label class="d-label" style="display:block; margin-bottom: 6px;">Unit Number</label>
+        <input class="input" value="UNIT-304" />
+      </div>
+      <div>
+        <label class="d-label" style="display:block; margin-bottom: 6px;">Status</label>
+        <select class="input">
+          <option>Occupied</option>
+          <option>Vacant</option>
+          <option>Maintenance</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 08 PATTERNS ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">08</span>
+      <h2>Backgrounds &amp; patterns</h2>
+      <span class="desc">Subtle textures add atmosphere without shouting. Use sparingly — page-level or section-level.</span>
+    </div>
+
+    <div class="grid-3">
+      <div>
+        <div class="pattern-box pat-dots"></div>
+        <div class="d-sm" style="margin-top: 8px;"><strong style="color:var(--ink-900)">Dot grid</strong> · page background</div>
+        <pre class="code" style="margin-top:8px">background-image: radial-gradient(
+  circle at 1px 1px,
+  #d4d4d0 1px, transparent 0);
+background-size: 24px 24px;</pre>
+      </div>
+      <div>
+        <div class="pattern-box pat-grid"></div>
+        <div class="d-sm" style="margin-top: 8px;"><strong style="color:var(--ink-900)">Line grid</strong> · section dividers</div>
+        <pre class="code" style="margin-top:8px">background:
+  linear-gradient(to right, #ececea 1px, transparent 1px),
+  linear-gradient(to bottom, #ececea 1px, transparent 1px);
+background-size: 24px 24px;</pre>
+      </div>
+      <div>
+        <div class="pattern-box pat-crosshatch"></div>
+        <div class="d-sm" style="margin-top: 8px;"><strong style="color:var(--ink-900)">Crosshatch</strong> · decorative accents</div>
+        <pre class="code" style="margin-top:8px">background:
+  repeating-linear-gradient(45deg,
+    #f1f1f0 0 1px, transparent 1px 8px);</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 09 TOKEN REFERENCE ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">09</span>
+      <h2>CSS token reference</h2>
+      <span class="desc">Copy-ready variable declarations for your stylesheet or Tailwind config.</span>
+    </div>
+
+    <pre class="code">:root {
+  /* Neutrals */
+  --ink-950: #0a0a0a;   --ink-900: #111111;   --ink-800: #1a1a1a;
+  --ink-700: #2a2a2a;   --ink-600: #4a4a4a;   --ink-500: #6b7280;
+  --ink-400: #9ca3af;   --ink-300: #d1d5db;   --ink-200: #e5e7eb;
+  --ink-100: #f1f1f0;   --ink-50:  #f7f7f5;   --ink-25:  #fafaf8;
+  --paper:   #ffffff;
+
+  /* Semantic */
+  --success-bg: #e8f5ed;  --success-fg: #1a7f3e;
+  --warning-bg: #fdf3e3;  --warning-fg: #a56511;
+  --danger-bg:  #fde8e8;  --danger-fg:  #b42318;
+  --info-bg:    #e8eef9;  --info-fg:    #1d4ed8;
+
+  /* Priority */
+  --prio-high-bg: #fbeaea;  --prio-high-accent: #c24848;
+  --prio-med-bg:  #fbf0dc;  --prio-med-accent:  #b5812a;
+  --prio-low-bg:  #f1f1f0;  --prio-low-accent:  #6b6b6b;
+
+  /* Data viz */
+  --chart-1: #1f8a4c;  --chart-2: #2f6bd9;
+  --chart-3: #e8a33d;  --chart-4: #9ca3af;
+
+  /* Typography */
+  --font-sans:  'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono:  'Geist Mono', ui-monospace, monospace;
+
+  /* Radius */
+  --radius-xs: 4px;   --radius-sm: 6px;   --radius-md: 8px;
+  --radius-lg: 12px;  --radius-xl: 16px;  --radius-full: 999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(10,10,10,.04);
+  --shadow-sm: 0 1px 3px rgba(10,10,10,.06), 0 1px 2px rgba(10,10,10,.04);
+  --shadow-md: 0 4px 8px -2px rgba(10,10,10,.06), 0 2px 4px -2px rgba(10,10,10,.04);
+  --shadow-lg: 0 12px 24px -8px rgba(10,10,10,.08), 0 4px 8px -4px rgba(10,10,10,.04);
+  --shadow-xl: 0 24px 48px -12px rgba(10,10,10,.12);
+}</pre>
+  </section>
+
+  <!-- ===== 10 USAGE PRINCIPLES ===== -->
+  <section class="block">
+    <div class="section-head">
+      <span class="section-num">10</span>
+      <h2>Principles</h2>
+      <span class="desc">The rules that keep the system feeling like one product.</span>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <h4 class="d-h4" style="margin-bottom: 10px;">Neutrals first, color second</h4>
+        <p class="d-body" style="color: var(--ink-600)">A surface is white. A border is a 1px hairline. Color only appears when it carries meaning — a status, a metric, a data series. Never for decoration.</p>
+      </div>
+      <div>
+        <h4 class="d-h4" style="margin-bottom: 10px;">One italic serif moment per heading</h4>
+        <p class="d-body" style="color: var(--ink-600)">Instrument Serif italic is the signature accent — use it on one or two words inside a display heading. Never body copy, never more than twice per section.</p>
+      </div>
+      <div>
+        <h4 class="d-h4" style="margin-bottom: 10px;">Hairlines over shadows</h4>
+        <p class="d-body" style="color: var(--ink-600)">Cards are separated by 1px borders, not drop shadows. Shadows appear only on floating elements (popovers, the hero dashboard mockup).</p>
+      </div>
+      <div>
+        <h4 class="d-h4" style="margin-bottom: 10px;">Number every feature</h4>
+        <p class="d-body" style="color: var(--ink-600)">Major feature sections are labelled with monospace two-digit indices (01, 02, 03). It signals editorial rigor and echoes the dashboard&rsquo;s data-forward voice.</p>
+      </div>
+      <div>
+        <h4 class="d-h4" style="margin-bottom: 10px;">Pills are the handshake</h4>
+        <p class="d-body" style="color: var(--ink-600)">Every new section opens with an eyebrow pill (&ldquo;About&rdquo;, &ldquo;Features&rdquo;, &ldquo;Testimonials&rdquo;). It orients the reader before the headline lands.</p>
+      </div>
+      <div>
+        <h4 class="d-h4" style="margin-bottom: 10px;">Data cards are self-contained</h4>
+        <p class="d-body" style="color: var(--ink-600)">Every metric includes label, value, and — where meaningful — a mono trend indicator. Never a label alone, never a value alone.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="logo">▲ EstateFlow</div>
+    <div>Design System · Built to mirror the source template</div>
+  </footer>
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<script>
+  // click-to-copy swatches
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  document.querySelectorAll('.swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      const hex = sw.dataset.hex;
+      navigator.clipboard?.writeText(hex).then(() => {
+        sw.classList.add('copied');
+        toast.textContent = 'Copied ' + hex;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove('show');
+          sw.classList.remove('copied');
+        }, 1400);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

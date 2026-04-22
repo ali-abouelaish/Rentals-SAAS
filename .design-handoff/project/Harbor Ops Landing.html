@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Harbor Ops — Room-by-room property management for London operators</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-950:#0a0a0a; --ink-900:#111111; --ink-800:#1a1a1a; --ink-700:#2a2a2a;
+    --ink-600:#4a4a4a; --ink-500:#6b7280; --ink-400:#9ca3af; --ink-300:#d1d5db;
+    --ink-200:#e5e7eb; --ink-100:#f1f1f0; --ink-50:#f7f7f5; --ink-25:#fafaf8;
+    --paper:#ffffff;
+
+    --harbor-navy:#111111;
+    --harbor-navy-deep:#0a0a0a;
+    --harbor-sky:#9ca3af;
+    --harbor-sky-tint:#f7f7f5;
+
+    --success-bg:#e8f5ed; --success-fg:#1a7f3e;
+    --warning-bg:#fdf3e3; --warning-fg:#a56511;
+    --danger-bg:#fde8e8;  --danger-fg:#b42318;
+    --info-bg:#e8eef9;    --info-fg:#1d4ed8;
+    --neutral-bg:#f1f1f0; --neutral-fg:#4a4a4a;
+
+    --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    --font-serif:'Instrument Serif','Times New Roman',serif;
+    --font-mono:'Geist Mono',ui-monospace,monospace;
+
+    --text-xs:11px; --text-sm:13px; --text-base:15px; --text-md:17px;
+    --text-lg:20px; --text-xl:24px; --text-2xl:32px; --text-3xl:42px; --text-4xl:56px; --text-5xl:72px;
+
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+    --space-6:24px; --space-8:32px; --space-10:40px; --space-12:48px;
+    --space-16:64px; --space-20:80px; --space-24:96px;
+
+    --radius-xs:4px; --radius-sm:6px; --radius-md:8px; --radius-lg:12px;
+    --radius-xl:16px; --radius-2xl:20px; --radius-full:999px;
+
+    --shadow-xs:0 1px 2px rgba(10,10,10,.04);
+    --shadow-sm:0 1px 3px rgba(10,10,10,.06),0 1px 2px rgba(10,10,10,.04);
+    --shadow-md:0 4px 8px -2px rgba(10,10,10,.06),0 2px 4px -2px rgba(10,10,10,.04);
+    --shadow-lg:0 12px 24px -8px rgba(10,10,10,.08),0 4px 8px -4px rgba(10,10,10,.04);
+    --shadow-xl:0 24px 48px -12px rgba(10,10,10,.12);
+
+    --border-hairline:1px solid var(--ink-200);
+    --border-subtle:1px solid var(--ink-100);
+
+    --brand-primary:#111111;
+    --brand-accent:#4a4a4a;
+
+    --dot-color:#d4d4d0;
+    --grid-color:#ececea;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{
+    font-family:var(--font-sans);
+    color:var(--ink-900);
+    background:var(--ink-25);
+    font-size:var(--text-base);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    font-feature-settings:"ss01","cv11";
+    position:relative;
+  }
+  body{min-height:100vh}
+
+  /* ============ DECORATIVE BACKGROUND LAYERS ============ */
+  .bg-layer{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+  }
+  .bg-mesh{
+    background-image:
+      radial-gradient(ellipse 70% 40% at 15% -10%, color-mix(in oklab, var(--brand-accent) 20%, transparent), transparent 62%),
+      radial-gradient(ellipse 60% 45% at 110% 15%, color-mix(in oklab, var(--brand-primary) 12%, transparent), transparent 62%),
+      radial-gradient(ellipse 90% 50% at 50% 120%, color-mix(in oklab, var(--brand-accent) 14%, transparent), transparent 72%);
+  }
+  .bg-grain{
+    opacity:0.04;
+    mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size:160px 160px;
+  }
+  .bg-grid{
+    opacity:0.025;
+    color:var(--ink-900);
+    background-image:
+      linear-gradient(to right, currentColor 1px, transparent 1px),
+      linear-gradient(to bottom, currentColor 1px, transparent 1px);
+    background-size:44px 44px;
+  }
+  .page{position:relative;z-index:10}
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit}
+
+  .wrap{max-width:1200px;margin:0 auto;padding:0 var(--space-8)}
+  @media (max-width:720px){ .wrap{padding:0 var(--space-5)} }
+
+  /* ============ NAV ============ */
+  .nav{
+    position:sticky; top:0; z-index:40;
+    background:rgba(250,250,248,.85);
+    backdrop-filter:saturate(140%) blur(12px);
+    -webkit-backdrop-filter:saturate(140%) blur(12px);
+    border-bottom:var(--border-hairline);
+  }
+  .nav-inner{
+    display:flex; align-items:center; gap:var(--space-8);
+    height:64px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:500;letter-spacing:-0.01em}
+  .brand img{width:28px;height:28px;display:block}
+  .brand-name{font-size:15px}
+  .brand-name em{font-family:var(--font-serif);font-style:italic;font-weight:400}
+
+  .nav-links{display:flex;gap:var(--space-6);margin-left:var(--space-4)}
+  .nav-links a{font-size:13px;color:var(--ink-600);transition:color 120ms}
+  .nav-links a:hover{color:var(--ink-900)}
+  .nav-cta{margin-left:auto;display:flex;gap:var(--space-2);align-items:center}
+  @media (max-width:900px){ .nav-links{display:none} }
+
+  /* ============ BUTTONS ============ */
+  .btn{
+    display:inline-flex;align-items:center;gap:var(--space-2);
+    padding:10px 18px;font-size:var(--text-sm);font-weight:500;
+    border-radius:var(--radius-md);border:1px solid transparent;
+    cursor:pointer;transition:all 120ms ease;white-space:nowrap;line-height:1;
+  }
+  .btn-primary{background:var(--ink-900);color:var(--paper)}
+  .btn-primary:hover{background:var(--ink-700)}
+  .btn-secondary{background:var(--paper);color:var(--ink-900);border-color:var(--ink-200)}
+  .btn-secondary:hover{background:var(--ink-50);border-color:var(--ink-300)}
+  .btn-ghost{background:transparent;color:var(--ink-700)}
+  .btn-ghost:hover{background:var(--ink-100);color:var(--ink-900)}
+  .btn-lg{padding:13px 22px;font-size:var(--text-base)}
+  .btn-sm{padding:7px 12px;font-size:var(--text-xs)}
+
+  /* ============ PILL ============ */
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:5px 12px;border:var(--border-hairline);
+    border-radius:var(--radius-full);background:var(--paper);
+    font-size:var(--text-xs);color:var(--ink-600);letter-spacing:0.04em;
+  }
+  .pill .dot{width:5px;height:5px;border-radius:50%;background:var(--harbor-navy)}
+
+  /* ============ HERO ============ */
+  .hero{
+    position:relative;
+    padding:var(--space-24) 0 var(--space-16);
+    background:
+      radial-gradient(1200px 380px at 80% -100px, rgba(127,184,217,.16), transparent 60%),
+      radial-gradient(900px 320px at 10% 100%, rgba(30,78,126,.06), transparent 60%);
+    border-bottom:var(--border-hairline);
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0);
+    background-size:24px 24px;
+    mask-image:linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 85%);
+    -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 85%);
+  }
+  .hero-inner{position:relative;z-index:1}
+  .hero .pill{margin-bottom:var(--space-6)}
+  .hero h1{
+    font-size:clamp(40px,6vw,var(--text-5xl));
+    line-height:1.02;letter-spacing:-0.04em;
+    font-weight:500;max-width:18ch;margin-bottom:var(--space-6);
+  }
+  .hero h1 em{font-family:var(--font-serif);font-style:italic;font-weight:400;letter-spacing:-0.015em;color:var(--harbor-navy)}
+  .hero .lede{
+    color:var(--ink-500);font-size:var(--text-md);
+    max-width:58ch;margin-bottom:var(--space-8);line-height:1.6;
+  }
+  .hero-ctas{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-10)}
+  .hero-meta{
+    display:flex;gap:var(--space-8);flex-wrap:wrap;
+    padding-top:var(--space-8);border-top:var(--border-subtle);
+  }
+  .hero-meta .cell{min-width:120px}
+  .hero-meta .k{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--ink-400);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+  .hero-meta .v{font-size:var(--text-sm);color:var(--ink-800)}
+  .hero-meta .v em{font-family:var(--font-serif);font-style:italic;color:var(--harbor-navy);font-weight:400}
+
+  /* ============ HERO DASHBOARD MOCKUP ============ */
+  .dash{
+    margin-top:var(--space-12);
+    background:var(--paper);
+    border:var(--border-hairline);
+    border-radius:var(--radius-xl);
+    box-shadow:var(--shadow-xl);
+    overflow:hidden;
+    position:relative;
+  }
+  .dash-top{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 16px;border-bottom:var(--border-hairline);
+    background:var(--ink-25);
+  }
+  .dash-top .dots{display:flex;gap:6px}
+  .dash-top .dots span{width:10px;height:10px;border-radius:50%;background:var(--ink-200)}
+  .dash-top .url{
+    margin-left:var(--space-3);font-family:var(--font-mono);font-size:11px;
+    color:var(--ink-500);padding:4px 12px;background:var(--paper);
+    border:var(--border-subtle);border-radius:var(--radius-full);
+  }
+  .dash-body{display:grid;grid-template-columns:220px 1fr;min-height:540px}
+  @media (max-width:900px){ .dash-body{grid-template-columns:1fr} .dash-side{display:none} }
+
+  .dash-side{
+    border-right:var(--border-hairline);padding:var(--space-5) var(--space-4);
+    background:var(--ink-25);
+  }
+  .dash-side .ws{
+    display:flex;align-items:center;gap:10px;padding:10px;
+    border:var(--border-hairline);border-radius:var(--radius-md);
+    background:var(--paper);margin-bottom:var(--space-4);
+  }
+  .dash-side .ws .badge-ws{width:28px;height:28px;border-radius:6px;background:var(--harbor-navy);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:600}
+  .dash-side .ws-name{font-size:13px;font-weight:500}
+  .dash-side .ws-sub{font-size:11px;color:var(--ink-500);font-family:var(--font-mono)}
+  .dash-side .label{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-400);margin:var(--space-4) 0 6px;padding:0 8px}
+  .dash-side .item{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 10px;border-radius:var(--radius-sm);
+    font-size:13px;color:var(--ink-600);cursor:default;
+  }
+  .dash-side .item svg{width:15px;height:15px;color:var(--ink-500)}
+  .dash-side .item.active{background:var(--ink-100);color:var(--ink-900);font-weight:500}
+  .dash-side .item.active svg{color:var(--ink-900)}
+  .dash-side .item .count{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--ink-400)}
+
+  .dash-main{padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-5);background:var(--paper)}
+  .dash-h{
+    display:flex;align-items:center;gap:var(--space-3);
+    padding-bottom:var(--space-4);border-bottom:var(--border-subtle);
+  }
+  .dash-h h3{font-size:var(--text-md);font-weight:500;letter-spacing:-0.01em}
+  .dash-h .crumb{font-family:var(--font-mono);font-size:11px;color:var(--ink-400)}
+  .dash-h .right{margin-left:auto;display:flex;gap:8px}
+
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3)}
+  @media (max-width:700px){ .metrics{grid-template-columns:repeat(2,1fr)} }
+  .mcard{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-lg);padding:var(--space-4);
+  }
+  .mcard .lab{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-500);margin-bottom:8px}
+  .mcard .val{font-size:24px;font-weight:500;letter-spacing:-0.02em}
+  .mcard .val em{font-family:var(--font-serif);font-style:italic;font-weight:400}
+  .mcard .tr{margin-top:6px;font-size:11px;font-family:var(--font-mono)}
+  .tr-up{color:var(--success-fg)}
+  .tr-dn{color:var(--danger-fg)}
+
+  /* rooms table */
+  .rooms{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-lg);overflow:hidden;
+  }
+  .rooms .r-head{
+    display:grid;grid-template-columns:110px 1.4fr 80px 100px 100px 100px;
+    padding:10px 14px;border-bottom:var(--border-subtle);
+    background:var(--ink-25);
+    font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-500);
+  }
+  .rooms .r-row{
+    display:grid;grid-template-columns:110px 1.4fr 80px 100px 100px 100px;
+    padding:12px 14px;border-bottom:var(--border-subtle);align-items:center;
+    font-size:13px;
+  }
+  .rooms .r-row:last-child{border-bottom:none}
+  .rooms .code{font-family:var(--font-mono);font-size:12px;color:var(--ink-700)}
+  .rooms .addr{color:var(--ink-800)}
+  .rooms .sub{font-family:var(--font-mono);font-size:11px;color:var(--ink-400)}
+  .rooms .num{font-family:var(--font-mono);color:var(--ink-700);font-size:12px}
+  @media (max-width:700px){
+    .rooms .r-head, .rooms .r-row{grid-template-columns:80px 1.2fr 80px 80px}
+    .rooms .hide-mobile{display:none}
+  }
+
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:3px 9px;font-size:11px;font-weight:500;
+    border-radius:var(--radius-full);letter-spacing:0.02em;
+  }
+  .badge-success{background:var(--success-bg);color:var(--success-fg)}
+  .badge-warning{background:var(--warning-bg);color:var(--warning-fg)}
+  .badge-danger{background:var(--danger-bg);color:var(--danger-fg)}
+  .badge-info{background:var(--info-bg);color:var(--info-fg)}
+  .badge-neutral{background:var(--neutral-bg);color:var(--neutral-fg)}
+  .badge-dot::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+
+  /* mini chart */
+  .mchart{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-lg);padding:var(--space-4);
+    display:grid;grid-template-columns:1fr 220px;gap:var(--space-5);
+  }
+  @media (max-width:720px){ .mchart{grid-template-columns:1fr} }
+  .mchart .t{font-size:13px;font-weight:500;margin-bottom:4px}
+  .mchart .s{font-size:11px;color:var(--ink-500);font-family:var(--font-mono);margin-bottom:var(--space-3)}
+  .bars{display:flex;align-items:flex-end;gap:8px;height:80px}
+  .bars span{flex:1;background:var(--harbor-navy);border-radius:2px;opacity:.85}
+  .bars span:nth-child(even){background:var(--harbor-sky)}
+  .brk{
+    display:flex;flex-direction:column;gap:8px;
+    padding-left:var(--space-5);border-left:var(--border-subtle);
+  }
+  .brk .row{display:flex;justify-content:space-between;font-size:12px}
+  .brk .row .k{color:var(--ink-500)}
+  .brk .row .v{font-family:var(--font-mono);color:var(--ink-900)}
+
+  /* ============ SECTIONS ============ */
+  section.sec{padding:var(--space-24) 0;border-bottom:var(--border-hairline)}
+  section.sec.tight{padding:var(--space-20) 0}
+  .sec-head{margin-bottom:var(--space-12)}
+  .sec-head .pill{margin-bottom:var(--space-5)}
+  .sec-head h2{
+    font-size:clamp(28px,3.6vw,var(--text-3xl));
+    line-height:1.08;letter-spacing:-0.03em;font-weight:500;
+    max-width:22ch;
+  }
+  .sec-head h2 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--harbor-navy)}
+  .sec-head .lede{color:var(--ink-500);max-width:60ch;margin-top:var(--space-4);font-size:var(--text-md);line-height:1.6}
+  .sec-head.row-head{display:grid;grid-template-columns:1.2fr 1fr;gap:var(--space-10);align-items:end}
+  @media (max-width:900px){ .sec-head.row-head{grid-template-columns:1fr} }
+
+  /* ============ PROBLEM ============ */
+  .problem{
+    display:grid;grid-template-columns:1fr 1fr;gap:var(--space-8);
+  }
+  @media (max-width:900px){ .problem{grid-template-columns:1fr} }
+  .problem-card{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-xl);padding:var(--space-8);
+    position:relative;
+  }
+  .problem-card .tag{font-family:var(--font-mono);font-size:11px;color:var(--ink-400);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:var(--space-4)}
+  .problem-card h3{font-size:var(--text-xl);font-weight:500;letter-spacing:-0.02em;margin-bottom:var(--space-3)}
+  .problem-card p{color:var(--ink-600);font-size:var(--text-sm);line-height:1.65;margin-bottom:var(--space-4)}
+  .stack-list{display:flex;flex-wrap:wrap;gap:8px}
+  .stack-list .s{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;background:var(--ink-50);
+    border:var(--border-subtle);border-radius:var(--radius-sm);
+    font-size:12px;color:var(--ink-600);font-family:var(--font-mono);
+  }
+  .stack-list .s.strike{text-decoration:line-through;text-decoration-color:var(--ink-400);color:var(--ink-500)}
+
+  .problem-card.dark{
+    background:var(--ink-900);color:var(--paper);
+    border-color:transparent;
+    background-image:
+      radial-gradient(600px 200px at 100% 0%, rgba(127,184,217,.14), transparent 60%);
+  }
+  .problem-card.dark .tag{color:var(--ink-400)}
+  .problem-card.dark p{color:var(--ink-300)}
+  .problem-card.dark .stack-list .s{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08);color:var(--ink-200)}
+  .problem-card.dark .mini{
+    margin-top:var(--space-5);padding:var(--space-4);
+    border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-md);
+    display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4);
+  }
+  .problem-card.dark .mini .k{font-size:11px;color:var(--ink-400);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+  .problem-card.dark .mini .v{font-family:var(--font-mono);font-size:20px;color:var(--harbor-sky)}
+
+  /* ============ MODULES ============ */
+  .modules{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+    border:var(--border-hairline);border-radius:var(--radius-xl);overflow:hidden;
+    background:var(--paper);
+  }
+  @media (max-width:900px){ .modules{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:600px){ .modules{grid-template-columns:1fr} }
+  .mod{
+    padding:var(--space-8);
+    border-right:var(--border-subtle);
+    border-bottom:var(--border-subtle);
+    position:relative;
+    transition:background 200ms ease;
+  }
+  .mod:hover{background:var(--ink-25)}
+  .modules .mod:nth-child(3n){border-right:none}
+  .modules .mod:nth-last-child(-n+3){border-bottom:none}
+  @media (max-width:900px){
+    .modules .mod{border-right:var(--border-subtle);border-bottom:var(--border-subtle)}
+    .modules .mod:nth-child(3n){border-right:var(--border-subtle)}
+    .modules .mod:nth-child(2n){border-right:none}
+    .modules .mod:nth-last-child(-n+3){border-bottom:var(--border-subtle)}
+    .modules .mod:nth-last-child(-n+2){border-bottom:none}
+  }
+  @media (max-width:600px){
+    .modules .mod{border-right:none !important}
+    .modules .mod:not(:last-child){border-bottom:var(--border-subtle) !important}
+  }
+  .mod .idx{font-family:var(--font-mono);font-size:12px;color:var(--ink-400);letter-spacing:0.06em;margin-bottom:var(--space-5)}
+  .mod .ico{
+    width:40px;height:40px;border-radius:var(--radius-sm);
+    background:var(--ink-50);border:var(--border-subtle);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:var(--space-4);color:var(--ink-800);
+  }
+  .mod h4{font-size:var(--text-md);font-weight:500;letter-spacing:-0.01em;margin-bottom:var(--space-2)}
+  .mod h4 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--harbor-navy)}
+  .mod p{font-size:var(--text-sm);color:var(--ink-500);line-height:1.6;margin-bottom:var(--space-4)}
+  .mod ul{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:auto}
+  .mod ul li{font-size:12px;color:var(--ink-600);display:flex;align-items:center;gap:8px}
+  .mod ul li::before{content:"";width:3px;height:3px;border-radius:50%;background:var(--harbor-navy)}
+
+  /* ============ ACQUISITIONS ============ */
+  .acq{
+    display:grid;grid-template-columns:1fr 1.1fr;gap:var(--space-10);align-items:stretch;
+  }
+  @media (max-width:900px){ .acq{grid-template-columns:1fr} }
+  .acq-copy h3{font-size:var(--text-2xl);font-weight:500;letter-spacing:-0.025em;line-height:1.15;margin-bottom:var(--space-5)}
+  .acq-copy h3 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--harbor-navy)}
+  .acq-copy p{color:var(--ink-600);font-size:var(--text-md);line-height:1.65;margin-bottom:var(--space-6)}
+  .acq-list{display:flex;flex-direction:column;gap:var(--space-4)}
+  .acq-list .item{display:flex;gap:var(--space-4);padding:var(--space-4) 0;border-top:var(--border-subtle)}
+  .acq-list .item:first-child{border-top:none;padding-top:0}
+  .acq-list .n{font-family:var(--font-mono);font-size:12px;color:var(--ink-400);min-width:32px;padding-top:2px}
+  .acq-list h5{font-size:14px;font-weight:500;margin-bottom:4px}
+  .acq-list p{font-size:13px;color:var(--ink-500);margin:0;line-height:1.55}
+
+  .calc{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-xl);overflow:hidden;
+    display:flex;flex-direction:column;
+    box-shadow:var(--shadow-md);
+  }
+  .calc-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:var(--border-hairline);background:var(--ink-25)}
+  .calc-top .ttl{font-family:var(--font-mono);font-size:11px;color:var(--ink-500);letter-spacing:0.08em;text-transform:uppercase}
+  .calc-top .right{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-500);font-family:var(--font-mono)}
+  .calc-top .live{width:6px;height:6px;border-radius:50%;background:var(--success-fg);box-shadow:0 0 0 3px rgba(26,127,62,.15)}
+
+  .listing{padding:var(--space-5);border-bottom:var(--border-subtle);display:grid;grid-template-columns:80px 1fr;gap:var(--space-4)}
+  .listing .photo{
+    height:80px;border-radius:var(--radius-md);background:var(--harbor-sky-tint);
+    background-image:repeating-linear-gradient(45deg, rgba(30,78,126,.08) 0 1px, transparent 1px 8px);
+    border:var(--border-subtle);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:10px;color:var(--harbor-navy);letter-spacing:0.08em;text-align:center;padding:4px;
+  }
+  .listing h6{font-size:14px;font-weight:500;margin-bottom:4px;letter-spacing:-0.01em}
+  .listing .addr{font-size:12px;color:var(--ink-500);font-family:var(--font-mono);margin-bottom:8px}
+  .listing .tags{display:flex;gap:6px;flex-wrap:wrap}
+
+  .calc-body{padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-4)}
+  .calc-row{display:grid;grid-template-columns:1fr auto;gap:var(--space-4);align-items:center;padding:8px 0;border-bottom:var(--border-subtle)}
+  .calc-row:last-child{border-bottom:none}
+  .calc-row .k{font-size:13px;color:var(--ink-600)}
+  .calc-row .v{font-family:var(--font-mono);font-size:13px;color:var(--ink-900)}
+  .calc-row.total{padding-top:var(--space-3);margin-top:var(--space-2);border-top:1px solid var(--ink-300);border-bottom:none}
+  .calc-row.total .k{font-weight:500;color:var(--ink-900);font-size:14px}
+  .calc-row.total .v{font-size:18px;color:var(--harbor-navy);font-weight:500}
+
+  .verdict{
+    padding:var(--space-5);background:#f0f8f2;border-top:var(--border-subtle);
+    display:flex;align-items:center;gap:var(--space-4);
+  }
+  .verdict .icon{
+    width:36px;height:36px;border-radius:50%;
+    background:var(--success-fg);color:#fff;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .verdict .t{font-size:14px;font-weight:500;color:var(--success-fg)}
+  .verdict .s{font-size:12px;color:var(--ink-600);font-family:var(--font-mono);margin-top:2px}
+
+  /* ============ PROFIT ============ */
+  .profit{
+    display:grid;grid-template-columns:1.1fr 1fr;gap:var(--space-10);align-items:start;
+  }
+  @media (max-width:900px){ .profit{grid-template-columns:1fr} }
+
+  .prop-card{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow-sm);
+  }
+  .prop-head{padding:var(--space-5);border-bottom:var(--border-subtle);display:flex;align-items:center;gap:var(--space-4)}
+  .prop-head .code{font-family:var(--font-mono);font-size:11px;color:var(--ink-400);letter-spacing:0.06em}
+  .prop-head .addr{font-size:15px;font-weight:500;letter-spacing:-0.01em}
+  .prop-head .sub{font-size:12px;color:var(--ink-500);font-family:var(--font-mono);margin-top:2px}
+  .prop-head .right{margin-left:auto;text-align:right}
+  .prop-head .right .k{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-500)}
+  .prop-head .right .v{font-size:18px;font-weight:500;color:var(--success-fg);font-family:var(--font-mono);margin-top:2px}
+
+  .room-row{
+    display:grid;grid-template-columns:56px 1fr 80px 90px 90px 80px;
+    align-items:center;
+    padding:14px var(--space-5);border-bottom:var(--border-subtle);
+    font-size:13px;
+  }
+  .room-row:last-child{border-bottom:none}
+  .room-row .rn{
+    width:40px;height:40px;border-radius:8px;
+    background:var(--ink-50);border:var(--border-subtle);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:12px;color:var(--ink-700);font-weight:500;
+  }
+  .room-row .rn.vacant{background:#fde8e8;border-color:#f2c9c9;color:var(--danger-fg)}
+  .room-row .tenant .nm{font-size:13px;color:var(--ink-900);font-weight:500}
+  .room-row .tenant .meta{font-size:11px;color:var(--ink-500);font-family:var(--font-mono);margin-top:2px}
+  .room-row .num{font-family:var(--font-mono);font-size:12px;text-align:right}
+  .room-row .num.pos{color:var(--success-fg)}
+  .room-row .num.neg{color:var(--danger-fg)}
+  .room-row .bar{
+    height:4px;background:var(--ink-100);border-radius:2px;overflow:hidden;
+  }
+  .room-row .bar span{display:block;height:100%;background:var(--harbor-navy);border-radius:2px}
+  @media (max-width:700px){
+    .room-row{grid-template-columns:40px 1fr 70px 70px}
+    .room-row .hide-mobile{display:none}
+    .room-row .rn{width:32px;height:32px}
+  }
+
+  .profit-copy h3{font-size:var(--text-2xl);font-weight:500;letter-spacing:-0.025em;line-height:1.15;margin-bottom:var(--space-5)}
+  .profit-copy h3 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--harbor-navy)}
+  .profit-copy p{color:var(--ink-600);font-size:var(--text-md);line-height:1.65;margin-bottom:var(--space-6)}
+  .profit-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-4);margin-top:var(--space-6)}
+  .profit-stats .cell{border-top:1px solid var(--ink-300);padding-top:var(--space-3)}
+  .profit-stats .v{font-size:var(--text-2xl);font-weight:500;letter-spacing:-0.02em}
+  .profit-stats .v em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--harbor-navy)}
+  .profit-stats .k{font-size:12px;color:var(--ink-500);margin-top:4px;font-family:var(--font-mono);letter-spacing:0.04em}
+
+  /* ============ WORKSPACE ============ */
+  .ws-panel{
+    background:var(--ink-900);color:var(--paper);
+    border-radius:var(--radius-2xl);overflow:hidden;
+    padding:var(--space-16) var(--space-12);
+    position:relative;
+    background-image:
+      radial-gradient(800px 300px at 100% 0%, rgba(127,184,217,.12), transparent 60%),
+      radial-gradient(600px 240px at 0% 100%, rgba(30,78,126,.18), transparent 60%);
+  }
+  @media (max-width:720px){ .ws-panel{padding:var(--space-10) var(--space-6)} }
+  .ws-panel .pill{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:var(--ink-300)}
+  .ws-panel h3{font-size:clamp(26px,3.2vw,var(--text-2xl));font-weight:500;letter-spacing:-0.025em;line-height:1.15;margin:var(--space-5) 0 var(--space-4);max-width:24ch}
+  .ws-panel h3 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--harbor-sky)}
+  .ws-panel p.lede{color:var(--ink-300);font-size:var(--text-md);max-width:62ch;line-height:1.65}
+
+  .ws-toggle{
+    margin-top:var(--space-10);
+    display:inline-flex;padding:4px;gap:4px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:var(--radius-full);
+  }
+  .ws-toggle button{
+    padding:8px 16px;background:transparent;border:none;color:var(--ink-300);
+    font-size:13px;border-radius:var(--radius-full);cursor:pointer;font-weight:500;
+    display:inline-flex;align-items:center;gap:8px;
+    transition:all 160ms ease;
+  }
+  .ws-toggle button .sw{width:18px;height:18px;border-radius:5px;background:rgba(255,255,255,.1);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px}
+  .ws-toggle button.active{background:var(--paper);color:var(--ink-900)}
+  .ws-toggle button.active .sw{background:var(--harbor-navy);color:#fff}
+  .ws-toggle button.active[data-ws="T"] .sw{background:#2a2a2a}
+
+  .ws-content{
+    margin-top:var(--space-8);
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:var(--radius-xl);
+    padding:var(--space-8);
+    display:grid;grid-template-columns:1fr 1fr;gap:var(--space-10);
+  }
+  @media (max-width:780px){ .ws-content{grid-template-columns:1fr;gap:var(--space-6)} }
+  .ws-content h5{font-size:14px;font-weight:500;margin-bottom:var(--space-3);color:var(--paper)}
+  .ws-content p{font-size:13px;color:var(--ink-400);line-height:1.65}
+  .ws-content ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:var(--space-4)}
+  .ws-content ul li{font-size:13px;color:var(--ink-300);display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:var(--radius-sm)}
+  .ws-content ul li .mono{font-family:var(--font-mono);font-size:11px;color:var(--ink-500);margin-left:auto}
+
+  /* ============ TESTIMONIALS ============ */
+  .testimonials{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
+  @media (max-width:900px){ .testimonials{grid-template-columns:1fr} }
+  .quote-card{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-xl);padding:var(--space-6);
+    display:flex;flex-direction:column;gap:var(--space-5);
+  }
+  .quote-card .mk{font-family:var(--font-serif);font-style:italic;font-size:48px;line-height:.5;color:var(--harbor-sky);height:22px}
+  .quote-card .q{font-size:15px;line-height:1.6;color:var(--ink-800)}
+  .quote-card .q em{font-family:var(--font-serif);font-style:italic;color:var(--harbor-navy);font-weight:400}
+  .quote-card .who{
+    display:flex;align-items:center;gap:12px;
+    padding-top:var(--space-4);border-top:var(--border-subtle);margin-top:auto;
+  }
+  .quote-card .avatar{
+    width:38px;height:38px;border-radius:50%;
+    background:linear-gradient(135deg,var(--harbor-sky-tint),var(--ink-100));
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:12px;color:var(--harbor-navy);font-weight:600;
+  }
+  .quote-card .name{font-size:13px;font-weight:500}
+  .quote-card .role{font-size:11px;color:var(--ink-500);font-family:var(--font-mono);margin-top:2px}
+
+  /* ============ FOUNDER ============ */
+  .founder{
+    background:var(--paper);border:var(--border-hairline);
+    border-radius:var(--radius-xl);padding:var(--space-10);
+    display:grid;grid-template-columns:160px 1fr;gap:var(--space-8);align-items:start;
+  }
+  @media (max-width:720px){ .founder{grid-template-columns:1fr;padding:var(--space-6)} }
+  .founder .port{
+    width:160px;height:200px;border-radius:var(--radius-md);
+    background:var(--harbor-sky-tint);
+    background-image:repeating-linear-gradient(45deg, rgba(30,78,126,.1) 0 1px, transparent 1px 10px);
+    border:var(--border-subtle);
+    display:flex;align-items:flex-end;padding:10px;
+    font-family:var(--font-mono);font-size:10px;color:var(--harbor-navy);letter-spacing:0.08em;
+  }
+  .founder .tag{font-family:var(--font-mono);font-size:11px;color:var(--ink-400);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:var(--space-3)}
+  .founder blockquote{font-size:var(--text-lg);line-height:1.45;letter-spacing:-0.01em;color:var(--ink-800);margin-bottom:var(--space-5);font-weight:400}
+  .founder blockquote em{font-family:var(--font-serif);font-style:italic;color:var(--harbor-navy);font-weight:400}
+  .founder .signoff{font-size:13px;color:var(--ink-600)}
+  .founder .signoff strong{color:var(--ink-900);font-weight:500}
+  .postcodes{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--space-4)}
+  .postcodes .pc{
+    padding:5px 10px;background:var(--ink-50);border:var(--border-subtle);
+    border-radius:var(--radius-full);font-family:var(--font-mono);font-size:11px;
+    color:var(--ink-700);letter-spacing:0.04em;
+  }
+
+  /* ============ CTA ============ */
+  .cta{
+    border:var(--border-hairline);border-radius:var(--radius-2xl);
+    background:var(--paper);
+    padding:var(--space-16) var(--space-12);
+    display:grid;grid-template-columns:1fr auto;gap:var(--space-10);align-items:center;
+    position:relative;overflow:hidden;
+    background-image:radial-gradient(800px 400px at 100% 0%, rgba(127,184,217,.18), transparent 60%);
+  }
+  @media (max-width:780px){ .cta{grid-template-columns:1fr;padding:var(--space-10) var(--space-6);gap:var(--space-6)} }
+  .cta h3{
+    font-size:clamp(28px,3.4vw,var(--text-3xl));
+    line-height:1.08;letter-spacing:-0.03em;font-weight:500;max-width:18ch;
+  }
+  .cta h3 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--harbor-navy)}
+  .cta p{color:var(--ink-500);margin-top:var(--space-4);font-size:var(--text-md);max-width:48ch;line-height:1.6}
+  .cta form{display:flex;gap:var(--space-2);flex-wrap:wrap}
+  .input{
+    padding:12px 16px;font-family:inherit;font-size:14px;
+    border:var(--border-hairline);border-radius:var(--radius-md);
+    background:var(--paper);color:var(--ink-900);min-width:260px;
+  }
+  .input:focus{outline:none;border-color:var(--ink-700);box-shadow:0 0 0 3px rgba(10,10,10,.08)}
+  .cta-meta{margin-top:var(--space-4);display:flex;gap:var(--space-5);flex-wrap:wrap;font-size:12px;color:var(--ink-500);font-family:var(--font-mono)}
+  .cta-meta span{display:inline-flex;align-items:center;gap:6px}
+  .cta-meta span::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--success-fg)}
+
+  /* ============ FOOTER ============ */
+  footer.foot{padding:var(--space-16) 0 var(--space-10);border-top:var(--border-hairline)}
+  .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:var(--space-10)}
+  @media (max-width:780px){ .foot-grid{grid-template-columns:1fr 1fr;gap:var(--space-8)} }
+  .foot-brand{display:flex;align-items:center;gap:10px;margin-bottom:var(--space-4)}
+  .foot-brand img{width:24px;height:24px}
+  .foot-brand span{font-size:14px;font-weight:500}
+  .foot p.tag{color:var(--ink-500);font-size:13px;max-width:40ch;line-height:1.6}
+  .foot h6{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-400);margin-bottom:var(--space-4);font-weight:500}
+  .foot ul{list-style:none;display:flex;flex-direction:column;gap:var(--space-2)}
+  .foot ul a{font-size:13px;color:var(--ink-600)}
+  .foot ul a:hover{color:var(--ink-900)}
+  .foot-bottom{
+    margin-top:var(--space-12);padding-top:var(--space-6);
+    border-top:var(--border-subtle);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);
+    font-size:12px;color:var(--ink-500);font-family:var(--font-mono);
+  }
+
+  /* responsive type tuning */
+  @media (max-width:720px){
+    section.sec{padding:var(--space-20) 0}
+    .hero{padding:var(--space-20) 0 var(--space-12)}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-layer bg-mesh"></div>
+<div class="bg-layer bg-grain"></div>
+<div class="bg-layer bg-grid"></div>
+
+<div class="page">
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a href="#" class="brand">
+      <img src="assets/harbor-logo.png" alt="Harbor Ops" />
+      <span class="brand-name">Harbor <em>Ops</em></span>
+    </a>
+    <div class="nav-links">
+      <a href="#problem">Why Harbor</a>
+      <a href="#modules">Modules</a>
+      <a href="#acquisitions">Acquisitions</a>
+      <a href="#profitability">Profitability</a>
+      <a href="#workspaces">Workspaces</a>
+      <a href="#pricing">Access</a>
+    </div>
+    <div class="nav-cta">
+      <a href="#pricing" class="btn btn-ghost btn-sm">Sign in</a>
+      <a href="#pricing" class="btn btn-primary btn-sm">Request access</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap hero-inner">
+    <span class="pill"><span class="dot"></span>Built for London HMO operators</span>
+    <h1>The operating system for <em>room-by-room</em> property management.</h1>
+    <p class="lede">Harbor Ops replaces the spreadsheets, generic CRMs, SpareRoom tabs and accounting exports that small-to-mid London operators stitch together. Track occupancy, margin and maintenance at the bedroom level — the unit London actually rents.</p>
+
+    <div class="hero-ctas">
+      <a href="#pricing" class="btn btn-primary btn-lg">Request access</a>
+      <a href="#modules" class="btn btn-secondary btn-lg">See the modules →</a>
+    </div>
+
+    <div class="hero-meta">
+      <div class="cell">
+        <div class="k">Portfolio size</div>
+        <div class="v">10–200 units <em>with rooms</em></div>
+      </div>
+      <div class="cell">
+        <div class="k">Built for</div>
+        <div class="v">Letting agencies · HMO operators · R2R</div>
+      </div>
+      <div class="cell">
+        <div class="k">Live data</div>
+        <div class="v">SpareRoom feed · margin per room</div>
+      </div>
+      <div class="cell">
+        <div class="k">Workspaces</div>
+        <div class="v">Agency <em>+</em> management, in one codebase</div>
+      </div>
+    </div>
+
+    <!-- dashboard mockup -->
+    <div class="dash">
+      <div class="dash-top">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="url">app.harborops.co/portfolio/hmo-zone2</div>
+      </div>
+      <div class="dash-body">
+        <aside class="dash-side">
+          <div class="ws">
+            <div class="badge-ws">HO</div>
+            <div>
+              <div class="ws-name">Harbor Ops</div>
+              <div class="ws-sub">management · 47 rooms</div>
+            </div>
+          </div>
+          <div class="label">Operate</div>
+          <div class="item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Portfolio <span class="count">12</span>
+          </div>
+          <div class="item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V12h6v9"/></svg>
+            Properties <span class="count">12</span>
+          </div>
+          <div class="item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V5h10v3"/></svg>
+            Rooms <span class="count">47</span>
+          </div>
+          <div class="item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/></svg>
+            Tenants <span class="count">42</span>
+          </div>
+          <div class="item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Bookings <span class="count">8</span>
+          </div>
+          <div class="label">Grow</div>
+          <div class="item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            Acquisitions <span class="count">3</span>
+          </div>
+          <div class="item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Profitability
+          </div>
+        </aside>
+
+        <div class="dash-main">
+          <div class="dash-h">
+            <div>
+              <div class="crumb">PORTFOLIO · APRIL 2026</div>
+              <h3>Rooms overview</h3>
+            </div>
+            <div class="right">
+              <span class="badge badge-success badge-dot">Live</span>
+              <button class="btn btn-secondary btn-sm">Export</button>
+            </div>
+          </div>
+
+          <div class="metrics">
+            <div class="mcard">
+              <div class="lab">Rooms let</div>
+              <div class="val">42<span style="color:var(--ink-400);font-size:16px;"> / 47</span></div>
+              <div class="tr tr-up">↑ +3 MoM</div>
+            </div>
+            <div class="mcard">
+              <div class="lab">Occupancy</div>
+              <div class="val">89<em>.4</em>%</div>
+              <div class="tr tr-up">↑ +4.2%</div>
+            </div>
+            <div class="mcard">
+              <div class="lab">Monthly rent roll</div>
+              <div class="val">£41,820</div>
+              <div class="tr tr-up">↑ +£1,640</div>
+            </div>
+            <div class="mcard">
+              <div class="lab">Margin / room</div>
+              <div class="val">£218</div>
+              <div class="tr tr-dn">↓ £12 vs target</div>
+            </div>
+          </div>
+
+          <div class="rooms">
+            <div class="r-head">
+              <div>UNIT</div>
+              <div>ADDRESS · ROOM</div>
+              <div>RENT</div>
+              <div class="hide-mobile">MARGIN</div>
+              <div class="hide-mobile">RENEWAL</div>
+              <div>STATUS</div>
+            </div>
+            <div class="r-row">
+              <div class="code">W2-04 · R2</div>
+              <div><div class="addr">Sussex Gardens</div><div class="sub">W2 · double en-suite</div></div>
+              <div class="num">£1,180</div>
+              <div class="num hide-mobile">+£284</div>
+              <div class="num hide-mobile">14 Jun</div>
+              <div><span class="badge badge-success badge-dot">Let</span></div>
+            </div>
+            <div class="r-row">
+              <div class="code">SW12-03 · R3</div>
+              <div><div class="addr">Balham High Rd</div><div class="sub">SW12 · single</div></div>
+              <div class="num">£820</div>
+              <div class="num hide-mobile">+£142</div>
+              <div class="num hide-mobile">02 Aug</div>
+              <div><span class="badge badge-success badge-dot">Let</span></div>
+            </div>
+            <div class="r-row">
+              <div class="code">SE16-01 · R1</div>
+              <div><div class="addr">Rotherhithe St</div><div class="sub">SE16 · double</div></div>
+              <div class="num">£1,050</div>
+              <div class="num hide-mobile">—</div>
+              <div class="num hide-mobile">—</div>
+              <div><span class="badge badge-danger badge-dot">Vacant · 11d</span></div>
+            </div>
+            <div class="r-row">
+              <div class="code">E2-02 · R4</div>
+              <div><div class="addr">Hackney Rd</div><div class="sub">E2 · double</div></div>
+              <div class="num">£960</div>
+              <div class="num hide-mobile">+£198</div>
+              <div class="num hide-mobile">29 Apr</div>
+              <div><span class="badge badge-warning badge-dot">Renewal due</span></div>
+            </div>
+          </div>
+
+          <div class="mchart">
+            <div>
+              <div class="t">Margin per room · last 6 months</div>
+              <div class="s">AVG £218  ·  TARGET £230  ·  P25 £164 · P75 £284</div>
+              <div class="bars">
+                <span style="height:52%"></span>
+                <span style="height:60%"></span>
+                <span style="height:64%"></span>
+                <span style="height:72%"></span>
+                <span style="height:80%"></span>
+                <span style="height:74%"></span>
+              </div>
+            </div>
+            <div class="brk">
+              <div class="row"><span class="k">Rent</span><span class="v">£41,820</span></div>
+              <div class="row"><span class="k">Bills</span><span class="v">−£6,240</span></div>
+              <div class="row"><span class="k">Mgmt fees</span><span class="v">−£2,090</span></div>
+              <div class="row"><span class="k">Maintenance</span><span class="v">−£1,214</span></div>
+              <div class="row" style="border-top:1px solid var(--ink-200);padding-top:8px;margin-top:4px"><span class="k" style="font-weight:500;color:var(--ink-900)">Net margin</span><span class="v" style="color:var(--harbor-navy);font-weight:500">£32,276</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ PROBLEM ============ -->
+<section class="sec" id="problem">
+  <div class="wrap">
+    <div class="sec-head row-head">
+      <div>
+        <span class="pill">The problem</span>
+        <h2 style="margin-top:var(--space-5)">London doesn't rent by the flat. It rents <em>by the room</em>.</h2>
+      </div>
+      <p class="lede">Most property software was built for a landlord with one tenant per unit. A huge share of London stock doesn't work that way — which means operators spend their week in workarounds instead of their portfolio.</p>
+    </div>
+
+    <div class="problem">
+      <div class="problem-card">
+        <div class="tag">Before · the fragmented stack</div>
+        <h3>Seven tabs, one spreadsheet, no margin visibility.</h3>
+        <p>The generic CRM logs leads. Excel tracks margin. SpareRoom lives in another tab. Accounting exports sit in Drive. Every room is a fake "property." Every reconciliation is manual.</p>
+        <div class="stack-list">
+          <span class="s strike">Excel: margin.xlsx</span>
+          <span class="s strike">Generic CRM</span>
+          <span class="s strike">SpareRoom tabs</span>
+          <span class="s strike">Xero exports</span>
+          <span class="s strike">Google Docs contracts</span>
+          <span class="s strike">WhatsApp threads</span>
+        </div>
+      </div>
+      <div class="problem-card dark">
+        <div class="tag">After · Harbor Ops</div>
+        <h3>Rooms-first data model. Margin by bedroom. Acquisitions next to operations.</h3>
+        <p>Every property breaks down to the individual room. Occupancy, rent, renewals, maintenance, margin — all tracked at the bedroom level, where the profitability actually happens.</p>
+        <div class="mini">
+          <div><div class="k">Per-room margin</div><div class="v">£218</div></div>
+          <div><div class="k">Days to fill</div><div class="v">11.4</div></div>
+          <div><div class="k">Rent collected</div><div class="v">98%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MODULES ============ -->
+<section class="sec" id="modules">
+  <div class="wrap">
+    <div class="sec-head row-head">
+      <div>
+        <span class="pill">Modules</span>
+        <h2 style="margin-top:var(--space-5)">Six modules. <em>One</em> operating picture.</h2>
+      </div>
+      <p class="lede">Every module is built on the same rooms-first data model — so profitability, maintenance, bookings and acquisitions all speak to the same bedroom-level truth.</p>
+    </div>
+
+    <div class="modules">
+      <div class="mod">
+        <div class="idx">01 / 06</div>
+        <div class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/><path d="M6 14h12"/></svg>
+        </div>
+        <h4>Properties &amp; <em>rooms</em></h4>
+        <p>Every property breaks down to the individual bedroom. Track occupancy, rent, condition and renewal at room level — not just unit level.</p>
+        <ul>
+          <li>Room-level floorplans</li>
+          <li>En-suite / shared flags</li>
+          <li>Condition photos &amp; history</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="idx">02 / 06</div>
+        <div class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
+        </div>
+        <h4>Tenants &amp; contracts</h4>
+        <p>Leads through offboarding in one lifecycle. Digital signatures, automated renewals, communication history attached to the room.</p>
+        <ul>
+          <li>Lead → applicant → tenant</li>
+          <li>Digital signing &amp; references</li>
+          <li>Renewal reminders on rails</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="idx">03 / 06</div>
+        <div class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="7" y1="15" x2="10" y2="15"/></svg>
+        </div>
+        <h4>Bookings &amp; payments</h4>
+        <p>Rent collection, invoice status, reconciliation and arrears tracking. Long-term tenancies and short lets live in one ledger.</p>
+        <ul>
+          <li>GoCardless &amp; bank feeds</li>
+          <li>Arrears chaser workflows</li>
+          <li>Short-let support</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="idx">04 / 06</div>
+        <div class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h4>Profitability</h4>
+        <p>Real margin per property and per room. Not revenue — profit after bills, management fees and maintenance. See which rooms earn and which leak.</p>
+        <ul>
+          <li>Margin per bedroom</li>
+          <li>Net yield vs target</li>
+          <li>Leak detection</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="idx">05 / 06</div>
+        <div class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 14l2 2 4-4"/></svg>
+        </div>
+        <h4>Maintenance</h4>
+        <p>Ticketing, vendor assignment, scheduling and cost tracking — tied back to profitability so you see the true cost of every unit.</p>
+        <ul>
+          <li>Tenant ticket portal</li>
+          <li>Vendor SLA tracking</li>
+          <li>Cost flows into P&amp;L</li>
+        </ul>
+      </div>
+
+      <div class="mod">
+        <div class="idx">06 / 06</div>
+        <div class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <h4>Acquisitions &amp; <em>market</em></h4>
+        <p>Live SpareRoom feed plus an underwriting calculator. Know whether a deal clears your return threshold before you schedule the viewing.</p>
+        <ul>
+          <li>SpareRoom scraper feed</li>
+          <li>Break-even calculator</li>
+          <li>Pipeline &amp; deal stage</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ACQUISITIONS DEEP DIVE ============ -->
+<section class="sec" id="acquisitions">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="pill">Deep dive · 06</span>
+      <h2 style="margin-top:var(--space-5)">Underwrite the deal before you <em>view the house</em>.</h2>
+      <p class="lede">A live SpareRoom feed brings room-rate comps into the app. The break-even calculator reads your own portfolio's cost structure — bills, management fees, void assumptions — and tells you what margin a prospective HMO clears at your threshold.</p>
+    </div>
+
+    <div class="acq">
+      <div class="acq-copy">
+        <h3>Every listing, <em>pre-underwritten</em>.</h3>
+        <p>Paste a SpareRoom or property-portal URL. Harbor Ops pulls the listing, matches comparable room rates within a 500m radius, and runs your portfolio's cost model against it — so you see margin-per-room before you open the inbox.</p>
+
+        <div class="acq-list">
+          <div class="item">
+            <div class="n">01</div>
+            <div>
+              <h5>Live comps within 500m</h5>
+              <p>Room rates, en-suite premium, time-on-market — scraped and indexed nightly.</p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="n">02</div>
+            <div>
+              <h5>Your cost model, not a generic one</h5>
+              <p>Void rate, management overhead, council tax band — pulled from your own portfolio history.</p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="n">03</div>
+            <div>
+              <h5>Verdict in plain English</h5>
+              <p>Clears / doesn't clear / marginal. Plus the stress test: what the numbers look like at 85% occupancy.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="calc">
+        <div class="calc-top">
+          <span class="ttl">Deal underwrite · SR-48219</span>
+          <div class="right"><span class="live"></span>Live comps · 11 min ago</div>
+        </div>
+
+        <div class="listing">
+          <div class="photo">LISTING<br>PHOTO</div>
+          <div>
+            <h6>5-bed HMO · Forest Hill</h6>
+            <div class="addr">SE23 · 3 en-suite · C1 use class · EPC C</div>
+            <div class="tags">
+              <span class="badge badge-info badge-dot">SpareRoom</span>
+              <span class="badge badge-neutral">C1 use</span>
+              <span class="badge badge-neutral">Freehold</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-body">
+          <div class="calc-row"><span class="k">Asking price</span><span class="v">£685,000</span></div>
+          <div class="calc-row"><span class="k">Projected rent roll (5 rooms)</span><span class="v">£4,950 / mo</span></div>
+          <div class="calc-row"><span class="k">Bills &amp; council tax</span><span class="v">−£820 / mo</span></div>
+          <div class="calc-row"><span class="k">Management @ 8%</span><span class="v">−£396 / mo</span></div>
+          <div class="calc-row"><span class="k">Void allowance (12%)</span><span class="v">−£594 / mo</span></div>
+          <div class="calc-row"><span class="k">Finance cost (65% LTV · 5.4%)</span><span class="v">−£2,003 / mo</span></div>
+          <div class="calc-row total"><span class="k">Net margin / month</span><span class="v">£1,137</span></div>
+        </div>
+
+        <div class="verdict">
+          <div class="icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="t">Clears threshold · £227 margin per room</div>
+            <div class="s">Target £200 · stress-tested at 85% occ → £174</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROFITABILITY DEEP DIVE ============ -->
+<section class="sec" id="profitability">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="pill">Deep dive · 04</span>
+      <h2 style="margin-top:var(--space-5)">The bedroom is the P&amp;L <em>unit</em>.</h2>
+      <p class="lede">Revenue per property is a vanity number. The question that matters — which rooms earn and which leak — has always lived in a spreadsheet. Harbor Ops answers it in the app.</p>
+    </div>
+
+    <div class="profit">
+      <div class="prop-card">
+        <div class="prop-head">
+          <div>
+            <div class="code">W2-04 · SUSSEX GARDENS</div>
+            <div class="addr" style="margin-top:2px">4-bed HMO · W2 1UH</div>
+            <div class="sub">acquired Jun 2024 · £782,000</div>
+          </div>
+          <div class="right">
+            <div class="k">Net margin / mo</div>
+            <div class="v">+£1,086</div>
+          </div>
+        </div>
+
+        <div class="room-row">
+          <div class="rn">R1</div>
+          <div class="tenant">
+            <div class="nm">Amelia K.</div>
+            <div class="meta">renewal 14 JUN · 18 months</div>
+          </div>
+          <div class="num" style="text-align:left">£1,180</div>
+          <div class="num pos">+£284</div>
+          <div class="hide-mobile"><div class="bar"><span style="width:92%"></span></div></div>
+          <div class="hide-mobile"><span class="badge badge-success badge-dot">Let</span></div>
+        </div>
+
+        <div class="room-row">
+          <div class="rn">R2</div>
+          <div class="tenant">
+            <div class="nm">Marcus H.</div>
+            <div class="meta">renewal 02 AUG · 12 months</div>
+          </div>
+          <div class="num" style="text-align:left">£1,040</div>
+          <div class="num pos">+£198</div>
+          <div class="hide-mobile"><div class="bar"><span style="width:78%"></span></div></div>
+          <div class="hide-mobile"><span class="badge badge-success badge-dot">Let</span></div>
+        </div>
+
+        <div class="room-row">
+          <div class="rn">R3</div>
+          <div class="tenant">
+            <div class="nm">Priya R.</div>
+            <div class="meta">renewal 29 APR · overdue response</div>
+          </div>
+          <div class="num" style="text-align:left">£920</div>
+          <div class="num pos">+£112</div>
+          <div class="hide-mobile"><div class="bar"><span style="width:54%"></span></div></div>
+          <div class="hide-mobile"><span class="badge badge-warning badge-dot">Renewal</span></div>
+        </div>
+
+        <div class="room-row">
+          <div class="rn vacant">R4</div>
+          <div class="tenant">
+            <div class="nm" style="color:var(--danger-fg)">Vacant · 11 days</div>
+            <div class="meta">listed on SpareRoom · 7 enquiries</div>
+          </div>
+          <div class="num" style="text-align:left">—</div>
+          <div class="num neg">−£148</div>
+          <div class="hide-mobile"><div class="bar"><span style="width:12%;background:var(--danger-fg)"></span></div></div>
+          <div class="hide-mobile"><span class="badge badge-danger badge-dot">Vacant</span></div>
+        </div>
+      </div>
+
+      <div class="profit-copy">
+        <h3>Room R4 is quietly <em>costing you</em> £148 a month.</h3>
+        <p>Bills, council tax and finance keep running whether the bedroom is let or empty. Harbor Ops surfaces the true cost of a vacancy in real time — and shows exactly which rooms are pulling their weight against your portfolio target.</p>
+
+        <div class="profit-stats">
+          <div class="cell">
+            <div class="v">£218</div>
+            <div class="k">AVG MARGIN / ROOM</div>
+          </div>
+          <div class="cell">
+            <div class="v"><em>11.4</em> days</div>
+            <div class="k">AVG ROOM VOID</div>
+          </div>
+          <div class="cell">
+            <div class="v">£1,086</div>
+            <div class="k">NET / MONTH · W2-04</div>
+          </div>
+          <div class="cell">
+            <div class="v">89<em>.4</em>%</div>
+            <div class="k">PORTFOLIO OCCUPANCY</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORKSPACES ============ -->
+<section class="sec" id="workspaces">
+  <div class="wrap">
+    <div class="ws-panel">
+      <span class="pill"><span class="dot"></span>Dual workspace · single codebase</span>
+      <h3>Run the agency and the management arm <em>without context-switching</em>.</h3>
+      <p class="lede">Operators who do both shouldn't need two tools. Truehold handles the letting-agency side — listings, viewings, applicants. Harbor Ops handles the property-management side — rooms, tenancies, margin. One login, one database, super-admin oversight across both.</p>
+
+      <div class="ws-toggle" id="wsToggle">
+        <button class="active" data-ws="H"><span class="sw">H</span>Harbor Ops</button>
+        <button data-ws="T"><span class="sw">T</span>Truehold</button>
+      </div>
+
+      <div class="ws-content" id="wsContent">
+        <div>
+          <h5 id="wsTitle">Harbor Ops · Property management</h5>
+          <p id="wsDesc">The operations surface. Every property decomposes to rooms. Margin, maintenance, tenants and renewals all tracked at the bedroom level.</p>
+        </div>
+        <div>
+          <ul id="wsList">
+            <li>Rooms &amp; tenancies <span class="mono">47 active</span></li>
+            <li>Bookings &amp; reconciliation <span class="mono">£41.8k / mo</span></li>
+            <li>Maintenance tickets <span class="mono">8 open</span></li>
+            <li>Profitability &amp; margin <span class="mono">per room</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="sec" id="testimonials">
+  <div class="wrap">
+    <div class="sec-head row-head">
+      <div>
+        <span class="pill">Operators</span>
+        <h2 style="margin-top:var(--space-5)">Built with <em>operators</em>, not focus groups.</h2>
+      </div>
+      <p class="lede">Early access is running with a handful of London HMO operators and boutique agencies across Zones 1–3.</p>
+    </div>
+
+    <div class="testimonials">
+      <div class="quote-card">
+        <div class="mk">"</div>
+        <p class="q">We stopped listing every bedroom as a fake "property." Our team finally <em>sees the same numbers</em> at the same time — and the spreadsheet has been retired.</p>
+        <div class="who">
+          <div class="avatar">JO</div>
+          <div>
+            <div class="name">James O.</div>
+            <div class="role">HMO operator · SE8, SE16 · 34 rooms</div>
+          </div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <div class="mk">"</div>
+        <p class="q">The break-even calculator killed two deals in the first week — deals we would've viewed otherwise. That alone paid for a year of the tool.</p>
+        <div class="who">
+          <div class="avatar">RN</div>
+          <div>
+            <div class="name">Rhea N.</div>
+            <div class="role">R2R operator · W2, NW6 · 22 rooms</div>
+          </div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <div class="mk">"</div>
+        <p class="q">We run an agency and a management arm off one spreadsheet stack. Harbor Ops is the first tool that assumes both things are true about us.</p>
+        <div class="who">
+          <div class="avatar">DL</div>
+          <div>
+            <div class="name">Daniela L.</div>
+            <div class="role">Boutique estate agency · E1, E2 · 58 units</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOUNDER ============ -->
+<section class="sec" id="founder">
+  <div class="wrap">
+    <div class="founder">
+      <div class="port">
+        FOUNDER<br>PORTRAIT<br>&lt;drop image&gt;
+      </div>
+      <div>
+        <div class="tag">Origin</div>
+        <blockquote>Harbor Ops started as internal tooling for a live London portfolio — W2, SW8/SW12, SE8/SE16, E1/E2. After enough other operators asked what we were using, we made it a product. <em>Built by an operator, not a remote product team.</em></blockquote>
+        <div class="signoff">
+          <strong>Harbor Ops founding team</strong> · shipping since 2024
+        </div>
+        <div class="postcodes">
+          <span class="pc">W2</span>
+          <span class="pc">SW8</span>
+          <span class="pc">SW12</span>
+          <span class="pc">SE8</span>
+          <span class="pc">SE16</span>
+          <span class="pc">E1</span>
+          <span class="pc">E2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="sec tight" id="pricing">
+  <div class="wrap">
+    <div class="cta">
+      <div>
+        <span class="pill"><span class="dot"></span>Early access</span>
+        <h3 style="margin-top:var(--space-5)">Bring your portfolio. Leave your <em>spreadsheets</em>.</h3>
+        <p>Rolling invite list for London HMO operators and agencies with 10+ rooms. Onboarding includes a 1:1 migration session and 90 days of import support.</p>
+        <div class="cta-meta">
+          <span>£149 / mo per workspace · during early access</span>
+          <span>Cancel any time</span>
+          <span>Data export on day one</span>
+        </div>
+      </div>
+      <form onsubmit="event.preventDefault(); this.querySelector('button').innerHTML='Request received ✓'; this.querySelector('button').disabled=true;">
+        <input class="input" type="email" placeholder="operator@company.co.uk" required />
+        <button class="btn btn-primary btn-lg" type="submit">Request access</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">
+          <img src="assets/harbor-logo.png" alt="Harbor Ops" />
+          <span>Harbor <em style="font-family:var(--font-serif);font-style:italic;font-weight:400">Ops</em></span>
+        </div>
+        <p class="tag">The operating system for room-by-room property management in London. Built by operators, for operators.</p>
+      </div>
+      <div>
+        <h6>Product</h6>
+        <ul>
+          <li><a href="#modules">Modules</a></li>
+          <li><a href="#acquisitions">Acquisitions</a></li>
+          <li><a href="#profitability">Profitability</a></li>
+          <li><a href="#workspaces">Workspaces</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6>Company</h6>
+        <ul>
+          <li><a href="#founder">Origin</a></li>
+          <li><a href="#testimonials">Operators</a></li>
+          <li><a href="#pricing">Access</a></li>
+          <li><a href="#">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6>Resources</h6>
+        <ul>
+          <li><a href="#">HMO margin guide</a></li>
+          <li><a href="#">Zone-2 room rates</a></li>
+          <li><a href="#">Data &amp; privacy</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="wrap foot-bottom" style="padding-left:0;padding-right:0">
+      <div>© 2026 Harbor Ops · London, UK</div>
+      <div>v1.0 · built room-by-room</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // workspace toggle
+  const toggle = document.getElementById('wsToggle');
+  const wsTitle = document.getElementById('wsTitle');
+  const wsDesc = document.getElementById('wsDesc');
+  const wsList = document.getElementById('wsList');
+
+  const DATA = {
+    H: {
+      title: 'Harbor Ops · Property management',
+      desc: 'The operations surface. Every property decomposes to rooms. Margin, maintenance, tenants and renewals all tracked at the bedroom level.',
+      list: [
+        ['Rooms &amp; tenancies', '47 active'],
+        ['Bookings &amp; reconciliation', '£41.8k / mo'],
+        ['Maintenance tickets', '8 open'],
+        ['Profitability &amp; margin', 'per room'],
+      ],
+    },
+    T: {
+      title: 'Truehold · Letting agency',
+      desc: 'The acquisition surface. Listings, viewings, applicants, valuations — everything the agency side of the business runs on.',
+      list: [
+        ['Listings &amp; viewings', '12 live'],
+        ['Applicant pipeline', '68 leads'],
+        ['Valuations &amp; market appraisals', '4 this week'],
+        ['Commission tracking', '£11.4k YTD'],
+      ],
+    },
+  };
+
+  toggle.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-ws]');
+    if (!btn) return;
+    toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const d = DATA[btn.dataset.ws];
+    wsTitle.textContent = d.title;
+    wsDesc.textContent = d.desc;
+    wsList.innerHTML = d.list.map(([k,v]) => `<li>${k} <span class="mono">${v}</span></li>`).join('');
+  });
+</script>
+
+</div><!-- /.page -->
+
+</body>
+</html>
