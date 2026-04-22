@@ -30,13 +30,16 @@ export function RentalCodeForm({
   const [clientIdFiles, setClientIdFiles] = useState<File[]>([]);
   const [nextCode, setNextCode] = useState<string | null>(null);
   const [loadingCode, setLoadingCode] = useState(false);
-  const [marketingAgentIds, setMarketingAgentIds] = useState<string[]>([]);
+  const [marketingAgentIds, setMarketingAgentIds] = useState<string[]>([""]);
   const [fee, setFee] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+
+  const hasMarketingAgent = marketingAgentIds.some((id) => id !== "");
 
   const isComplete =
     fee !== "" && Number(fee) > 0 &&
     paymentMethod !== "" &&
+    hasMarketingAgent &&
     sourcingFiles.length > 0 &&
     paymentFiles.length > 0 &&
     clientIdFiles.length > 0;
@@ -78,6 +81,10 @@ export function RentalCodeForm({
     }
     if (!paymentMethod) {
       toast.error("Please select a payment method");
+      return;
+    }
+    if (!hasMarketingAgent) {
+      toast.error("Please select a marketing agent (even if it's you)");
       return;
     }
     if (sourcingFiles.length === 0) {
@@ -138,7 +145,7 @@ export function RentalCodeForm({
         setSourcingFiles([]);
         setPaymentFiles([]);
         setClientIdFiles([]);
-        setMarketingAgentIds([]);
+        setMarketingAgentIds([""]);
         setFee("");
         setPaymentMethod("");
         router.refresh();
@@ -222,8 +229,11 @@ export function RentalCodeForm({
         />
         <div className="md:col-span-2 space-y-2">
           <label className="text-xs text-foreground-secondary block">
-            Marketing agents (optional)
+            Marketing agents <span className="text-red-500">*</span>
           </label>
+          <p className="text-xs text-foreground-muted">
+            Please select a marketing agent, even if it&apos;s you.
+          </p>
           {marketingAgentIds.map((agentId, index) => (
             <div key={index} className="flex items-center gap-2">
               <Select

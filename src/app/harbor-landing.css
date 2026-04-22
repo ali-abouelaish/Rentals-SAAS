@@ -716,10 +716,10 @@
   .harbor-landing .hero-meta { gap: var(--space-5); padding-top: var(--space-6); }
   .harbor-landing .hero-meta .cell { min-width: 45%; }
 
-  /* Nav: hide the secondary "Sign in" link on narrow phones so the
-     primary CTA doesn't get crowded next to the logo */
-  .harbor-landing .nav-cta .btn-ghost { display: none; }
+  /* Nav: keep both Sign in + Request demo visible, just tighten spacing */
   .harbor-landing .nav-inner { gap: var(--space-3); }
+  .harbor-landing .nav-cta { gap: var(--space-1); }
+  .harbor-landing .nav-cta .btn-sm { padding: 6px 10px; }
 
   /* Dashboard mockup — reclaim horizontal room */
   .harbor-landing .dash-top .url { font-size: 10px; padding: 3px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }

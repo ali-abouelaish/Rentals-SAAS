@@ -157,6 +157,7 @@ export default async function AgentEarningsPage({
             to={filters.to}
             minAmount={minAmount}
             isAdmin={isAdmin}
+            viewerAgentId={params.id}
           />
         </CardContent>
       </Card>

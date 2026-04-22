@@ -32,11 +32,13 @@ export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent, isAdm
     );
   }
 
+  const outstanding = bonuses.reduce(
+    (sum, b) => (b.status === "paid" ? sum : sum + agentShare(b, commissionPercent)),
+    0,
+  );
+
   return (
     <div className="space-y-4">
-      <p className="text-sm font-medium text-foreground">
-        Total bonuses: {formatGBP(totalBonuses)}
-      </p>
       <div className="overflow-x-auto -mx-1">
         <table className="w-full text-sm">
           <thead>
@@ -63,6 +65,22 @@ export function MeBonusesTable({ bonuses, totalBonuses, commissionPercent, isAdm
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-border font-semibold">
+              <td className="pt-3 pr-4 text-foreground-muted" colSpan={3}>
+                Total bonuses ({bonuses.length} {bonuses.length === 1 ? "bonus" : "bonuses"})
+              </td>
+              <td className="pt-3 pl-4 text-right tabular-nums">{formatGBP(totalBonuses)}</td>
+            </tr>
+            <tr className="font-semibold">
+              <td className="pb-3 pr-4 text-foreground-muted" colSpan={3}>
+                Outstanding (unpaid)
+              </td>
+              <td className="pb-3 pl-4 text-right tabular-nums text-amber-600">
+                {formatGBP(outstanding)}
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

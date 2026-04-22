@@ -55,6 +55,7 @@ export function PaymentsTracker({ payments, statusFilter, from, to, isAdmin }: P
                   <th className="pb-3 pr-4">Code</th>
                   <th className="pb-3 pr-4">Client</th>
                   <th className="pb-3 pr-4">Agent</th>
+                  <th className="pb-3 pr-4">Marketing agent</th>
                   <th className="pb-3 pr-4 text-right tabular-nums">Amount</th>
                   <th className="pb-3 pl-4">Status</th>
                 </tr>
@@ -79,6 +80,11 @@ export function PaymentsTracker({ payments, statusFilter, from, to, isAdmin }: P
                     <td className="py-3 pr-4 font-medium">{p.code || "—"}</td>
                     <td className="py-3 pr-4">{p.client_name}</td>
                     <td className="py-3 pr-4 text-foreground-muted">{p.agent_name}</td>
+                    <td className="py-3 pr-4 text-foreground-muted">
+                      {p.marketing_agents && p.marketing_agents.length > 0
+                        ? p.marketing_agents.join(", ")
+                        : "—"}
+                    </td>
                     <td className="py-3 pr-4 text-right tabular-nums font-medium">
                       {formatGBP(p.amount)}
                     </td>

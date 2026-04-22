@@ -564,6 +564,31 @@ export async function getTransactions(
   const rentalIds = rentals.map(r => r.id);
   const { countMap, agentRentalIds } = await fetchRentalMarketingData(supabase, rentalIds, options?.agentId);
 
+  // Per-rental list of marketing agent user IDs (primary on rental_codes + junction rows)
+  const { data: junctionRows } = rentalIds.length > 0
+    ? await supabase.from("rental_marketing_agents").select("rental_id, agent_id, paid_at").in("rental_id", rentalIds)
+    : { data: [] as { rental_id: string; agent_id: string; paid_at: string | null }[] };
+  const mktAgentsByRental = new Map<string, Set<string>>();
+  const mktPaidByKey = new Map<string, string | null>(); // key: `${rental_id}:${agent_id}` → paid_at
+  for (const rental of rentals) {
+    const set = new Set<string>();
+    if (rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id) {
+      set.add(rental.marketing_agent_id);
+    }
+    mktAgentsByRental.set(rental.id, set);
+  }
+  for (const row of junctionRows ?? []) {
+    const set = mktAgentsByRental.get(row.rental_id);
+    if (set) set.add(row.agent_id);
+    mktPaidByKey.set(`${row.rental_id}:${row.agent_id}`, row.paid_at);
+  }
+
+  const allMktUserIds = [...new Set([...mktAgentsByRental.values()].flatMap(s => [...s]))];
+  const { data: mktNameRows } = allMktUserIds.length > 0
+    ? await supabase.from("user_profiles").select("id, display_name").in("id", allMktUserIds)
+    : { data: [] as { id: string; display_name: string | null }[] };
+  const mktNameMap = new Map((mktNameRows ?? []).map(r => [r.id, r.display_name ?? "Agent"]));
+
   const out: EarningsTransaction[] = [];
 
   for (const rental of rentals) {
@@ -591,6 +616,19 @@ export async function getTransactions(
       amount = gross;
     }
 
+    const mktAgentIds = [...(mktAgentsByRental.get(rental.id) ?? [])];
+    const marketing_agents = mktAgentIds
+      .map(id => mktNameMap.get(id))
+      .filter((n): n is string => Boolean(n));
+
+    // For marketing-role rows, the paid state comes from the junction's paid_at,
+    // independent of the rental's overall status (which reflects the assisted payout).
+    let rowStatus = rental.status;
+    if (role === "marketing" && options?.agentId) {
+      const paidAt = mktPaidByKey.get(`${rental.id}:${options.agentId}`);
+      rowStatus = paidAt ? "paid" : "approved";
+    }
+
     out.push({
       id: rental.id,
       agent_id: rental.assisted_by_agent_id,
@@ -599,9 +637,10 @@ export async function getTransactions(
       amount,
       consultation_fee: Number(rental.consultation_fee_amount ?? 0),
       payment_method: rental.payment_method,
+      marketing_agents,
       created_at: rental.date,
       role,
-      status: rental.status,
+      status: rowStatus,
     });
   }
 
@@ -747,7 +786,7 @@ export async function getPayments(
   // ── Rentals ──────────────────────────────────────────────────────────
   let rentalQuery = supabase
     .from("rental_codes")
-    .select("id, code, client_name, assisted_by_agent_id, consultation_fee_amount, date, status, agent_profiles!rental_codes_assisted_by_agent_id_fkey(user_profiles(display_name))")
+    .select("id, code, client_name, assisted_by_agent_id, marketing_agent_id, consultation_fee_amount, date, status, agent_profiles!rental_codes_assisted_by_agent_id_fkey(user_profiles(display_name))")
     .gte("date", filters.from)
     .lte("date", toEnd);
 
@@ -758,6 +797,26 @@ export async function getPayments(
 
   const { data: rentals } = await rentalQuery;
 
+  // Build per-rental marketing agent name list (primary + junction, excluding assisted)
+  const rentalIds = (rentals ?? []).map((r: any) => r.id);
+  const { data: mktJunction } = rentalIds.length > 0
+    ? await supabase.from("rental_marketing_agents").select("rental_id, agent_id").in("rental_id", rentalIds)
+    : { data: [] as { rental_id: string; agent_id: string }[] };
+  const mktIdsByRental = new Map<string, Set<string>>();
+  for (const r of (rentals ?? []) as any[]) {
+    const set = new Set<string>();
+    if (r.marketing_agent_id && r.marketing_agent_id !== r.assisted_by_agent_id) set.add(r.marketing_agent_id);
+    mktIdsByRental.set(r.id, set);
+  }
+  for (const row of mktJunction ?? []) {
+    mktIdsByRental.get(row.rental_id)?.add(row.agent_id);
+  }
+  const allMktIds = [...new Set([...mktIdsByRental.values()].flatMap(s => [...s]))];
+  const { data: mktNames } = allMktIds.length > 0
+    ? await supabase.from("user_profiles").select("id, display_name").in("id", allMktIds)
+    : { data: [] as { id: string; display_name: string | null }[] };
+  const mktNameMap = new Map((mktNames ?? []).map(n => [n.id, n.display_name ?? "Agent"]));
+
   const rentalRows: PaymentRow[] = (rentals ?? []).map((r: any) => ({
     id: r.id,
     type: "rental" as const,
@@ -765,6 +824,9 @@ export async function getPayments(
     client_name: r.client_name ?? "",
     agent_name: r.agent_profiles?.user_profiles?.display_name ?? "Unknown",
     agent_id: r.assisted_by_agent_id,
+    marketing_agents: [...(mktIdsByRental.get(r.id) ?? [])]
+      .map(id => mktNameMap.get(id))
+      .filter((n): n is string => Boolean(n)),
     amount: Number(r.consultation_fee_amount ?? 0),
     date: r.date,
     status: r.status ?? "approved",

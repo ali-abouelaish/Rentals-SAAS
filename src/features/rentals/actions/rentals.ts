@@ -125,6 +125,9 @@ export async function createRentalCodeWithDocuments(formData: FormData): Promise
     if (clientIdFiles.length < 1) {
       return { ok: false, error: "Client ID is required (at least 1 image or PDF)." };
     }
+    if (marketingAgentIdList.length < 1) {
+      return { ok: false, error: "Please select a marketing agent (even if it's you)." };
+    }
 
     // Validate form data
     const payload = rentalCodeSchema.parse({
@@ -573,6 +576,30 @@ export async function updateRentalStatus(formData: FormData) {
 
   revalidatePath("/rentals");
   revalidatePath(`/rentals/${rentalId}`);
+  revalidatePath("/earnings", "layout");
+  revalidatePath("/me");
+  return { ok: true };
+}
+
+/** Toggle the paid state of a single marketing agent on a rental.
+ *  Tracked independently from the rental's `status` so each marketing payout
+ *  can be marked paid on its own timeline. */
+export async function updateMarketingAgentPaid(formData: FormData) {
+  const supabase = createSupabaseServerClient();
+  await requireRole([...ADMIN_ROLES]);
+  const rentalId = String(formData.get("rental_id") ?? "");
+  const agentId = String(formData.get("agent_id") ?? "");
+  const paid = formData.get("paid") === "true";
+
+  if (!rentalId || !agentId) throw new Error("Missing rental id or agent id.");
+
+  const { error } = await supabase
+    .from("rental_marketing_agents")
+    .update({ paid_at: paid ? new Date().toISOString() : null })
+    .eq("rental_id", rentalId)
+    .eq("agent_id", agentId);
+  if (error) throw new Error(error.message);
+
   revalidatePath("/earnings", "layout");
   revalidatePath("/me");
   return { ok: true };

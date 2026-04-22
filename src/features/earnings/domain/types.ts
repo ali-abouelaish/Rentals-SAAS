@@ -39,6 +39,7 @@ export type EarningsTransaction = {
   amount: number;
   consultation_fee?: number;
   payment_method?: string;
+  marketing_agents?: string[];
   created_at: string;
   role?: "assisted" | "marketing";
   status?: string;
@@ -52,6 +53,7 @@ export type PaymentRow = {
   client_name: string;
   agent_name: string;
   agent_id: string;
+  marketing_agents?: string[];
   amount: number;
   date: string;
   status: string;

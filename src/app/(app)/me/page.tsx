@@ -125,7 +125,7 @@ export default async function MePage({
                 </Button>
               </div>
             ) : (
-              <MeTransactionsTable transactions={transactions} isAdmin={isAdmin} />
+              <MeTransactionsTable transactions={transactions} isAdmin={isAdmin} viewerAgentId={profile.id} />
             )}
           </div>
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
@@ -158,7 +158,7 @@ export default async function MePage({
                 </Button>
               </div>
             ) : (
-              <MeTransactionsTable transactions={transactions} isAdmin={isAdmin} />
+              <MeTransactionsTable transactions={transactions} isAdmin={isAdmin} viewerAgentId={profile.id} />
             )}
           </div>
         </TabsContent>

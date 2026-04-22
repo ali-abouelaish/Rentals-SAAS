@@ -11,7 +11,15 @@ import { PaidToggle } from "@/features/earnings/ui/PaidToggle";
 
 const PAGE_SIZE = 10;
 
-export function MeTransactionsTable({ transactions, isAdmin = false }: { transactions: EarningsTransaction[]; isAdmin?: boolean }) {
+export function MeTransactionsTable({
+  transactions,
+  isAdmin = false,
+  viewerAgentId,
+}: {
+  transactions: EarningsTransaction[];
+  isAdmin?: boolean;
+  viewerAgentId?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get("search") ?? "";
@@ -38,6 +46,13 @@ export function MeTransactionsTable({ transactions, isAdmin = false }: { transac
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const totalConsultationFee = filtered.reduce((sum, t) => sum + (t.consultation_fee ?? 0), 0);
+  const totalEarnings = filtered.reduce((sum, t) => sum + t.amount, 0);
+  const outstandingEarnings = filtered.reduce(
+    (sum, t) => (t.status === "paid" ? sum : sum + t.amount),
+    0,
+  );
 
   const setParam = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -72,11 +87,12 @@ export function MeTransactionsTable({ transactions, isAdmin = false }: { transac
                   <th className="pb-3 pr-4">Date</th>
                   <th className="pb-3 pr-4">Rental Code</th>
                   <th className="pb-3 pr-4">Client</th>
+                  <th className="pb-3 pr-4">Marketing agent</th>
                   <th className="pb-3 pr-4">Role</th>
-                  <th className="pb-3 pr-4">Paid</th>
                   <th className="pb-3 pr-4">Payment method</th>
                   <th className="pb-3 pr-4 text-right tabular-nums">Consultation fee</th>
-                  <th className="pb-3 pl-4 text-right tabular-nums">Earnings</th>
+                  <th className="pb-3 pr-4 text-right tabular-nums">Earnings</th>
+                  <th className="pb-3 pl-4">Paid</th>
                 </tr>
               </thead>
               <tbody>
@@ -89,6 +105,9 @@ export function MeTransactionsTable({ transactions, isAdmin = false }: { transac
                       </Link>
                     </td>
                     <td className="py-3 pr-4">{t.client_name}</td>
+                    <td className="py-3 pr-4 text-foreground-muted">
+                      {t.marketing_agents && t.marketing_agents.length > 0 ? t.marketing_agents.join(", ") : "—"}
+                    </td>
                     <td className="py-3 pr-4">
                       {t.role === "marketing" ? (
                         <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">Marketing</span>
@@ -98,15 +117,45 @@ export function MeTransactionsTable({ transactions, isAdmin = false }: { transac
                         <span className="text-foreground-muted">—</span>
                       )}
                     </td>
-                    <td className="py-3 pr-4">
-                      <PaidToggle rentalId={t.id} status={t.status} isAdmin={isAdmin} />
-                    </td>
                     <td className="py-3 pr-4 capitalize">{t.payment_method ?? "—"}</td>
                     <td className="py-3 pr-4 text-right tabular-nums">{t.consultation_fee != null ? formatGBP(t.consultation_fee) : "—"}</td>
-                    <td className="py-3 pl-4 text-right tabular-nums font-medium">{formatGBP(t.amount)}</td>
+                    <td className="py-3 pr-4 text-right tabular-nums font-medium">{formatGBP(t.amount)}</td>
+                    <td className="py-3 pl-4">
+                      <PaidToggle
+                        rentalId={t.id}
+                        status={t.status}
+                        isAdmin={isAdmin}
+                        role={t.role}
+                        marketingAgentId={t.role === "marketing" ? viewerAgentId : undefined}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-border font-semibold">
+                  <td className="pt-3 pr-4 text-foreground-muted" colSpan={6}>
+                    Total agent revenue ({filtered.length} {filtered.length === 1 ? "rental" : "rentals"})
+                  </td>
+                  <td className="pt-3 pr-4 text-right tabular-nums">{formatGBP(totalConsultationFee)}</td>
+                  <td className="pt-3 pr-4" />
+                  <td className="pt-3 pl-4" />
+                </tr>
+                <tr className="font-semibold">
+                  <td className="pr-4 text-foreground-muted" colSpan={7}>
+                    Total agent commission
+                  </td>
+                  <td className="pr-4 text-right tabular-nums">{formatGBP(totalEarnings)}</td>
+                  <td className="pl-4" />
+                </tr>
+                <tr className="font-semibold">
+                  <td className="pb-3 pr-4 text-foreground-muted" colSpan={7}>
+                    Outstanding (unpaid)
+                  </td>
+                  <td className="pb-3 pr-4 text-right tabular-nums text-amber-600">{formatGBP(outstandingEarnings)}</td>
+                  <td className="pb-3 pl-4" />
+                </tr>
+              </tfoot>
             </table>
           </div>
           {totalPages > 1 && (
