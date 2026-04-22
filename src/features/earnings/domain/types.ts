@@ -37,7 +37,8 @@ export type EarningsTransaction = {
   code: string;
   client_name: string;
   amount: number;
-  rent_amount?: number;
+  consultation_fee?: number;
+  payment_method?: string;
   created_at: string;
   role?: "assisted" | "marketing";
   status?: string;

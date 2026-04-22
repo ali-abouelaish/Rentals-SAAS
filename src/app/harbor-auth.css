@@ -370,3 +370,86 @@
 .harbor-auth .alert.err { background: var(--danger-bg); color: var(--danger-fg); border-color: rgba(180,35,24,.18); }
 .harbor-auth .alert.ok  { background: var(--success-bg); color: var(--success-fg); border-color: rgba(26,127,62,.18); }
 .harbor-auth .alert.warn { background: var(--warning-bg); color: var(--warning-fg); border-color: rgba(165,101,17,.18); }
+
+/* ============ RESPONSIVE ============ */
+/* Tablet & below — aside hides, form becomes full width */
+@media (max-width: 960px) {
+  .harbor-auth .shell { min-height: 100dvh; }
+  .harbor-auth .form-side { min-height: 100dvh; padding: var(--space-8); }
+  .harbor-auth .form-wrap { margin: var(--space-10) auto; }
+}
+
+/* Small tablets / large phones */
+@media (max-width: 720px) {
+  .harbor-auth .form-side { padding: var(--space-6) var(--space-5); }
+  .harbor-auth .form-wrap { margin: var(--space-6) auto; max-width: 100%; }
+  .harbor-auth h1.head {
+    font-size: clamp(24px, 6.2vw, 30px);
+    letter-spacing: -0.03em;
+    margin: var(--space-5) 0 var(--space-3);
+  }
+  .harbor-auth .lede {
+    font-size: var(--text-base);
+    margin-bottom: var(--space-6);
+  }
+}
+
+/* Phones */
+@media (max-width: 480px) {
+  .harbor-auth .form-side { padding: var(--space-5) var(--space-4); }
+  .harbor-auth .form-nav { gap: var(--space-3); }
+  .harbor-auth .form-nav .back { font-size: 12px; }
+  .harbor-auth .brand-name { font-size: 14px; }
+
+  .harbor-auth h1.head { font-size: clamp(22px, 7.2vw, 28px); }
+  .harbor-auth .pill { font-size: 10px; padding: 4px 10px; }
+
+  .harbor-auth .input { padding: 11px 12px; font-size: var(--text-base); } /* 15px avoids iOS zoom */
+  .harbor-auth textarea.input { font-size: var(--text-base); }
+  .harbor-auth .btn { padding: 12px 16px; }
+
+  .harbor-auth .row-fields { grid-template-columns: 1fr; gap: 0; }
+
+  /* Meta row: one item per line on tiniest screens to keep readability */
+  .harbor-auth .meta-row {
+    gap: var(--space-2);
+    font-size: 10px;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Legal footer stacks on phones */
+  .harbor-auth .legal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: 10px;
+    padding-top: var(--space-6);
+  }
+
+  .harbor-auth .success-state .mark { width: 48px; height: 48px; }
+  .harbor-auth .success-state h2 { font-size: var(--text-xl); }
+}
+
+/* Very narrow phones (<360px) — keep it usable */
+@media (max-width: 360px) {
+  .harbor-auth .form-side { padding: var(--space-4) var(--space-3); }
+  .harbor-auth .brand img { width: 24px; height: 24px; }
+  .harbor-auth .brand-name { font-size: 13px; }
+  .harbor-auth .form-nav .back {
+    font-size: 0;
+    line-height: 1;
+  }
+  .harbor-auth .form-nav .back::before {
+    content: "←";
+    font-size: 16px;
+    color: var(--ink-500);
+  }
+}
+
+/* Respect the soft keyboard on short viewports — don't force the form to center
+   when the viewport is shorter than the content (center-justify causes clipping). */
+@media (max-height: 720px) {
+  .harbor-auth .form-wrap { justify-content: flex-start; margin-top: var(--space-8); }
+}

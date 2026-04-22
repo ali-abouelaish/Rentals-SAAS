@@ -141,10 +141,9 @@ export function BonusesTableWithInvoice({ bonuses, isAdmin }: { bonuses: BonusRo
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-foreground-muted mt-0.5">
-                    <span className="truncate max-w-[120px] sm:max-w-none">{bonus.client_name}</span>
+                    <span className="truncate max-w-[120px] sm:max-w-none">{bonus.landlords?.[0]?.name ?? "—"}</span>
                     <span>·</span>
-                    <span className="hidden sm:inline truncate">{bonus.property_address} ·</span>
-                    <span className="truncate">{bonus.landlords?.[0]?.name ?? "—"}</span>
+                    <span className="truncate">{bonus.agent?.[0]?.display_name ?? "—"}</span>
                   </div>
                 </div>
 

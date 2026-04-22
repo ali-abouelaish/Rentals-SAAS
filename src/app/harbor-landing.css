@@ -695,3 +695,86 @@
   .harbor-landing section.sec { padding: var(--space-20) 0; }
   .harbor-landing .hero { padding: var(--space-20) 0 var(--space-12); }
 }
+
+/* ============ MOBILE (<=520px) ============
+   Below the 900/780/720/700/600 breakpoints the design hands off to a
+   phone-optimized layout. Main concerns: the hero dashboard mockup has
+   nested paddings that crush the rooms table at 360px, section padding is
+   too generous for a small screen, and several grids need to collapse to
+   a single column. */
+@media (max-width: 520px) {
+  /* Tighter vertical rhythm */
+  .harbor-landing section.sec { padding: var(--space-16) 0; }
+  .harbor-landing section.sec.tight { padding: var(--space-12) 0; }
+  .harbor-landing .hero { padding: var(--space-16) 0 var(--space-10); }
+  .harbor-landing .sec-head { margin-bottom: var(--space-10); }
+
+  /* Hero */
+  .harbor-landing .hero h1 { font-size: 34px; letter-spacing: -0.03em; }
+  .harbor-landing .hero .lede { font-size: var(--text-base); }
+  .harbor-landing .hero-ctas .btn { flex: 1 1 auto; justify-content: center; }
+  .harbor-landing .hero-meta { gap: var(--space-5); padding-top: var(--space-6); }
+  .harbor-landing .hero-meta .cell { min-width: 45%; }
+
+  /* Nav: hide the secondary "Sign in" link on narrow phones so the
+     primary CTA doesn't get crowded next to the logo */
+  .harbor-landing .nav-cta .btn-ghost { display: none; }
+  .harbor-landing .nav-inner { gap: var(--space-3); }
+
+  /* Dashboard mockup — reclaim horizontal room */
+  .harbor-landing .dash-top .url { font-size: 10px; padding: 3px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+  .harbor-landing .dash-main { padding: var(--space-4); gap: var(--space-4); }
+  .harbor-landing .dash-h { flex-wrap: wrap; gap: var(--space-2); }
+  .harbor-landing .dash-h .right { margin-left: 0; width: 100%; justify-content: flex-start; }
+  .harbor-landing .mcard { padding: var(--space-3); }
+  .harbor-landing .mcard .val { font-size: 20px; }
+
+  /* Rooms table: at 700px it's already 4 cols; at 360px those columns
+     get too narrow, so shrink them and the padding. */
+  .harbor-landing .rooms .r-head,
+  .harbor-landing .rooms .r-row {
+    grid-template-columns: 66px 1fr 62px 70px;
+    padding: 10px 10px;
+    gap: 6px;
+  }
+  .harbor-landing .rooms .code,
+  .harbor-landing .rooms .num { font-size: 11px; }
+  .harbor-landing .rooms .addr { font-size: 12px; }
+
+  /* Mini chart: compact break-down */
+  .harbor-landing .mchart { padding: var(--space-3); }
+  .harbor-landing .brk { padding-left: 0; border-left: none; padding-top: var(--space-3); border-top: var(--border-subtle); }
+
+  /* Problem card dark mini: 3-col stays but tighter */
+  .harbor-landing .problem-card { padding: var(--space-6); }
+  .harbor-landing .problem-card.dark .mini { grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+
+  /* Profitability cards */
+  .harbor-landing .profit-stats { grid-template-columns: 1fr; }
+  .harbor-landing .prop-head { flex-wrap: wrap; }
+  .harbor-landing .prop-head .right { margin-left: 0; text-align: left; width: 100%; padding-top: var(--space-2); }
+
+  /* Acquisitions calc */
+  .harbor-landing .listing { grid-template-columns: 64px 1fr; gap: var(--space-3); padding: var(--space-4); }
+  .harbor-landing .listing .photo { height: 64px; }
+  .harbor-landing .calc-body { padding: var(--space-4); gap: var(--space-3); }
+
+  /* Workspace dark panel */
+  .harbor-landing .ws-panel { padding: var(--space-10) var(--space-5); }
+  .harbor-landing .ws-toggle { width: 100%; }
+  .harbor-landing .ws-toggle button { flex: 1 1 0; justify-content: center; padding: 10px 8px; font-size: 12px; }
+  .harbor-landing .ws-content { padding: var(--space-5); }
+
+  /* Testimonials & founder */
+  .harbor-landing .founder .port { width: 100%; height: 120px; }
+
+  /* CTA form goes full width stacked */
+  .harbor-landing .cta form { flex-direction: column; width: 100%; }
+  .harbor-landing .cta .input { min-width: 0; width: 100%; }
+  .harbor-landing .cta form .btn { width: 100%; justify-content: center; }
+  .harbor-landing .cta-meta { gap: var(--space-2); font-size: 11px; }
+
+  /* Footer: single column */
+  .harbor-landing .foot-grid { grid-template-columns: 1fr; gap: var(--space-6); }
+  .harbor-landing .foot-bottom { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+}

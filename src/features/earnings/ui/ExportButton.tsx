@@ -25,12 +25,13 @@ export function ExportButton({
       toast("No transactions in this range to export.");
       return;
     }
-    const headers = ["Date", "Rental Code", "Client", "Rent (£)", "Earnings (£)"];
+    const headers = ["Date", "Rental Code", "Client", "Payment method", "Consultation fee (£)", "Earnings (£)"];
     const rows = transactions.map((t) => [
       t.created_at.slice(0, 10),
       escapeCsvCell(t.code),
       escapeCsvCell(t.client_name),
-      (t.rent_amount ?? 0).toFixed(2),
+      escapeCsvCell(t.payment_method ?? ""),
+      (t.consultation_fee ?? 0).toFixed(2),
       t.amount.toFixed(2)
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useMemo } from "react";
 import { formatGBP, formatDate } from "@/lib/utils/formatters";
@@ -73,7 +74,8 @@ export function MeTransactionsTable({ transactions, isAdmin = false }: { transac
                   <th className="pb-3 pr-4">Client</th>
                   <th className="pb-3 pr-4">Role</th>
                   <th className="pb-3 pr-4">Paid</th>
-                  <th className="pb-3 pr-4 text-right tabular-nums">Rent</th>
+                  <th className="pb-3 pr-4">Payment method</th>
+                  <th className="pb-3 pr-4 text-right tabular-nums">Consultation fee</th>
                   <th className="pb-3 pl-4 text-right tabular-nums">Earnings</th>
                 </tr>
               </thead>
@@ -81,7 +83,11 @@ export function MeTransactionsTable({ transactions, isAdmin = false }: { transac
                 {paged.map((t) => (
                   <tr key={t.id} className="border-b border-border/60">
                     <td className="py-3 pr-4 text-foreground-muted">{formatDate(t.created_at)}</td>
-                    <td className="py-3 pr-4 font-mono text-xs">{t.code}</td>
+                    <td className="py-3 pr-4 font-mono text-xs">
+                      <Link href={`/rentals/${t.id}`} className="text-brand hover:underline">
+                        {t.code}
+                      </Link>
+                    </td>
                     <td className="py-3 pr-4">{t.client_name}</td>
                     <td className="py-3 pr-4">
                       {t.role === "marketing" ? (
@@ -95,7 +101,8 @@ export function MeTransactionsTable({ transactions, isAdmin = false }: { transac
                     <td className="py-3 pr-4">
                       <PaidToggle rentalId={t.id} status={t.status} isAdmin={isAdmin} />
                     </td>
-                    <td className="py-3 pr-4 text-right tabular-nums">{t.rent_amount != null ? formatGBP(t.rent_amount) : "—"}</td>
+                    <td className="py-3 pr-4 capitalize">{t.payment_method ?? "—"}</td>
+                    <td className="py-3 pr-4 text-right tabular-nums">{t.consultation_fee != null ? formatGBP(t.consultation_fee) : "—"}</td>
                     <td className="py-3 pl-4 text-right tabular-nums font-medium">{formatGBP(t.amount)}</td>
                   </tr>
                 ))}

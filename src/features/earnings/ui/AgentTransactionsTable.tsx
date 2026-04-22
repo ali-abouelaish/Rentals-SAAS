@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatGBP, formatDate } from "@/lib/utils/formatters";
 import type { EarningsTransaction } from "../domain/types";
@@ -83,7 +84,8 @@ export function AgentTransactionsTable({
                 <th className="pb-3 pr-4">Rental Code</th>
                 <th className="pb-3 pr-4">Client</th>
                 <th className="pb-3 pr-4">Paid</th>
-                <th className="pb-3 pr-4 text-right tabular-nums">Rent</th>
+                <th className="pb-3 pr-4">Payment method</th>
+                <th className="pb-3 pr-4 text-right tabular-nums">Consultation fee</th>
                 <th className="pb-3 pl-4 text-right tabular-nums">Earnings</th>
               </tr>
             </thead>
@@ -93,13 +95,23 @@ export function AgentTransactionsTable({
                   <td className="py-3 pr-4 text-foreground-muted">
                     {formatDate(t.created_at)}
                   </td>
-                  <td className="py-3 pr-4 font-mono text-xs">{t.code}</td>
+                  <td className="py-3 pr-4 font-mono text-xs">
+                    <Link
+                      href={`/rentals/${t.id}`}
+                      className="text-brand hover:underline"
+                    >
+                      {t.code}
+                    </Link>
+                  </td>
                   <td className="py-3 pr-4">{t.client_name}</td>
                   <td className="py-3 pr-4">
                     <PaidToggle rentalId={t.id} status={t.status} isAdmin={isAdmin} />
                   </td>
+                  <td className="py-3 pr-4 capitalize">
+                    {t.payment_method ?? "—"}
+                  </td>
                   <td className="py-3 pr-4 text-right tabular-nums">
-                    {t.rent_amount != null ? formatGBP(t.rent_amount) : "—"}
+                    {t.consultation_fee != null ? formatGBP(t.consultation_fee) : "—"}
                   </td>
                   <td className="py-3 pl-4 text-right tabular-nums font-medium">
                     {formatGBP(t.amount)}
