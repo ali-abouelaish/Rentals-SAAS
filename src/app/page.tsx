@@ -40,10 +40,10 @@ export default function LandingPage() {
               <a href="#pricing">Demo</a>
             </div>
             <div className="nav-cta">
-              <a href="/auth/login" className="btn btn-ghost btn-sm">
+              <a href="/login" className="btn btn-ghost btn-sm">
                 Sign in
               </a>
-              <a href="#pricing" className="btn btn-primary btn-sm">
+              <a href="/signup" className="btn btn-primary btn-sm">
                 Request demo
               </a>
             </div>

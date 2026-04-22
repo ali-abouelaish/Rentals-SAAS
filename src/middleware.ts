@@ -25,13 +25,27 @@ const PUBLIC_PATHS = [
 function getTenantFromHost(host: string | null): string | null {
   if (!host) return null;
   const hostname = host.split(":")[0].toLowerCase();
-  const parts = hostname.split(".");
 
-  // e.g. truehold.harborops.co.uk -> ["truehold","harborops","co","uk"]
-  if (parts.length > 2) {
-    return parts[0] || null;
+  const portalRaw = process.env.APP_PORTAL_DOMAIN;
+  const portal = portalRaw
+    ? portalRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
+    : null;
+
+  if (portal) {
+    if (hostname === portal || hostname === `www.${portal}`) return null;
+    if (hostname.endsWith(`.${portal}`)) {
+      const sub = hostname.slice(0, -1 - portal.length);
+      if (!sub || sub === "www") return null;
+      return sub.split(".")[0] || null;
+    }
+    return null;
   }
 
+  const parts = hostname.split(".");
+  if (parts.length > 2) {
+    const [first] = parts;
+    if (first && first !== "www") return first;
+  }
   return null;
 }
 

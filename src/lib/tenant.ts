@@ -4,22 +4,40 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 /**
  * Derive the tenant slug from a host name.
  *
- * Examples:
+ * Examples (portal domain = harborops.co.uk):
  * - "truehold.harborops.co.uk" -> "truehold"
  * - "www.harborops.co.uk"      -> null
  * - "harborops.co.uk"          -> null
+ * - "localhost"                -> null
  */
 export function getTenantFromHost(host: string): string | null {
   const hostname = host.split(":")[0].toLowerCase();
-  const parts = hostname.split(".");
 
-  if (parts.length > 2) {
-    const [first] = parts;
-    if (first && first !== "www") {
-      return first;
+  // Portal domain: everything that's exactly this host (or its www.) is apex.
+  const portalRaw = process.env.APP_PORTAL_DOMAIN;
+  const portal = portalRaw
+    ? portalRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
+    : null;
+
+  if (portal) {
+    if (hostname === portal || hostname === `www.${portal}`) return null;
+    if (hostname.endsWith(`.${portal}`)) {
+      const sub = hostname.slice(0, -1 - portal.length);
+      if (!sub || sub === "www") return null;
+      // Only the leftmost label is the tenant slug.
+      return sub.split(".")[0] || null;
     }
+    // Host isn't under the portal domain (local dev, preview URLs, IPs) — treat as apex.
+    return null;
   }
 
+  // Fallback heuristic when APP_PORTAL_DOMAIN isn't set:
+  // treat anything with 3+ labels (excluding leading www) as a subdomain.
+  const parts = hostname.split(".");
+  if (parts.length > 2) {
+    const [first] = parts;
+    if (first && first !== "www") return first;
+  }
   return null;
 }
 
