@@ -12,6 +12,7 @@ const emptyToNull = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((val) => (typeof val === "string" && val.trim() === "" ? null : val), schema);
 
 export const bankDetailsSchema = z.object({
+  label: z.string().min(1, "Give this account a name (e.g. 'Main', 'Deposits')").max(80),
   account_holder_name: emptyToNull(z.string().max(120).nullable().optional()),
   account_number: emptyToNull(
     z

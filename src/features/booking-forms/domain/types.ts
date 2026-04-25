@@ -27,6 +27,7 @@ export type BookingForm = {
   id: string;
   tenant_id: string;
   portfolio_id: string | null;
+  bank_details_id: string | null;
   name: string;
   description: string | null;
   is_active: boolean;
@@ -41,14 +42,18 @@ export type BookingForm = {
   } | null;
 };
 
-export type FormBankDetails = {
-  form_id: string;
+export type PortfolioBankDetails = {
+  id: string;
   tenant_id: string;
+  portfolio_id: string;
+  label: string;
   account_holder_name: string | null;
   account_number: string | null;
   sort_code: string | null;
   bank_name: string | null;
   payment_reference_hint: string | null;
+  is_default: boolean;
+  created_at: string;
   updated_at: string;
 };
 

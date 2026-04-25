@@ -34,6 +34,7 @@ import {
   Layers,
   Search,
   Share2,
+  Key as KeyIcon,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -71,6 +72,7 @@ const RA_NAV_ITEMS: NavItem[] = [
   { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
 ];
 
 const PM_NAV_ITEMS: NavItem[] = [
@@ -82,12 +84,14 @@ const PM_NAV_ITEMS: NavItem[] = [
   { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
   { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
   { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
+  { href: "/keys", label: "Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
   { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
   { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
   { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
   { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Settings", icon: Settings, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
 ];
 
 const PM_ROUTE_PREFIXES = [
@@ -98,6 +102,7 @@ const PM_ROUTE_PREFIXES = [
   "/profitability",
   "/rent-collection",
   "/maintenance",
+  "/keys",
   "/acquisition-insights",
   "/marketing",
   "/shares",

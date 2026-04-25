@@ -9,7 +9,8 @@ const UNIT_SELECT = `
   ),
   resident:property_residents(*),
   pm_tenant:pm_tenants(id, full_name, email, phone),
-  current_contract:property_contracts(id, start_date, status, document_url, rent_pcm, deposit, pm_tenant_id)
+  current_contract:property_contracts(id, start_date, status, document_url, rent_pcm, deposit, pm_tenant_id),
+  recent_rent_payments:rent_payments(id, period_year, period_month, amount, paid_at, notes)
 ` as const;
 
 const ACTIVE_CONTRACT_STATUSES = ["active", "signed", "notice_given"];
@@ -31,11 +32,31 @@ function pickUnitContract(rows: UnitContractRow[] | null | undefined) {
   return [...rows].sort((a, b) => (a.start_date < b.start_date ? 1 : -1))[0] ?? null;
 }
 
-function flattenUnit<T extends { current_contract?: unknown }>(row: T): T {
+type RentPaymentRow = {
+  id: string;
+  period_year: number;
+  period_month: number;
+  amount: number;
+  paid_at: string;
+  notes: string | null;
+};
+
+function sortPayments(rows: RentPaymentRow[]): RentPaymentRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.period_year !== b.period_year) return b.period_year - a.period_year;
+    return b.period_month - a.period_month;
+  });
+}
+
+function flattenUnit<T extends { current_contract?: unknown; recent_rent_payments?: unknown }>(row: T): T {
   const rel = row.current_contract as unknown;
+  const payments = row.recent_rent_payments as unknown;
   return {
     ...row,
     current_contract: Array.isArray(rel) ? pickUnitContract(rel as UnitContractRow[]) : rel ?? null,
+    recent_rent_payments: Array.isArray(payments)
+      ? sortPayments(payments as RentPaymentRow[])
+      : [],
   } as T;
 }
 

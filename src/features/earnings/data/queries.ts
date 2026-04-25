@@ -35,8 +35,8 @@ function vatRate(method: string): number {
 
 function computeRentalNet(amount: number, method: string): number {
   const afterFee = amount * (1 - paymentFeeRate(method));
-  const afterVat = afterFee * (1 - vatRate(method));
-  return Math.round(afterVat * 100) / 100;
+  const divisor = method === "card" ? 1.2 : 1;
+  return Math.round((afterFee / divisor) * 100) / 100;
 }
 
 /** Fetch junction table data for a set of rental IDs.

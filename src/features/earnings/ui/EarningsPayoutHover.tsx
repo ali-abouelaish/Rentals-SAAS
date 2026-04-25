@@ -41,7 +41,7 @@ export function EarningsPayoutHover({ transaction, children }: Props) {
           {showVat && (
             <Row
               label="VAT (20%)"
-              value={`−${formatGBP(p.rental_amount * (1 - p.payment_fee_rate) * p.vat_rate)}`}
+              value={`−${formatGBP(p.rental_amount * (1 - p.payment_fee_rate) - p.base_after_fee_and_vat)}`}
             />
           )}
           <Row

@@ -11,6 +11,7 @@ import { ClientDetailsCard } from "@/features/clients/ui/ClientDetailsCard";
 import { CreateRentalCodeCard } from "@/features/rentals/ui/CreateRentalCodeCard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { TrackEntityVisit } from "@/features/search/ui/TrackEntityVisit";
 
 export default async function ClientDetailPage({
   params
@@ -74,6 +75,14 @@ export default async function ClientDetailPage({
 
   return (
     <div className="space-y-6">
+      <TrackEntityVisit
+        tenantId={profile.tenant_id}
+        kind="client"
+        id={client.id}
+        title={client.full_name}
+        subtitle={client.email ?? client.phone ?? null}
+        href={`/clients/${client.id}`}
+      />
       <PageHeader title={client.full_name} subtitle="Client profile overview" />
 
       <ClientDetailsCard

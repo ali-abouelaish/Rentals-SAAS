@@ -26,6 +26,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         role: profile.role,
         avatar_url: agentRow?.avatar_url ?? null,
       }}
+      tenantId={profile.tenant_id}
       branding={branding}
       moduleConfig={moduleConfig}
     >

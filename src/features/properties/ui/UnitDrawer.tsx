@@ -16,6 +16,7 @@ import { OverviewTab } from "./OverviewTab";
 import { TenantTab } from "./TenantTab";
 import { PhotosTab } from "./PhotosTab";
 import { MarketingTab } from "./MarketingTab";
+import { UnitHistoryPanel } from "@/features/contracts/ui/UnitHistoryPanel";
 import type { Unit } from "../domain/types";
 
 function formatUnitLabel(unit: Unit): string {
@@ -108,6 +109,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants }: Un
               {[
                 { value: "overview", label: "Overview" },
                 { value: "tenant", label: "Tenant" },
+                { value: "history", label: "History" },
                 { value: "photos", label: "Photos" },
                 { value: "marketing", label: "Marketing" },
               ].map((tab) => (
@@ -148,6 +150,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants }: Un
               }}
             />
           )}
+          {activeTab === "history" && <UnitHistoryPanel unitId={localUnit.id} />}
           {activeTab === "photos" && <PhotosTab unit={localUnit} />}
           {activeTab === "marketing" && <MarketingTab />}
         </div>

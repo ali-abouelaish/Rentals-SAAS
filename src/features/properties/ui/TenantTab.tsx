@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { User, UserPlus, X, Check, Search, FileSignature } from "lucide-react";
+import { User, UserPlus, X, Check, Search, FileSignature, PoundSterling } from "lucide-react";
+import { TenancyPaymentsList } from "@/features/contracts/ui/TenancyPaymentsList";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -20,6 +21,40 @@ interface PmTenantOption {
   full_name: string;
   email: string;
   phone: string;
+}
+
+function RentPaymentsCard({ unit }: { unit: Unit }) {
+  const contract = unit.current_contract ?? null;
+
+  if (!contract) {
+    return (
+      <div className="rounded-lg border border-border bg-surface-card p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <PoundSterling className="h-3.5 w-3.5 text-foreground-muted" />
+          <p className="text-sm font-semibold text-foreground">Rent payments</p>
+        </div>
+        <p className="text-xs text-foreground-secondary">
+          Create a contract first — rent payments are tracked per contract. Past
+          tenancies are visible under the <span className="font-medium">History</span> tab.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <PoundSterling className="h-3.5 w-3.5 text-foreground-muted" />
+        <p className="text-sm font-semibold text-foreground">Rent payments</p>
+      </div>
+      <TenancyPaymentsList
+        contractId={contract.id}
+        rentPence={contract.rent_pcm ?? 0}
+        startDate={contract.start_date}
+        endDate={null}
+      />
+    </div>
+  );
 }
 
 interface TenantTabProps {
@@ -356,6 +391,8 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
             onUnitUpdated={onUnitUpdated}
             onCreateContract={() => setContractDialogOpen(true)}
           />
+
+          <RentPaymentsCard unit={unit} />
 
           <Button
             type="button"

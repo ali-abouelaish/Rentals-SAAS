@@ -21,6 +21,9 @@ export type FeatureKey =
   | "maintenance"
   | "acquisition_insights"
   | "property_shares"
+  | "keys"
+  | "rent_collection"
+  | "public_api_access"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -46,6 +49,9 @@ export const ALL_FEATURES: FeatureKey[] = [
   "maintenance",
   "acquisition_insights",
   "property_shares",
+  "keys",
+  "rent_collection",
+  "public_api_access",
   "admin",
 ];
 
@@ -110,6 +116,18 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   property_shares: {
     label: "Property Shares",
     description: "Public token-gated share links for external partners to view a live, filtered unit inventory with images, commission, and tenant contact."
+  },
+  keys: {
+    label: "Keys",
+    description: "Physical key tracking — register every key for a property or unit, log check-out and check-in to internal agents or external contacts, and surface overdue returns across the portfolio."
+  },
+  rent_collection: {
+    label: "Rent Collection",
+    description: "Track rent payments, record collections, and view lifetime arrears across active tenancies."
+  },
+  public_api_access: {
+    label: "Public API",
+    description: "Issue API keys so external platforms can read scraped listings (and future endpoints) over HTTPS."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

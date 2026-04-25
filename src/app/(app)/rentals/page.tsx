@@ -173,22 +173,26 @@ export default async function RentalsPage({
             return (
               <div
                 key={rental.id}
-                className="flex items-center gap-4 px-5 py-3.5 hover:bg-surface-inset transition-colors"
+                className="relative flex items-center gap-4 px-5 py-3.5 hover:bg-surface-inset transition-colors"
               >
+                {/* Stretched link — entire row navigates to detail view */}
+                <Link
+                  href={`/rentals/${rental.id}`}
+                  aria-label={`View rental ${rental.code}`}
+                  className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-bento"
+                />
+
                 {/* Agent avatar */}
-                <div className="shrink-0">
+                <div className="shrink-0 relative z-[1] pointer-events-none">
                   <AvatarCircle name={assistedByName || clientName || "Agent"} size={32} />
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 relative z-[1] pointer-events-none">
                   <div className="flex items-center gap-2">
-                    <Link
-                      href={`/rentals/${rental.id}`}
-                      className="text-sm font-semibold text-brand hover:underline"
-                    >
+                    <span className="text-sm font-semibold text-brand">
                       {rental.code}
-                    </Link>
+                    </span>
                     <StatusBadge status={rental.status} size="sm" />
                   </div>
                   <p className="text-xs text-foreground-muted mt-0.5 truncate">
@@ -203,7 +207,7 @@ export default async function RentalsPage({
                 </div>
 
                 {/* Amount + method */}
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 relative z-[1] pointer-events-none">
                   <p className="text-sm font-semibold text-foreground tabular-nums">
                     {formatCurrency(rental.consultation_fee_amount)}
                     <span className="ml-1.5">
@@ -212,9 +216,9 @@ export default async function RentalsPage({
                   </p>
                 </div>
 
-                {/* Actions */}
+                {/* Actions — kept above the stretched link so they stay interactive */}
                 <div
-                  className="flex items-center gap-2 shrink-0"
+                  className="flex items-center gap-2 shrink-0 relative z-[2]"
                 >
                   {isAdmin && rental.status === "approved" && (
                     <>
@@ -245,12 +249,12 @@ export default async function RentalsPage({
                       </form>
                     </>
                   )}
-                  <Link
-                    href={`/rentals/${rental.id}`}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-foreground-muted hover:bg-surface-highlight hover:text-foreground transition-colors"
+                  <span
+                    aria-hidden
+                    className="h-8 w-8 rounded-lg flex items-center justify-center text-foreground-muted"
                   >
                     <ArrowUpRight className="h-4 w-4" />
-                  </Link>
+                  </span>
                 </div>
               </div>
             );

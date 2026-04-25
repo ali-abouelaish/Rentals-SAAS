@@ -5,7 +5,19 @@ import { addDays, format } from "date-fns";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { contractSchema, giveNoticeSchema, type ContractFormValues, type GiveNoticeValues } from "../domain/schemas";
+import { assertContractCloseout } from "@/lib/auth/assertions";
+import { requireUserProfile } from "@/lib/auth/requireRole";
+import { isAdminRole } from "@/lib/auth/roles";
+import { getUnitTenantHistory } from "../data/tenant-history";
+import type { UnitHistory } from "../domain/history";
+import {
+  contractSchema,
+  giveNoticeSchema,
+  closeoutSchema,
+  type ContractFormValues,
+  type GiveNoticeValues,
+  type CloseoutValues,
+} from "../domain/schemas";
 
 export async function createContract(values: ContractFormValues) {
   const profile = await requireRole([...ADMIN_ROLES]);
@@ -151,6 +163,68 @@ export async function uploadContractDocument(formData: FormData) {
   revalidatePath("/contracts");
   revalidatePath("/tenants");
   return data;
+}
+
+export async function closeoutContract(id: string, values: CloseoutValues) {
+  // Tenant scope + role check happens in the assertion.
+  const contract = await assertContractCloseout(id);
+  const supabase = createSupabaseServerClient();
+  const payload = closeoutSchema.parse(values);
+
+  const depositReturnedAt = payload.deposit_returned_at?.toString().trim();
+
+  const { data, error } = await supabase
+    .from("property_contracts")
+    .update({
+      status: "terminated",
+      actual_end_date: payload.actual_end_date,
+      end_reason: payload.end_reason,
+      arrears_at_end: payload.arrears_at_end ?? 0,
+      would_relet: payload.would_relet ?? null,
+      end_notes: payload.end_notes?.toString().trim() || null,
+      deposit_returned:
+        payload.deposit_returned == null ? null : payload.deposit_returned,
+      deposit_returned_at: depositReturnedAt || null,
+      deposit_release_notes:
+        payload.deposit_release_notes?.toString().trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  // Free the unit so the property looks vacant in lists/Kanban.
+  const { error: unitError } = await supabase
+    .from("units")
+    .update({
+      status: "available",
+      notice_given: false,
+      pm_tenant_id: null,
+      available_date: payload.actual_end_date,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", contract.unit_id);
+  if (unitError) throw new Error(unitError.message);
+
+  revalidatePath("/contracts");
+  revalidatePath("/properties");
+  revalidatePath(`/properties/${contract.unit_id}`);
+  revalidatePath("/tenants");
+
+  return data;
+}
+
+export async function fetchUnitTenantHistory(
+  unitId: string
+): Promise<{ history: UnitHistory; canCloseout: boolean }> {
+  // Tenant scope is enforced inside getUnitTenantHistory via assertTenantHistoryRead.
+  const [history, profile] = await Promise.all([
+    getUnitTenantHistory(unitId),
+    requireUserProfile(),
+  ]);
+  return { history, canCloseout: isAdminRole(profile.role) };
 }
 
 export async function deleteContract(id: string) {

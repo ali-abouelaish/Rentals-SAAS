@@ -27,7 +27,12 @@ import { cn } from "@/lib/utils/cn";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { UnitStatusBadge } from "./UnitStatusBadge";
 import { DeletePropertyButton } from "./DeletePropertyButton";
+import { PropertyTenantHistory } from "@/features/contracts/ui/PropertyTenantHistory";
+import { PropertyKeysTab } from "@/features/keys/ui/PropertyKeysTab";
+import type { PropertyHistory } from "@/features/contracts/domain/history";
+import type { PropertyKeysPayload } from "@/features/keys/domain/types";
 import type { Property, Unit, UnitPhoto } from "../domain/types";
+import { Key as KeyIcon } from "lucide-react";
 
 /* ─── lightbox ───────────────────────────────────────────── */
 
@@ -253,13 +258,24 @@ export function PropertyDetailPage({
   property,
   initialUnits,
   allPhotos,
+  tenantHistory,
+  canCloseout,
+  keysPayload,
+  agents,
+  keysEnabled,
 }: {
   property: Property;
   initialUnits: Unit[];
   allPhotos: UnitPhoto[];
+  tenantHistory: PropertyHistory;
+  canCloseout: boolean;
+  keysPayload: PropertyKeysPayload | null;
+  agents: Array<{ id: string; name: string }>;
+  keysEnabled: boolean;
 }) {
   const router = useRouter();
   const units = initialUnits;
+  const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "keys">("overview");
 
   // Separate communal from unit photos
   const communalPhotos = allPhotos.filter((p) => !p.unit_id);
@@ -334,7 +350,55 @@ export function PropertyDetailPage({
         </div>
       </div>
 
-      {/* Two-column layout */}
+      {/* Tabs */}
+      <div className="border-b border-border flex gap-0">
+        {[
+          { value: "overview" as const, label: "Overview" },
+          { value: "tenants" as const, label: "Tenants", icon: Users },
+          ...(keysEnabled
+            ? [{ value: "keys" as const, label: "Keys", icon: KeyIcon }]
+            : []),
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setActiveTab(tab.value)}
+              className={cn(
+                "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5",
+                activeTab === tab.value
+                  ? "border-brand text-brand"
+                  : "border-transparent text-foreground-secondary hover:text-foreground hover:border-border"
+              )}
+            >
+              {Icon && <Icon className="h-3.5 w-3.5" />}
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "tenants" && (
+        <PropertyTenantHistory history={tenantHistory} canCloseout={canCloseout} />
+      )}
+
+      {activeTab === "keys" && keysEnabled && keysPayload && (
+        <PropertyKeysTab
+          payload={keysPayload}
+          units={units.map((u) => ({
+            id: u.id,
+            label: u.room_number
+              ? `Room ${u.room_number}`
+              : u.unit_type === "studio"
+              ? "Studio"
+              : "Whole flat",
+          }))}
+          agents={agents}
+        />
+      )}
+
+      {activeTab === "overview" && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* ── Left: photos + rooms ── */}
@@ -497,6 +561,7 @@ export function PropertyDetailPage({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

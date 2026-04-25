@@ -3,8 +3,8 @@ import { requireUserProfile } from "@/lib/auth/requireRole";
 
 function computeRentalNet(amount: number, method: string): number {
   const feeRate = method === "cash" ? 0 : method === "transfer" ? 0.2 : 0.0175;
-  const vatRate = method === "card" ? 0.2 : 0;
-  return Math.round(amount * (1 - feeRate) * (1 - vatRate) * 100) / 100;
+  const vatDivisor = method === "card" ? 1.2 : 1;
+  return Math.round((amount * (1 - feeRate) / vatDivisor) * 100) / 100;
 }
 
 export async function getLedgerTotals() {

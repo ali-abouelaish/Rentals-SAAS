@@ -141,6 +141,16 @@ export type Unit = {
     deposit: number | null;
     pm_tenant_id: string | null;
   } | null;
+  recent_rent_payments?: UnitRentPayment[];
+};
+
+export type UnitRentPayment = {
+  id: string;
+  period_year: number;
+  period_month: number;
+  amount: number;
+  paid_at: string;
+  notes: string | null;
 };
 
 export type UnitPhoto = {

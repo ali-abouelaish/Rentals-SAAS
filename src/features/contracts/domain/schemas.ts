@@ -29,3 +29,23 @@ export const giveNoticeSchema = z.object({
   vacate_date: z.string().nullable().optional().or(z.literal("")),
 });
 export type GiveNoticeValues = z.infer<typeof giveNoticeSchema>;
+
+export const closeoutSchema = z.object({
+  actual_end_date: z.string().min(1, "Move-out date is required"),
+  end_reason: z.enum([
+    "tenant_notice",
+    "landlord_notice",
+    "mutual",
+    "breach",
+    "abandoned",
+    "other",
+  ]),
+  arrears_at_end: z.coerce.number().int().min(0).default(0),
+  would_relet: z.union([z.boolean(), z.null()]).optional().default(null),
+  end_notes: z.string().max(2000).nullable().optional().or(z.literal("")),
+  // Null = not yet released. Capped at original deposit by DB check.
+  deposit_returned: z.coerce.number().int().min(0).nullable().optional(),
+  deposit_returned_at: z.string().nullable().optional().or(z.literal("")),
+  deposit_release_notes: z.string().max(2000).nullable().optional().or(z.literal("")),
+});
+export type CloseoutValues = z.infer<typeof closeoutSchema>;

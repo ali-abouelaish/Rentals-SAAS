@@ -8,7 +8,7 @@ import { UnitsListView } from "./UnitsListView";
 import { UnitsKanbanView } from "./UnitsKanbanView";
 import { UnitDrawer } from "./UnitDrawer";
 import { ManagePortfoliosDialog } from "./CreatePortfolioDialog";
-import type { Portfolio, Property, Unit, UnitFilters } from "../domain/types";
+import type { Portfolio, Property, Unit, UnitFilters, UnitRentPayment } from "../domain/types";
 
 type ViewMode = "list" | "kanban";
 
@@ -158,6 +158,22 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
     setUnits((prev) => prev.filter((u) => u.property_id !== propertyId));
   };
 
+  const handlePaymentRecorded = (unitId: string, payment: UnitRentPayment) => {
+    setUnits((prev) =>
+      prev.map((u) => {
+        if (u.id !== unitId) return u;
+        const others = (u.recent_rent_payments ?? []).filter(
+          (p) => !(p.period_year === payment.period_year && p.period_month === payment.period_month)
+        );
+        const merged = [payment, ...others].sort((a, b) => {
+          if (a.period_year !== b.period_year) return b.period_year - a.period_year;
+          return b.period_month - a.period_month;
+        });
+        return { ...u, recent_rent_payments: merged };
+      })
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* Page header */}
@@ -202,6 +218,7 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
           onUnitClick={handleUnitClick}
           onUnitCreated={handleUnitCreated}
           onPropertyDeleted={handlePropertyDeleted}
+          onPaymentRecorded={handlePaymentRecorded}
         />
       ) : (
         <UnitsKanbanView

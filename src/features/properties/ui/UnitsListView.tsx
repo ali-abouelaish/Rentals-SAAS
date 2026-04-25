@@ -16,14 +16,14 @@ import {
   getActiveContractForUnit,
   recordRentPayment,
 } from "@/features/contracts/actions/rent-payments";
-import type { Property, Unit } from "../domain/types";
+import type { Property, Unit, UnitRentPayment } from "../domain/types";
 
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
 ];
 
-function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open: boolean; onClose: () => void; onPaid: (year: number, month: number) => void }) {
+function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open: boolean; onClose: () => void; onPaid: (payment: UnitRentPayment) => void }) {
   const now = new Date();
   const [isPending, startTransition] = useTransition();
   const [loaded, setLoaded] = useState(false);
@@ -51,7 +51,7 @@ function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open:
     if (!parsed || parsed <= 0) { toast.error("Enter a valid amount"); return; }
     startTransition(async () => {
       try {
-        await recordRentPayment({
+        const payment = await recordRentPayment({
           contractId: contract.id,
           unitId: unit.id,
           periodYear,
@@ -60,7 +60,7 @@ function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open:
           notes: notes.trim() || undefined,
         });
         toast.success(`Rent marked as paid — ${MONTH_NAMES[periodMonth - 1]} ${periodYear}`);
-        onPaid(periodYear, periodMonth);
+        onPaid(payment);
         onClose();
         setNotes("");
       } catch {
@@ -187,16 +187,22 @@ const COLS = "grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr_80px]";
 function UnitRow({
   unit,
   onUnitClick,
+  onPaymentRecorded,
   striped,
 }: {
   unit: Unit;
   onUnitClick: (id: string) => void;
+  onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
   striped: boolean;
 }) {
   const now = new Date();
   const daysEmpty = getDaysEmpty(unit);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [paidThisMonth, setPaidThisMonth] = useState(false);
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const paidThisMonth = (unit.recent_rent_payments ?? []).some(
+    (p) => p.period_year === currentYear && p.period_month === currentMonth
+  );
 
   return (
     <>
@@ -304,11 +310,7 @@ function UnitRow({
         unit={unit}
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        onPaid={(year, month) => {
-          if (year === now.getFullYear() && month === now.getMonth() + 1) {
-            setPaidThisMonth(true);
-          }
-        }}
+        onPaid={(payment) => onPaymentRecorded(unit.id, payment)}
       />
     </>
   );
@@ -320,12 +322,14 @@ function PropertyGroup({
   onUnitClick,
   onUnitCreated,
   onPropertyDeleted,
+  onPaymentRecorded,
 }: {
   property: Property;
   units: Unit[];
   onUnitClick: (id: string) => void;
   onUnitCreated: (unit: Unit) => void;
   onPropertyDeleted: (id: string) => void;
+  onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
 }) {
   return (
     <div className="rounded-xl border border-border bg-surface-card overflow-hidden">
@@ -402,7 +406,13 @@ function PropertyGroup({
       {units.length > 0 ? (
         <div className="divide-y divide-border">
           {units.map((unit, i) => (
-            <UnitRow key={unit.id} unit={unit} onUnitClick={onUnitClick} striped={i % 2 === 1} />
+            <UnitRow
+              key={unit.id}
+              unit={unit}
+              onUnitClick={onUnitClick}
+              onPaymentRecorded={onPaymentRecorded}
+              striped={i % 2 === 1}
+            />
           ))}
         </div>
       ) : (
@@ -421,9 +431,10 @@ interface UnitsListViewProps {
   onUnitClick: (unitId: string) => void;
   onUnitCreated: (unit: Unit) => void;
   onPropertyDeleted: (propertyId: string) => void;
+  onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
 }
 
-export function UnitsListView({ properties, units, onUnitClick, onUnitCreated, onPropertyDeleted }: UnitsListViewProps) {
+export function UnitsListView({ properties, units, onUnitClick, onUnitCreated, onPropertyDeleted, onPaymentRecorded }: UnitsListViewProps) {
   if (properties.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-surface-card py-16 text-center">
@@ -446,6 +457,7 @@ export function UnitsListView({ properties, units, onUnitClick, onUnitCreated, o
             onUnitClick={onUnitClick}
             onUnitCreated={onUnitCreated}
             onPropertyDeleted={onPropertyDeleted}
+            onPaymentRecorded={onPaymentRecorded}
           />
         );
       })}

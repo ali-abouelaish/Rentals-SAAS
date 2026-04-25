@@ -11,6 +11,7 @@ import { InvoiceStatusBadge } from "@/features/invoices/ui/InvoiceStatusBadge";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
 import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { TrackEntityVisit } from "@/features/search/ui/TrackEntityVisit";
 import { Trash2, ArrowLeft } from "lucide-react";
 
 export default async function LandlordDetailPage({
@@ -36,6 +37,14 @@ export default async function LandlordDetailPage({
 
   return (
     <div className="space-y-6">
+      <TrackEntityVisit
+        tenantId={profile.tenant_id}
+        kind="landlord"
+        id={landlord.id}
+        title={landlord.name}
+        subtitle={landlord.email ?? landlord.contact ?? null}
+        href={`/landlords/${landlord.id}`}
+      />
       <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-foreground-secondary hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
         Back to Landlords

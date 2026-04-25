@@ -10,6 +10,23 @@ export type DepositScheme = "dps" | "mydeposits" | "tds" | "none";
 export type SigningMethod = "email" | "whatsapp" | "adobe_sign" | "docusign" | "paper" | "other";
 export type NoticeGivenBy = "tenant" | "landlord";
 
+export type EndReason =
+  | "tenant_notice"
+  | "landlord_notice"
+  | "mutual"
+  | "breach"
+  | "abandoned"
+  | "other";
+
+export const END_REASON_LABELS: Record<EndReason, string> = {
+  tenant_notice:   "Tenant gave notice",
+  landlord_notice: "Landlord gave notice",
+  mutual:          "Mutual agreement",
+  breach:          "Breach of contract",
+  abandoned:       "Abandoned",
+  other:           "Other",
+};
+
 export type PropertyContract = {
   id: string;
   tenant_id: string;
@@ -29,6 +46,14 @@ export type PropertyContract = {
   notice_given_by: NoticeGivenBy | null;
   notice_given_date: string | null;
   vacate_date: string | null;
+  actual_end_date: string | null;
+  end_reason: EndReason | null;
+  arrears_at_end: number;
+  would_relet: boolean | null;
+  end_notes: string | null;
+  deposit_returned: number | null;
+  deposit_returned_at: string | null;
+  deposit_release_notes: string | null;
   document_url: string | null;
   notes: string | null;
   created_at: string;

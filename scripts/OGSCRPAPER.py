@@ -4,11 +4,12 @@ import pandas as pd
 import time
 import sys
 import os
+import re
+from urllib.parse import urlparse, parse_qs, unquote
 
 # Load .env.local / .env so APP_URL, SCRAPER_API_KEY, TENANT_ID are set when run from project root
 try:
     from dotenv import load_dotenv
-    # Project root: parent of directory containing this script
     _root = os.path.dirname(os.path.dirname(os.path.abspath(os.path.realpath(__file__))))
     for _f in (".env.local", ".env"):
         _path = os.path.join(_root, _f)
@@ -23,72 +24,221 @@ except ImportError:
 
 # Fix Windows console encoding for emojis
 if sys.platform == 'win32':
-    # Try to set UTF-8 encoding
     try:
         sys.stdout.reconfigure(encoding='utf-8')
     except:
-        # If that fails, just replace emojis with text
         pass
 
 # -----------------------------
-# 1) Load profiles from public Google Sheet
+# 1) Load landlord SpareRoom profiles from app DB (via API)
 # -----------------------------
-
-# Load profiles from landlord profiles (app API)
-import os
-import requests
 
 app_url = (os.environ.get("APP_URL") or os.environ.get("NEXT_PUBLIC_APP_URL") or "").strip().rstrip("/")
 tenant_id = os.environ.get("TENANT_ID")
 api_key = os.environ.get("SCRAPER_API_KEY")
-# If TENANT_ID missing, try to get first tenant from Supabase (dev convenience)
+
+# Dev fallback: if TENANT_ID missing, grab the first tenant via Supabase service role
 if not tenant_id and os.environ.get("NEXT_PUBLIC_SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
     try:
-        supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL").rstrip("/")
-        sr_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-        r0 = requests.get(
-            f"{supabase_url}/rest/v1/tenants?select=id&limit=1",
-            headers={"apikey": sr_key, "Authorization": f"Bearer {sr_key}"},
+        _supabase_url = os.environ["NEXT_PUBLIC_SUPABASE_URL"].rstrip("/")
+        _sr_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+        _r0 = requests.get(
+            f"{_supabase_url}/rest/v1/tenants?select=id&limit=1",
+            headers={"apikey": _sr_key, "Authorization": f"Bearer {_sr_key}"},
             timeout=10,
         )
-        if r0.ok and r0.json():
-            tenant_id = r0.json()[0].get("id")
+        if _r0.ok and _r0.json():
+            tenant_id = _r0.json()[0].get("id")
     except Exception:
         pass
+
 if not app_url or not tenant_id or not api_key:
     raise SystemExit("Set APP_URL, SCRAPER_API_KEY and TENANT_ID in env (or Supabase vars for tenant fallback).")
 
-r = requests.get(
+_r = requests.get(
     f"{app_url}/api/landlords/spareroom-profiles?tenant_id={tenant_id}",
     headers={"Authorization": f"Bearer {api_key}"},
     timeout=15,
 )
-if not r.ok:
-    print(f"API error {r.status_code}: {r.text[:500]}", file=sys.stderr)
-    raise SystemExit(f"Profiles API returned {r.status_code}. Is the app running at {app_url}?")
+if not _r.ok:
+    print(f"API error {_r.status_code}: {_r.text[:500]}", file=sys.stderr)
+    raise SystemExit(f"Profiles API returned {_r.status_code}. Is the app running at {app_url}?")
 try:
-    data = r.json()
+    _data = _r.json()
 except Exception as e:
-    print(f"API response was not JSON. Status: {r.status_code}", file=sys.stderr)
-    print(f"Response (first 500 chars): {r.text[:500]}", file=sys.stderr)
+    print(f"API response was not JSON. Status: {_r.status_code}", file=sys.stderr)
+    print(f"Response (first 500 chars): {_r.text[:500]}", file=sys.stderr)
     raise SystemExit("Profiles API did not return JSON. Is the Next.js app running?") from e
-profiles = data.get("profiles", [])
-paying_flags = (data.get("paying_flags") or [""] * len(profiles))[: len(profiles)]
-property_flags = (data.get("profile_flags") or [""] * len(profiles))[: len(profiles)]
-landlord_ids = (data.get("ids") or [""] * len(profiles))[: len(profiles)]
+
+profiles = _data.get("profiles", [])
+paying_flags = (_data.get("paying_flags") or [""] * len(profiles))[: len(profiles)]
+property_flags = (_data.get("profile_flags") or [""] * len(profiles))[: len(profiles)]
+landlord_ids = (_data.get("ids") or [""] * len(profiles))[: len(profiles)]
+print(f"Loaded {len(profiles)} landlord profiles from DB for tenant {tenant_id}")
+
 # -----------------------------
 # 2) Scraper setup
 # -----------------------------
+
 base_url = "https://www.spareroom.co.uk"
-headers = {"User-Agent": "Mozilla/5.0"}
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.spareroom.co.uk/",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
+}
+
+session = requests.Session()
+session.headers.update(headers)
+# Warm up cookies so subsequent requests look like a real browsing session
+try:
+    session.get(base_url, timeout=10)
+except Exception:
+    pass
+
+
+# Profile path matcher: /u12345 or /pro/SomeAgent
+PROFILE_PATH_RE = re.compile(r"^/(u\d+|pro/[\w-]+)/?$")
+
+
+def classify_url(url):
+    """Classify a stored landlord URL.
+
+    Returns one of:
+      ('profile', profile_url)  — a clean SpareRoom profile (e.g. /u20824796 or /pro/CrownCentral)
+      ('listing', listing_url)  — a flatshare_detail.pl URL we cannot promote to a profile
+      ('unknown', url)          — unrecognised, caller should skip with a warning
+
+    Handles the legacy case where a flatshare_detail.pl URL has a search_results
+    query param pointing at a profile path — those are promoted to ('profile', ...).
+    """
+    if not url:
+        return ("unknown", url)
+    try:
+        parsed = urlparse(url)
+
+        # Already a profile path
+        if PROFILE_PATH_RE.match(parsed.path):
+            return ("profile", url)
+
+        # Listing detail page — see if search_results encodes a profile path
+        if "flatshare_detail.pl" in parsed.path:
+            sr = parse_qs(parsed.query).get("search_results", [""])[0]
+            sr_path = unquote(sr or "").split("?", 1)[0].strip()
+            if PROFILE_PATH_RE.match(sr_path):
+                return ("profile", f"{base_url}{sr_path}")
+            return ("listing", url)
+    except Exception:
+        pass
+    return ("unknown", url)
+
+
+def extract_more_from_sidebar(soup):
+    """Pull listing hrefs from the 'More from the same advertiser' sidebar on a
+    flatshare detail page. Returns a list of hrefs (may be relative or absolute).
+
+    Note: SpareRoom typically caps this list at a small number (often <5), so
+    listing-URL landlords will under-harvest compared to profile-URL landlords.
+    """
+    urls = []
+    for sidebar in soup.find_all("div", class_="listing-sidebar-box"):
+        title_elem = sidebar.find("h3", class_="listing-sidebar-box__title")
+        title_text = title_elem.get_text(" ", strip=True).lower() if title_elem else ""
+        if "more from" not in title_text:
+            continue  # skip "Similar nearby", "Recently viewed", etc.
+        for li in sidebar.select("li.listing-sidebar-box__list-item"):
+            a = li.find("a", href=True)
+            if a:
+                urls.append(a["href"])
+        break
+    return urls
+
+
+def fetch_with_retry(url, max_attempts=4, timeout=15):
+    """GET via session, retrying transient 503/429/502/504 with backoff."""
+    last_exc = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = session.get(url, timeout=timeout)
+            if resp.status_code in (503, 429, 502, 504):
+                wait = 2 ** attempt
+                print(f"   ⏳ {resp.status_code} — retry {attempt}/{max_attempts} in {wait}s")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            # SpareRoom often omits charset; bytes are UTF-8 in practice. Forcing
+            # this avoids 'requests' falling back to ISO-8859-1 and producing
+            # mojibake (e.g. 🔥 -> ð¥) in titles/descriptions.
+            resp.encoding = "utf-8"
+            return resp
+        except requests.RequestException as e:
+            last_exc = e
+            wait = 2 ** attempt
+            print(f"   ⏳ {e.__class__.__name__} — retry {attempt}/{max_attempts} in {wait}s")
+            time.sleep(wait)
+    if last_exc:
+        raise last_exc
+    raise requests.HTTPError(f"Exhausted retries for {url}")
+
 
 all_results = []   # ← this is now your main array
 
 # -----------------------------
-# 3) Scrape each profile
+# 3) Scrape each profile (or listing fallback)
 # -----------------------------
-for profile_url, paying_flag, property_flag, landlord_id in zip(profiles, paying_flags, property_flags, landlord_ids):
+for raw_url, paying_flag, property_flag, landlord_id in zip(
+    profiles, paying_flags, property_flags, landlord_ids
+):
+    kind, resolved = classify_url(raw_url)
+
+    if kind == "unknown":
+        print(f"\n⚠️ Skipping {raw_url} — unrecognised URL format")
+        continue
+
+    # ----- LISTING URL FALLBACK -----
+    # The stored URL points at a single ad; harvest the "More from the same
+    # advertiser" sidebar. This is capped by SpareRoom and will under-harvest
+    # compared to a profile URL — flag the landlord so the user can update it.
+    if kind == "listing":
+        print(f"\n📄 Listing URL detected: {resolved}")
+        print(f"   Using 'More from advertiser' sidebar fallback (will under-harvest)")
+        try:
+            response = fetch_with_retry(resolved)
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            page_links = {resolved}  # always include the listing itself
+            for href in extract_more_from_sidebar(soup):
+                full_url = href if href.startswith("http") else base_url + href
+                page_links.add(full_url)
+
+            print(f"   Collected {len(page_links)} listing(s) "
+                  f"(1 main + {len(page_links) - 1} from sidebar)")
+
+            for link in page_links:
+                all_results.append({
+                    "profile": resolved,
+                    "url": link,
+                    "paying": paying_flag,
+                    "profile_flag": property_flag,
+                    "landlord_id": landlord_id if landlord_id else None,
+                })
+        except Exception as e:
+            print(f"⚠️ Error scraping listing page {resolved}: {e}")
+        continue  # next landlord — skip the profile pagination below
+
+    # ----- PROFILE URL: NORMAL PAGINATION -----
+    profile_url = resolved
+    if profile_url != raw_url:
+        print(f"\n🔧 Promoted listing search_results → profile: {profile_url}")
     print(f"\n🔍 Scraping profile: {profile_url}")
+    if property_flag:
+        print(f"   📌 Will apply flag: {property_flag}")
     offset = 0
     prev_page_links = set()
 
@@ -100,8 +250,7 @@ for profile_url, paying_flag, property_flag, landlord_id in zip(profiles, paying
         )
 
         try:
-            response = requests.get(page_url, headers=headers, timeout=10)
-            response.raise_for_status()
+            response = fetch_with_retry(page_url)
             soup = BeautifulSoup(response.text, "html.parser")
 
             listings = soup.find_all("a", class_="listing-card__link")
@@ -156,55 +305,7 @@ print(f"\n✅ Finished scraping {len(listings)} unique listings")
 
 
 
-import requests
-from bs4 import BeautifulSoup
-import re
-import time
 import json
-import gspread
-import pandas as pd
-import os
-from google.oauth2.service_account import Credentials
-
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# Get the project root (parent directory of scripts folder)
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-# Credentials: env var first (so you can put the file anywhere), then default paths
-_env_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or os.environ.get("GOOGLE_SERVICE_ACCOUNT_PATH")
-SERVICE_ACCOUNT_PATHS = []
-if _env_creds and os.path.isfile(_env_creds):
-    SERVICE_ACCOUNT_PATHS.append(_env_creds)
-SERVICE_ACCOUNT_PATHS.extend([
-    os.path.join(PROJECT_ROOT, "storage", "app", "google-credentials.json"),
-    os.path.join(PROJECT_ROOT, "credentials", "service_account.json"),
-    os.path.join(PROJECT_ROOT, "storage", "app", "service_account.json"),
-])
-
-SERVICE_ACCOUNT_FILE = None
-for path in SERVICE_ACCOUNT_PATHS:
-    if os.path.exists(path):
-        SERVICE_ACCOUNT_FILE = path
-        print(f"Found credentials at: {path}")
-        break
-
-# Optional: Google Sheets (script now posts to Supabase only)
-gc = None
-sheet = None
-if SERVICE_ACCOUNT_FILE:
-    try:
-        SCOPES = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-        gc = gspread.authorize(creds)
-        sheet = gc.open_by_key("1qkiVKv8HimkCznrxMvJVNSz-l9yNWkD0kQ2KYRlqV18").worksheet("Properties")
-        print("Google Sheets connected (optional).")
-    except Exception as e:
-        print(f"Google Sheets skip: {e}")
-else:
-    print("(Posting to Supabase only; no Google credentials.)")
 
 def clean_text(text):
     """Clean and normalize text data (for titles, small fields)"""
@@ -250,14 +351,6 @@ def extract_price(price_text):
         except:
             return None
     return None
-
-
-
-
-
-
-
-
 
 
 def parse_money_to_int(text):
@@ -364,11 +457,6 @@ def extract_room_deposits(soup):
     return room_deposits, generic_deposit
 
 
-
-
-
-
-
 def extract_whole_property_price(soup):
     """
     Find price from:
@@ -402,6 +490,7 @@ def detect_whole_property(soup):
             return True
 
     return False
+
 def extract_coordinates(lat_text, lon_text):
     """Extract and validate coordinates"""
     try:
@@ -461,16 +550,11 @@ def detect_property_type_from_key_features(soup):
         return "Flat", True
 
     return None, False
- 
 
 
 def scrape_listing_advanced(url, paying, profile_flag=""):
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        }
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
+        resp = fetch_with_retry(url)
         soup = BeautifulSoup(resp.text, "html.parser")
         html = resp.text
         if "The advertiser is not currently accepting applications" in html:
@@ -515,8 +599,7 @@ def scrape_listing_advanced(url, paying, profile_flag=""):
                 flat_rooms[f"room{i}_type"] = r.get("room_type") or ""
                 flat_rooms[f"room{i}_price_pcm"] = r.get("price_pcm") or ""
                 flat_rooms[f"room{i}_deposit"] = r.get("deposit") or ""
-               
-        
+
 
         # Title
         title = "N/A"
@@ -638,14 +721,13 @@ def scrape_listing_advanced(url, paying, profile_flag=""):
                     except:
                         continue
 
-        # Property type
-                # Property type (reliable) + whole property override
+        # Property type (reliable) + whole property override
         property_type, is_whole_property_from_kf = detect_property_type_from_key_features(soup)
 
         # If key-features says "to rent", treat as whole property
         if is_whole_property_from_kf:
             is_whole_property = True  # overrides earlier detection
-            
+
 
         # ✅ Extract structured features
         features = extract_feature_list(soup)
@@ -725,6 +807,8 @@ def scrape_listing_advanced(url, paying, profile_flag=""):
             "photos": json.dumps(all_photo_urls) if all_photo_urls else None,
             "paying": paying,
             "profile_flag": profile_flag,
+            "flag": "",  # ✅ Will be populated from profile or manual flags
+            "flag_color": "",  # ✅ Will be populated from profile or manual flags
             "room_count": room_count,
             "min_room_price_pcm": min_room_price_pcm,
             "max_room_price_pcm": max_room_price_pcm,
@@ -744,6 +828,7 @@ def main(listings):
     for item in listings:
         url = item.get("url")
         paying = item.get("paying", "")
+        profile_flag = item.get("profile_flag", "")
 
         if not url:
             continue
@@ -756,19 +841,16 @@ def main(listings):
         seen_urls.add(url)
 
         print(f"Scraping {url}")
-        data = scrape_listing_advanced(url, paying, "")
+        if profile_flag:
+            print(f"   📌 Applying profile flag: {profile_flag}")
+        data = scrape_listing_advanced(url, paying, profile_flag)
         if data:
             data["landlord_id"] = item.get("landlord_id")
-            data["tenant_id"] = tenant_id
             results.append(data)
 
         time.sleep(1)
 
-    # Convert to DataFrame (kept for any legacy use; we now post to Supabase)
-    df_output = pd.DataFrame(results)
-
-    # SAFETY CHECK
-    if df_output.empty:
+    if not results:
         print("❌ No listings scraped. Supabase not updated.")
         return
 
@@ -777,8 +859,24 @@ def main(listings):
     # ========================================
     supabase_url = (os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL") or "").rstrip("/")
     supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    tenant_id = os.environ.get("TENANT_ID")
+
     if not supabase_url or not supabase_key:
         print("ERROR: Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to post to Supabase.")
+        return
+    if not tenant_id:
+        try:
+            r0 = requests.get(
+                f"{supabase_url}/rest/v1/tenants?select=id&limit=1",
+                headers={"apikey": supabase_key, "Authorization": f"Bearer {supabase_key}"},
+                timeout=10,
+            )
+            if r0.ok and r0.json():
+                tenant_id = r0.json()[0].get("id")
+        except Exception:
+            pass
+    if not tenant_id:
+        print("ERROR: Set TENANT_ID env var (no tenants found in Supabase fallback).")
         return
 
     try:
@@ -787,26 +885,6 @@ def main(listings):
     except ImportError:
         print("ERROR: Install supabase: pip install supabase")
         return
-
-    # Flags are set from the dashboard on the landlord profile; scraper does not set or preserve them.
-
-    # 4b️⃣ Drop columns that are entirely null or empty (only show columns with at least one value)
-    def _is_empty(val):
-        if pd.isna(val):
-            return True
-        s = str(val).strip()
-        return s == "" or s.lower() in ("nan", "none", "n/a")
-
-    cols_to_drop = [c for c in df_output.columns if df_output[c].apply(_is_empty).all()]
-    if cols_to_drop:
-        df_output = df_output.drop(columns=cols_to_drop)
-        print(f"\n📋 Dropped {len(cols_to_drop)} empty columns: {', '.join(cols_to_drop)}")
-
-    # 5️⃣ Ensure headers match dataframe (strip any leading/trailing spaces)
-    df_output.columns = [str(c).strip() for c in df_output.columns]
-    df_headers = df_output.columns.tolist()
-    
-    print(f"\n📋 Posting {len(results)} rows to Supabase scraped_listings")
 
     TABLE_COLS = [
         "tenant_id", "url", "title", "landlord_id", "location", "latitude", "longitude", "status", "price",
@@ -818,21 +896,18 @@ def main(listings):
         "room1_type", "room1_price_pcm", "room1_deposit", "room2_type", "room2_price_pcm", "room2_deposit",
         "room3_type", "room3_price_pcm", "room3_deposit", "room4_type", "room4_price_pcm", "room4_deposit",
     ]
+
     def _parse_date_for_db(val):
-        """Parse SpareRoom-style dates (e.g. '1st Dec 20', '15th Jan 21', 'Available now') to YYYY-MM-DD or None."""
         if not val or not isinstance(val, str):
             return None
         s = val.strip()
         if not s:
             return None
-        # "Available now" / "available now" -> use today
         if re.match(r"^available\s+now", s, re.I):
             from datetime import date
             return date.today().isoformat()
-        # Already ISO-like (YYYY-MM-DD)
         if re.match(r"^\d{4}-\d{2}-\d{2}", s):
             return s[:10]
-        # e.g. "1st Dec 20", "15th Jan 21", "3rd Mar 22"
         m = re.match(r"^(\d{1,2})(?:st|nd|rd|th)?\s+(\w{3,9})\s+(\d{2,4})", s, re.I)
         if not m:
             return None
@@ -840,9 +915,6 @@ def main(listings):
         months = "jan feb mar apr may jun jul aug sep oct nov dec"
         try:
             month_num = months.split().index(month_str.lower()[:3]) + 1
-        except (ValueError, AttributeError):
-            return None
-        try:
             day = int(day_str)
             year = int(year_str)
             if year < 100:
@@ -850,39 +922,50 @@ def main(listings):
             if day < 1 or day > 31 or month_num < 1 or month_num > 12:
                 return None
             return f"{year:04d}-{month_num:02d}-{day:02d}"
-        except (ValueError, TypeError):
+        except (ValueError, AttributeError, TypeError):
             return None
 
+    NUMERIC_COLS = {
+        "latitude", "longitude", "price", "deposit", "min_room_price_pcm", "max_room_price_pcm",
+        "room1_price_pcm", "room1_deposit", "room2_price_pcm", "room2_deposit",
+        "room3_price_pcm", "room3_deposit", "room4_price_pcm", "room4_deposit",
+    }
+    INT_COLS = {"photo_count", "room_count"}
+
     def _to_row(r):
-        row = {}
+        row = {"tenant_id": tenant_id}
         for col in TABLE_COLS:
+            if col == "tenant_id":
+                continue
             val = r.get(col)
-            if val is None:
+            if val is None or val == "":
                 row[col] = None
-            elif col == "available_date" and isinstance(val, str) and val:
+            elif col == "available_date" and isinstance(val, str):
                 row[col] = _parse_date_for_db(val)
-            elif col in ("latitude", "longitude", "price", "deposit", "min_room_price_pcm", "max_room_price_pcm",
-                        "room1_price_pcm", "room1_deposit", "room2_price_pcm", "room2_deposit",
-                        "room3_price_pcm", "room3_deposit", "room4_price_pcm", "room4_deposit") and val is not None:
+            elif col in NUMERIC_COLS:
                 try:
                     row[col] = float(val) if isinstance(val, (int, float)) else float(str(val).replace(",", ""))
                 except (TypeError, ValueError):
                     row[col] = None
-            elif col in ("photo_count", "room_count"):
+            elif col in INT_COLS:
                 try:
-                    row[col] = int(val) if val is not None else None
+                    row[col] = int(val)
                 except (TypeError, ValueError):
                     row[col] = None
             else:
                 row[col] = str(val).strip() if val is not None else None
         return row
+
     rows = [_to_row(r) for r in results]
     landlord_ids_in_run = list({r.get("landlord_id") for r in results if r.get("landlord_id")})
+    rows_without_landlord = sum(1 for r in results if not r.get("landlord_id"))
     if landlord_ids_in_run:
         supabase.table("scraped_listings").delete().eq("tenant_id", tenant_id).in_("landlord_id", landlord_ids_in_run).execute()
     for i in range(0, len(rows), 100):
         supabase.table("scraped_listings").insert(rows[i : i + 100]).execute()
     print(f"\n✅ Successfully posted {len(rows)} listings to Supabase scraped_listings!")
+    print(f"   👤 Landlords in this run: {len(landlord_ids_in_run)}"
+          + (f" (+ {rows_without_landlord} listings with no landlord_id)" if rows_without_landlord else ""))
 
 
 # Call main() to scrape each individual listing
