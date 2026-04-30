@@ -173,3 +173,43 @@ export async function recordRentPayment({
     notes: string | null;
   };
 }
+
+/**
+ * Reverse a recorded rent payment for a given contract + period. Used by the
+ * "Paid -> Undo" toggle in the units list when an admin marked a payment by
+ * mistake. Returns the deleted payment so the caller can pop it from local state.
+ */
+export async function undoRentPayment({
+  contractId,
+  periodYear,
+  periodMonth,
+}: {
+  contractId: string;
+  periodYear: number;
+  periodMonth: number;
+}): Promise<{ ok: true; deletedId: string } | { ok: false; error: string }> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  // RLS scopes by tenant_id; the explicit eq is belt-and-braces and lets the
+  // SELECT below short-circuit when the row belongs to another agency.
+  const { data: existing, error: findErr } = await supabase
+    .from("rent_payments")
+    .select("id")
+    .eq("contract_id", contractId)
+    .eq("period_year", periodYear)
+    .eq("period_month", periodMonth)
+    .eq("tenant_id", profile.tenant_id)
+    .maybeSingle();
+  if (findErr) return { ok: false, error: findErr.message };
+  if (!existing) return { ok: false, error: "No payment found for that period." };
+
+  const { error: deleteErr } = await supabase
+    .from("rent_payments")
+    .delete()
+    .eq("id", existing.id);
+  if (deleteErr) return { ok: false, error: deleteErr.message };
+
+  revalidatePath("/properties");
+  return { ok: true, deletedId: existing.id as string };
+}

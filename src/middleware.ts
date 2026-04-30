@@ -19,7 +19,8 @@ const PUBLIC_PATHS = [
   "/auth/error",
   "/s",
   "/api/shares",
-  "/apply"
+  "/apply",
+  "/preferences"
 ];
 
 function getTenantFromHost(host: string | null): string | null {

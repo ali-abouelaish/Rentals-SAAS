@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { differenceInDays, parseISO } from "date-fns";
-import { MapPin, Clock, User, Warehouse, Pencil, Key, PoundSterling, Check } from "lucide-react";
+import { AlertTriangle, MapPin, Clock, User, Warehouse, Pencil, Key, PoundSterling, Check, Bell, X } from "lucide-react";
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
+import { sendRentReminderNow } from "@/features/reminders/actions/send-now";
+import type { ReminderStatusMap } from "@/features/reminders/data/status";
 import { cn } from "@/lib/utils/cn";
 import { UnitStatusBadge } from "./UnitStatusBadge";
 import { PortfolioBadge } from "./PortfolioBadge";
@@ -15,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import {
   getActiveContractForUnit,
   recordRentPayment,
+  undoRentPayment,
 } from "@/features/contracts/actions/rent-payments";
 import type { Property, Unit, UnitRentPayment } from "../domain/types";
 
@@ -182,27 +186,101 @@ function formatPropertyType(type: string) {
 }
 
 /* Column layout shared between header and rows */
-const COLS = "grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr_80px]";
+const COLS = "grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr_80px_140px]";
+
+function ReminderCell({ pmTenantId, status }: { pmTenantId: string; status?: { kind: string; daysOverdue: number } }) {
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  const kind = status?.kind ?? "no_contract";
+  if (kind === "no_contract") {
+    return <span className="text-xs text-foreground-muted">—</span>;
+  }
+  const overdue = kind === "overdue";
+  const label = overdue
+    ? `Overdue${status?.daysOverdue ? ` ${status.daysOverdue}d` : ""}`
+    : kind === "due_today"
+      ? "Due today"
+      : "Reminder";
+  const handle = () => {
+    start(async () => {
+      const result = await sendRentReminderNow(pmTenantId);
+      if (!result.ok) {
+        toast({ variant: "error", title: "Reminder not sent", description: result.error });
+      } else {
+        toast({
+          title: result.kind === "rent_overdue" ? "Overdue notice sent" : "Rent reminder sent",
+          description: `Sent to ${result.sentTo}${result.kind === "rent_overdue" ? ` · ${result.daysOverdue} day(s) overdue` : ""}`,
+        });
+      }
+    });
+  };
+  return (
+    <button
+      type="button"
+      onClick={handle}
+      disabled={pending}
+      title={`Send ${overdue ? "overdue notice" : "rent reminder"}`}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors disabled:opacity-60",
+        overdue
+          ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+          : "border-border bg-surface-card text-foreground-secondary hover:border-brand hover:bg-brand/5 hover:text-brand"
+      )}
+    >
+      {overdue ? <AlertTriangle className="h-3 w-3" /> : <Bell className="h-3 w-3" />}
+      {pending ? "..." : label}
+    </button>
+  );
+}
 
 function UnitRow({
   unit,
   onUnitClick,
   onPaymentRecorded,
+  onPaymentUndone,
   striped,
+  reminderStatus,
 }: {
   unit: Unit;
   onUnitClick: (id: string) => void;
   onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
+  onPaymentUndone: (unitId: string, periodYear: number, periodMonth: number) => void;
   striped: boolean;
+  reminderStatus: ReminderStatusMap;
 }) {
   const now = new Date();
   const daysEmpty = getDaysEmpty(unit);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmUndo, setConfirmUndo] = useState(false);
+  const [undoPending, startUndo] = useTransition();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const paidThisMonth = (unit.recent_rent_payments ?? []).some(
     (p) => p.period_year === currentYear && p.period_month === currentMonth
   );
+
+  const handleUndo = async () => {
+    const contract = await getActiveContractForUnit(unit.id);
+    if (!contract) {
+      toast.error("No active contract for this unit");
+      setConfirmUndo(false);
+      return;
+    }
+    startUndo(async () => {
+      const result = await undoRentPayment({
+        contractId: contract.id,
+        periodYear: currentYear,
+        periodMonth: currentMonth,
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Rent payment undone — ${MONTH_NAMES[currentMonth - 1]} ${currentYear}`);
+        onPaymentUndone(unit.id, currentYear, currentMonth);
+      }
+      setConfirmUndo(false);
+    });
+  };
 
   return (
     <>
@@ -289,20 +367,62 @@ function UnitRow({
 
         {/* Mark rent paid action */}
         <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            title={paidThisMonth ? "Rent paid this month" : "Mark rent paid"}
-            onClick={() => setDialogOpen(true)}
-            className={cn(
-              "flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors",
-              paidThisMonth
-                ? "border-green-400 bg-green-50 text-green-700 hover:bg-green-100"
-                : "border-border bg-surface-card text-foreground-secondary hover:border-green-400 hover:text-green-700 hover:bg-green-50"
-            )}
-          >
-            <PoundSterling className="h-3 w-3" />
-            Paid
-          </button>
+          {paidThisMonth ? (
+            confirmUndo ? (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleUndo}
+                  disabled={undoPending}
+                  className="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
+                  title="Confirm undo"
+                >
+                  {undoPending ? "Undoing..." : "Undo?"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmUndo(false)}
+                  disabled={undoPending}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-foreground-muted hover:bg-surface-inset"
+                  title="Cancel"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                title="Rent paid this month - click to undo"
+                onClick={() => setConfirmUndo(true)}
+                className="flex items-center gap-1 rounded-lg border border-green-400 bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+              >
+                <PoundSterling className="h-3 w-3" />
+                Paid
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              title="Mark rent paid"
+              onClick={() => setDialogOpen(true)}
+              className="flex items-center gap-1 rounded-lg border border-border bg-surface-card px-2 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:border-green-400 hover:text-green-700 hover:bg-green-50"
+            >
+              <PoundSterling className="h-3 w-3" />
+              Paid
+            </button>
+          )}
+        </div>
+
+        {/* Rent reminder action — only when the unit is occupied */}
+        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+          {unit.pm_tenant_id || unit.pm_tenant?.id ? (
+            <ReminderCell
+              pmTenantId={(unit.pm_tenant?.id ?? unit.pm_tenant_id) as string}
+              status={reminderStatus[(unit.pm_tenant?.id ?? unit.pm_tenant_id) as string]}
+            />
+          ) : (
+            <span className="text-xs text-foreground-muted">—</span>
+          )}
         </div>
       </div>
 
@@ -323,6 +443,8 @@ function PropertyGroup({
   onUnitCreated,
   onPropertyDeleted,
   onPaymentRecorded,
+  onPaymentUndone,
+  reminderStatus,
 }: {
   property: Property;
   units: Unit[];
@@ -330,6 +452,8 @@ function PropertyGroup({
   onUnitCreated: (unit: Unit) => void;
   onPropertyDeleted: (id: string) => void;
   onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
+  onPaymentUndone: (unitId: string, periodYear: number, periodMonth: number) => void;
+  reminderStatus: ReminderStatusMap;
 }) {
   return (
     <div className="rounded-xl border border-border bg-surface-card overflow-hidden">
@@ -399,6 +523,7 @@ function PropertyGroup({
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Tenant</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-center">Empty</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-right">Rent</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-right">Reminders</div>
         </div>
       )}
 
@@ -411,7 +536,9 @@ function PropertyGroup({
               unit={unit}
               onUnitClick={onUnitClick}
               onPaymentRecorded={onPaymentRecorded}
+              onPaymentUndone={onPaymentUndone}
               striped={i % 2 === 1}
+              reminderStatus={reminderStatus}
             />
           ))}
         </div>
@@ -428,13 +555,15 @@ function PropertyGroup({
 interface UnitsListViewProps {
   properties: Property[];
   units: Unit[];
+  reminderStatus?: ReminderStatusMap;
   onUnitClick: (unitId: string) => void;
   onUnitCreated: (unit: Unit) => void;
   onPropertyDeleted: (propertyId: string) => void;
   onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
+  onPaymentUndone: (unitId: string, periodYear: number, periodMonth: number) => void;
 }
 
-export function UnitsListView({ properties, units, onUnitClick, onUnitCreated, onPropertyDeleted, onPaymentRecorded }: UnitsListViewProps) {
+export function UnitsListView({ properties, units, reminderStatus, onUnitClick, onUnitCreated, onPropertyDeleted, onPaymentRecorded, onPaymentUndone }: UnitsListViewProps) {
   if (properties.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-surface-card py-16 text-center">
@@ -458,6 +587,8 @@ export function UnitsListView({ properties, units, onUnitClick, onUnitCreated, o
             onUnitCreated={onUnitCreated}
             onPropertyDeleted={onPropertyDeleted}
             onPaymentRecorded={onPaymentRecorded}
+            onPaymentUndone={onPaymentUndone}
+            reminderStatus={reminderStatus ?? {}}
           />
         );
       })}

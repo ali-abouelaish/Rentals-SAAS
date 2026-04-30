@@ -14,12 +14,14 @@ export function AppShellClient({
   tenantId,
   branding,
   moduleConfig,
+  inboxPendingCount,
   children,
 }: {
   profile: Profile;
   tenantId: string;
   branding: TenantBrandingSettings | null;
   moduleConfig: PublishedModuleConfig;
+  inboxPendingCount: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -41,6 +43,7 @@ export function AppShellClient({
             : null
         }
         moduleConfig={moduleConfig}
+        inboxPendingCount={inboxPendingCount}
       />
       <main className="flex-1 overflow-y-auto bg-surface-card rounded-bento shadow-bento">
         {showSearch && (

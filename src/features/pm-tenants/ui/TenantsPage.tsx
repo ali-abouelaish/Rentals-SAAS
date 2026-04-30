@@ -19,6 +19,7 @@ import { pmTenantSchema, type PmTenantFormValues } from "../domain/schemas";
 import { createPmTenant } from "../actions/pm-tenants";
 import { EMPLOYMENT_STATUS_LABELS } from "../domain/types";
 import type { PmTenant, PmTenantFilters } from "../domain/types";
+import type { ReminderStatusMap } from "@/features/reminders/data/status";
 
 const DEFAULT_FILTERS: PmTenantFilters = {
   search: "",
@@ -39,9 +40,10 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 
 interface TenantsPageProps {
   initialTenants: PmTenant[];
+  reminderStatus?: ReminderStatusMap;
 }
 
-export function TenantsPage({ initialTenants }: TenantsPageProps) {
+export function TenantsPage({ initialTenants, reminderStatus }: TenantsPageProps) {
   const [tenants, setTenants] = useState<PmTenant[]>(initialTenants);
   const [filters, setFilters] = useState<PmTenantFilters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -111,6 +113,7 @@ export function TenantsPage({ initialTenants }: TenantsPageProps) {
       {/* List */}
       <TenantsListView
         tenants={filteredTenants}
+        reminderStatus={reminderStatus ?? {}}
         onTenantClick={(id) => {
           setSelectedId(id);
           setDrawerOpen(true);

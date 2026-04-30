@@ -542,6 +542,7 @@ export async function sendInvoice(formData: FormData) {
   await resend.emails.send({
     from: process.env.INVOICE_FROM_EMAIL ?? "invoices@example.com",
     to: invoice.landlords?.email ?? "",
+    reply_to: "info@harborops.co.uk",
     subject,
     html: `<p>${body}</p>`,
     attachments: [

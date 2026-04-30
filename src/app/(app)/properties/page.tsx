@@ -5,6 +5,7 @@ import { getPortfolios } from "@/features/properties/data/portfolios";
 import { getProperties } from "@/features/properties/data/properties";
 import { getUnits } from "@/features/properties/data/units";
 import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
+import { getRentReminderStatusMap } from "@/features/reminders/data/status";
 import { UnitsPage } from "@/features/properties/ui/UnitsPage";
 import { Warehouse } from "lucide-react";
 
@@ -27,12 +28,18 @@ export default async function PropertiesPage() {
       phone: t.phone,
     }));
 
+    const occupiedPmTenantIds = unitsResult.units
+      .map((u) => u.pm_tenant_id ?? u.pm_tenant?.id ?? null)
+      .filter((id): id is string => !!id);
+    const reminderStatus = await getRentReminderStatusMap(occupiedPmTenantIds);
+
     return (
       <UnitsPage
         portfolios={portfolios}
         initialProperties={propertiesData}
         initialUnits={unitsResult.units}
         pmTenants={pmTenants}
+        reminderStatus={reminderStatus}
       />
     );
   } catch (err) {

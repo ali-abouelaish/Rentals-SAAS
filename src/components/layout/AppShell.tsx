@@ -8,7 +8,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const profile = await requireUserProfile();
 
   const supabase = createSupabaseServerClient();
-  const [branding, agentRow, moduleConfig] = await Promise.all([
+  const [branding, agentRow, moduleConfig, inboxCountRes] = await Promise.all([
     getTenantBrandingForApp(profile.tenant_id),
     supabase
       .from("agent_profiles")
@@ -16,8 +16,15 @@ export async function AppShell({ children }: { children: ReactNode }) {
       .eq("user_id", profile.id)
       .single()
       .then(({ data }) => data),
-    getPublishedModuleConfigForApp(profile.tenant_id)
+    getPublishedModuleConfigForApp(profile.tenant_id),
+    supabase
+      .from("tenant_communication_requests")
+      .select("id", { head: true, count: "exact" })
+      .eq("tenant_id", profile.tenant_id)
+      .eq("status", "pending"),
   ]);
+
+  const inboxPendingCount = inboxCountRes?.count ?? 0;
 
   return (
     <AppShellClient
@@ -29,6 +36,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
       tenantId={profile.tenant_id}
       branding={branding}
       moduleConfig={moduleConfig}
+      inboxPendingCount={inboxPendingCount}
     >
       {children}
     </AppShellClient>

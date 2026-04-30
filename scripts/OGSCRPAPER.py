@@ -74,6 +74,9 @@ profiles = _data.get("profiles", [])
 paying_flags = (_data.get("paying_flags") or [""] * len(profiles))[: len(profiles)]
 property_flags = (_data.get("profile_flags") or [""] * len(profiles))[: len(profiles)]
 landlord_ids = (_data.get("ids") or [""] * len(profiles))[: len(profiles)]
+landlord_names = (_data.get("names") or [""] * len(profiles))[: len(profiles)]
+# Landlord id -> display name lookup, used in the end-of-run diagnostic
+LANDLORD_NAME_BY_ID = {lid: name for lid, name in zip(landlord_ids, landlord_names) if lid}
 print(f"Loaded {len(profiles)} landlord profiles from DB for tenant {tenant_id}")
 
 # -----------------------------
@@ -964,8 +967,21 @@ def main(listings):
     for i in range(0, len(rows), 100):
         supabase.table("scraped_listings").insert(rows[i : i + 100]).execute()
     print(f"\n✅ Successfully posted {len(rows)} listings to Supabase scraped_listings!")
-    print(f"   👤 Landlords in this run: {len(landlord_ids_in_run)}"
+    print(f"   👤 Landlords in this run: {len(landlord_ids_in_run)} of {len(LANDLORD_NAME_BY_ID)} loaded"
           + (f" (+ {rows_without_landlord} listings with no landlord_id)" if rows_without_landlord else ""))
+
+    # Show which loaded landlords produced 0 listings so the user can investigate
+    landlords_in_run_set = set(landlord_ids_in_run)
+    missing = [
+        (lid, LANDLORD_NAME_BY_ID.get(lid) or "(no name)")
+        for lid in LANDLORD_NAME_BY_ID
+        if lid not in landlords_in_run_set
+    ]
+    if missing:
+        print(f"   ⚠️ {len(missing)} loaded landlords produced 0 listings:")
+        for lid, name in missing:
+            print(f"      - {name} ({lid})")
+        print("     Likely causes: profile URL unrecognised, profile empty/blocked, or every listing skipped (no images / not accepting).")
 
 
 # Call main() to scrape each individual listing

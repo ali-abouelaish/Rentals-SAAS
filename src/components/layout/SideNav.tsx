@@ -49,6 +49,7 @@ interface SideNavProps {
   };
   branding?: { logoUrl: string | null; brandName: string | null } | null;
   moduleConfig: PublishedModuleConfig;
+  inboxPendingCount?: number;
 }
 
 type NavItem = {
@@ -60,6 +61,7 @@ type NavItem = {
 
 const RA_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/inbox", label: "Inbox", icon: Inbox, allowedRoles: ADMIN_ROLES },
   { href: "/me", label: "My Profile", icon: User },
   { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
   { href: "/clients", label: "Clients", icon: Users },
@@ -77,6 +79,7 @@ const RA_NAV_ITEMS: NavItem[] = [
 
 const PM_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/inbox", label: "Inbox", icon: Inbox, allowedRoles: ADMIN_ROLES },
   { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
   { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
   { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
@@ -95,6 +98,7 @@ const PM_NAV_ITEMS: NavItem[] = [
 ];
 
 const PM_ROUTE_PREFIXES = [
+  "/inbox",
   "/properties",
   "/bookings",
   "/tenants",
@@ -117,7 +121,7 @@ function isPmRoute(pathname: string) {
 }
 
 /** Inner component — reads searchParams so must be inside Suspense. */
-function SideNavInner({ profile, branding, moduleConfig }: SideNavProps) {
+function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0 }: SideNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -244,7 +248,18 @@ function SideNavInner({ profile, branding, moduleConfig }: SideNavProps) {
                   active ? "text-accent-fg" : "text-sidebar-text group-hover:text-white"
                 )}
               />
-              {item.label}
+              <span className="flex-1 truncate">{item.label}</span>
+              {item.href === "/inbox" && inboxPendingCount > 0 && (
+                <span
+                  className={cn(
+                    "ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
+                    active ? "bg-white/20 text-white" : "bg-accent text-accent-fg"
+                  )}
+                  aria-label={`${inboxPendingCount} pending requests`}
+                >
+                  {inboxPendingCount > 99 ? "99+" : inboxPendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

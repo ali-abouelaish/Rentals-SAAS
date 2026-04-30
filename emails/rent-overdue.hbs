@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, address=no, email=no, date=no, url=no">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>Rent overdue</title>
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+      <o:AllowPNG/>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif:ital@1&family=Geist+Mono:wght@500&display=swap');
+    html, body { margin: 0 !important; padding: 0 !important; height: 100% !important; width: 100% !important; }
+    * { -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt !important; mso-table-rspace: 0pt !important; }
+    table { border-spacing: 0 !important; border-collapse: collapse !important; table-layout: fixed !important; margin: 0 auto !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    a { text-decoration: none; }
+    @media only screen and (max-device-width: 600px), only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; margin: auto !important; }
+      .px-mobile { padding-left: 24px !important; padding-right: 24px !important; }
+      h1.headline { font-size: 26px !important; line-height: 1.15 !important; }
+      .amount { font-size: 28px !important; }
+    }
+  </style>
+</head>
+<body width="100%" style="margin: 0; padding: 0 !important; mso-line-height-rule: exactly; background-color: #fafaf8; font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <center role="article" aria-roledescription="email" lang="en" style="width: 100%; background-color: #fafaf8;">
+    <div style="display: none; font-size: 1px; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all; font-family: sans-serif;">
+      Rent of {{amount}} for {{property.address}} is {{daysOverdue}} day(s) overdue.
+    </div>
+    <div style="display: none; font-size: 1px; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+
+    <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: auto;" class="email-container">
+      <tr>
+        <td style="padding: 32px 16px;">
+
+          <!-- Card -->
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px;">
+            <!-- Header: logo + eyebrow -->
+            <tr>
+              <td class="px-mobile" style="padding: 28px 32px 0 32px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td valign="middle" style="vertical-align: middle;">
+                      {{#if agency.logo_url}}
+                      <img src="{{agency.logo_url}}" alt="{{agency.name}}" height="36" style="height: 36px; max-height: 36px; width: auto; display: block;">
+                      {{else}}
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                          <td width="36" height="36" align="center" valign="middle" style="background-color: #111111; color: #ffffff; border-radius: 8px; font-family: 'Geist', -apple-system, sans-serif; font-weight: 600; font-size: 15px; width: 36px; height: 36px; line-height: 36px; text-align: center;">
+                            {{agency.name.[0]}}
+                          </td>
+                          <td width="12">&nbsp;</td>
+                          <td valign="middle" style="font-family: 'Geist', -apple-system, sans-serif; font-size: 14px; font-weight: 500; color: #111111; vertical-align: middle;">{{agency.name}}</td>
+                        </tr>
+                      </table>
+                      {{/if}}
+                    </td>
+                    <td valign="middle" align="right" style="vertical-align: middle; text-align: right;">
+                      <span style="display: inline-block; padding: 5px 12px; border-radius: 999px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #b42318; background-color: #fde8e8;">Overdue</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Headline + greeting -->
+            <tr>
+              <td class="px-mobile" style="padding: 28px 32px 0 32px;">
+                <h1 class="headline" style="margin: 0 0 16px 0; font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 32px; line-height: 1.1; letter-spacing: -0.025em; font-weight: 500; color: {{agency.primary_color}};">
+                  Your rent is overdue.
+                </h1>
+                <p style="margin: 0 0 8px 0; font-family: 'Geist', -apple-system, sans-serif; font-size: 15px; line-height: 1.55; color: #2a2a2a;">
+                  Hi {{tenant.name}},
+                </p>
+                <p style="margin: 0; font-family: 'Geist', -apple-system, sans-serif; font-size: 15px; line-height: 1.55; color: #4a4a4a;">
+                  Our records show your last rent payment is now <span style="color: #111111; font-weight: 500;">{{daysOverdue}} day{{#unless (eq daysOverdue 1)}}s{{/unless}}</span> past due. Please make payment as soon as possible, or get in touch if you need to discuss arrangements.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Data inset -->
+            <tr>
+              <td class="px-mobile" style="padding: 24px 32px 0 32px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #fde8e8; border: 1px solid #f2c9c9; border-radius: 12px;">
+                  <tr>
+                    <td style="padding: 20px 22px;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #b42318; padding-bottom: 6px;">Amount overdue</td>
+                        </tr>
+                        <tr>
+                          <td class="amount" style="font-family: 'Geist', -apple-system, sans-serif; font-size: 32px; font-weight: 500; letter-spacing: -0.02em; color: #b42318; padding-bottom: 18px;">{{amount}}</td>
+                        </tr>
+                        <tr>
+                          <td style="border-top: 1px solid #f2c9c9; padding-top: 16px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                              <tr>
+                                <td width="50%" style="vertical-align: top;">
+                                  <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #b42318; padding-bottom: 4px;">Was due</div>
+                                  <div style="font-family: 'Geist', -apple-system, sans-serif; font-size: 15px; font-weight: 500; color: #7f1d1d;">{{dueDate}}</div>
+                                </td>
+                                <td width="50%" style="vertical-align: top;">
+                                  <div style="font-family: 'Geist Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #b42318; padding-bottom: 4px;">Property</div>
+                                  <div style="font-family: 'Geist', -apple-system, sans-serif; font-size: 15px; color: #7f1d1d; line-height: 1.4;">{{property.address}}</div>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Closing -->
+            <tr>
+              <td class="px-mobile" style="padding: 22px 32px 32px 32px;">
+                <p style="margin: 0 0 14px 0; font-family: 'Geist', -apple-system, sans-serif; font-size: 14px; line-height: 1.55; color: #4a4a4a;">
+                  If you&rsquo;ve already paid in the last 24 hours, please ignore this message; we&rsquo;ll reconcile shortly. Otherwise, reply to this email so we can sort it out together.
+                </p>
+                <p style="margin: 0; font-family: 'Geist', -apple-system, sans-serif; font-size: 14px; line-height: 1.55; color: #2a2a2a;">
+                  Thanks,<br>
+                  <span style="font-weight: 500;">{{agency.name}}</span>
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Footer -->
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 20px;">
+            <tr>
+              <td style="padding: 0 16px; font-family: 'Geist', -apple-system, sans-serif; font-size: 12px; line-height: 1.6; color: #6b7280; text-align: center;">
+                {{#if agency.footer_address}}
+                <div style="margin-bottom: 6px;">{{agency.footer_address}}</div>
+                {{/if}}
+                <div style="margin-bottom: 6px;">You&rsquo;re receiving this because you&rsquo;re a tenant at {{property.address}}.</div>
+                <div>
+                  <a href="{{preferenceUrl}}" style="color: #6b7280; text-decoration: underline;">Manage email preferences</a>
+                </div>
+              </td>
+            </tr>
+          </table>
+
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

@@ -37,9 +37,10 @@ interface UnitsPageProps {
   initialProperties: Property[];
   initialUnits: Unit[];
   pmTenants: PmTenantOption[];
+  reminderStatus?: import("@/features/reminders/data/status").ReminderStatusMap;
 }
 
-export function UnitsPage({ portfolios: initialPortfolios, initialProperties, initialUnits, pmTenants }: UnitsPageProps) {
+export function UnitsPage({ portfolios: initialPortfolios, initialProperties, initialUnits, pmTenants, reminderStatus }: UnitsPageProps) {
   const [view, setView] = useState<ViewMode>("list");
   const [filters, setFilters] = useState<UnitFilters>(DEFAULT_FILTERS);
   const [portfolios, setPortfolios] = useState<Portfolio[]>(initialPortfolios);
@@ -174,6 +175,18 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
     );
   };
 
+  const handlePaymentUndone = (unitId: string, periodYear: number, periodMonth: number) => {
+    setUnits((prev) =>
+      prev.map((u) => {
+        if (u.id !== unitId) return u;
+        const filtered = (u.recent_rent_payments ?? []).filter(
+          (p) => !(p.period_year === periodYear && p.period_month === periodMonth)
+        );
+        return { ...u, recent_rent_payments: filtered };
+      })
+    );
+  };
+
   return (
     <div className="space-y-5">
       {/* Page header */}
@@ -215,10 +228,12 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
         <UnitsListView
           properties={filteredProperties}
           units={filteredUnits}
+          reminderStatus={reminderStatus ?? {}}
           onUnitClick={handleUnitClick}
           onUnitCreated={handleUnitCreated}
           onPropertyDeleted={handlePropertyDeleted}
           onPaymentRecorded={handlePaymentRecorded}
+          onPaymentUndone={handlePaymentUndone}
         />
       ) : (
         <UnitsKanbanView

@@ -86,10 +86,3 @@ values
   ('11111111-1111-1111-1111-111111111111'::uuid, 'marketing_fee', 'rental_code', '44444444-4444-4444-4444-444444444441', 0, 25, (select id from auth.users where email = 'marketing@demo.local')),
   ('11111111-1111-1111-1111-111111111111'::uuid, 'rental_net', 'rental_code', '44444444-4444-4444-4444-444444444443', 200, 0, null),
   ('11111111-1111-1111-1111-111111111111'::uuid, 'agent_earning', 'rental_code', '44444444-4444-4444-4444-444444444443', 0, 90, (select id from auth.users where email = 'agent2@demo.local'));
-
-insert into activity_log (tenant_id, actor_user_id, action, entity_type, entity_id, metadata)
-values
-  ('11111111-1111-1111-1111-111111111111'::uuid, (select id from auth.users where email = 'agent1@demo.local'), 'rental_created', 'rental', '44444444-4444-4444-4444-444444444441', '{"code": "CC0001"}'),
-  ('11111111-1111-1111-1111-111111111111'::uuid, (select id from auth.users where email = 'admin@demo.local'), 'rental_approved', 'rental', '44444444-4444-4444-4444-444444444441', '{"code": "CC0001"}'),
-  ('11111111-1111-1111-1111-111111111111'::uuid, (select id from auth.users where email = 'agent2@demo.local'), 'rental_created', 'rental', '44444444-4444-4444-4444-444444444443', '{"code": "CC0003"}'),
-  ('11111111-1111-1111-1111-111111111111'::uuid, (select id from auth.users where email = 'admin@demo.local'), 'rental_approved', 'rental', '44444444-4444-4444-4444-444444444443', '{"code": "CC0003"}');
