@@ -5,6 +5,7 @@ import { LayoutDashboard, Building2, FileText } from "lucide-react";
 import { getDashboardData } from "@/features/profitability/data/queries";
 import { getRentalDashboardData } from "@/features/rentals-dashboard/data/queries";
 import { PMDashboardPage } from "@/features/pm-dashboard/ui/PMDashboardPage";
+import { getDashboardActivityFeed } from "@/features/pm-dashboard/data/activity-feed";
 import { RentalDashboardPage } from "@/features/rentals-dashboard/ui/RentalDashboardPage";
 import { getPublishedModuleConfigForApp } from "@/features/admin/data/admin";
 
@@ -35,11 +36,18 @@ export default async function DashboardPage({
 
   try {
     if (view === "pm") {
-      const data = await getDashboardData();
+      const [data, activity] = await Promise.all([
+        getDashboardData(),
+        getDashboardActivityFeed().catch(() => []),
+      ]);
       return (
         <div className="space-y-6">
           {showTabToggle && <DashboardTabs active="pm" />}
-          <PMDashboardPage data={data} userName={profile.display_name || "User"} />
+          <PMDashboardPage
+            data={data}
+            userName={profile.display_name || "User"}
+            activity={activity}
+          />
         </div>
       );
     }

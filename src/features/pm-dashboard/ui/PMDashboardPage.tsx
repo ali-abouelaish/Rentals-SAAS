@@ -116,12 +116,23 @@ function PortfolioBadge({ name, color }: { name: string; color: string }) {
 // Main Component
 // ──────────────────────────────────────────────────────────
 
+export type ActivityFeedItem = {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor_name: string;
+  created_at: string;
+  subject: string | null;
+};
+
 interface PMDashboardPageProps {
   data: DashboardData;
   userName: string;
+  activity: ActivityFeedItem[];
 }
 
-export function PMDashboardPage({ data, userName }: PMDashboardPageProps) {
+export function PMDashboardPage({ data, userName, activity }: PMDashboardPageProps) {
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -554,38 +565,74 @@ export function PMDashboardPage({ data, userName }: PMDashboardPageProps) {
           <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
         </div>
 
-        <div className="space-y-1">
-          {MOCK_ACTIVITY_FEED.map((item, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-surface-inset transition-colors">
-              <div className={cn("mt-0.5 p-1.5 rounded-lg shrink-0", item.bgClass)}>
-                <item.Icon size={13} className={item.iconClass} strokeWidth={2} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-foreground leading-snug">
-                  <span className="font-medium">{item.actor}</span>{" "}
-                  <span className="text-foreground-secondary">{item.action}</span>{" "}
-                  <span className="font-medium">{item.subject}</span>
-                </p>
-                <p className="text-xs text-foreground-muted">{item.time}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {activity.length > 0 ? (
+          <div className="space-y-1">
+            {activity.map((item) => {
+              const cfg = activityIconFor(item.action, item.entity_type);
+              return (
+                <div key={item.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-surface-inset transition-colors">
+                  <div className={cn("mt-0.5 p-1.5 rounded-lg shrink-0", cfg.bgClass)}>
+                    <cfg.Icon size={13} className={cfg.iconClass} strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground leading-snug">
+                      <span className="font-medium">{item.actor_name}</span>{" "}
+                      <span className="text-foreground-secondary">{humaniseAction(item.action)}</span>
+                      {item.subject && <> <span className="font-medium">{item.subject}</span></>}
+                    </p>
+                    <p className="text-xs text-foreground-muted">{relativeTime(item.created_at)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-foreground-muted py-4 text-center">No recent activity yet.</p>
+        )}
       </div>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────
-// Static activity feed (would be DB-driven in production)
+// Activity feed presentation helpers
 // ──────────────────────────────────────────────────────────
 
-const MOCK_ACTIVITY_FEED = [
-  { Icon: CheckCircle2, bgClass: "bg-emerald-50", iconClass: "text-emerald-600", actor: "Emma Thompson", action: "booked", subject: "Room 5 · 14 Mastmaker Road", time: "2 hours ago" },
-  { Icon: DollarSign,  bgClass: "bg-violet-50",  iconClass: "text-violet-600",  actor: "Admin",         action: "logged maintenance cost for", subject: "22 Balham High Road", time: "5 hours ago" },
-  { Icon: Calendar,    bgClass: "bg-amber-50",   iconClass: "text-amber-600",   actor: "Mohammed Al-Rashid", action: "gave notice at", subject: "78 Hackney Road", time: "Yesterday" },
-  { Icon: Building2,   bgClass: "bg-blue-50",    iconClass: "text-blue-600",    actor: "Daniel Chen",   action: "signed contract for", subject: "Room 3 · 3 Shoreditch High Street", time: "Yesterday" },
-  { Icon: DollarSign,  bgClass: "bg-emerald-50", iconClass: "text-emerald-600", actor: "Admin",         action: "received rent payment from", subject: "Aleksandra Kowalski", time: "2 days ago" },
-  { Icon: Activity,    bgClass: "bg-orange-50",  iconClass: "text-orange-600",  actor: "System",        action: "flagged cost spike at", subject: "22 Balham High Road", time: "3 days ago" },
-  { Icon: Building2,   bgClass: "bg-blue-50",    iconClass: "text-blue-600",    actor: "Priya Sharma",  action: "moved into", subject: "Room 1 · 45 Clapham Common", time: "4 days ago" },
-];
+function humaniseAction(action: string): string {
+  return action.replaceAll("_", " ");
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
+
+function activityIconFor(action: string, entityType: string): {
+  Icon: typeof Activity; bgClass: string; iconClass: string;
+} {
+  if (action.includes("payment") || action.includes("rent")) {
+    return { Icon: DollarSign, bgClass: "bg-emerald-50", iconClass: "text-emerald-600" };
+  }
+  if (action.includes("notice") || action.includes("vacate")) {
+    return { Icon: Calendar, bgClass: "bg-amber-50", iconClass: "text-amber-600" };
+  }
+  if (action.includes("contract") || action.includes("sign")) {
+    return { Icon: Building2, bgClass: "bg-blue-50", iconClass: "text-blue-600" };
+  }
+  if (action.includes("book") || action.includes("approve")) {
+    return { Icon: CheckCircle2, bgClass: "bg-emerald-50", iconClass: "text-emerald-600" };
+  }
+  if (action.includes("maintenance") || entityType === "maintenance_job") {
+    return { Icon: Wrench, bgClass: "bg-violet-50", iconClass: "text-violet-600" };
+  }
+  return { Icon: Activity, bgClass: "bg-brand-subtle", iconClass: "text-brand" };
+}
