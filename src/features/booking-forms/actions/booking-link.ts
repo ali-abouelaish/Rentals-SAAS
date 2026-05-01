@@ -6,11 +6,19 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { buildTenantAppUrl } from "@/lib/urls";
 
+export type BookingLinkForm = {
+  id: string;
+  name: string;
+  public_slug: string;
+};
+
 export type RoomBookingLinkResult =
   | {
-      url: string;
+      forms: BookingLinkForm[];
       minPrice: number | null;
       maxPrice: number | null;
+      baseUrl: string;
+      unitId: string;
     }
   | {
       error: string;
@@ -50,17 +58,15 @@ export async function getRoomBookingLink(unitId: string): Promise<RoomBookingLin
     };
   }
 
-  const { data: form } = await supabase
+  const { data: forms } = await supabase
     .from("booking_forms")
-    .select("public_slug")
+    .select("id, name, public_slug, portfolio_id")
     .eq("tenant_id", profile.tenant_id)
-    .eq("portfolio_id", portfolioId)
     .eq("is_active", true)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .or(`portfolio_id.eq.${portfolioId},portfolio_id.is.null`)
+    .order("created_at", { ascending: true });
 
-  if (!form) {
+  if (!forms || forms.length === 0) {
     return {
       error: portfolioName
         ? `No active booking form for the "${portfolioName}" portfolio yet.`
@@ -71,10 +77,13 @@ export async function getRoomBookingLink(unitId: string): Promise<RoomBookingLin
     };
   }
 
-  const appUrl = buildTenantAppUrl(headers());
+  const baseUrl = buildTenantAppUrl(headers());
+
   return {
-    url: `${appUrl}/apply/${form.public_slug}/${unitId}`,
+    forms: forms.map((f) => ({ id: f.id, name: f.name, public_slug: f.public_slug })),
     minPrice: unit.min_price_pcm ?? null,
     maxPrice: unit.max_price_pcm ?? null,
+    baseUrl,
+    unitId,
   };
 }

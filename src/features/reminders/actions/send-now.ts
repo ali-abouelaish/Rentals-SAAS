@@ -8,9 +8,26 @@ import { loadAgency } from "@/lib/email/agency-context";
 import { sendAgencyEmail } from "@/lib/email/agency-send";
 import { templates, buildContext, renderPlainText } from "@/lib/email/render";
 
+export type ReminderKind = "rent_due" | "rent_overdue";
+
 export type SendNowResult =
-  | { ok: true; kind: "rent_due" | "rent_overdue"; daysOverdue: number; sentTo: string }
+  | { ok: true; kind: ReminderKind; daysOverdue: number; sentTo: string }
   | { ok: false; error: string };
+
+export type ReminderPreviewResult =
+  | {
+      ok: true;
+      sentTo: string;
+      suggestedKind: ReminderKind;
+      daysOverdue: number;
+      defaultBody: Record<ReminderKind, string>;
+    }
+  | { ok: false; error: string };
+
+export type SendNowOptions = {
+  kind?: ReminderKind;
+  customBody?: string;
+};
 
 function daysInMonth(year: number, monthIndex0: number): number {
   return new Date(year, monthIndex0 + 1, 0).getDate();
@@ -32,13 +49,43 @@ function buildAddress(
     .join(", ");
 }
 
-/**
- * Manually send the right rent-reminder email for a tenant, deciding the
- * variant (rent-due vs rent-overdue) from the live contract + payment state.
- * Always recomputes server-side; never trusts a client-supplied kind.
- */
-export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowResult> {
-  const profile = await requireRole([...ADMIN_ROLES]);
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function customBodyToHtml(body: string): string {
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 12px 0;line-height:1.5;">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">${paragraphs}</div>`;
+}
+
+function subjectFor(kind: ReminderKind, daysOverdue: number): string {
+  if (kind === "rent_overdue") {
+    return `Rent overdue: ${daysOverdue} day${daysOverdue === 1 ? "" : "s"}`;
+  }
+  return daysOverdue === 0
+    ? "Rent reminder: payment due today"
+    : "Rent reminder: payment due soon";
+}
+
+type ResolvedContext = {
+  pm: { id: string; full_name: string; email: string; tenant_id: string };
+  contract: { id: string };
+  ctx: Parameters<typeof templates.rentDue>[0];
+  suggestedKind: ReminderKind;
+  daysOverdue: number;
+  dueDate: Date;
+};
+
+async function resolveReminderContext(
+  pmTenantId: string,
+  profileTenantId: string
+): Promise<{ ok: true; data: ResolvedContext } | { ok: false; error: string }> {
   const admin = createSupabaseAdminClient();
 
   const { data: pm, error: pmErr } = await admin
@@ -48,7 +95,7 @@ export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowRe
     .maybeSingle();
   if (pmErr) return { ok: false, error: pmErr.message };
   if (!pm) return { ok: false, error: "Tenant not found." };
-  if (pm.tenant_id !== profile.tenant_id) return { ok: false, error: "Tenant not found." };
+  if (pm.tenant_id !== profileTenantId) return { ok: false, error: "Tenant not found." };
   if (!pm.email) return { ok: false, error: "Tenant has no email on file." };
   if (pm.email_status !== "active") {
     return { ok: false, error: `Tenant email status is ${pm.email_status}. Cannot send.` };
@@ -76,7 +123,6 @@ export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowRe
     };
   }
 
-  // Most recent collection date that's <= today.
   const today = new Date();
   let dueYear = today.getFullYear();
   let dueMonthIdx = today.getMonth();
@@ -91,10 +137,8 @@ export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowRe
   const dueDate = new Date(dueYear, dueMonthIdx, dueDay);
   const startDate = new Date(contract.start_date);
 
-  // If the contract hasn't started yet, the next collection date is in the
-  // future and we should send a "rent due soon" notice rather than overdue.
   let daysOverdue = 0;
-  let kind: "rent_due" | "rent_overdue" = "rent_due";
+  let suggestedKind: ReminderKind = "rent_due";
 
   if (dueDate >= startDate) {
     const periodYear = dueYear;
@@ -109,7 +153,7 @@ export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowRe
       .maybeSingle();
 
     daysOverdue = diffDays(today, dueDate);
-    if (!payment && daysOverdue > 0) kind = "rent_overdue";
+    if (!payment && daysOverdue > 0) suggestedKind = "rent_overdue";
   }
 
   const unitRel = contract.unit as unknown;
@@ -120,7 +164,7 @@ export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowRe
     propertyObj as { address_line_1: string; address_line_2: string | null; postcode: string | null } | null
   );
 
-  const agency = await loadAgency(profile.tenant_id);
+  const agency = await loadAgency(profileTenantId);
   if (!agency) return { ok: false, error: "Agency not found." };
 
   const ctx = buildContext({
@@ -131,43 +175,113 @@ export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowRe
     propertyAddress,
     amountPence: Number(contract.rent_pcm),
     dueDate,
-    daysOverdue: kind === "rent_overdue" ? daysOverdue : undefined,
+    daysOverdue: suggestedKind === "rent_overdue" ? daysOverdue : undefined,
     appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "https://harborops.co.uk",
   });
 
-  const html = kind === "rent_overdue" ? templates.rentOverdue(ctx) : templates.rentDue(ctx);
-  const text = renderPlainText(kind === "rent_overdue" ? "overdue" : "due", ctx);
-  const subject =
-    kind === "rent_overdue"
-      ? `Rent overdue: ${daysOverdue} day${daysOverdue === 1 ? "" : "s"}`
-      : daysOverdue === 0
-        ? "Rent reminder: payment due today"
-        : "Rent reminder: payment due soon";
+  return {
+    ok: true,
+    data: {
+      pm: {
+        id: pm.id as string,
+        full_name: pm.full_name as string,
+        email: pm.email as string,
+        tenant_id: pm.tenant_id as string,
+      },
+      contract: { id: contract.id as string },
+      ctx,
+      suggestedKind,
+      daysOverdue,
+      dueDate,
+    },
+  };
+}
+
+/**
+ * Compute the default body for both reminder variants without sending. Used by
+ * the UI to prefill the customisation dialog so the user starts from the same
+ * copy the system would otherwise send automatically.
+ */
+export async function getRentReminderPreview(
+  pmTenantId: string
+): Promise<ReminderPreviewResult> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const resolved = await resolveReminderContext(pmTenantId, profile.tenant_id);
+  if (!resolved.ok) return { ok: false, error: resolved.error };
+
+  const dueCtx = { ...resolved.data.ctx, daysOverdue: undefined };
+  const overdueCtx = {
+    ...resolved.data.ctx,
+    daysOverdue: Math.max(resolved.data.daysOverdue, 1),
+  };
+
+  return {
+    ok: true,
+    sentTo: resolved.data.pm.email,
+    suggestedKind: resolved.data.suggestedKind,
+    daysOverdue: resolved.data.daysOverdue,
+    defaultBody: {
+      rent_due: renderPlainText("due", dueCtx),
+      rent_overdue: renderPlainText("overdue", overdueCtx),
+    },
+  };
+}
+
+/**
+ * Manually send a rent-reminder email for a tenant. Caller may override the
+ * variant (rent_due vs rent_overdue) and/or supply a custom body — when no
+ * override is given, the variant is recomputed server-side from contract +
+ * payment state.
+ */
+export async function sendRentReminderNow(
+  pmTenantId: string,
+  opts: SendNowOptions = {}
+): Promise<SendNowResult> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const admin = createSupabaseAdminClient();
+
+  const resolved = await resolveReminderContext(pmTenantId, profile.tenant_id);
+  if (!resolved.ok) return { ok: false, error: resolved.error };
+  const { pm, contract, ctx, suggestedKind, daysOverdue, dueDate } = resolved.data;
+
+  const agency = await loadAgency(profile.tenant_id);
+  if (!agency) return { ok: false, error: "Agency not found." };
+
+  const kind: ReminderKind = opts.kind ?? suggestedKind;
+  const reportedOverdue = kind === "rent_overdue" ? Math.max(daysOverdue, 1) : daysOverdue;
+
+  const customBody = opts.customBody?.trim();
+  const html = customBody
+    ? customBodyToHtml(customBody)
+    : kind === "rent_overdue"
+      ? templates.rentOverdue({ ...ctx, daysOverdue: reportedOverdue })
+      : templates.rentDue({ ...ctx, daysOverdue: undefined });
+  const text = customBody
+    ? customBody
+    : renderPlainText(kind === "rent_overdue" ? "overdue" : "due", {
+        ...ctx,
+        daysOverdue: kind === "rent_overdue" ? reportedOverdue : undefined,
+      });
+  const subject = subjectFor(kind, reportedOverdue);
 
   try {
     const { providerId } = await sendAgencyEmail({
       agency,
-      to: pm.email as string,
+      to: pm.email,
       subject,
       html,
       text,
-      pmTenantId: pm.id as string,
+      pmTenantId: pm.id,
     });
 
-    // Best-effort log entry; failures here don't block success since the mail
-    // already went out. Use a 'manual_<kind>' reminder_type so the existing
-    // CHECK constraint isn't tripped — which it would be — so instead we
-    // pick the closest existing window and log under that. Falling back to
-    // an upsert with onConflict prevents unique-constraint errors when the
-    // cron has already logged this period.
     const reminderType =
       kind === "rent_overdue"
-        ? daysOverdue >= 14
+        ? reportedOverdue >= 14
           ? "overdue_14d"
-          : daysOverdue >= 7
+          : reportedOverdue >= 7
             ? "overdue_7d"
             : "overdue_3d"
-        : daysOverdue === 0
+        : reportedOverdue === 0
           ? "due_today"
           : "upcoming_3d";
 
@@ -188,7 +302,7 @@ export async function sendRentReminderNow(pmTenantId: string): Promise<SendNowRe
     revalidatePath("/tenants");
     revalidatePath("/properties");
 
-    return { ok: true, kind, daysOverdue, sentTo: pm.email as string };
+    return { ok: true, kind, daysOverdue: reportedOverdue, sentTo: pm.email };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[email] manual rent reminder send failed", { pmTenantId, error: message });

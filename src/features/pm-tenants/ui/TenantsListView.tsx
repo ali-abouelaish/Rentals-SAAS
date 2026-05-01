@@ -1,13 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
 import { AlertTriangle, Bell, UserCircle } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils/cn";
 import { RightToRentBadge } from "./RightToRentBadge";
 import { EMPLOYMENT_STATUS_LABELS } from "../domain/types";
 import type { PmTenant } from "../domain/types";
-import { sendRentReminderNow } from "@/features/reminders/actions/send-now";
+import { SendReminderDialog } from "@/features/reminders/ui/SendReminderDialog";
 import type { ReminderStatusMap } from "@/features/reminders/data/status";
 
 interface TenantsListViewProps {
@@ -38,15 +37,16 @@ function UnitLabel({ tenant }: { tenant: PmTenant }) {
 
 function ReminderButton({
   pmTenantId,
+  tenantName,
   kind,
   daysOverdue,
 }: {
   pmTenantId: string;
+  tenantName: string;
   kind: "no_contract" | "upcoming" | "due_today" | "overdue";
   daysOverdue: number;
 }) {
-  const { toast } = useToast();
-  const [pending, start] = useTransition();
+  const [open, setOpen] = useState(false);
 
   if (kind === "no_contract") {
     return <span className="text-xs text-foreground-muted">No contract</span>;
@@ -59,36 +59,29 @@ function ReminderButton({
       ? "Send due-today reminder"
       : "Send rent reminder";
 
-  function handleClick() {
-    start(async () => {
-      const result = await sendRentReminderNow(pmTenantId);
-      if (!result.ok) {
-        toast({ variant: "error", title: "Reminder not sent", description: result.error });
-      } else {
-        toast({
-          title: result.kind === "rent_overdue" ? "Overdue notice sent" : "Rent reminder sent",
-          description: `Sent to ${result.sentTo}${result.kind === "rent_overdue" ? ` · ${result.daysOverdue} day(s) overdue` : ""}`,
-        });
-      }
-    });
-  }
-
   return (
-    <button
-      type="button"
-      title={label}
-      onClick={handleClick}
-      disabled={pending}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60",
-        overdue
-          ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-          : "border-border bg-surface-card text-foreground-secondary hover:border-brand hover:bg-brand/5 hover:text-brand"
-      )}
-    >
-      {overdue ? <AlertTriangle className="h-3 w-3" /> : <Bell className="h-3 w-3" />}
-      {pending ? "Sending..." : label}
-    </button>
+    <>
+      <button
+        type="button"
+        title={label}
+        onClick={() => setOpen(true)}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+          overdue
+            ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+            : "border-border bg-surface-card text-foreground-secondary hover:border-brand hover:bg-brand/5 hover:text-brand"
+        )}
+      >
+        {overdue ? <AlertTriangle className="h-3 w-3" /> : <Bell className="h-3 w-3" />}
+        {label}
+      </button>
+      <SendReminderDialog
+        open={open}
+        pmTenantId={pmTenantId}
+        tenantName={tenantName}
+        onOpenChange={setOpen}
+      />
+    </>
   );
 }
 
@@ -159,6 +152,7 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
             <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
               <ReminderButton
                 pmTenantId={tenant.id}
+                tenantName={tenant.full_name}
                 kind={status.kind}
                 daysOverdue={status.daysOverdue}
               />

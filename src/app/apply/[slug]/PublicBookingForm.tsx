@@ -159,7 +159,12 @@ export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice }
     ? [property.address_line_1, property.address_line_2, property.postcode].filter(Boolean)
     : [];
   const rentLabel = formatGBP(agreedPrice ?? unit.min_price_pcm);
-  const holdingDepositLabel = formatGBP(unit.holding_deposit);
+  const WEEKS_PER_MONTH = 52 / 12;
+  const holdingDeposit =
+    agreedPrice && agreedPrice > 0
+      ? Math.round(agreedPrice / WEEKS_PER_MONTH)
+      : unit.holding_deposit;
+  const holdingDepositLabel = formatGBP(holdingDeposit);
 
   const hasAnyBank =
     bankDetails &&

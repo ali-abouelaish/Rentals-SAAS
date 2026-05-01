@@ -58,6 +58,27 @@ type AIOutputType = {
   occupancy_reasoning?: string;
   comparable_properties_used?: { area: string; room_count: number; property_type: string; avg_rent_pcm: number; avg_occupancy_rate: number; avg_vacancy_days: number }[];
   risk_flags?: { severity: string; message: string }[];
+  market_listings?: {
+    count: number;
+    median_rent_pounds: number | null;
+    min_rent_pounds: number | null;
+    max_rent_pounds: number | null;
+    last_scraped_at: string | null;
+    listings: {
+      url: string;
+      title: string | null;
+      location_text: string | null;
+      property_type: string | null;
+      price: number | null;
+      room_count: number | null;
+      min_room_price_pcm: number | null;
+      max_room_price_pcm: number | null;
+      latitude: number | null;
+      longitude: number | null;
+      distance_miles: number | null;
+      scraped_at: string;
+    }[];
+  };
 } | null;
 
 export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
@@ -168,6 +189,7 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: vals.address,
+          postcode: vals.postcode,
           detected_area: vals.detected_area,
           property_type: vals.property_type,
           total_rooms: vals.total_rooms,
@@ -742,6 +764,57 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
                   </div>
                 )}
 
+                {/* SpareRoom Market Listings */}
+                {aiOutput.market_listings && aiOutput.market_listings.count > 0 && (
+                  <div className="rounded-xl border border-border bg-surface-raised p-4 space-y-3">
+                    <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+                      <Building2 size={14} className="text-foreground-secondary" />
+                      SpareRoom Listings near {form.watch("postcode")}
+                    </h3>
+                    <div className="text-[12px] text-foreground-secondary">
+                      {aiOutput.market_listings.count} listings · range £
+                      {aiOutput.market_listings.min_rent_pounds ?? "?"}–£
+                      {aiOutput.market_listings.max_rent_pounds ?? "?"} pcm · median £
+                      {aiOutput.market_listings.median_rent_pounds ?? "?"} pcm
+                      {aiOutput.market_listings.last_scraped_at && (
+                        <>
+                          {" "}
+                          · last scraped{" "}
+                          {new Date(aiOutput.market_listings.last_scraped_at).toLocaleDateString()}
+                        </>
+                      )}
+                    </div>
+                    <ul className="space-y-1.5">
+                      {aiOutput.market_listings.listings.slice(0, 8).map((l) => (
+                        <li key={l.url} className="text-[12px]">
+                          <a
+                            href={l.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand hover:underline"
+                          >
+                            {l.title ?? l.url}
+                          </a>
+                          <span className="text-foreground-secondary">
+                            {l.location_text ? ` · ${l.location_text}` : ""}
+                            {l.distance_miles != null ? ` · ${l.distance_miles.toFixed(2)}mi` : ""}
+                            {l.room_count ? ` · ${l.room_count} rooms` : ""}
+                            {l.min_room_price_pcm
+                              ? ` · £${l.min_room_price_pcm}${
+                                  l.max_room_price_pcm && l.max_room_price_pcm !== l.min_room_price_pcm
+                                    ? `–£${l.max_room_price_pcm}`
+                                    : ""
+                                } pcm`
+                              : l.price
+                              ? ` · £${l.price} pcm`
+                              : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
@@ -759,9 +832,12 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
                   </button>
                 </div>
 
-                <p className="text-[11px] text-foreground-secondary text-center">
-                  External market data (SpareRoom) coming soon — this will further improve recommendation accuracy.
-                </p>
+                {(!aiOutput.market_listings || aiOutput.market_listings.count === 0) && (
+                  <p className="text-[11px] text-foreground-secondary text-center">
+                    No SpareRoom listings cached for this postcode yet — run the market scraper
+                    (scripts/MARKET_SCRAPER.py) to populate.
+                  </p>
+                )}
               </div>
             )}
           </div>

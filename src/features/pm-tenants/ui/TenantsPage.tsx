@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,20 @@ export function TenantsPage({ initialTenants, reminderStatus }: TenantsPageProps
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const focusId = searchParams.get("focus");
+    if (!focusId) return;
+    if (tenants.some((t) => t.id === focusId)) {
+      setSelectedId(focusId);
+      setDrawerOpen(true);
+      router.replace(pathname, { scroll: false });
+    }
+  }, [searchParams, tenants, router, pathname]);
 
   const {
     register,

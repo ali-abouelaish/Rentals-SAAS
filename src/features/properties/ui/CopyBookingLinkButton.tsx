@@ -16,13 +16,21 @@ interface CopyBookingLinkButtonProps {
   size?: "sm" | "md";
 }
 
-type ReadyStatus = Extract<RoomBookingLinkResult, { url: string }>;
+type ReadyStatus = Extract<RoomBookingLinkResult, { forms: unknown }>;
+
+const WEEKS_PER_MONTH = 52 / 12; // 4.33333…
+
+function holdingDepositFromRent(rent: number): number {
+  return Math.round(rent / WEEKS_PER_MONTH);
+}
 
 export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkButtonProps) {
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState<RoomBookingLinkResult | null>(null);
-  const [priceOpen, setPriceOpen] = useState(false);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedFormId, setSelectedFormId] = useState<string>("");
   const [priceInput, setPriceInput] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
 
@@ -49,30 +57,20 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
     });
   };
 
-  const handleCopy = () => {
+  const handleOpen = () => {
     if (!status || "error" in status) return;
-
-    const hasRange =
-      status.minPrice !== null &&
-      status.maxPrice !== null &&
-      status.minPrice !== status.maxPrice;
-
-    if (hasRange) {
-      setPriceInput(status.minPrice?.toString() ?? "");
-      setPriceError(null);
-      setPriceOpen(true);
-      return;
-    }
-
-    writeToClipboard(status.url);
+    setSelectedFormId(status.forms[0]?.id ?? "");
+    setPriceInput(status.minPrice ? String(status.minPrice) : "");
+    setPriceError(null);
+    setDialogOpen(true);
   };
 
-  const submitPrice = (ready: ReadyStatus) => {
+  const submit = (ready: ReadyStatus) => {
     const trimmed = priceInput.trim();
     const price = Number(trimmed);
 
     if (!trimmed || !Number.isFinite(price) || price <= 0) {
-      setPriceError("Enter a valid number.");
+      setPriceError("Enter a valid monthly rent.");
       return;
     }
     if (ready.minPrice !== null && price < ready.minPrice) {
@@ -84,10 +82,16 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
       return;
     }
 
-    const urlWithPrice = new URL(ready.url);
-    urlWithPrice.searchParams.set("price", String(Math.round(price)));
-    writeToClipboard(urlWithPrice.toString());
-    setPriceOpen(false);
+    const form = ready.forms.find((f) => f.id === selectedFormId);
+    if (!form) {
+      setPriceError("Pick a form to send.");
+      return;
+    }
+
+    const url = new URL(`${ready.baseUrl}/apply/${form.public_slug}/${ready.unitId}`);
+    url.searchParams.set("price", String(Math.round(price)));
+    writeToClipboard(url.toString());
+    setDialogOpen(false);
   };
 
   if (status === null) {
@@ -134,10 +138,18 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
     );
   }
 
-  const hasRange =
-    status.minPrice !== null &&
-    status.maxPrice !== null &&
-    status.minPrice !== status.maxPrice;
+  const parsedPrice = Number(priceInput);
+  const previewDeposit =
+    Number.isFinite(parsedPrice) && parsedPrice > 0
+      ? holdingDepositFromRent(parsedPrice)
+      : null;
+
+  const priceRangeLabel =
+    status.minPrice !== null && status.maxPrice !== null
+      ? status.minPrice === status.maxPrice
+        ? `£${status.minPrice.toLocaleString()} pcm`
+        : `£${status.minPrice.toLocaleString()} – £${status.maxPrice.toLocaleString()} pcm`
+      : null;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -145,8 +157,7 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
         type="button"
         variant="outline"
         size={size === "sm" ? "sm" : "md"}
-        onClick={handleCopy}
-        loading={isPending && !priceOpen}
+        onClick={handleOpen}
       >
         {copied ? (
           <>
@@ -161,28 +172,33 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
         )}
       </Button>
       <p className="text-[11px] text-foreground-muted">
-        {hasRange
-          ? "This room has a price range — you'll be asked for the agreed price."
-          : "Share this link with prospective tenants to apply for this specific room."}
+        Pick the form and agreed price — we&apos;ll build the link.
       </p>
 
-      <Dialog open={priceOpen} onOpenChange={setPriceOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Set the agreed price</DialogTitle>
+            <DialogTitle>Send a booking link</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-foreground-secondary">
-              This room is listed between{" "}
-              <span className="font-medium text-foreground">
-                £{status.minPrice?.toLocaleString()}
-              </span>{" "}
-              and{" "}
-              <span className="font-medium text-foreground">
-                £{status.maxPrice?.toLocaleString()}
-              </span>{" "}
-              pcm. The price you enter here will be shown on the applicant&apos;s booking form.
-            </p>
+          <div className="space-y-4">
+            {status.forms.length > 1 && (
+              <div className="space-y-1.5">
+                <label htmlFor="booking-form" className="block text-sm font-medium text-foreground">
+                  Form to send
+                </label>
+                <select
+                  id="booking-form"
+                  value={selectedFormId}
+                  onChange={(e) => setSelectedFormId(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
+                >
+                  {status.forms.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label htmlFor="agreed-price" className="block text-sm font-medium text-foreground">
                 Agreed monthly rent (£)
@@ -201,21 +217,38 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    submitPrice(status);
+                    submit(status);
                   }
                 }}
                 className="h-10 w-full rounded-xl border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
-                placeholder={status.minPrice?.toString() ?? ""}
+                placeholder={status.minPrice?.toString() ?? "e.g. 1200"}
                 autoFocus
               />
+              {priceRangeLabel && (
+                <p className="text-[11px] text-foreground-muted">
+                  Listed at {priceRangeLabel}.
+                </p>
+              )}
               {priceError && <p className="text-xs text-red-600">{priceError}</p>}
             </div>
+
+            <div className="rounded-xl border border-border bg-surface-inset/40 px-3 py-2.5">
+              <span className="block text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+                Holding deposit (1 week)
+              </span>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {previewDeposit !== null
+                  ? `£${previewDeposit.toLocaleString()}`
+                  : "Enter a rent to calculate"}
+              </p>
+            </div>
+
             <div className="flex justify-end gap-2 pt-1">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setPriceOpen(false)}
+                onClick={() => setDialogOpen(false)}
               >
                 Cancel
               </Button>
@@ -223,7 +256,7 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => submitPrice(status)}
+                onClick={() => submit(status)}
                 loading={isPending}
               >
                 <LinkIcon className="h-3.5 w-3.5 mr-1" />

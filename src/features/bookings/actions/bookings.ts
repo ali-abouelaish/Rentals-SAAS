@@ -40,7 +40,7 @@ export async function rejectBooking(id: string, rejectionReason: string) {
   revalidatePath("/bookings");
 }
 
-export async function approveBooking(id: string) {
+export async function approveBooking(id: string, signedAndPaid = false) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
@@ -83,19 +83,22 @@ export async function approveBooking(id: string) {
 
   if (updateBookingError) throw new Error(updateBookingError.message);
 
-  // 4. If unit_id is set: update unit status to booked + link pm_tenant
+  const unitStatus = signedAndPaid ? "occupied" : "booked";
+  const contractStatus = signedAndPaid ? "active" : "draft";
+
+  // 4. If unit_id is set: update unit status + link pm_tenant
   if (booking.unit_id) {
     await supabase
       .from("units")
       .update({
-        status: "booked",
+        status: unitStatus,
         pm_tenant_id: pmTenant.id,
         updated_at: new Date().toISOString(),
       })
       .eq("id", booking.unit_id)
       .eq("tenant_id", profile.tenant_id);
 
-    // 5. Draft a contract record
+    // 5. Open a contract record (draft if not signed/paid yet, active if both done)
     await supabase
       .from("property_contracts")
       .insert({
@@ -105,7 +108,7 @@ export async function approveBooking(id: string) {
         start_date: format(new Date(), "yyyy-MM-dd"),
         rent_pcm: 0, // Admin fills in the details
         deposit: 0,
-        status: "draft",
+        status: contractStatus,
         deposit_protection_deadline: format(
           new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           "yyyy-MM-dd"
@@ -118,7 +121,7 @@ export async function approveBooking(id: string) {
   revalidatePath("/contracts");
   revalidatePath("/properties");
 
-  return { pmTenantId: pmTenant.id };
+  return { pmTenantId: pmTenant.id, contractStatus, unitStatus };
 }
 
 export async function updateBookingNotes(id: string, notes: string) {

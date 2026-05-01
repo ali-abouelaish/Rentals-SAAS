@@ -17,7 +17,7 @@ export const contractSchema = z.object({
     .optional(),
   status: z
     .enum(["draft", "sent", "signed", "active", "notice_given", "terminated"])
-    .default("draft"),
+    .default("active"),
   document_url: z.string().nullable().optional().or(z.literal("")),
   notes: z.string().nullable().optional().or(z.literal("")),
 });

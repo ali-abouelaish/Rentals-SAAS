@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { unitSchema, unitStatusUpdateSchema, type UnitFormValues, type UnitStatusUpdateValues } from "../domain/schemas";
+import { unitSchema, unitEditSchema, unitStatusUpdateSchema, type UnitFormValues, type UnitStatusUpdateValues } from "../domain/schemas";
 
 export async function createUnit(values: UnitFormValues) {
   const profile = await requireRole([...ADMIN_ROLES]);
@@ -34,7 +34,13 @@ export async function updateUnit(id: string, values: Partial<UnitFormValues>) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
-  const updates: Record<string, unknown> = { ...values, updated_at: new Date().toISOString() };
+  // Edit path: no validations, all fields nullable; null/undefined values are
+  // dropped so existing DB values are preserved when the user leaves a field blank.
+  const parsed = unitEditSchema.parse(values);
+  const cleaned = Object.fromEntries(
+    Object.entries(parsed).filter(([, v]) => v !== null && v !== undefined)
+  );
+  const updates: Record<string, unknown> = { ...cleaned, updated_at: new Date().toISOString() };
 
   const { data, error } = await supabase
     .from("units")

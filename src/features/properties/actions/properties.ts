@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { propertySchema, type PropertyFormValues } from "../domain/schemas";
+import { propertySchema, propertyEditSchema, type PropertyFormValues } from "../domain/schemas";
 
 export async function createProperty(values: PropertyFormValues) {
   const profile = await requireRole([...ADMIN_ROLES]);
@@ -50,7 +50,12 @@ export async function createProperty(values: PropertyFormValues) {
 export async function updateProperty(id: string, values: Partial<PropertyFormValues>) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
-  const payload = propertySchema.partial().parse(values);
+  // Edit path: no validations, all fields nullable; null/undefined values are
+  // dropped so existing DB values are preserved when the user leaves a field blank.
+  const parsed = propertyEditSchema.parse(values);
+  const payload = Object.fromEntries(
+    Object.entries(parsed).filter(([, v]) => v !== null && v !== undefined)
+  );
 
   const { data, error } = await supabase
     .from("properties")

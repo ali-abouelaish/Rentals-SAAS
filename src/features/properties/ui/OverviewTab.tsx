@@ -7,7 +7,7 @@ import { Check, ExternalLink, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { updateUnit } from "../actions/units";
-import { unitSchema, type UnitFormValues } from "../domain/schemas";
+import { unitSchema, unitEditSchema, type UnitFormValues } from "../domain/schemas";
 import { LONDON_AREAS, type Unit } from "../domain/types";
 import { toast } from "sonner";
 import { CopyBookingLinkButton } from "./CopyBookingLinkButton";
@@ -71,7 +71,9 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
     setValue,
     formState: { errors },
   } = useForm<UnitFormValues>({
-    resolver: zodResolver(unitSchema),
+    // Always editing an existing unit here — use the lenient schema so the
+    // form never blocks a save on missing/empty fields.
+    resolver: zodResolver(unitEditSchema as unknown as typeof unitSchema),
     defaultValues: {
       property_id: unit.property_id,
       unit_type: unit.unit_type,

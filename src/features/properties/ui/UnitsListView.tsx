@@ -5,8 +5,7 @@ import { differenceInDays, parseISO } from "date-fns";
 import { AlertTriangle, MapPin, Clock, User, Warehouse, Pencil, Key, PoundSterling, Check, Bell, X } from "lucide-react";
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
-import { useToast } from "@/components/ui/use-toast";
-import { sendRentReminderNow } from "@/features/reminders/actions/send-now";
+import { SendReminderDialog } from "@/features/reminders/ui/SendReminderDialog";
 import type { ReminderStatusMap } from "@/features/reminders/data/status";
 import { cn } from "@/lib/utils/cn";
 import { UnitStatusBadge } from "./UnitStatusBadge";
@@ -188,9 +187,16 @@ function formatPropertyType(type: string) {
 /* Column layout shared between header and rows */
 const COLS = "grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr_80px_140px]";
 
-function ReminderCell({ pmTenantId, status }: { pmTenantId: string; status?: { kind: string; daysOverdue: number } }) {
-  const { toast } = useToast();
-  const [pending, start] = useTransition();
+function ReminderCell({
+  pmTenantId,
+  tenantName,
+  status,
+}: {
+  pmTenantId: string;
+  tenantName?: string;
+  status?: { kind: string; daysOverdue: number };
+}) {
+  const [open, setOpen] = useState(false);
   const kind = status?.kind ?? "no_contract";
   if (kind === "no_contract") {
     return <span className="text-xs text-foreground-muted">—</span>;
@@ -201,35 +207,29 @@ function ReminderCell({ pmTenantId, status }: { pmTenantId: string; status?: { k
     : kind === "due_today"
       ? "Due today"
       : "Reminder";
-  const handle = () => {
-    start(async () => {
-      const result = await sendRentReminderNow(pmTenantId);
-      if (!result.ok) {
-        toast({ variant: "error", title: "Reminder not sent", description: result.error });
-      } else {
-        toast({
-          title: result.kind === "rent_overdue" ? "Overdue notice sent" : "Rent reminder sent",
-          description: `Sent to ${result.sentTo}${result.kind === "rent_overdue" ? ` · ${result.daysOverdue} day(s) overdue` : ""}`,
-        });
-      }
-    });
-  };
   return (
-    <button
-      type="button"
-      onClick={handle}
-      disabled={pending}
-      title={`Send ${overdue ? "overdue notice" : "rent reminder"}`}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors disabled:opacity-60",
-        overdue
-          ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-          : "border-border bg-surface-card text-foreground-secondary hover:border-brand hover:bg-brand/5 hover:text-brand"
-      )}
-    >
-      {overdue ? <AlertTriangle className="h-3 w-3" /> : <Bell className="h-3 w-3" />}
-      {pending ? "..." : label}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title={`Send ${overdue ? "overdue notice" : "rent reminder"}`}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors",
+          overdue
+            ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+            : "border-border bg-surface-card text-foreground-secondary hover:border-brand hover:bg-brand/5 hover:text-brand"
+        )}
+      >
+        {overdue ? <AlertTriangle className="h-3 w-3" /> : <Bell className="h-3 w-3" />}
+        {label}
+      </button>
+      <SendReminderDialog
+        open={open}
+        pmTenantId={pmTenantId}
+        tenantName={tenantName}
+        onOpenChange={setOpen}
+      />
+    </>
   );
 }
 
@@ -418,6 +418,7 @@ function UnitRow({
           {unit.pm_tenant_id || unit.pm_tenant?.id ? (
             <ReminderCell
               pmTenantId={(unit.pm_tenant?.id ?? unit.pm_tenant_id) as string}
+              tenantName={unit.pm_tenant?.full_name}
               status={reminderStatus[(unit.pm_tenant?.id ?? unit.pm_tenant_id) as string]}
             />
           ) : (

@@ -32,7 +32,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { createProperty, updateProperty } from "../actions/properties";
 import { saveUnitPhoto } from "../actions/photos";
-import { propertySchema, type PropertyFormValues } from "../domain/schemas";
+import { propertySchema, propertyEditSchema, type PropertyFormValues } from "../domain/schemas";
 import { LONDON_AREAS } from "../domain/types";
 import type { Portfolio, Property, UnitPhoto, OwnerLandlord, PropertyManager } from "../domain/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -490,7 +490,11 @@ export function CreatePropertyPage({
     control,
     formState: { errors },
   } = useForm<PropertyFormValues>({
-    resolver: zodResolver(propertySchema),
+    // In edit mode, drop all required/format validations so any field can be
+    // saved blank or partially filled. Create still uses the strict schema.
+    resolver: zodResolver(
+      (isEditMode ? propertyEditSchema : propertySchema) as unknown as typeof propertySchema
+    ),
     defaultValues: initialProperty
       ? {
           property_type: initialProperty.property_type,

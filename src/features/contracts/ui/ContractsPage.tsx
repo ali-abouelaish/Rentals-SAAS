@@ -54,7 +54,7 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
-    defaultValues: { deposit_scheme: "none", deposit_protection_alert: true, status: "draft" },
+    defaultValues: { deposit_scheme: "none", deposit_protection_alert: true, status: "active" },
   });
 
   const unitOptions = units.map((u) => ({

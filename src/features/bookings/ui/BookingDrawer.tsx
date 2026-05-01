@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Check, ExternalLink } from "lucide-react";
+import { ArrowRight, Check, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils/cn";
 import { BookingStatusBadge } from "./BookingStatusBadge";
 import { approveBooking, rejectBooking, updateBookingStatus, updateBookingNotes } from "../actions/bookings";
@@ -168,18 +169,6 @@ function ActionsContent({
 
   const isTerminal = booking.status === "approved" || booking.status === "rejected";
 
-  const handleApprove = () => {
-    startTransition(async () => {
-      try {
-        await approveBooking(booking.id);
-        toast.success("Booking approved — tenant and contract draft created");
-        onBookingUpdated({ ...booking, status: "approved" });
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to approve booking");
-      }
-    });
-  };
-
   const handleReject = () => {
     if (!rejectionReason.trim()) {
       toast.error("Please enter a rejection reason");
@@ -221,7 +210,7 @@ function ActionsContent({
             booking.status === "approved" ? "text-green-800" : "text-red-800"
           )}>
             {booking.status === "approved"
-              ? "Booking has been approved. A pm_tenant record and draft contract have been created."
+              ? "Tenant and contract created — see the contract drawer for status."
               : "Booking has been rejected."}
           </p>
           {booking.rejection_reason && (
@@ -234,23 +223,6 @@ function ActionsContent({
 
   return (
     <div className="py-2 space-y-4">
-      {/* Approve */}
-      <div className="rounded-lg border border-border bg-surface-card p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-foreground">Approve Application</h3>
-        <p className="text-xs text-foreground-muted">
-          Creates a tenant record, links to the unit (if set), and opens a draft contract.
-        </p>
-        <Button
-          type="button"
-          className="bg-green-600 hover:bg-green-700 text-white w-full"
-          size="sm"
-          loading={isPending}
-          onClick={handleApprove}
-        >
-          Approve Booking
-        </Button>
-      </div>
-
       {/* Reject */}
       <div className="rounded-lg border border-border bg-surface-card p-4 space-y-2">
         <h3 className="text-sm font-semibold text-foreground">Reject Application</h3>
@@ -325,10 +297,13 @@ interface BookingDrawerProps {
 export function BookingDrawer({ booking, open, onClose, onBookingUpdated }: BookingDrawerProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [localBooking, setLocalBooking] = useState<Booking | null>(booking);
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [isConverting, startConvertTransition] = useTransition();
 
   useEffect(() => {
     setLocalBooking(booking);
     setActiveTab("overview");
+    setConvertOpen(false);
   }, [booking?.id]);
 
   if (!localBooking) return null;
@@ -338,17 +313,98 @@ export function BookingDrawer({ booking, open, onClose, onBookingUpdated }: Book
     onBookingUpdated(updated);
   };
 
+  const canConvert =
+    localBooking.status === "pending" || localBooking.status === "under_review";
+
+  const handleConvert = (signedAndPaid: boolean) => {
+    startConvertTransition(async () => {
+      try {
+        await approveBooking(localBooking.id, signedAndPaid);
+        toast.success(
+          signedAndPaid
+            ? "Tenancy is active — room marked occupied."
+            : "Booking approved — contract draft created, room marked booked."
+        );
+        handleUpdated({ ...localBooking, status: "approved" });
+        setConvertOpen(false);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to convert booking");
+      }
+    });
+  };
+
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="right" className="flex flex-col p-0 w-full max-w-[540px]">
         {/* Header */}
         <SheetHeader className="shrink-0">
-          <div className="space-y-1.5 min-w-0">
-            <BookingStatusBadge status={localBooking.status} />
-            <h2 className="text-base font-semibold text-foreground">{localBooking.applicant_name}</h2>
-            <p className="text-xs text-foreground-secondary">{localBooking.applicant_email}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1.5 min-w-0">
+              <BookingStatusBadge status={localBooking.status} />
+              <h2 className="text-base font-semibold text-foreground">{localBooking.applicant_name}</h2>
+              <p className="text-xs text-foreground-secondary">{localBooking.applicant_email}</p>
+            </div>
+            {canConvert && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setConvertOpen(true)}
+                className="shrink-0"
+              >
+                Convert to tenancy
+                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            )}
           </div>
         </SheetHeader>
+
+        <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Convert to tenancy</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-foreground-secondary">
+                Has the tenant signed the contract and paid the holding deposit?
+              </p>
+              <ul className="rounded-lg bg-surface-inset px-3 py-2.5 text-xs text-foreground-muted space-y-1">
+                <li><span className="font-medium text-foreground">Yes</span> — contract becomes <span className="font-medium">active</span> and the room is marked <span className="font-medium">occupied</span>.</li>
+                <li><span className="font-medium text-foreground">Not yet</span> — contract stays as a <span className="font-medium">draft</span> and the room is held as <span className="font-medium">booked</span> until activated later.</li>
+              </ul>
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConvertOpen(false)}
+                  disabled={isConverting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={isConverting}
+                  onClick={() => handleConvert(false)}
+                >
+                  Not yet — keep as draft
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={isConverting}
+                  onClick={() => handleConvert(true)}
+                >
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                  Yes — activate now
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Tabs */}
         <div className="border-b border-border px-6 pt-2 pb-0 shrink-0">
