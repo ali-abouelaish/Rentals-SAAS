@@ -18,8 +18,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { COST_TYPE_LABELS, COST_MODE_LABELS } from "../domain/types";
-import type { PropertyProfitability, PropertyCost } from "../domain/types";
+import type { PropertyProfitability, PropertyCost, PropertyMonthPoint } from "../domain/types";
 import { CostModal } from "./CostModal";
+import { PropertyTrendChart } from "./PropertyTrendChart";
 import { deletePropertyCost } from "../actions";
 
 // ──────────────────────────────────────────────────────────
@@ -85,9 +86,10 @@ function SummaryCard({
 
 interface PropertyDetailPageProps {
   property: PropertyProfitability;
+  trend: PropertyMonthPoint[];
 }
 
-export function PropertyDetailPage({ property }: PropertyDetailPageProps) {
+export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps) {
   const [showCostModal, setShowCostModal] = useState(false);
   const [editingCost, setEditingCost] = useState<PropertyCost | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -224,6 +226,9 @@ export function PropertyDetailPage({ property }: PropertyDetailPageProps) {
         </div>
       )}
 
+      {/* Trend Chart */}
+      {trend.length > 0 && <PropertyTrendChart data={trend} />}
+
       {/* Income Breakdown */}
       <div className="rounded-bento bg-surface-card shadow-bento p-6">
         <h2 className="text-base font-semibold text-foreground mb-4">Income Breakdown</h2>
@@ -345,6 +350,37 @@ export function PropertyDetailPage({ property }: PropertyDetailPageProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
+              {property.owner_rent_monthly > 0 && (
+                <tr className="bg-surface-inset/40">
+                  <td className="py-3 pr-4">
+                    <span className="font-medium text-foreground">
+                      {COST_TYPE_LABELS.owner_rent}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4 hidden md:table-cell text-foreground-secondary">
+                    {property.owner_landlord_name
+                      ? `Paid to ${property.owner_landlord_name}`
+                      : "Rent paid to owner landlord"}
+                    {property.owner_payment_schedule &&
+                    property.owner_payment_schedule !== "monthly"
+                      ? ` (${property.owner_payment_schedule}, monthly equivalent)`
+                      : ""}
+                  </td>
+                  <td className="py-3 pr-4 text-right tabular-nums font-medium">
+                    {fmt(property.owner_rent_monthly)}
+                  </td>
+                  <td className="py-3 pr-4 hidden sm:table-cell pl-4">
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-blue-50 text-blue-700">
+                      {COST_MODE_LABELS.recurring}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4 hidden lg:table-cell text-foreground-muted text-xs italic">
+                    From property contract
+                  </td>
+                  <td className="py-3 pr-4 hidden xl:table-cell" />
+                  <td className="py-3" />
+                </tr>
+              )}
               {displayedCosts().map((cost) => {
                 const isAmortisedFurniture =
                   cost.cost_type === "furniture" && cost.cost_mode === "amortised";

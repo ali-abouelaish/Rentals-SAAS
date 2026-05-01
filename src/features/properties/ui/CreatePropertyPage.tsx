@@ -36,7 +36,12 @@ import { propertySchema, propertyEditSchema, type PropertyFormValues } from "../
 import { LONDON_AREAS } from "../domain/types";
 import type { Portfolio, Property, UnitPhoto, OwnerLandlord, PropertyManager } from "../domain/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { CreateOwnerLandlordDialog, CreatePropertyManagerDialog } from "./LandlordDialogs";
+import {
+  CreateOwnerLandlordDialog,
+  CreatePropertyManagerDialog,
+  EditOwnerLandlordDialog,
+  EditPropertyManagerDialog,
+} from "./LandlordDialogs";
 
 /* ─── primitives ─────────────────────────────────────────── */
 
@@ -700,10 +705,13 @@ export function CreatePropertyPage({
           first?.scrollIntoView({ behavior: "smooth", block: "center" });
           first?.focus({ preventScroll: true });
         })}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
+        className={cn(
+          "grid grid-cols-1 gap-6 items-start",
+          isEditMode ? "max-w-3xl mx-auto" : "lg:grid-cols-3"
+        )}
       >
-        {/* ── Left: form sections (2 of 3 cols) ── */}
-        <div className="lg:col-span-2 space-y-5">
+        {/* ── Left: form sections ── */}
+        <div className={cn("space-y-5", !isEditMode && "lg:col-span-2")}>
 
           {/* Property type */}
           <SectionCard icon={Building2} title="Property type" description="What kind of property is this?">
@@ -827,11 +835,26 @@ export function CreatePropertyPage({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-foreground">Owner landlord</label>
-                <CreateOwnerLandlordDialog
-                  onCreated={(landlord) => {
-                    setOwnerLandlords((prev) => [...prev, landlord]);
-                  }}
-                />
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const selected = ownerLandlords.find((l) => l.id === liveValues.owner_landlord_id);
+                    return selected ? (
+                      <EditOwnerLandlordDialog
+                        landlord={selected}
+                        onUpdated={(updated) => {
+                          setOwnerLandlords((prev) =>
+                            prev.map((l) => (l.id === updated.id ? updated : l))
+                          );
+                        }}
+                      />
+                    ) : null;
+                  })()}
+                  <CreateOwnerLandlordDialog
+                    onCreated={(landlord) => {
+                      setOwnerLandlords((prev) => [...prev, landlord]);
+                    }}
+                  />
+                </div>
               </div>
               <select {...register("owner_landlord_id")} className={selectCls}>
                 <option value="">— None —</option>
@@ -846,11 +869,26 @@ export function CreatePropertyPage({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-foreground">Property manager</label>
-                <CreatePropertyManagerDialog
-                  onCreated={(manager) => {
-                    setPropertyManagers((prev) => [...prev, manager]);
-                  }}
-                />
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const selected = propertyManagers.find((m) => m.id === liveValues.manager_landlord_id);
+                    return selected ? (
+                      <EditPropertyManagerDialog
+                        manager={selected}
+                        onUpdated={(updated) => {
+                          setPropertyManagers((prev) =>
+                            prev.map((m) => (m.id === updated.id ? updated : m))
+                          );
+                        }}
+                      />
+                    ) : null;
+                  })()}
+                  <CreatePropertyManagerDialog
+                    onCreated={(manager) => {
+                      setPropertyManagers((prev) => [...prev, manager]);
+                    }}
+                  />
+                </div>
               </div>
               <select {...register("manager_landlord_id")} className={selectCls}>
                 <option value="">— None —</option>
@@ -1007,10 +1045,12 @@ export function CreatePropertyPage({
           )}
         </div>
 
-        {/* ── Right: sticky live summary (1 of 3 cols) ── */}
-        <div className="lg:col-span-1 lg:sticky lg:top-6">
-          <SummaryPanel values={liveValues as PropertyFormValues} portfolios={portfolios} />
-        </div>
+        {/* ── Right: sticky live summary — only on create ── */}
+        {!isEditMode && (
+          <div className="lg:col-span-1 lg:sticky lg:top-6">
+            <SummaryPanel values={liveValues as PropertyFormValues} portfolios={portfolios} />
+          </div>
+        )}
       </form>
     </div>
   );

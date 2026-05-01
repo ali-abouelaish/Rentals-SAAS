@@ -99,12 +99,24 @@ export type PropertyProfitability = {
   trend: "up" | "down" | "flat" | null;
   unit_breakdown: UnitProfitRow[];
   costs: PropertyCost[];
+  owner_rent_monthly: number; // pence — monthly rent paid to owner landlord (derived from property.monthly_rent_owed × payment_schedule)
+  owner_landlord_name: string | null;
+  owner_payment_schedule: "monthly" | "quarterly" | "biannual" | "annual" | null;
 };
 
 // For the portfolio line graph (monthly rollup per portfolio)
 export type PortfolioMonthPoint = {
   month: string; // "Apr 25", "May 25", etc.
   [portfolioName: string]: number | string; // portfolio_name → net profit £
+};
+
+// Per-property historical trend point (last N months)
+export type PropertyMonthPoint = {
+  month: string;        // "Apr 25"
+  month_key: string;    // "2025-04" — sortable
+  income: number;       // £
+  costs: number;        // £
+  net_profit: number;   // £
 };
 
 // Dashboard-specific types

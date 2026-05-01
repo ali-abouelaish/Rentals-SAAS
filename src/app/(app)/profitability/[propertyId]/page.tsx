@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import { TrendingUp } from "lucide-react";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { getPropertyProfitability } from "@/features/profitability/data/queries";
+import {
+  getPropertyProfitability,
+  getPropertyMonthlyTrend,
+} from "@/features/profitability/data/queries";
 import { PropertyDetailPage } from "@/features/profitability/ui/PropertyDetailPage";
 
 interface Props {
@@ -13,13 +16,16 @@ export default async function PropertyProfitabilityRoute({ params }: Props) {
   await requireRole([...ADMIN_ROLES]);
 
   try {
-    const property = await getPropertyProfitability(params.propertyId);
+    const [property, trend] = await Promise.all([
+      getPropertyProfitability(params.propertyId),
+      getPropertyMonthlyTrend(params.propertyId, 12),
+    ]);
 
     if (!property) {
       notFound();
     }
 
-    return <PropertyDetailPage property={property} />;
+    return <PropertyDetailPage property={property} trend={trend} />;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     const isMissingTable =

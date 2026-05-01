@@ -186,6 +186,31 @@ export const unitStatusUpdateSchema = z.object({
 });
 export type UnitStatusUpdateValues = z.infer<typeof unitStatusUpdateSchema>;
 
+// Lenient edit schemas for landlord & property manager — no validations,
+// every field nullable, empty/undefined → null.
+export const ownerLandlordEditSchema = z.object({
+  name: lenientStr,
+  phone: lenientStr,
+  email: lenientStr,
+  contract_start_date: lenientStr,
+  contract_expiry_date: lenientStr,
+  monthly_rent_owed: lenientNum,
+  payment_schedule: lenientEnum(["monthly", "quarterly", "biannual", "annual"] as const),
+  alert_60_days: lenientBool,
+  alert_30_days: lenientBool,
+  contract_document_url: lenientStr,
+}).partial();
+export type OwnerLandlordEditValues = z.infer<typeof ownerLandlordEditSchema>;
+
+export const propertyManagerEditSchema = z.object({
+  full_name: lenientStr,
+  company_name: lenientStr,
+  phone: lenientStr,
+  email: lenientStr,
+  notes: lenientStr,
+}).partial();
+export type PropertyManagerEditValues = z.infer<typeof propertyManagerEditSchema>;
+
 export const ownerLandlordSchema = z.object({
   name: z.string().min(1, "Name is required"),
   phone: z.string().nullable().optional().or(z.literal("")),

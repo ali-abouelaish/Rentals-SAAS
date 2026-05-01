@@ -7,6 +7,7 @@ import type {
   ProfitabilityAlert,
   DashboardData,
   PortfolioMonthPoint,
+  PropertyMonthPoint,
   UnitProfitRow,
 } from "../domain/types";
 import { getMaintenanceSummary } from "@/features/maintenance/data/queries";
@@ -68,10 +69,12 @@ function computeMonthlyCosts(costs: PropertyCost[]): number {
 export async function getAllPropertyProfitabilities(): Promise<PropertyProfitability[]> {
   const supabase = createSupabaseServerClient();
 
-  // Properties + portfolios
+  // Properties + portfolios + owner landlord rent details
   const { data: properties, error: propErr } = await supabase
     .from("properties")
-    .select("id, name, portfolio_id, portfolios(id, name, color)")
+    .select(
+      "id, name, portfolio_id, monthly_rent_owed, payment_schedule, portfolios(id, name, color), owner_landlord:owner_landlords(id, name)"
+    )
     .order("name");
   if (propErr) throw propErr;
   if (!properties?.length) return [];
@@ -158,10 +161,22 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
     });
 
     const total_income = unit_breakdown.reduce((s, u) => s + u.rent_pcm, 0);
-    const total_costs = computeMonthlyCosts(propCosts);
+    const scheduleDivisor: Record<NonNullable<typeof prop.payment_schedule>, number> = {
+      monthly: 1,
+      quarterly: 3,
+      biannual: 6,
+      annual: 12,
+    };
+    const ownerRentRaw = prop.monthly_rent_owed ?? 0;
+    const divisor = prop.payment_schedule ? scheduleDivisor[prop.payment_schedule] : 1;
+    const owner_rent_monthly = Math.round((Number(ownerRentRaw) * 100) / divisor);
+    const total_costs = computeMonthlyCosts(propCosts) + owner_rent_monthly;
     const vacancy_loss = unit_breakdown.reduce((s, u) => s + u.vacancy_loss, 0);
     const net_profit = total_income - total_costs - vacancy_loss;
     const target_profit = targetMap.get(prop.id) ?? null;
+    const ownerLandlord = Array.isArray(prop.owner_landlord)
+      ? prop.owner_landlord[0]
+      : prop.owner_landlord;
 
     return {
       property_id: prop.id,
@@ -181,6 +196,9 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
       trend: null,
       unit_breakdown,
       costs: propCosts,
+      owner_rent_monthly,
+      owner_landlord_name: (ownerLandlord as { name?: string } | null)?.name ?? null,
+      owner_payment_schedule: prop.payment_schedule ?? null,
     };
   });
 }
@@ -237,6 +255,129 @@ export async function getPropertyCosts(propertyId: string): Promise<PropertyCost
     .order("date_incurred", { ascending: false });
   if (error) throw error;
   return (data ?? []) as PropertyCost[];
+}
+
+/** Build a per-property monthly trend (income / costs / net profit) for the past N months.
+ *
+ * Approximations:
+ *   - Income is pro-rated daily based on contract start_date / vacate_date overlap.
+ *   - Recurring costs are assumed active throughout (no historical activation dates).
+ *   - Amortised costs apply only within their amortisation window.
+ *   - One-off costs apply only in the month of date_incurred.
+ *   - Vacancy loss is not computed historically (no historical unit-state log).
+ */
+export async function getPropertyMonthlyTrend(
+  propertyId: string,
+  months = 12
+): Promise<PropertyMonthPoint[]> {
+  const supabase = createSupabaseServerClient();
+
+  const { data: property, error: propErr } = await supabase
+    .from("properties")
+    .select("id, monthly_rent_owed, payment_schedule")
+    .eq("id", propertyId)
+    .single();
+  if (propErr || !property) return [];
+
+  const { data: unitRows } = await supabase
+    .from("units")
+    .select("id")
+    .eq("property_id", propertyId);
+  const unitIds = (unitRows ?? []).map((u) => u.id);
+
+  const [contractsRes, costsRes] = await Promise.all([
+    unitIds.length
+      ? supabase
+          .from("property_contracts")
+          .select("unit_id, rent_pcm, status, start_date, vacate_date")
+          .in("unit_id", unitIds)
+          .in("status", ["active", "signed", "notice_given", "terminated"])
+      : Promise.resolve({ data: [] as Array<{ unit_id: string; rent_pcm: number; status: string; start_date: string; vacate_date: string | null }> }),
+    supabase
+      .from("property_costs")
+      .select("*")
+      .eq("property_id", propertyId),
+  ]);
+  const contracts = (contractsRes.data ?? []) as Array<{
+    unit_id: string;
+    rent_pcm: number;
+    status: string;
+    start_date: string;
+    vacate_date: string | null;
+  }>;
+  const costsList = (costsRes.data ?? []) as PropertyCost[];
+
+  const scheduleDivisor: Record<"monthly" | "quarterly" | "biannual" | "annual", number> = {
+    monthly: 1,
+    quarterly: 3,
+    biannual: 6,
+    annual: 12,
+  };
+  const ownerRentRaw = property.monthly_rent_owed ?? 0;
+  const divisor = property.payment_schedule
+    ? scheduleDivisor[property.payment_schedule as keyof typeof scheduleDivisor]
+    : 1;
+  const ownerRentMonthlyPence = Math.round((Number(ownerRentRaw) * 100) / divisor);
+
+  const result: PropertyMonthPoint[] = [];
+  const now = new Date();
+
+  for (let i = months - 1; i >= 0; i--) {
+    const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+    const daysInMonth = monthEnd.getDate();
+    const msStr = monthStart.toISOString().split("T")[0];
+    const meStr = monthEnd.toISOString().split("T")[0];
+
+    // Income (pence) — pro-rated by overlap days
+    let incomePence = 0;
+    for (const c of contracts) {
+      const cStart = c.start_date;
+      const cEnd = c.vacate_date ?? meStr;
+      if (cStart > meStr || cEnd < msStr) continue;
+      const overlapStart = cStart > msStr ? cStart : msStr;
+      const overlapEnd = cEnd < meStr ? cEnd : meStr;
+      const daysActive =
+        Math.floor(
+          (new Date(overlapEnd).getTime() - new Date(overlapStart).getTime()) / 86400000
+        ) + 1;
+      incomePence += Math.round(((c.rent_pcm ?? 0) * 100 * daysActive) / daysInMonth);
+    }
+
+    // Costs (pence)
+    let costsPence = ownerRentMonthlyPence;
+    for (const c of costsList) {
+      if (c.cost_mode === "recurring") {
+        costsPence += c.amount;
+      } else if (c.cost_mode === "amortised") {
+        if (!c.amortise_months || !c.amortise_start_date) continue;
+        const aStart = new Date(c.amortise_start_date);
+        const aEnd = new Date(aStart);
+        aEnd.setMonth(aEnd.getMonth() + c.amortise_months);
+        if (monthStart >= aStart && monthStart < aEnd) {
+          costsPence += Math.round(c.amount / c.amortise_months);
+        }
+      } else if (c.date_incurred >= msStr && c.date_incurred <= meStr) {
+        costsPence += c.amount;
+      }
+    }
+
+    const monthLabel = monthStart.toLocaleDateString("en-GB", {
+      month: "short",
+      year: "2-digit",
+    });
+    const monthKey = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`;
+
+    result.push({
+      month: monthLabel,
+      month_key: monthKey,
+      income: Math.round(incomePence / 100),
+      costs: Math.round(costsPence / 100),
+      net_profit: Math.round((incomePence - costsPence) / 100),
+    });
+  }
+
+  return result;
 }
 
 /** Build the portfolio line graph data for the past N months.
