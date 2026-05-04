@@ -15,13 +15,14 @@ import {
   ToggleRight,
   ChevronRight,
   Wrench,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { COST_TYPE_LABELS, COST_MODE_LABELS } from "../domain/types";
 import type { PropertyProfitability, PropertyCost, PropertyMonthPoint } from "../domain/types";
 import { CostModal } from "./CostModal";
 import { PropertyTrendChart } from "./PropertyTrendChart";
-import { deletePropertyCost } from "../actions";
+import { deletePropertyCost, upsertPropertyTarget } from "../actions";
 
 // ──────────────────────────────────────────────────────────
 // Helpers
@@ -95,6 +96,35 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [furnitureView, setFurnitureView] = useState<"cash" | "amortised">("amortised");
   const [costs, setCosts] = useState<PropertyCost[]>(property.costs);
+  const [editingTarget, setEditingTarget] = useState(false);
+  const [targetInput, setTargetInput] = useState<string>(
+    property.target_profit !== null ? String(Math.round(property.target_profit / 100)) : ""
+  );
+  const [savingTarget, setSavingTarget] = useState(false);
+
+  async function handleSaveTarget() {
+    const pcm = Number(targetInput);
+    if (!Number.isFinite(pcm) || pcm < 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+    setSavingTarget(true);
+    try {
+      const result = await upsertPropertyTarget({
+        property_id: property.property_id,
+        target_profit_pcm: Math.round(pcm),
+      });
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Target saved");
+        setEditingTarget(false);
+        window.location.reload();
+      }
+    } finally {
+      setSavingTarget(false);
+    }
+  }
 
   const netProfit = property.net_profit;
   const isProfit = netProfit >= 0;
@@ -147,9 +177,21 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">
+            <Link
+              href={`/properties/${property.property_id}`}
+              className="text-2xl font-bold tracking-tight font-heading text-foreground hover:text-brand transition-colors"
+            >
               {property.property_name}
-            </h1>
+            </Link>
+            <a
+              href={`/properties/${property.property_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open property view in new tab"
+              className="inline-flex items-center justify-center p-1 rounded-md text-foreground-muted hover:text-brand hover:bg-surface-inset transition-colors"
+            >
+              <ExternalLink size={16} />
+            </a>
             <PortfolioBadge
               name={property.portfolio_name}
               color={property.portfolio_color}
@@ -176,28 +218,94 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
         <SummaryCard label="Total Costs" value={fmt(property.total_costs)} />
         <SummaryCard
           label="Vacancy Loss"
-          value={property.vacancy_loss > 0 ? `-${fmt(property.vacancy_loss)}` : "£0"}
-          positive={property.vacancy_loss === 0}
+          value={
+            property.vacancy_loss + property.total_pre_let_loss > 0
+              ? `-${fmt(property.vacancy_loss + property.total_pre_let_loss)}`
+              : "£0"
+          }
+          positive={property.vacancy_loss + property.total_pre_let_loss === 0}
         />
         <SummaryCard
           label="Net Profit"
           value={fmt(netProfit, true)}
           positive={isProfit}
         />
-        <SummaryCard
-          label="vs Target"
-          value={
-            property.vs_target !== null
-              ? fmt(property.vs_target, true)
-              : "No target"
-          }
-          sub={
-            property.target_profit !== null
-              ? `Target: ${fmt(property.target_profit)}/mo`
-              : undefined
-          }
-          positive={aboveTarget === null ? undefined : aboveTarget}
-        />
+        <div className="rounded-xl bg-surface-inset p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">vs Target</p>
+            {!editingTarget && (
+              <button
+                type="button"
+                onClick={() => setEditingTarget(true)}
+                className="p-1 rounded hover:bg-surface-card text-foreground-muted hover:text-foreground transition-colors"
+                title={property.target_profit !== null ? "Edit target" : "Set target"}
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+          </div>
+          {editingTarget ? (
+            <div className="mt-1.5 space-y-2">
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-foreground-muted">£</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={targetInput}
+                  onChange={(e) => setTargetInput(e.target.value)}
+                  placeholder="Target /mo"
+                  className="w-full bg-surface-card border border-border rounded-lg px-2 py-1 text-sm font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-brand"
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleSaveTarget}
+                  disabled={savingTarget}
+                  className="flex-1 rounded-md bg-brand text-brand-fg px-2 py-1 text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {savingTarget ? "Saving…" : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTarget(false);
+                    setTargetInput(
+                      property.target_profit !== null
+                        ? String(Math.round(property.target_profit / 100))
+                        : ""
+                    );
+                  }}
+                  disabled={savingTarget}
+                  className="rounded-md border border-border bg-surface-card px-2 py-1 text-xs font-medium text-foreground-secondary hover:bg-surface-inset transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p
+                className={cn(
+                  "text-xl font-bold mt-1.5 tabular-nums",
+                  aboveTarget === true
+                    ? "text-emerald-600"
+                    : aboveTarget === false
+                    ? "text-red-600"
+                    : "text-foreground"
+                )}
+              >
+                {property.vs_target !== null ? fmt(property.vs_target, true) : "No target"}
+              </p>
+              {property.target_profit !== null && (
+                <p className="text-xs text-foreground-muted mt-0.5">
+                  Target: {fmt(property.target_profit)}/mo
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Trend indicator */}
@@ -239,7 +347,12 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
                 <th className="text-left pb-3">Unit</th>
                 <th className="text-left pb-3">Tenant</th>
                 <th className="text-right pb-3">Rent PCM</th>
-                <th className="text-right pb-3 hidden sm:table-cell">Days Vacant</th>
+                <th
+                  className="text-right pb-3 hidden sm:table-cell"
+                  title="Total vacant days = pre-let period (since owner-landlord contract) + currently vacant. Hover the number for the exact periods."
+                >
+                  Vacant days
+                </th>
                 <th className="text-right pb-3 hidden md:table-cell">Vacancy Loss</th>
                 <th className="text-right pb-3">Contribution</th>
               </tr>
@@ -259,18 +372,37 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
                     {unit.rent_pcm > 0 ? fmt(unit.rent_pcm) : <span className="text-foreground-muted">—</span>}
                   </td>
                   <td className="py-3 pr-4 text-right hidden sm:table-cell tabular-nums">
-                    {unit.days_vacant > 0 ? (
-                      <span className="text-amber-600">{unit.days_vacant}d</span>
-                    ) : (
-                      <span className="text-foreground-muted">—</span>
-                    )}
+                    {(() => {
+                      const preLet = unit.pre_let_days ?? 0;
+                      const totalDays = preLet + unit.days_vacant;
+                      if (totalDays === 0) return <span className="text-foreground-muted">—</span>;
+                      const tooltipParts: string[] = [];
+                      if (preLet > 0 && unit.pre_let_period_start && unit.pre_let_period_end) {
+                        tooltipParts.push(
+                          `Pre-let: ${unit.pre_let_period_start} → ${unit.pre_let_period_end} (${preLet}d)`
+                        );
+                      }
+                      if (unit.days_vacant > 0 && unit.vacant_since) {
+                        tooltipParts.push(
+                          `Currently vacant: ${unit.vacant_since} → today (${unit.days_vacant}d)`
+                        );
+                      }
+                      return (
+                        <span
+                          className="text-amber-600 cursor-help underline decoration-dotted underline-offset-2"
+                          title={tooltipParts.join("\n")}
+                        >
+                          {totalDays}d
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 pr-4 text-right hidden md:table-cell tabular-nums">
-                    {unit.vacancy_loss > 0 ? (
-                      <span className="text-red-600">-{fmt(unit.vacancy_loss)}</span>
-                    ) : (
-                      <span className="text-foreground-muted">—</span>
-                    )}
+                    {(() => {
+                      const totalLoss = unit.pre_let_loss + unit.vacancy_loss;
+                      if (totalLoss === 0) return <span className="text-foreground-muted">—</span>;
+                      return <span className="text-red-600">-{fmt(totalLoss)}</span>;
+                    })()}
                   </td>
                   <td className="py-3 text-right tabular-nums">
                     <span
@@ -290,15 +422,25 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
               <tr className="font-semibold">
                 <td colSpan={2} className="pt-3 text-foreground">Total</td>
                 <td className="pt-3 text-right tabular-nums">{fmt(property.total_income)}</td>
-                <td className="pt-3 hidden sm:table-cell" />
+                <td className="pt-3 text-right hidden sm:table-cell tabular-nums">
+                  {(() => {
+                    const totalDays =
+                      property.total_pre_let_days +
+                      property.unit_breakdown.reduce((s, u) => s + u.days_vacant, 0);
+                    if (totalDays === 0) return <span className="text-foreground-muted font-normal">—</span>;
+                    return <span className="text-amber-600">{totalDays}d</span>;
+                  })()}
+                </td>
                 <td className="pt-3 text-right hidden md:table-cell tabular-nums">
-                  {property.vacancy_loss > 0 && (
-                    <span className="text-red-600">-{fmt(property.vacancy_loss)}</span>
-                  )}
+                  {(() => {
+                    const totalLoss = property.total_pre_let_loss + property.vacancy_loss;
+                    if (totalLoss === 0) return <span className="text-foreground-muted font-normal">—</span>;
+                    return <span className="text-red-600">-{fmt(totalLoss)}</span>;
+                  })()}
                 </td>
                 <td className="pt-3 text-right tabular-nums">
-                  <span className={isProfit ? "text-emerald-600" : "text-red-600"}>
-                    {fmt(property.total_income - property.vacancy_loss)}
+                  <span className="text-emerald-600">
+                    {fmt(property.total_income)}
                   </span>
                 </td>
               </tr>
@@ -499,6 +641,45 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
             </p>
           </div>
         )}
+      </div>
+
+      {/* Net Profit */}
+      <div
+        className="rounded-bento bg-surface-card shadow-bento p-6"
+        title="Net Profit = Total Income − Total Costs − Vacancy Loss (pre-let + currently vacant)"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Net Profit</h2>
+            <p className="text-xs text-foreground-muted mt-0.5">
+              Income − Costs − Vacancy Loss
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm tabular-nums">
+            <span className="text-foreground-muted">
+              Income <span className="font-medium text-foreground">{fmt(property.total_income)}</span>
+            </span>
+            <span className="text-foreground-muted">
+              Costs <span className="font-medium text-red-600">-{fmt(property.total_costs)}</span>
+            </span>
+            <span className="text-foreground-muted">
+              Vacancy Loss{" "}
+              <span className="font-medium text-red-600">
+                {property.vacancy_loss + property.total_pre_let_loss > 0
+                  ? `-${fmt(property.vacancy_loss + property.total_pre_let_loss)}`
+                  : fmt(0)}
+              </span>
+            </span>
+            <span
+              className={cn(
+                "text-2xl font-bold",
+                netProfit >= 0 ? "text-emerald-600" : "text-red-600"
+              )}
+            >
+              {fmt(netProfit, true)}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Cost Modal */}

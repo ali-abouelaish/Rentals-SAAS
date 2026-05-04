@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import {
-  ComposedChart,
-  Bar,
+  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -13,7 +12,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { LineChart as LineIcon, BarChart3 } from "lucide-react";
 import type { PropertyMonthPoint } from "../domain/types";
 
 interface PropertyTrendChartProps {
@@ -53,7 +51,6 @@ function CustomTooltip({ active, payload, label }: any) {
 
 export function PropertyTrendChart({ data }: PropertyTrendChartProps) {
   const [period, setPeriod] = useState<6 | 12>(12);
-  const [mode, setMode] = useState<"line" | "bar">("line");
 
   const sliced = data.slice(-period);
 
@@ -67,31 +64,6 @@ export function PropertyTrendChart({ data }: PropertyTrendChartProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Mode toggle */}
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => setMode("line")}
-              className={`px-3 py-1.5 text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
-                mode === "line"
-                  ? "bg-brand text-brand-fg"
-                  : "text-foreground-secondary hover:bg-surface-inset"
-              }`}
-            >
-              <LineIcon size={13} />
-              Line
-            </button>
-            <button
-              onClick={() => setMode("bar")}
-              className={`px-3 py-1.5 text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
-                mode === "bar"
-                  ? "bg-brand text-brand-fg"
-                  : "text-foreground-secondary hover:bg-surface-inset"
-              }`}
-            >
-              <BarChart3 size={13} />
-              Bar
-            </button>
-          </div>
           {/* Period selector */}
           <div className="flex rounded-lg border border-border overflow-hidden">
             {PERIODS.map(({ label, months }) => (
@@ -112,7 +84,7 @@ export function PropertyTrendChart({ data }: PropertyTrendChartProps) {
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={sliced} margin={{ top: 5, right: 16, left: 8, bottom: 5 }}>
+        <LineChart data={sliced} margin={{ top: 5, right: 16, left: 8, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e5e7eb)" vertical={false} />
           <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="4 4" strokeWidth={1} />
           <XAxis
@@ -136,52 +108,34 @@ export function PropertyTrendChart({ data }: PropertyTrendChartProps) {
             iconType="circle"
             iconSize={8}
           />
-          {mode === "bar" ? (
-            <>
-              <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="costs" name="Costs" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              <Line
-                type="monotone"
-                dataKey="net_profit"
-                name="Net Profit"
-                stroke="#0ea5e9"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 5 }}
-              />
-            </>
-          ) : (
-            <>
-              <Line
-                type="monotone"
-                dataKey="income"
-                name="Income"
-                stroke="#10b981"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 5 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="costs"
-                name="Costs"
-                stroke="#ef4444"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 5 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="net_profit"
-                name="Net Profit"
-                stroke="#0ea5e9"
-                strokeWidth={2.5}
-                dot={{ r: 3 }}
-                activeDot={{ r: 6 }}
-              />
-            </>
-          )}
-        </ComposedChart>
+          <Line
+            type="monotone"
+            dataKey="income"
+            name="Income"
+            stroke="#10b981"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 5 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="costs"
+            name="Costs"
+            stroke="#ef4444"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 5 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="net_profit"
+            name="Net Profit"
+            stroke="#0ea5e9"
+            strokeWidth={2.5}
+            dot={{ r: 3 }}
+            activeDot={{ r: 6 }}
+          />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

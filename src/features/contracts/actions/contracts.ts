@@ -24,13 +24,40 @@ export async function createContract(values: ContractFormValues) {
   const supabase = createSupabaseServerClient();
   const payload = contractSchema.parse(values);
 
-  // Auto-compute deposit_protection_deadline = start_date + 30 days
   const deadline = format(addDays(new Date(payload.start_date), 30), "yyyy-MM-dd");
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  // A unit is "taken" when another contract on it is still active or in notice.
+  // If taken, this new contract is queued — we won't touch the unit until that one closes out.
+  const { data: existingActive, error: existErr } = await supabase
+    .from("property_contracts")
+    .select("id")
+    .eq("tenant_id", profile.tenant_id)
+    .eq("unit_id", payload.unit_id)
+    .in("status", ["active", "notice_given"])
+    .limit(1);
+  if (existErr) throw new Error(existErr.message);
+  const unitIsTaken = (existingActive ?? []).length > 0;
+
+  const startsTodayOrEarlier = payload.start_date <= today;
+  const shouldActivateNow = startsTodayOrEarlier && !unitIsTaken;
+
+  // Resolve final contract status:
+  //  - shouldActivateNow → force "active" so the unit becomes occupied
+  //  - unit is taken but caller asked for "active" → downgrade to "signed" (queued) to avoid two active contracts
+  //  - otherwise honour the submitted status
+  let contractStatus = payload.status;
+  if (shouldActivateNow) {
+    contractStatus = "active";
+  } else if (unitIsTaken && contractStatus === "active") {
+    contractStatus = "signed";
+  }
 
   const { data, error } = await supabase
     .from("property_contracts")
     .insert({
       ...payload,
+      status: contractStatus,
       deposit_protection_deadline: deadline,
       tenant_id: profile.tenant_id,
     })
@@ -38,7 +65,23 @@ export async function createContract(values: ContractFormValues) {
     .single();
   if (error) throw new Error(error.message);
 
+  if (shouldActivateNow) {
+    const { error: unitErr } = await supabase
+      .from("units")
+      .update({
+        status: "occupied",
+        pm_tenant_id: payload.pm_tenant_id,
+        notice_given: false,
+        available_date: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", payload.unit_id)
+      .eq("tenant_id", profile.tenant_id);
+    if (unitErr) throw new Error(unitErr.message);
+  }
+
   revalidatePath("/contracts");
+  revalidatePath("/properties");
   return data;
 }
 
@@ -195,18 +238,50 @@ export async function closeoutContract(id: string, values: CloseoutValues) {
 
   if (error) throw new Error(error.message);
 
-  // Free the unit so the property looks vacant in lists/Kanban.
-  const { error: unitError } = await supabase
-    .from("units")
-    .update({
-      status: "available",
-      notice_given: false,
-      pm_tenant_id: null,
-      available_date: payload.actual_end_date,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", contract.unit_id);
-  if (unitError) throw new Error(unitError.message);
+  // Look for a queued contract on this unit ready to take over (start_date <= today).
+  const today = format(new Date(), "yyyy-MM-dd");
+  const { data: queuedRows } = await supabase
+    .from("property_contracts")
+    .select("id, pm_tenant_id, start_date")
+    .eq("unit_id", contract.unit_id)
+    .neq("id", id)
+    .in("status", ["draft", "sent", "signed"])
+    .lte("start_date", today)
+    .order("start_date", { ascending: true })
+    .limit(1);
+  const nextContract = queuedRows?.[0] ?? null;
+
+  if (nextContract) {
+    const { error: activateErr } = await supabase
+      .from("property_contracts")
+      .update({ status: "active", updated_at: new Date().toISOString() })
+      .eq("id", nextContract.id);
+    if (activateErr) throw new Error(activateErr.message);
+
+    const { error: unitError } = await supabase
+      .from("units")
+      .update({
+        status: "occupied",
+        notice_given: false,
+        pm_tenant_id: nextContract.pm_tenant_id,
+        available_date: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", contract.unit_id);
+    if (unitError) throw new Error(unitError.message);
+  } else {
+    const { error: unitError } = await supabase
+      .from("units")
+      .update({
+        status: "available",
+        notice_given: false,
+        pm_tenant_id: null,
+        available_date: payload.actual_end_date,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", contract.unit_id);
+    if (unitError) throw new Error(unitError.message);
+  }
 
   revalidatePath("/contracts");
   revalidatePath("/properties");

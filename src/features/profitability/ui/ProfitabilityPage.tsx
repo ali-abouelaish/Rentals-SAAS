@@ -10,6 +10,8 @@ import {
   ArrowRight,
   ChevronDown,
   Filter,
+  Search,
+  X,
 } from "lucide-react";
 import type { PropertyProfitability, PortfolioMonthPoint } from "../domain/types";
 import { PortfolioGraph } from "./PortfolioGraph";
@@ -104,6 +106,27 @@ function PropertyRow({ prop }: { prop: PropertyProfitability }) {
         </p>
       </div>
 
+      {/* Pre-let Loss (since owner-landlord contract start) */}
+      <div
+        className="hidden xl:block text-right w-24 shrink-0"
+        title="Lost rent between property contract start (with owner landlord) and first tenant move-in. Subtracted from net profit once the room is let."
+      >
+        <p className="text-xs text-foreground-muted mb-0.5">Vacant days</p>
+        {!prop.property_contract_start_date ? (
+          <p className="text-xs text-foreground-muted">—</p>
+        ) : prop.total_pre_let_loss > 0 ? (
+          <p className="text-sm font-medium tabular-nums text-red-600">
+            -{fmtAbs(prop.total_pre_let_loss)}
+          </p>
+        ) : prop.total_pre_let_days > 0 ? (
+          <p className="text-sm font-medium tabular-nums text-amber-600">
+            {prop.total_pre_let_days}d
+          </p>
+        ) : (
+          <p className="text-sm font-medium tabular-nums text-foreground-muted">—</p>
+        )}
+      </div>
+
       {/* Net Profit */}
       <div className="text-right w-28 shrink-0">
         <p className="text-xs text-foreground-muted mb-0.5">Net Profit</p>
@@ -146,6 +169,7 @@ interface ProfitabilityPageProps {
 export function ProfitabilityPage({ properties, graphData }: ProfitabilityPageProps) {
   const [portfolioFilter, setPortfolioFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"actual" | "projected">("actual");
+  const [search, setSearch] = useState("");
 
   // Unique portfolios
   const portfolios = useMemo(() => {
@@ -158,18 +182,23 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
     return Array.from(seen.values());
   }, [properties]);
 
-  const filtered = useMemo(
-    () =>
-      portfolioFilter === "all"
-        ? properties
-        : properties.filter((p) => p.portfolio_name === portfolioFilter),
-    [properties, portfolioFilter]
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return properties.filter((p) => {
+      if (portfolioFilter !== "all" && p.portfolio_name !== portfolioFilter) return false;
+      if (!q) return true;
+      return (
+        p.property_name.toLowerCase().includes(q) ||
+        p.portfolio_name.toLowerCase().includes(q)
+      );
+    });
+  }, [properties, portfolioFilter, search]);
 
   // Summary stats
   const totalIncome = filtered.reduce((s, p) => s + p.total_income, 0);
   const totalCosts = filtered.reduce((s, p) => s + p.total_costs, 0);
   const totalVacancy = filtered.reduce((s, p) => s + p.vacancy_loss, 0);
+  const totalPreLetLoss = filtered.reduce((s, p) => s + p.total_pre_let_loss, 0);
   const totalNet = filtered.reduce((s, p) => s + p.net_profit, 0);
   const aboveTarget = filtered.filter(
     (p) => p.vs_target !== null && p.vs_target >= 0
@@ -211,11 +240,12 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-[var(--gap-bento)]">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-[var(--gap-bento)]">
         {[
           { label: "Total Income", value: fmtAbs(totalIncome), color: "text-emerald-600", bg: "bg-emerald-50" },
           { label: "Total Costs", value: fmtAbs(totalCosts), color: "text-red-600", bg: "bg-red-50" },
           { label: "Vacancy Loss", value: fmtAbs(totalVacancy), color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Vacant Days Loss", value: fmtAbs(totalPreLetLoss), color: "text-red-600", bg: "bg-red-50" },
           {
             label: "Net Profit",
             value: fmt(totalNet),
@@ -254,7 +284,30 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
         {/* Table header + filters */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="text-base font-semibold text-foreground">All Properties</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search */}
+            <label className="relative">
+              <span className="sr-only">Search properties</span>
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search property…"
+                className="bg-surface-inset border border-border rounded-lg pl-8 pr-7 py-1.5 text-xs font-medium text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-brand w-48"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-surface-card text-foreground-muted hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </label>
+
             <Filter className="h-3.5 w-3.5 text-foreground-muted" />
             <div className="relative">
               <select
@@ -278,6 +331,7 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
           <div className="hidden lg:block w-24 text-right">Income</div>
           <div className="hidden lg:block w-24 text-right">Costs</div>
           <div className="hidden xl:block w-24 text-right">Vacancy</div>
+          <div className="hidden xl:block w-24 text-right">Vacant days</div>
           <div className="w-28 text-right">Net Profit</div>
           <div className="hidden sm:block w-24 text-right">vs Target</div>
           <div className="hidden sm:block w-8" />
@@ -293,7 +347,9 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
 
         {filtered.length === 0 && (
           <div className="py-16 text-center text-sm text-foreground-muted">
-            No properties match the current filter.
+            {search.trim()
+              ? `No properties match “${search.trim()}”.`
+              : "No properties match the current filter."}
           </div>
         )}
       </div>

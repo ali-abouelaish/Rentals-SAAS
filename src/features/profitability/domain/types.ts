@@ -78,6 +78,21 @@ export type UnitProfitRow = {
   vacancy_loss: number; // pence
   net_contribution: number; // pence
   status: string;
+  // Vacant days between property contract start (with owner landlord) and the
+  // earliest tenant contract start — i.e. days the room was empty after the
+  // agency took over, before the first tenant moved in. If no tenant contract
+  // exists yet, measured up to today. null when the property has no
+  // contract_start_date set.
+  pre_let_days: number | null;
+  // pre-let loss in pence: pre_let_days × (max_price_pcm / 30). Counted in
+  // net_profit only when the pre-let period has ended (i.e. the room has had
+  // at least one tenant contract) — otherwise the existing vacancy_loss
+  // already captures it via available_date.
+  pre_let_loss: number;
+  // Period bounds for hover breakdown
+  pre_let_period_start: string | null; // = property contract start when pre_let_days > 0
+  pre_let_period_end: string | null;   // = earliest tenant contract start, or today if never let
+  vacant_since: string | null;         // available_date for currently-vacant units
 };
 
 // Computed per-property P&L
@@ -102,6 +117,9 @@ export type PropertyProfitability = {
   owner_rent_monthly: number; // pence — monthly rent paid to owner landlord (derived from property.monthly_rent_owed × payment_schedule)
   owner_landlord_name: string | null;
   owner_payment_schedule: "monthly" | "quarterly" | "biannual" | "annual" | null;
+  property_contract_start_date: string | null; // when the agency took over (owner landlord contract)
+  total_pre_let_days: number; // sum of pre_let_days across units (0 when contract_start_date is null)
+  total_pre_let_loss: number; // pence — sum of pre_let_loss across units; subtracted from net_profit
 };
 
 // For the portfolio line graph (monthly rollup per portfolio)

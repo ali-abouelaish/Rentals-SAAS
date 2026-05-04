@@ -22,11 +22,11 @@ import {
   ChevronRight,
   X,
   User,
+  PoundSterling,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { UnitStatusBadge } from "./UnitStatusBadge";
-import { DeletePropertyButton } from "./DeletePropertyButton";
 import { PropertyTenantHistory } from "@/features/contracts/ui/PropertyTenantHistory";
 import { PropertyKeysTab } from "@/features/keys/ui/PropertyKeysTab";
 import type { PropertyHistory } from "@/features/contracts/domain/history";
@@ -330,6 +330,13 @@ export function PropertyDetailPage({
 
         <div className="flex items-center gap-2 shrink-0">
           <Link
+            href={`/profitability/${property.id}`}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
+          >
+            <PoundSterling className="h-3.5 w-3.5" />
+            Profitability
+          </Link>
+          <Link
             href={`/properties/${property.id}/setup`}
             className="flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
           >
@@ -342,11 +349,6 @@ export function PropertyDetailPage({
             <Pencil className="h-3.5 w-3.5" />
             Edit
           </Link>
-          <DeletePropertyButton
-            propertyId={property.id}
-            propertyName={property.name}
-            redirectAfter
-          />
         </div>
       </div>
 

@@ -175,6 +175,7 @@ export const unitEditSchema = z.object({
   furnishings: lenientEnum(["furnished", "unfurnished", "part_furnished"] as const),
   drive_folder_url: lenientStr,
   resident_id: lenientStr,
+  pm_tenant_id: lenientStr,
 }).partial();
 export type UnitEditValues = z.infer<typeof unitEditSchema>;
 

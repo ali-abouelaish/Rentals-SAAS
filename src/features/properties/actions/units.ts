@@ -36,9 +36,16 @@ export async function updateUnit(id: string, values: Partial<UnitFormValues>) {
 
   // Edit path: no validations, all fields nullable; null/undefined values are
   // dropped so existing DB values are preserved when the user leaves a field blank.
+  // Exception: pm_tenant_id and resident_id may legitimately be set to null
+  // (unlinking a tenant), so we keep null when the caller explicitly passed it.
   const parsed = unitEditSchema.parse(values);
+  const explicitNullableKeys = new Set(["pm_tenant_id", "resident_id"]);
   const cleaned = Object.fromEntries(
-    Object.entries(parsed).filter(([, v]) => v !== null && v !== undefined)
+    Object.entries(parsed).filter(([k, v]) => {
+      if (v === undefined) return false;
+      if (v === null) return explicitNullableKeys.has(k) && k in (values as object);
+      return true;
+    })
   );
   const updates: Record<string, unknown> = { ...cleaned, updated_at: new Date().toISOString() };
 

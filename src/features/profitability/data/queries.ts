@@ -73,7 +73,7 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
   const { data: properties, error: propErr } = await supabase
     .from("properties")
     .select(
-      "id, name, portfolio_id, monthly_rent_owed, payment_schedule, portfolios(id, name, color), owner_landlord:owner_landlords(id, name)"
+      "id, name, portfolio_id, monthly_rent_owed, payment_schedule, contract_start_date, portfolios(id, name, color), owner_landlord:owner_landlords(id, name)"
     )
     .order("name");
   if (propErr) throw propErr;
@@ -94,6 +94,13 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
     .in("status", ["active", "notice_given", "signed"]);
   if (conErr) throw conErr;
 
+  // All contracts ever (for earliest tenant start_date per unit) — used to
+  // compute pre-let vacant days from property's owner-landlord contract start.
+  const { data: allContracts, error: allConErr } = await supabase
+    .from("property_contracts")
+    .select("unit_id, start_date");
+  if (allConErr) throw allConErr;
+
   // Costs
   const { data: costs, error: costErr } = await supabase
     .from("property_costs")
@@ -113,6 +120,15 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
   for (const c of contracts ?? []) {
     contractMap.set(c.unit_id, (c.rent_pcm ?? 0) * 100);
   }
+  // unit_id → earliest start_date string (YYYY-MM-DD comparisons are safe)
+  const earliestStartMap = new Map<string, string>();
+  for (const c of allContracts ?? []) {
+    if (!c.start_date) continue;
+    const existing = earliestStartMap.get(c.unit_id);
+    if (!existing || c.start_date < existing) {
+      earliestStartMap.set(c.unit_id, c.start_date);
+    }
+  }
   const costsMap = new Map<string, PropertyCost[]>();
   for (const c of costs ?? []) {
     if (!costsMap.has(c.property_id)) costsMap.set(c.property_id, []);
@@ -129,6 +145,7 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
     const portfolio = Array.isArray(prop.portfolios) ? prop.portfolios[0] : prop.portfolios;
     const propUnits = (units ?? []).filter((u) => u.property_id === prop.id);
     const propCosts = costsMap.get(prop.id) ?? [];
+    const propContractStart = (prop.contract_start_date as string | null) ?? null;
 
     const unit_breakdown: UnitProfitRow[] = propUnits.map((u) => {
       const isVacant =
@@ -148,6 +165,32 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
         ? `Room ${u.room_number}${u.room_type ? ` · ${u.room_type.charAt(0).toUpperCase() + u.room_type.slice(1)}` : ""}`
         : u.unit_type === "studio" ? "Studio" : "Whole Flat";
 
+      // Pre-let vacant days: from property's owner-landlord contract start
+      // until the room's earliest tenant contract start (or today if never let).
+      let preLetDays: number | null = null;
+      let preLetLoss = 0;
+      let preLetPeriodStart: string | null = null;
+      let preLetPeriodEnd: string | null = null;
+      if (propContractStart) {
+        const earliestTenantStart = earliestStartMap.get(u.id);
+        const endDate = earliestTenantStart ?? today();
+        if (endDate >= propContractStart) {
+          preLetDays = daysBetween(propContractStart, endDate);
+        } else {
+          preLetDays = 0;
+        }
+        if (preLetDays > 0) {
+          preLetPeriodStart = propContractStart;
+          preLetPeriodEnd = endDate;
+        }
+        // Only book pre-let loss when the room has actually been let since —
+        // for never-let rooms the existing vacancy_loss (driven by
+        // available_date) already covers it, so we'd double count.
+        if (preLetDays > 0 && earliestTenantStart) {
+          preLetLoss = preLetDays * dailyRate;
+        }
+      }
+
       return {
         unit_id: u.id,
         unit_label: roomLabel,
@@ -155,8 +198,13 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
         rent_pcm: rentPcm,
         days_vacant: daysVacant,
         vacancy_loss: vacancyLoss,
-        net_contribution: rentPcm - vacancyLoss,
+        net_contribution: rentPcm,
         status: u.status,
+        pre_let_days: preLetDays,
+        pre_let_loss: preLetLoss,
+        pre_let_period_start: preLetPeriodStart,
+        pre_let_period_end: preLetPeriodEnd,
+        vacant_since: isVacant && u.available_date ? u.available_date : null,
       };
     });
 
@@ -172,7 +220,8 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
     const owner_rent_monthly = Math.round((Number(ownerRentRaw) * 100) / divisor);
     const total_costs = computeMonthlyCosts(propCosts) + owner_rent_monthly;
     const vacancy_loss = unit_breakdown.reduce((s, u) => s + u.vacancy_loss, 0);
-    const net_profit = total_income - total_costs - vacancy_loss;
+    const total_pre_let_loss = unit_breakdown.reduce((s, u) => s + u.pre_let_loss, 0);
+    const net_profit = total_income - total_costs - vacancy_loss - total_pre_let_loss;
     const target_profit = targetMap.get(prop.id) ?? null;
     const ownerLandlord = Array.isArray(prop.owner_landlord)
       ? prop.owner_landlord[0]
@@ -199,6 +248,9 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
       owner_rent_monthly,
       owner_landlord_name: (ownerLandlord as { name?: string } | null)?.name ?? null,
       owner_payment_schedule: prop.payment_schedule ?? null,
+      property_contract_start_date: propContractStart,
+      total_pre_let_days: unit_breakdown.reduce((s, u) => s + (u.pre_let_days ?? 0), 0),
+      total_pre_let_loss,
     };
   });
 }

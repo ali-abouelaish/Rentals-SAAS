@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { User, UserPlus, X, Check, Search, FileSignature, PoundSterling } from "lucide-react";
 import { TenancyPaymentsList } from "@/features/contracts/ui/TenancyPaymentsList";
 import { useForm, Controller } from "react-hook-form";
@@ -82,13 +83,24 @@ function CreateContractDialog({
   unit,
   pmTenants,
   preselectedTenantId,
+  onCreated,
 }: {
   open: boolean;
   onClose: () => void;
   unit: Unit;
   pmTenants: PmTenantOption[];
   preselectedTenantId?: string;
+  onCreated: (contract: {
+    id: string;
+    start_date: string;
+    status: string;
+    document_url: string | null;
+    rent_pcm: number | null;
+    deposit: number | null;
+    pm_tenant_id: string | null;
+  }) => void;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const unitLabel = unit.unit_type === "room" && unit.room_number
     ? `Room ${unit.room_number}`
@@ -114,8 +126,19 @@ function CreateContractDialog({
   const handleCreate = (values: ContractFormValues) => {
     startTransition(async () => {
       try {
-        await createContract(values);
+        const created = (await createContract(values)) as {
+          id: string;
+          start_date: string;
+          status: string;
+          document_url: string | null;
+          rent_pcm: number | null;
+          deposit: number | null;
+          pm_tenant_id: string | null;
+        };
         toast.success("Contract created");
+        onCreated(created);
+        // Refresh server data so unit.status / pm_tenant_id (auto-occupy logic) are picked up
+        router.refresh();
         reset();
         onClose();
       } catch (e) {
@@ -326,8 +349,14 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
   const handleLink = (tenant: PmTenantOption) => {
     startTransition(async () => {
       try {
-        await updateUnit(unit.id, { pm_tenant_id: tenant.id } as never);
-        onUnitUpdated({ ...unit, pm_tenant_id: tenant.id, pm_tenant: tenant });
+        // Promote vacant-ish statuses to "occupied" so list/Kanban reflects the assignment.
+        const vacantStatuses = ["available", "on_hold", "booked"];
+        const nextStatus = vacantStatuses.includes(unit.status) ? "occupied" : unit.status;
+        await updateUnit(unit.id, {
+          pm_tenant_id: tenant.id,
+          status: nextStatus,
+        } as never);
+        onUnitUpdated({ ...unit, pm_tenant_id: tenant.id, pm_tenant: tenant, status: nextStatus });
         setLinking(false);
         setSearch("");
         toast.success(`${tenant.full_name} linked to this unit`);
@@ -340,8 +369,13 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
   const handleUnlink = () => {
     startTransition(async () => {
       try {
-        await updateUnit(unit.id, { pm_tenant_id: null } as never);
-        onUnitUpdated({ ...unit, pm_tenant_id: null, pm_tenant: null });
+        // Drop back to "available" if the unit was occupied via this assignment.
+        const nextStatus = unit.status === "occupied" ? "available" : unit.status;
+        await updateUnit(unit.id, {
+          pm_tenant_id: null,
+          status: nextStatus,
+        } as never);
+        onUnitUpdated({ ...unit, pm_tenant_id: null, pm_tenant: null, status: nextStatus });
         toast.success("Tenant unlinked");
       } catch {
         toast.error("Failed to unlink tenant");
@@ -411,6 +445,7 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
           unit={unit}
           pmTenants={pmTenants}
           preselectedTenantId={current.id}
+          onCreated={(contract) => onUnitUpdated({ ...unit, current_contract: contract })}
         />
       </>
     );
@@ -513,6 +548,7 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
         onClose={() => setContractDialogOpen(false)}
         unit={unit}
         pmTenants={pmTenants}
+        onCreated={(contract) => onUnitUpdated({ ...unit, current_contract: contract })}
       />
     </>
   );

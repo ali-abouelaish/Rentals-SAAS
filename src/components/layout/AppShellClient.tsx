@@ -33,7 +33,7 @@ export function AppShellClient({
   const showSearch = !isSuperAdminPanel;
 
   return (
-    <div className="h-screen bg-surface-ground p-2 md:p-3 flex gap-3 overflow-hidden">
+    <div className="h-dvh bg-surface-ground p-2 md:p-3 flex gap-3 overflow-hidden">
       {applyTenantBranding && <BrandingStyles branding={branding} />}
       <SideNav
         profile={profile}
@@ -45,13 +45,13 @@ export function AppShellClient({
         moduleConfig={moduleConfig}
         inboxPendingCount={inboxPendingCount}
       />
-      <main className="flex-1 overflow-y-auto bg-surface-card rounded-bento shadow-bento">
+      <main className="flex-1 min-w-0 overflow-y-auto bg-surface-card rounded-bento shadow-bento">
         {showSearch && (
           <div className="sticky top-0 z-30 flex items-center justify-end gap-3 border-b border-border/60 bg-surface-card/95 px-4 py-3 backdrop-blur-md md:justify-center lg:px-10">
             <GlobalSearchBar tenantId={tenantId} />
           </div>
         )}
-        <div className="px-6 py-8 lg:px-10 lg:py-10">{children}</div>
+        <div className="px-6 pt-8 pb-4 lg:px-10 lg:pt-10 lg:pb-4">{children}</div>
       </main>
     </div>
   );

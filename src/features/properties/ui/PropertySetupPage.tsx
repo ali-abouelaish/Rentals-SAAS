@@ -19,7 +19,6 @@ import { saveUnitPhoto, deleteUnitPhoto } from "../actions/photos";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { UnitStatusBadge } from "./UnitStatusBadge";
-import { DeletePropertyButton } from "./DeletePropertyButton";
 import type { Property, Unit, UnitPhoto } from "../domain/types";
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -524,11 +523,6 @@ export function PropertySetupPage({
             <Pencil className="h-3.5 w-3.5" />
             Edit details
           </Link>
-          <DeletePropertyButton
-            propertyId={property.id}
-            propertyName={property.name}
-            redirectAfter
-          />
           <button
             type="button"
             onClick={() => router.push("/properties")}

@@ -42,6 +42,7 @@ import {
   EditOwnerLandlordDialog,
   EditPropertyManagerDialog,
 } from "./LandlordDialogs";
+import { DeletePropertyButton } from "./DeletePropertyButton";
 
 /* ─── primitives ─────────────────────────────────────────── */
 
@@ -678,6 +679,13 @@ export function CreatePropertyPage({
           >
             {isPending ? "Saving…" : isEditMode ? "Save changes" : "Save property"}
           </button>
+          {isEditMode && (
+            <DeletePropertyButton
+              propertyId={initialProperty!.id}
+              propertyName={initialProperty!.name}
+              redirectAfter
+            />
+          )}
         </div>
       </div>
 
@@ -706,8 +714,9 @@ export function CreatePropertyPage({
           first?.focus({ preventScroll: true });
         })}
         className={cn(
-          "grid grid-cols-1 gap-6 items-start",
-          isEditMode ? "max-w-3xl mx-auto" : "lg:grid-cols-3"
+          isEditMode
+            ? "max-w-3xl mx-auto"
+            : "grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
         )}
       >
         {/* ── Left: form sections ── */}

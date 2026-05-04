@@ -10,8 +10,6 @@ import type { ReminderStatusMap } from "@/features/reminders/data/status";
 import { cn } from "@/lib/utils/cn";
 import { UnitStatusBadge } from "./UnitStatusBadge";
 import { PortfolioBadge } from "./PortfolioBadge";
-import { AddRoomDialog } from "./AddRoomDialog";
-import { DeletePropertyButton } from "./DeletePropertyButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -498,7 +496,6 @@ function PropertyGroup({
           <span className="text-xs text-foreground-muted mr-1">
             {units.length} {units.length === 1 ? "unit" : "units"}
           </span>
-          <AddRoomDialog property={property} onCreated={onUnitCreated} />
           <Link
             href={`/properties/${property.id}/edit`}
             className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-surface-inset hover:bg-surface-card transition-colors text-foreground-muted hover:text-foreground"
@@ -506,11 +503,6 @@ function PropertyGroup({
           >
             <Pencil className="h-3.5 w-3.5" />
           </Link>
-          <DeletePropertyButton
-            propertyId={property.id}
-            propertyName={property.name}
-            onDeleted={() => onPropertyDeleted(property.id)}
-          />
         </div>
       </div>
 
@@ -522,7 +514,7 @@ function PropertyGroup({
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Available</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Price PCM</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Tenant</div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-center">Empty</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-center">Vacant days</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-right">Rent</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted text-right">Reminders</div>
         </div>
@@ -546,7 +538,6 @@ function PropertyGroup({
       ) : (
         <div className="flex items-center justify-center gap-3 py-6 text-center">
           <p className="text-sm text-foreground-muted">No rooms yet</p>
-          <AddRoomDialog property={property} onCreated={onUnitCreated} />
         </div>
       )}
     </div>

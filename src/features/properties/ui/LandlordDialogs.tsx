@@ -108,7 +108,13 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
           The person or company you pay rent to (rent-to-rent model).
         </p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 pt-1">
+        <form
+          onSubmit={(e) => {
+            e.stopPropagation();
+            handleSubmit(onSubmit)(e);
+          }}
+          className="space-y-3 pt-1"
+        >
           <Field label="Name" error={errors.name?.message}>
             <input
               {...register("name")}
@@ -196,7 +202,13 @@ export function CreatePropertyManagerDialog({ onCreated }: CreatePropertyManager
           Someone who gets notified about maintenance tickets for this property.
         </p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 pt-1">
+        <form
+          onSubmit={(e) => {
+            e.stopPropagation();
+            handleSubmit(onSubmit)(e);
+          }}
+          className="space-y-3 pt-1"
+        >
           <Field label="Full name" error={errors.full_name?.message}>
             <input
               {...register("full_name")}
@@ -321,7 +333,13 @@ export function EditOwnerLandlordDialog({ landlord, onUpdated }: EditOwnerLandlo
           <DialogTitle>Edit owner landlord</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 pt-1">
+        <form
+          onSubmit={(e) => {
+            e.stopPropagation();
+            handleSubmit(onSubmit)(e);
+          }}
+          className="space-y-3 pt-1"
+        >
           <Field label="Name">
             <input
               {...register("name")}
@@ -424,7 +442,13 @@ export function EditPropertyManagerDialog({ manager, onUpdated }: EditPropertyMa
           <DialogTitle>Edit property manager</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 pt-1">
+        <form
+          onSubmit={(e) => {
+            e.stopPropagation();
+            handleSubmit(onSubmit)(e);
+          }}
+          className="space-y-3 pt-1"
+        >
           <Field label="Full name">
             <input
               {...register("full_name")}
