@@ -7,6 +7,7 @@ export const contractSchema = z.object({
   rent_pcm: z.coerce.number().int().positive("Rent is required"),
   deposit: z.coerce.number().int().positive("Deposit is required"),
   collection_date: z.coerce.number().int().min(1).max(31).nullable().optional(),
+  pro_rata_amount: z.coerce.number().min(0).nullable().optional(),
   deposit_scheme: z.enum(["dps", "mydeposits", "tds", "none"]).default("none"),
   deposit_scheme_ref: z.string().nullable().optional().or(z.literal("")),
   deposit_protected_date: z.string().nullable().optional().or(z.literal("")),

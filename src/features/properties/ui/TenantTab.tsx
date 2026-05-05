@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils/cn";
 import { updateUnit } from "../actions/units";
 import { createContract, uploadContractDocument } from "@/features/contracts/actions/contracts";
 import { contractSchema, type ContractFormValues } from "@/features/contracts/domain/schemas";
+import { ProRataField } from "@/features/contracts/ui/ProRataField";
 import { CONTRACT_STATUS_CONFIG, DEPOSIT_SCHEME_LABELS, SIGNING_METHOD_LABELS } from "@/features/contracts/domain/types";
 import type { Unit } from "../domain/types";
 
@@ -53,6 +54,7 @@ function RentPaymentsCard({ unit }: { unit: Unit }) {
         rentPence={contract.rent_pcm ?? 0}
         startDate={contract.start_date}
         endDate={null}
+        proRataAmount={contract.pro_rata_amount ?? null}
       />
     </div>
   );
@@ -98,6 +100,7 @@ function CreateContractDialog({
     rent_pcm: number | null;
     deposit: number | null;
     pm_tenant_id: string | null;
+    pro_rata_amount: number | null;
   }) => void;
 }) {
   const router = useRouter();
@@ -112,7 +115,7 @@ function CreateContractDialog({
     sublabel: t.phone,
   }));
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ContractFormValues>({
+  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
     defaultValues: {
       unit_id: unit.id,
@@ -120,8 +123,12 @@ function CreateContractDialog({
       deposit_scheme: "none",
       deposit_protection_alert: true,
       status: "draft",
+      pro_rata_amount: null,
     },
   });
+
+  const watchedStart = watch("start_date");
+  const watchedRent = watch("rent_pcm");
 
   const handleCreate = (values: ContractFormValues) => {
     startTransition(async () => {
@@ -134,6 +141,7 @@ function CreateContractDialog({
           rent_pcm: number | null;
           deposit: number | null;
           pm_tenant_id: string | null;
+          pro_rata_amount: number | null;
         };
         toast.success("Contract created");
         onCreated(created);
@@ -199,6 +207,20 @@ function CreateContractDialog({
                 ))}
               </select>
             </FormField>
+            <div className="col-span-2">
+              <Controller
+                name="pro_rata_amount"
+                control={control}
+                render={({ field }) => (
+                  <ProRataField
+                    startDate={watchedStart}
+                    rentPcm={watchedRent ? Number(watchedRent) : undefined}
+                    value={field.value ?? null}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <Button type="button" variant="outline" size="sm" onClick={() => { reset(); onClose(); }}>
@@ -243,6 +265,7 @@ function ContractCard({
           rent_pcm: number | null;
           deposit: number | null;
           pm_tenant_id: string | null;
+          pro_rata_amount: number | null;
         };
         onUnitUpdated({
           ...unit,
@@ -254,6 +277,7 @@ function ContractCard({
             rent_pcm: c.rent_pcm,
             deposit: c.deposit,
             pm_tenant_id: c.pm_tenant_id,
+            pro_rata_amount: c.pro_rata_amount,
           },
         });
       })

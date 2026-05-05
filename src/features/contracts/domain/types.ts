@@ -36,6 +36,7 @@ export type PropertyContract = {
   rent_pcm: number;
   deposit: number;
   collection_date: number | null;
+  pro_rata_amount: number | null;
   deposit_scheme: DepositScheme;
   deposit_scheme_ref: string | null;
   deposit_protected_date: string | null;

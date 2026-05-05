@@ -8,6 +8,7 @@ export type TenancyEntry = {
   endDate: string | null;          // null = currently active
   scheduledEndDate: string | null; // vacate_date (notice / scheduled)
   rentPence: number;               // whole pounds (matches rent_pcm convention)
+  proRataAmount: number | null;    // pro-rated first period (null = no pro-rata)
   rentFrequency: "monthly";
   depositPence: number | null;     // whole pounds (matches deposit convention)
   endReason: EndReason | null;

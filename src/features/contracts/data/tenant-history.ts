@@ -17,6 +17,7 @@ type ContractRow = {
   pm_tenant_id: string | null;
   start_date: string;
   rent_pcm: number | null;
+  pro_rata_amount: number | null;
   deposit: number | null;
   vacate_date: string | null;
   actual_end_date: string | null;
@@ -93,6 +94,7 @@ function buildEntries(contracts: ContractRow[]): TenantHistoryEntry[] {
       endDate: end,
       scheduledEndDate: c.vacate_date,
       rentPence: c.rent_pcm ?? 0,
+      proRataAmount: c.pro_rata_amount == null ? null : Number(c.pro_rata_amount),
       rentFrequency: "monthly",
       depositPence: c.deposit ?? null,
       endReason: c.end_reason,
@@ -192,7 +194,7 @@ function computeStats(contracts: ContractRow[]): HistoryStats {
 }
 
 const HISTORY_SELECT = `
-  id, unit_id, pm_tenant_id, start_date, rent_pcm, deposit,
+  id, unit_id, pm_tenant_id, start_date, rent_pcm, pro_rata_amount, deposit,
   vacate_date, actual_end_date, end_reason, arrears_at_end,
   would_relet, end_notes,
   deposit_returned, deposit_returned_at, deposit_release_notes,

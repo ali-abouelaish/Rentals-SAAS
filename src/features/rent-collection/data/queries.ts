@@ -1,6 +1,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import {
+  expectedRent,
+  inclusiveMonthsBetween,
+} from "@/features/contracts/domain/pro-rata";
 
 export type RentCollectionRow = {
   contractId: string;
@@ -9,6 +13,7 @@ export type RentCollectionRow = {
   status: string;
   startDate: string;
   rentPcm: number;
+  proRataAmount: number | null;
   collectionDate: number | null;
   monthsCovered: number;
   paid: number;
@@ -36,7 +41,7 @@ export type RentCollectionRow = {
 const ACTIVE_STATUSES = ["active", "signed", "notice_given"] as const;
 
 const SELECT = `
-  id, unit_id, pm_tenant_id, start_date, rent_pcm, collection_date, status,
+  id, unit_id, pm_tenant_id, start_date, rent_pcm, pro_rata_amount, collection_date, status,
   pm_tenant:pm_tenants(id, full_name, email, phone),
   unit:units(
     room_number, unit_type,
@@ -50,6 +55,7 @@ type RawContract = {
   pm_tenant_id: string;
   start_date: string;
   rent_pcm: number;
+  pro_rata_amount: number | string | null;
   collection_date: number | null;
   status: string;
   pm_tenant: {
@@ -68,18 +74,6 @@ type RawContract = {
     } | null;
   } | null;
 };
-
-function inclusiveMonthsBetween(startIso: string, endIso: string): number {
-  const start = new Date(startIso + "T00:00:00Z");
-  const end = new Date(endIso + "T00:00:00Z");
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
-  if (end < start) return 0;
-  return (
-    (end.getUTCFullYear() - start.getUTCFullYear()) * 12 +
-    (end.getUTCMonth() - start.getUTCMonth()) +
-    1
-  );
-}
 
 export async function getRentCollectionRows(): Promise<RentCollectionRow[]> {
   const profile = await requireRole([...ADMIN_ROLES]);
@@ -133,8 +127,9 @@ export async function getRentCollectionRows(): Promise<RentCollectionRow[]> {
   return rows.map<RentCollectionRow>((r) => {
     const a = agg.get(r.id) ?? { paid: 0, currentMonthPaid: false, lastPaidAt: null };
     const rentPcm = Number(r.rent_pcm ?? 0);
+    const proRata = r.pro_rata_amount == null ? null : Number(r.pro_rata_amount);
     const monthsCovered = inclusiveMonthsBetween(r.start_date, todayIso);
-    const expected = monthsCovered * rentPcm;
+    const expected = expectedRent(r.start_date, todayIso, rentPcm, proRata);
     const arrears = Math.max(0, Math.round(expected - a.paid));
 
     return {
@@ -144,6 +139,7 @@ export async function getRentCollectionRows(): Promise<RentCollectionRow[]> {
       status: r.status,
       startDate: r.start_date,
       rentPcm,
+      proRataAmount: proRata,
       collectionDate: r.collection_date,
       monthsCovered,
       paid: Math.round(a.paid),

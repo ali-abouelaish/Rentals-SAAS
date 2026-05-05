@@ -143,6 +143,7 @@ export function RentCollectionRow({ row }: { row: Row }) {
             rentPence={row.rentPcm}
             startDate={row.startDate}
             endDate={null}
+            proRataAmount={row.proRataAmount}
           />
         </div>
       )}
@@ -154,6 +155,8 @@ export function RentCollectionRow({ row }: { row: Row }) {
         unitId={row.unitId}
         tenantName={row.tenant.name}
         rentPcm={row.rentPcm}
+        startDate={row.startDate}
+        proRataAmount={row.proRataAmount}
       />
     </div>
   );

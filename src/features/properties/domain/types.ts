@@ -140,6 +140,7 @@ export type Unit = {
     rent_pcm: number | null;
     deposit: number | null;
     pm_tenant_id: string | null;
+    pro_rata_amount: number | null;
   } | null;
   recent_rent_payments?: UnitRentPayment[];
 };

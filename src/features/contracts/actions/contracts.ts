@@ -53,10 +53,16 @@ export async function createContract(values: ContractFormValues) {
     contractStatus = "signed";
   }
 
+  const proRata =
+    payload.pro_rata_amount == null || payload.pro_rata_amount === 0
+      ? null
+      : payload.pro_rata_amount;
+
   const { data, error } = await supabase
     .from("property_contracts")
     .insert({
       ...payload,
+      pro_rata_amount: proRata,
       status: contractStatus,
       deposit_protection_deadline: deadline,
       tenant_id: profile.tenant_id,
@@ -101,6 +107,14 @@ export async function updateContract(id: string, values: Partial<ContractFormVal
     notes: nullify(values.notes),
     collection_date: values.collection_date || null,
   };
+
+  // Only touch pro_rata_amount if the caller actually included it; treat
+  // null or 0 as "no pro-rata". This protects partial updates (e.g. deposit
+  // tab) from clobbering a previously-set value.
+  if ("pro_rata_amount" in values) {
+    const v = values.pro_rata_amount;
+    updates.pro_rata_amount = v == null || v === 0 ? null : v;
+  }
 
   // Re-compute deadline if start_date changed
   if (values.start_date) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PoundSterling } from "lucide-react";
 import { getRentPaymentsForContract, type RentPayment } from "../actions/rent-payments";
+import { expectedRent } from "../domain/pro-rata";
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -17,23 +18,18 @@ function formatPaidAt(iso: string): string {
   });
 }
 
-function tenancyMonths(start: string, end: string | null): number {
-  const startMs = Date.parse(start);
-  const endMs = end ? Date.parse(end) : Date.now();
-  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return 0;
-  return Math.max(0, Math.round((endMs - startMs) / (30.44 * 86_400_000)));
-}
-
 export function TenancyPaymentsList({
   contractId,
   rentPence,
   startDate,
   endDate,
+  proRataAmount = null,
 }: {
   contractId: string;
   rentPence: number;        // whole pounds, despite the name
   startDate: string;
   endDate: string | null;
+  proRataAmount?: number | null;
 }) {
   const [payments, setPayments] = useState<RentPayment[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,8 +60,8 @@ export function TenancyPaymentsList({
   }
 
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-  const monthsActive = tenancyMonths(startDate, endDate);
-  const expected = monthsActive * rentPence;
+  const endIso = (endDate ?? new Date().toISOString().slice(0, 10));
+  const expected = expectedRent(startDate, endIso, rentPence, proRataAmount);
   const balance = expected - totalPaid;
 
   return (

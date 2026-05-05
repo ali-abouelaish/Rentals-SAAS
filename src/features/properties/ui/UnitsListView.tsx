@@ -24,6 +24,11 @@ const MONTH_NAMES = [
   "July","August","September","October","November","December",
 ];
 
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
 function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open: boolean; onClose: () => void; onPaid: (payment: UnitRentPayment) => void }) {
   const now = new Date();
   const [isPending, startTransition] = useTransition();
@@ -32,6 +37,7 @@ function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open:
   const [periodYear, setPeriodYear] = useState(now.getFullYear());
   const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
   const [amount, setAmount] = useState("");
+  const [paidOn, setPaidOn] = useState(todayIso());
   const [notes, setNotes] = useState("");
 
   // Fetch contract once when dialog first opens
@@ -43,6 +49,7 @@ function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open:
         if (c) setAmount(String(c.rent_pcm));
       });
     }
+    if (open) setPaidOn(todayIso());
   }, [open, loaded, unit.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,6 +57,7 @@ function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open:
     if (!contract) return;
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) { toast.error("Enter a valid payment date"); return; }
     startTransition(async () => {
       try {
         const payment = await recordRentPayment({
@@ -59,6 +67,7 @@ function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open:
           periodMonth,
           amount: parsed,
           notes: notes.trim() || undefined,
+          paidAt: paidOn,
         });
         toast.success(`Rent marked as paid — ${MONTH_NAMES[periodMonth - 1]} ${periodYear}`);
         onPaid(payment);
@@ -87,6 +96,16 @@ function MarkRentPaidDialog({ unit, open, onClose, onPaid }: { unit: Unit; open:
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3 mt-1">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-foreground">Payment date</label>
+              <input
+                type="date"
+                value={paidOn}
+                max={todayIso()}
+                onChange={(e) => setPaidOn(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm"
+              />
+            </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-foreground">Amount (£)</label>
               <input

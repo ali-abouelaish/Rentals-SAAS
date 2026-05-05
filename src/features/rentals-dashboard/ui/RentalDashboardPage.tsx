@@ -201,13 +201,13 @@ export function RentalDashboardPage({ data, userName, isAdmin }: Props) {
             <h2 className="text-sm font-semibold text-foreground mb-3">Quick actions</h2>
             <div className="space-y-1.5">
               {[
-                { href: "/rentals/new", label: "New rental", icon: CheckCircle2 },
-                { href: "/clients/new", label: "Add client", icon: Users },
-                { href: "/rentals?status=pending", label: "Review pending", icon: Clock },
-                ...(isAdmin ? [{ href: "/invoices/new", label: "Create invoice", icon: XCircle }] : []),
-              ].map(({ href, label, icon: Icon }) => (
+                { key: "new-rental", href: "/clients", label: "New rental", icon: CheckCircle2 },
+                { key: "add-client", href: "/clients", label: "Add client", icon: Users },
+                { key: "review-pending", href: "/rentals?status=pending", label: "Review pending", icon: Clock },
+                ...(isAdmin ? [{ key: "create-invoice", href: "/invoices/new", label: "Create invoice", icon: XCircle }] : []),
+              ].map(({ key, href, label, icon: Icon }) => (
                 <Link
-                  key={href}
+                  key={key}
                   href={href}
                   className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
                 >

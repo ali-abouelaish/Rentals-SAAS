@@ -11,6 +11,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ContractFilterBar } from "./ContractFilterBar";
 import { ContractsListView } from "./ContractsListView";
 import { ContractDrawer } from "./ContractDrawer";
+import { ProRataField } from "./ProRataField";
 import { createContract } from "../actions/contracts";
 import { contractSchema, type ContractFormValues } from "../domain/schemas";
 import { DEPOSIT_SCHEME_LABELS, SIGNING_METHOD_LABELS, type ContractFilters } from "../domain/types";
@@ -52,10 +53,13 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
   const [createOpen, setCreateOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ContractFormValues>({
+  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
-    defaultValues: { deposit_scheme: "none", deposit_protection_alert: true, status: "active" },
+    defaultValues: { deposit_scheme: "none", deposit_protection_alert: true, status: "active", pro_rata_amount: null },
   });
+
+  const watchedStart = watch("start_date");
+  const watchedRent = watch("rent_pcm");
 
   const unitOptions = units.map((u) => ({
     value: u.id,
@@ -211,6 +215,20 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
                   ))}
                 </select>
               </FormField>
+              <div className="col-span-2">
+                <Controller
+                  name="pro_rata_amount"
+                  control={control}
+                  render={({ field }) => (
+                    <ProRataField
+                      startDate={watchedStart}
+                      rentPcm={watchedRent ? Number(watchedRent) : undefined}
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t border-border">
               <Button type="button" variant="outline" size="sm" onClick={() => { reset(); setCreateOpen(false); }}>Cancel</Button>

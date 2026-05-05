@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { expectedRent, inclusiveMonthsBetween } from "@/features/contracts/domain/pro-rata";
 
 export type RentPayment = {
   id: string;
@@ -85,7 +86,7 @@ export async function estimateContractArrears(
 
   const { data: contract, error: cErr } = await supabase
     .from("property_contracts")
-    .select("id, rent_pcm, start_date")
+    .select("id, rent_pcm, start_date, pro_rata_amount")
     .eq("id", contractId)
     .eq("tenant_id", profile.tenant_id)
     .maybeSingle();
@@ -101,18 +102,12 @@ export async function estimateContractArrears(
 
   const startDate = contract.start_date as string;
   const rentPcm = Number(contract.rent_pcm ?? 0);
+  const proRata =
+    contract.pro_rata_amount == null ? null : Number(contract.pro_rata_amount);
   const paid = (payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
 
-  const start = new Date(startDate + "T00:00:00Z");
-  const end = new Date(endDate + "T00:00:00Z");
-  const monthsCovered =
-    end < start
-      ? 0
-      : (end.getUTCFullYear() - start.getUTCFullYear()) * 12 +
-        (end.getUTCMonth() - start.getUTCMonth()) +
-        1;
-
-  const expected = monthsCovered * rentPcm;
+  const monthsCovered = inclusiveMonthsBetween(startDate, endDate);
+  const expected = expectedRent(startDate, endDate, rentPcm, proRata);
   const arrears = Math.max(0, Math.round(expected - paid));
 
   return {
@@ -133,6 +128,7 @@ export async function recordRentPayment({
   periodMonth,
   amount,
   notes,
+  paidAt,
 }: {
   contractId: string;
   unitId: string;
@@ -140,9 +136,18 @@ export async function recordRentPayment({
   periodMonth: number;
   amount: number;
   notes?: string;
+  // ISO date (YYYY-MM-DD) of the actual day the rent was paid. Stored as a
+  // timestamptz at UTC noon so date-only display is stable across timezones.
+  // Falls back to "now" when the caller doesn't provide one.
+  paidAt?: string;
 }) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
+
+  const paidAtIso =
+    paidAt && /^\d{4}-\d{2}-\d{2}$/.test(paidAt)
+      ? `${paidAt}T12:00:00Z`
+      : new Date().toISOString();
 
   const { data, error } = await supabase
     .from("rent_payments")
@@ -155,7 +160,7 @@ export async function recordRentPayment({
         period_month: periodMonth,
         amount,
         notes: notes || null,
-        paid_at: new Date().toISOString(),
+        paid_at: paidAtIso,
       },
       { onConflict: "contract_id,period_year,period_month" }
     )

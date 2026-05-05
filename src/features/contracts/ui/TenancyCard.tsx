@@ -202,6 +202,7 @@ export function TenancyCard({
             rentPence={entry.rentPence}
             startDate={entry.startDate}
             endDate={entry.endDate}
+            proRataAmount={entry.proRataAmount}
           />
 
           {(entry.arrearsAtEndPence > 0 ||
