@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getUserFromAccessTokenCookie } from "@/lib/auth/jwt";
 import { sendTicketStatusChange } from "@/features/support/data/notifications";
 
 export const runtime = "nodejs";
@@ -22,18 +23,16 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createSupabaseServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.user) {
+  const decoded = getUserFromAccessTokenCookie();
+  if (!decoded) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const supabase = createSupabaseServerClient();
   const { data: profile } = await supabase
     .from("user_profiles")
     .select("id, role, tenant_id")
-    .eq("id", session.user.id)
+    .eq("id", decoded.id)
     .single();
 
   if (!profile || !STAFF_ROLES.has((profile.role ?? "").toLowerCase())) {

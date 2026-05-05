@@ -12,7 +12,7 @@ import { ContractFilterBar } from "./ContractFilterBar";
 import { ContractsListView } from "./ContractsListView";
 import { ContractDrawer } from "./ContractDrawer";
 import { ProRataField } from "./ProRataField";
-import { createContract } from "../actions/contracts";
+import { createContract, uploadContractDocument } from "../actions/contracts";
 import { contractSchema, type ContractFormValues } from "../domain/schemas";
 import { DEPOSIT_SCHEME_LABELS, SIGNING_METHOD_LABELS, type ContractFilters } from "../domain/types";
 import type { PropertyContract } from "../domain/types";
@@ -51,6 +51,7 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [contractFile, setContractFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ContractFormValues>({
@@ -92,9 +93,20 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
   const handleCreate = (values: ContractFormValues) => {
     startTransition(async () => {
       try {
-        await createContract(values);
+        const created = (await createContract(values)) as { id: string };
+        if (contractFile) {
+          const formData = new FormData();
+          formData.set("contract_id", created.id);
+          formData.set("file", contractFile);
+          try {
+            await uploadContractDocument(formData);
+          } catch {
+            toast.error("Contract created, but document upload failed");
+          }
+        }
         toast.success("Contract created");
         reset();
+        setContractFile(null);
         setCreateOpen(false);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed to create contract");
@@ -145,7 +157,7 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
       />
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={(o) => { if (!o) reset(); setCreateOpen(o); }}>
+      <Dialog open={createOpen} onOpenChange={(o) => { if (!o) { reset(); setContractFile(null); } setCreateOpen(o); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Contract</DialogTitle>
@@ -229,9 +241,20 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
                   )}
                 />
               </div>
+              <div className="col-span-2">
+                <FormField label="Contract document">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    disabled={isPending}
+                    className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+                    onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
+                  />
+                </FormField>
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <Button type="button" variant="outline" size="sm" onClick={() => { reset(); setCreateOpen(false); }}>Cancel</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => { reset(); setContractFile(null); setCreateOpen(false); }}>Cancel</Button>
               <Button type="submit" variant="secondary" size="sm" loading={isPending}>Create Contract</Button>
             </div>
           </form>

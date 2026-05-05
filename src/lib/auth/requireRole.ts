@@ -1,30 +1,29 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "../supabase/server";
+import { getUserFromAccessTokenCookie } from "./jwt";
 import { ensureTenantSetup } from "@/features/tenants/actions/tenants";
 
 export const requireUserProfile = cache(async () => {
-  const supabase = createSupabaseServerClient();
-  // getSession() reads the JWT from the cookie locally — no auth API network call
-  // unless the access token needs refreshing (once per hour). Database RLS with
-  // auth.uid() still enforces all security guarantees.
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-  const user = session?.user;
-
-  if (!user) {
+  // Decode the access token locally instead of calling supabase.auth.getSession().
+  // getSession() auto-refreshes when the token is near expiry; in server components
+  // the rotated refresh_token can't be persisted to the response, and parallel
+  // server-side reads race to consume the single-use refresh token — both produce
+  // intermittent "random logouts". Middleware is the single authoritative refresher.
+  const decoded = getUserFromAccessTokenCookie();
+  if (!decoded) {
     redirect("/login");
   }
 
+  const supabase = createSupabaseServerClient();
   let { data: profile } = await supabase
     .from("user_profiles")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", decoded.id)
     .single();
 
   if (!profile) {
-    profile = await ensureTenantSetup(user.id, user.email ?? undefined);
+    profile = await ensureTenantSetup(decoded.id, decoded.email);
   }
 
   return profile;
