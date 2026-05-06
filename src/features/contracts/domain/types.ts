@@ -33,6 +33,7 @@ export type PropertyContract = {
   unit_id: string;
   pm_tenant_id: string;
   start_date: string;
+  expiry_date: string | null;
   rent_pcm: number;
   deposit: number;
   collection_date: number | null;

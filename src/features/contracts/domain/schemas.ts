@@ -4,6 +4,7 @@ export const contractSchema = z.object({
   unit_id: z.string().uuid("Unit is required"),
   pm_tenant_id: z.string().uuid("Tenant is required"),
   start_date: z.string().min(1, "Start date is required"),
+  expiry_date: z.string().nullable().optional().or(z.literal("")),
   rent_pcm: z.coerce.number().int().positive("Rent is required"),
   deposit: z.coerce.number().int().positive("Deposit is required"),
   collection_date: z.coerce.number().int().min(1).max(31).nullable().optional(),
@@ -21,7 +22,10 @@ export const contractSchema = z.object({
     .default("active"),
   document_url: z.string().nullable().optional().or(z.literal("")),
   notes: z.string().nullable().optional().or(z.literal("")),
-});
+}).refine(
+  (v) => !v.expiry_date || v.expiry_date >= v.start_date,
+  { message: "Expiry must be on or after start date", path: ["expiry_date"] }
+);
 export type ContractFormValues = z.infer<typeof contractSchema>;
 
 export const giveNoticeSchema = z.object({

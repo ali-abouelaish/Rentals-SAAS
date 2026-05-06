@@ -203,6 +203,9 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
               <FormField label="Start date *" error={errors.start_date?.message}>
                 <input type="date" {...register("start_date")} className={inputCls} />
               </FormField>
+              <FormField label="Expiry date" error={errors.expiry_date?.message}>
+                <input type="date" {...register("expiry_date")} className={inputCls} />
+              </FormField>
               <FormField label="Collection day">
                 <input type="number" min="1" max="31" {...register("collection_date")} className={inputCls} />
               </FormField>

@@ -61,6 +61,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
       unit_id: contract.unit_id,
       pm_tenant_id: contract.pm_tenant_id,
       start_date: contract.start_date,
+      expiry_date: contract.expiry_date ?? "",
       rent_pcm: contract.rent_pcm,
       deposit: contract.deposit,
       collection_date: contract.collection_date ?? undefined,
@@ -102,6 +103,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Terms</h3>
           <div className="grid grid-cols-2 gap-3">
             <InfoRow label="Start date" value={new Date(contract.start_date).toLocaleDateString("en-GB")} />
+            <InfoRow label="Expiry date" value={contract.expiry_date ? new Date(contract.expiry_date).toLocaleDateString("en-GB") : "Rolling / periodic"} />
             <InfoRow label="Rent PCM" value={`£${contract.rent_pcm.toLocaleString()}`} />
             <InfoRow label="Deposit" value={`£${contract.deposit.toLocaleString()}`} />
             <InfoRow label="Collection day" value={contract.collection_date ? `${contract.collection_date}${["st","nd","rd"][(contract.collection_date - 1) % 10] ?? "th"} of month` : null} />
@@ -123,6 +125,9 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Start date *" error={errors.start_date?.message}>
           <input type="date" {...register("start_date")} className={inputCls} />
+        </FormField>
+        <FormField label="Expiry date" error={errors.expiry_date?.message}>
+          <input type="date" {...register("expiry_date")} className={inputCls} />
         </FormField>
         <FormField label="Collection day">
           <input type="number" min="1" max="31" {...register("collection_date")} className={inputCls} />

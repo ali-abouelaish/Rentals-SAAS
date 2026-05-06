@@ -62,6 +62,7 @@ export async function createContract(values: ContractFormValues) {
     .from("property_contracts")
     .insert({
       ...payload,
+      expiry_date: payload.expiry_date ? payload.expiry_date : null,
       pro_rata_amount: proRata,
       status: contractStatus,
       deposit_protection_deadline: deadline,
@@ -106,6 +107,7 @@ export async function updateContract(id: string, values: Partial<ContractFormVal
     document_url: nullify(values.document_url),
     notes: nullify(values.notes),
     collection_date: values.collection_date || null,
+    expiry_date: nullify(values.expiry_date),
   };
 
   // Only touch pro_rata_amount if the caller actually included it; treat
