@@ -98,20 +98,23 @@ function PropertyRow({ prop }: { prop: PropertyProfitability }) {
         <p className="text-sm font-medium text-foreground tabular-nums">{fmtAbs(prop.total_costs)}</p>
       </div>
 
-      {/* Vacancy Loss */}
-      <div className="hidden xl:block text-right w-24 shrink-0">
-        <p className="text-xs text-foreground-muted mb-0.5">Vacancy</p>
+      {/* Re-let Gap (between tenants) */}
+      <div
+        className="hidden xl:block text-right w-24 shrink-0"
+        title="Re-let Gap — lost rent on units that were previously let and are currently empty between tenants."
+      >
+        <p className="text-xs text-foreground-muted mb-0.5">Re-let Gap</p>
         <p className={cn("text-sm font-medium tabular-nums", prop.vacancy_loss > 0 ? "text-amber-600" : "text-foreground-muted")}>
           {prop.vacancy_loss > 0 ? `-${fmtAbs(prop.vacancy_loss)}` : "—"}
         </p>
       </div>
 
-      {/* Pre-let Loss (since owner-landlord contract start) */}
+      {/* Pre-let Gap (before first tenant move-in) */}
       <div
         className="hidden xl:block text-right w-24 shrink-0"
-        title="Lost rent between property contract start (with owner landlord) and first tenant move-in. Subtracted from net profit once the room is let."
+        title="Pre-let Gap — lost rent between the property contract start (with the owner landlord) and the first tenant move-in. Subtracted from net profit once the room is let."
       >
-        <p className="text-xs text-foreground-muted mb-0.5">Vacant days</p>
+        <p className="text-xs text-foreground-muted mb-0.5">Pre-let Gap</p>
         {!prop.property_contract_start_date ? (
           <p className="text-xs text-foreground-muted">—</p>
         ) : prop.total_pre_let_loss > 0 ? (
@@ -244,8 +247,8 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
         {[
           { label: "Total Income", value: fmtAbs(totalIncome), color: "text-emerald-600", bg: "bg-emerald-50" },
           { label: "Total Costs", value: fmtAbs(totalCosts), color: "text-red-600", bg: "bg-red-50" },
-          { label: "Vacancy Loss", value: fmtAbs(totalVacancy), color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Vacant Days Loss", value: fmtAbs(totalPreLetLoss), color: "text-red-600", bg: "bg-red-50" },
+          { label: "Re-let Gap Loss", value: fmtAbs(totalVacancy), color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Pre-let Gap Loss", value: fmtAbs(totalPreLetLoss), color: "text-red-600", bg: "bg-red-50" },
           {
             label: "Net Profit",
             value: fmt(totalNet),
@@ -330,8 +333,8 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
           <div className="flex-1">Property</div>
           <div className="hidden lg:block w-24 text-right">Income</div>
           <div className="hidden lg:block w-24 text-right">Costs</div>
-          <div className="hidden xl:block w-24 text-right">Vacancy</div>
-          <div className="hidden xl:block w-24 text-right">Vacant days</div>
+          <div className="hidden xl:block w-24 text-right">Re-let Gap</div>
+          <div className="hidden xl:block w-24 text-right">Pre-let Gap</div>
           <div className="w-28 text-right">Net Profit</div>
           <div className="hidden sm:block w-24 text-right">vs Target</div>
           <div className="hidden sm:block w-8" />

@@ -18,6 +18,12 @@ type Props = {
   preservePaying?: string;
   /** Preserve agent filter (rentals page). */
   preserveAgent?: string;
+  /** Preserve payment method filter (rentals page). */
+  preserveMethod?: string;
+  /** Preserve date range start (rentals page). */
+  preserveStart?: string;
+  /** Preserve date range end (rentals page). */
+  preserveEnd?: string;
 };
 
 export function LiveSearchInput({
@@ -27,6 +33,9 @@ export function LiveSearchInput({
   preserveLandlord,
   preservePaying,
   preserveAgent,
+  preserveMethod,
+  preserveStart,
+  preserveEnd,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -49,13 +58,16 @@ export function LiveSearchInput({
       if (preserveLandlord) params.set("landlord", preserveLandlord);
       if (preservePaying) params.set("paying", preservePaying);
       if (preserveAgent) params.set("agent", preserveAgent);
+      if (preserveMethod) params.set("method", preserveMethod);
+      if (preserveStart) params.set("start", preserveStart);
+      if (preserveEnd) params.set("end", preserveEnd);
       params.set("page", "1");
       const qs = params.toString();
       const url = qs ? `${pathname}?${qs}` : pathname;
       router.push(url);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [value, pathname, preserveStatus, preserveLandlord, preservePaying, preserveAgent, router, initialQuery]);
+  }, [value, pathname, preserveStatus, preserveLandlord, preservePaying, preserveAgent, preserveMethod, preserveStart, preserveEnd, router, initialQuery]);
 
   return (
     <div className="relative flex-1 max-w-sm">

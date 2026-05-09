@@ -38,6 +38,7 @@ export default async function AdminTenantDetailsPage({
               tenantId={tenant.id}
               initialName={tenant.name}
               initialSlug={tenant.slug}
+              initialContactEmail={tenant.contact_email}
             />
             <TenantStatusActionButton tenantId={tenant.id} currentStatus={tenant.status} />
           </>
@@ -64,6 +65,12 @@ export default async function AdminTenantDetailsPage({
             <p className="text-xs uppercase text-foreground-muted">Branding</p>
             <p className="text-sm text-foreground mt-1">
               {tenant.brandingConfigured ? "Configured" : "Not configured"}
+            </p>
+          </div>
+          <div className="sm:col-span-2 xl:col-span-4">
+            <p className="text-xs uppercase text-foreground-muted">Contact email</p>
+            <p className="text-sm text-foreground mt-1">
+              {tenant.contact_email ?? <span className="text-foreground-muted">Not set</span>}
             </p>
           </div>
         </CardContent>

@@ -6,6 +6,7 @@ import { bonusSchema, type BonusFormValues } from "../domain/schemas";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { notifyAgencyOfNewBonus } from "@/lib/email/notify-creation";
 
 export async function submitBonus(values: BonusFormValues) {
   const supabase = createSupabaseServerClient();
@@ -47,6 +48,8 @@ export async function submitBonus(values: BonusFormValues) {
     entity_id: data.id,
     metadata: { amount: data.amount_owed }
   });
+
+  await notifyAgencyOfNewBonus(data.id);
 
   revalidatePath("/bonuses");
   return data;

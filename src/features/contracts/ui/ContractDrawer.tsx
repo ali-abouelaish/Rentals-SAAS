@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { Pencil, Check, AlertTriangle } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils/cn";
 import { ContractStatusBadge } from "./ContractStatusBadge";
 import { DepositBadge } from "./DepositBadge";
 import { GiveNoticeModal } from "./GiveNoticeModal";
+import { ProRataField } from "./ProRataField";
 import { updateContract } from "../actions/contracts";
 import { contractSchema, type ContractFormValues } from "../domain/schemas";
 import {
@@ -55,7 +56,7 @@ const TABS = [
 
 function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyContract; isEditing: boolean; onSaved: (c: PropertyContract) => void }) {
   const [isPending, startTransition] = useTransition();
-  const { register, handleSubmit, formState: { errors } } = useForm<ContractFormValues>({
+  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
     defaultValues: {
       unit_id: contract.unit_id,
@@ -65,6 +66,8 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
       rent_pcm: contract.rent_pcm,
       deposit: contract.deposit,
       collection_date: contract.collection_date ?? undefined,
+      pro_rata_amount: contract.pro_rata_amount,
+      prepaid_first_full_month: contract.prepaid_first_full_month,
       deposit_scheme: contract.deposit_scheme,
       deposit_scheme_ref: contract.deposit_scheme_ref ?? "",
       deposit_protected_date: contract.deposit_protected_date ?? "",
@@ -75,6 +78,9 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
       notes: contract.notes ?? "",
     },
   });
+
+  const watchedStart = watch("start_date");
+  const watchedRent = watch("rent_pcm");
 
   const onSubmit = (values: ContractFormValues) => {
     startTransition(async () => {
@@ -107,6 +113,18 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
             <InfoRow label="Rent PCM" value={`£${contract.rent_pcm.toLocaleString()}`} />
             <InfoRow label="Deposit" value={`£${contract.deposit.toLocaleString()}`} />
             <InfoRow label="Collection day" value={contract.collection_date ? `${contract.collection_date}${["st","nd","rd"][(contract.collection_date - 1) % 10] ?? "th"} of month` : null} />
+            <InfoRow
+              label="First-period pro-rata"
+              value={
+                contract.pro_rata_amount != null
+                  ? `£${Number(contract.pro_rata_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : null
+              }
+            />
+            <InfoRow
+              label="First full month upfront"
+              value={contract.prepaid_first_full_month ? "Paid in advance" : "No"}
+            />
             <InfoRow label="Signing method" value={contract.signing_method ? SIGNING_METHOD_LABELS[contract.signing_method] : null} />
           </div>
         </section>
@@ -139,6 +157,26 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
           <input type="number" {...register("deposit")} className={inputCls} />
         </FormField>
       </div>
+      <Controller
+        name="pro_rata_amount"
+        control={control}
+        render={({ field: proRataField }) => (
+          <Controller
+            name="prepaid_first_full_month"
+            control={control}
+            render={({ field: prepaidField }) => (
+              <ProRataField
+                startDate={watchedStart}
+                rentPcm={watchedRent ? Number(watchedRent) : undefined}
+                proRataValue={proRataField.value ?? null}
+                onProRataChange={proRataField.onChange}
+                prepaidValue={!!prepaidField.value}
+                onPrepaidChange={prepaidField.onChange}
+              />
+            )}
+          />
+        )}
+      />
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Status">
           <select {...register("status")} className={selectCls}>

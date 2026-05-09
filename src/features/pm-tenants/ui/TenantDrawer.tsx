@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Pencil, Check, X, Plus, Trash2, ShieldCheck } from "lucide-react";
+import { Pencil, Check, X, Plus, Trash2, ShieldCheck, FileText } from "lucide-react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { RightToRentBadge } from "./RightToRentBadge";
+import { CreateContractForTenantDialog } from "./CreateContractForTenantDialog";
 import { updatePmTenant, deletePmTenant, uploadPmTenantDocument } from "../actions/pm-tenants";
 import { createGuarantor, deleteGuarantor } from "../actions/guarantors";
 import { uploadContractDocument } from "@/features/contracts/actions/contracts";
@@ -19,6 +21,16 @@ import {
   type PmTenant,
   type Guarantor,
 } from "../domain/types";
+import {
+  CONTRACT_STATUS_CONFIG,
+  DEPOSIT_SCHEME_LABELS,
+  END_REASON_LABELS,
+  SIGNING_METHOD_LABELS,
+  type ContractStatus,
+  type DepositScheme,
+  type EndReason,
+  type SigningMethod,
+} from "@/features/contracts/domain/types";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +58,7 @@ const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset p
 
 const TABS = [
   { value: "overview", label: "Overview" },
+  { value: "contract", label: "Contract" },
   { value: "guarantors", label: "Guarantors" },
   { value: "documents", label: "Documents" },
   { value: "rtr", label: "Right to Rent" },
@@ -354,6 +367,202 @@ function GuarantorsContent({ tenant, onTenantUpdated }: { tenant: PmTenant; onTe
   );
 }
 
+function ContractContent({
+  tenant,
+  onTenantUpdated,
+}: {
+  tenant: PmTenant;
+  onTenantUpdated: (t: PmTenant) => void;
+}) {
+  const [createOpen, setCreateOpen] = useState(false);
+  const contract = tenant.current_contract;
+  const unit = tenant.current_unit;
+
+  if (!contract) {
+    return (
+      <>
+        <div className="rounded-xl border border-border bg-surface-card py-12 text-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 mb-3">
+            <FileText className="h-6 w-6 text-brand" />
+          </div>
+          <p className="text-sm font-semibold text-foreground mb-1">No active contract</p>
+          <p className="text-xs text-foreground-secondary max-w-xs mx-auto leading-relaxed">
+            This tenant has no contract on file yet. Create one and assign a unit.
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Create contract
+            </Button>
+          </div>
+        </div>
+        <CreateContractForTenantDialog
+          tenant={tenant}
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={onTenantUpdated}
+        />
+      </>
+    );
+  }
+
+  const status = contract.status as ContractStatus;
+  const statusCfg = CONTRACT_STATUS_CONFIG[status];
+  const unitLabel = unit
+    ? unit.unit_type === "room"
+      ? unit.room_number
+        ? `Room ${unit.room_number}`
+        : "Room"
+      : unit.unit_type === "studio"
+      ? "Studio"
+      : "Whole Flat"
+    : null;
+
+  const fmtDate = (d: string | null | undefined) =>
+    d ? new Date(d).toLocaleDateString("en-GB") : null;
+  const fmtMoney = (v: number | null | undefined) =>
+    v == null ? null : `£${Number(v).toLocaleString()}`;
+
+  const showLifecycle =
+    status === "notice_given" || status === "terminated" ||
+    contract.notice_given_date || contract.actual_end_date;
+
+  return (
+    <div className="space-y-5 py-1">
+      <section>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">Contract</h3>
+          {statusCfg && (
+            <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", statusCfg.bg, statusCfg.fg)}>
+              {statusCfg.label}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <InfoRow label="Property" value={unit?.property?.name} />
+          <InfoRow label="Unit" value={unitLabel} />
+          <InfoRow label="Address" value={unit?.property?.address_line_1} />
+          <InfoRow
+            label="Signing method"
+            value={contract.signing_method ? SIGNING_METHOD_LABELS[contract.signing_method as SigningMethod] ?? contract.signing_method : null}
+          />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Dates</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <InfoRow label="Start date" value={fmtDate(contract.start_date)} />
+          <InfoRow label="Expiry date" value={fmtDate(contract.expiry_date)} />
+          <InfoRow
+            label="Rent collection day"
+            value={contract.collection_date ? `${contract.collection_date} of each month` : null}
+          />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Financial</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <InfoRow label="Rent (PCM)" value={fmtMoney(contract.rent_pcm)} />
+          <InfoRow label="Deposit" value={fmtMoney(contract.deposit)} />
+          <InfoRow label="Pro-rata first month" value={fmtMoney(contract.pro_rata_amount)} />
+          <InfoRow
+            label="First full month prepaid"
+            value={contract.prepaid_first_full_month ? "Yes" : "No"}
+          />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Deposit Protection</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <InfoRow
+            label="Scheme"
+            value={contract.deposit_scheme ? DEPOSIT_SCHEME_LABELS[contract.deposit_scheme as DepositScheme] ?? contract.deposit_scheme : null}
+          />
+          <InfoRow label="Reference" value={contract.deposit_scheme_ref} />
+          <InfoRow label="Protected on" value={fmtDate(contract.deposit_protected_date)} />
+        </div>
+      </section>
+
+      {showLifecycle && (
+        <section>
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">End of Tenancy</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <InfoRow
+              label="Notice given by"
+              value={contract.notice_given_by ? contract.notice_given_by[0].toUpperCase() + contract.notice_given_by.slice(1) : null}
+            />
+            <InfoRow label="Notice date" value={fmtDate(contract.notice_given_date)} />
+            <InfoRow label="Vacate date" value={fmtDate(contract.vacate_date)} />
+            <InfoRow label="Actual end date" value={fmtDate(contract.actual_end_date)} />
+            <InfoRow
+              label="End reason"
+              value={contract.end_reason ? END_REASON_LABELS[contract.end_reason as EndReason] ?? contract.end_reason : null}
+            />
+          </div>
+        </section>
+      )}
+
+      <section>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-2">Document</h3>
+        {contract.document_url ? (
+          <a
+            href={contract.document_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-brand hover:underline"
+          >
+            View / download contract
+          </a>
+        ) : (
+          <p className="text-sm text-foreground-muted">
+            No document uploaded — add one in the Documents tab.
+          </p>
+        )}
+      </section>
+
+      {contract.notes && (
+        <section>
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-2">Notes</h3>
+          <p className="text-sm text-foreground whitespace-pre-wrap">{contract.notes}</p>
+        </section>
+      )}
+
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <Link
+          href="/contracts"
+          className="inline-flex items-center text-xs font-medium text-brand hover:underline"
+        >
+          Manage in Contracts →
+        </Link>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          New contract
+        </Button>
+      </div>
+
+      <CreateContractForTenantDialog
+        tenant={tenant}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={onTenantUpdated}
+      />
+    </div>
+  );
+}
+
 function RightToRentContent({ tenant, isEditing, onSaved }: { tenant: PmTenant; isEditing: boolean; onSaved: (t: PmTenant) => void }) {
   const [isPending, startTransition] = useTransition();
   const { register, handleSubmit } = useForm({
@@ -516,15 +725,12 @@ function DocumentsContent({
     uploadContractDocument(formData)
       .then((updated) => {
         toast.success("Contract uploaded");
-        const updatedContract = updated as { id: string; start_date: string; status: string; document_url: string | null };
+        const updatedContract = updated as { document_url: string | null };
         onTenantUpdated({
           ...tenant,
-          current_contract: {
-            id: updatedContract.id,
-            start_date: updatedContract.start_date,
-            status: updatedContract.status,
-            document_url: updatedContract.document_url,
-          },
+          current_contract: contract
+            ? { ...contract, document_url: updatedContract.document_url }
+            : tenant.current_contract,
         });
       })
       .catch(() => toast.error("Failed to upload contract"))
@@ -732,6 +938,12 @@ export function TenantDrawer({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {activeTab === "overview" && (
             <OverviewContent tenant={localTenant} isEditing={isEditing} onSaved={handleSaved} />
+          )}
+          {activeTab === "contract" && (
+            <ContractContent
+              tenant={localTenant}
+              onTenantUpdated={(t) => { setLocalTenant(t); onTenantUpdated(t); }}
+            />
           )}
           {activeTab === "guarantors" && (
             <GuarantorsContent tenant={localTenant} onTenantUpdated={(t) => { setLocalTenant(t); onTenantUpdated(t); }} />

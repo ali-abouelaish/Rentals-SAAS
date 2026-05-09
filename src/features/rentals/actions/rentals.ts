@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { rentalCodeSchema, type RentalCodeFormValues } from "../domain/schemas";
 import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { notifyAgencyOfNewRental } from "@/lib/email/notify-creation";
 
 export async function createRentalCode(values: RentalCodeFormValues) {
   const supabase = createSupabaseServerClient();
@@ -81,6 +82,8 @@ export async function createRentalCode(values: RentalCodeFormValues) {
     entity_id: data.id,
     metadata: { code: data.code }
   });
+
+  await notifyAgencyOfNewRental(data.id);
 
   revalidatePath("/rentals");
   return data;
@@ -256,6 +259,8 @@ export async function createRentalCodeWithDocuments(formData: FormData): Promise
         metadata: { code: rentalCode.code }
       });
       if (activityError) console.error("[rental] activity log insert failed:", activityError.message);
+
+      await notifyAgencyOfNewRental(rentalCode.id);
 
       // Mark client as registered after rental creation
       const { error: clientUpdateError } = await supabase

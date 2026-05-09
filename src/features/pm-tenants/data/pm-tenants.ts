@@ -3,7 +3,31 @@ import type { PmTenant, PmTenantFilters } from "../domain/types";
 
 const ACTIVE_CONTRACT_STATUSES = ["active", "signed", "notice_given"];
 
-type CurrentContractRow = { id: string; start_date: string; status: string; document_url: string | null };
+type CurrentContractRow = {
+  id: string;
+  start_date: string;
+  expiry_date: string | null;
+  rent_pcm: number;
+  deposit: number;
+  collection_date: number | null;
+  pro_rata_amount: number | null;
+  prepaid_first_full_month: boolean;
+  deposit_scheme: string | null;
+  deposit_scheme_ref: string | null;
+  deposit_protected_date: string | null;
+  signing_method: string | null;
+  status: string;
+  notice_given_by: string | null;
+  notice_given_date: string | null;
+  vacate_date: string | null;
+  actual_end_date: string | null;
+  end_reason: string | null;
+  document_url: string | null;
+  notes: string | null;
+};
+
+const CURRENT_CONTRACT_COLUMNS =
+  "id, start_date, expiry_date, rent_pcm, deposit, collection_date, pro_rata_amount, prepaid_first_full_month, deposit_scheme, deposit_scheme_ref, deposit_protected_date, signing_method, status, notice_given_by, notice_given_date, vacate_date, actual_end_date, end_reason, document_url, notes";
 
 function pickCurrentContract(
   contracts: CurrentContractRow[] | null | undefined
@@ -42,7 +66,7 @@ export async function getPmTenants(
         id, room_number, unit_type,
         property:properties(name, address_line_1)
       ),
-      current_contract:property_contracts(id, start_date, status, document_url)`
+      current_contract:property_contracts(${CURRENT_CONTRACT_COLUMNS})`
     )
     .order("full_name", { ascending: true });
 
@@ -72,7 +96,7 @@ export async function getPmTenantById(id: string): Promise<PmTenant | null> {
         id, room_number, unit_type,
         property:properties(name, address_line_1)
       ),
-      current_contract:property_contracts(id, start_date, status, document_url)`
+      current_contract:property_contracts(${CURRENT_CONTRACT_COLUMNS})`
     )
     .eq("id", id)
     .single();

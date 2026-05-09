@@ -4,11 +4,17 @@ export async function getRentalCodes({
   search,
   status,
   agentId,
+  paymentMethod,
+  dateFrom,
+  dateTo,
   page = 1
 }: {
   search?: string;
   status?: string;
   agentId?: string;
+  paymentMethod?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
 }) {
   const supabase = createSupabaseServerClient();
@@ -32,6 +38,15 @@ export async function getRentalCodes({
   }
   if (agentId) {
     query = query.or(`assisted_by_agent_id.eq.${agentId},marketing_agent_id.eq.${agentId}`);
+  }
+  if (paymentMethod && paymentMethod !== "all") {
+    query = query.eq("payment_method", paymentMethod);
+  }
+  if (dateFrom) {
+    query = query.gte("created_at", `${dateFrom}T00:00:00.000Z`);
+  }
+  if (dateTo) {
+    query = query.lte("created_at", `${dateTo}T23:59:59.999Z`);
   }
 
   query = query.range(from, to);

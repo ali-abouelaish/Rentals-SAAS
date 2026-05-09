@@ -82,28 +82,37 @@ export async function createTenantAction(input: {
   return { ok: true, tenantId: data.id };
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function updateTenantAction(input: {
   tenantId: string;
   name: string;
   slug: string;
+  contactEmail: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const actor = await requireSuperAdmin();
   const admin = createSupabaseAdminClient();
 
   const name = input.name.trim();
   const slug = normalizeSlug(input.slug);
+  const contact_email = input.contactEmail.trim();
   if (!name) return { ok: false, error: "Tenant name is required." };
   if (!slug) return { ok: false, error: "Tenant slug is required." };
+  if (!contact_email) return { ok: false, error: "Contact email is required." };
+  if (!EMAIL_RE.test(contact_email)) {
+    return { ok: false, error: "Contact email is not a valid email address." };
+  }
 
   const { error } = await admin
     .from("tenants")
-    .update({ name, slug })
+    .update({ name, slug, contact_email })
     .eq("id", input.tenantId);
   if (error) return { ok: false, error: error.message };
 
   await logAdminAction(actor.id, input.tenantId, "admin_tenant_updated", "tenant", input.tenantId, {
     name,
-    slug
+    slug,
+    contact_email
   });
 
   revalidatePath("/admin/tenants");

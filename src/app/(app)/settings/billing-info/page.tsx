@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getTenantBillingInfo } from "@/features/billing-info/data/queries";
 import { BillingInfoForm } from "@/features/billing-info/ui/BillingInfoForm";
 import { EmailTestCard } from "@/features/billing-info/ui/EmailTestCard";
+import { AgencyContactEmailCard } from "@/features/tenants/ui/AgencyContactEmailCard";
 import { normalizeBranding } from "@/lib/email/branding";
 
 export default async function BillingInfoPage() {
@@ -16,7 +17,7 @@ export default async function BillingInfoPage() {
     supabase.auth.getUser(),
     supabase
       .from("tenants")
-      .select("branding")
+      .select("branding, contact_email")
       .eq("id", profile.tenant_id)
       .single(),
   ]);
@@ -30,6 +31,7 @@ export default async function BillingInfoPage() {
         title="Billing info"
         subtitle="Subscription, payment status and billing contact for your account"
       />
+      <AgencyContactEmailCard initialEmail={tenant?.contact_email ?? null} />
       <BillingInfoForm info={info} />
       <EmailTestCard
         defaultEmail={defaultEmail}

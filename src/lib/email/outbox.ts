@@ -103,3 +103,20 @@ export async function markFailed(id: string, errorMessage: string): Promise<void
   });
   if (error) throw error;
 }
+
+/**
+ * Mark a claimed row as permanently failed without scheduling a retry.
+ * Use for errors retrying cannot fix (missing tenant_id, missing contact_email).
+ */
+export async function markFailedPermanent(id: string, errorMessage: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("email_outbox")
+    .update({
+      status: "failed",
+      last_error: errorMessage,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw error;
+}

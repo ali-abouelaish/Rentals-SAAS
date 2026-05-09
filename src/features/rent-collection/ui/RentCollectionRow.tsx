@@ -76,7 +76,7 @@ export function RentCollectionRow({ row }: { row: Row }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <Link
-              href={`/tenants/${row.tenant.id}`}
+              href={`/tenants?focus=${row.tenant.id}`}
               className="text-sm font-semibold text-foreground hover:underline truncate"
             >
               {row.tenant.name}

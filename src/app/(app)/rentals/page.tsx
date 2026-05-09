@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { RealtimeRefresher } from "@/components/shared/RealtimeRefresher";
 import { AgentFilterDropdown } from "@/features/rentals/ui/AgentFilterDropdown";
+import { RentalsDateRangeFilter } from "@/features/rentals/ui/RentalsDateRangeFilter";
 
 const statusLabels: Record<string, string> = {
   all: "All",
@@ -32,12 +33,22 @@ const statusLabels: Record<string, string> = {
 export default async function RentalsPage({
   searchParams,
 }: {
-  searchParams?: { q?: string; status?: string; page?: string; agent?: string };
+  searchParams?: { q?: string; status?: string; page?: string; agent?: string; method?: string; start?: string; end?: string };
 }) {
   const profile = await requireUserProfile();
   const activeStatus = searchParams?.status ?? "all";
   const activeAgent = searchParams?.agent ?? "all";
+  const activeMethod = searchParams?.method ?? "all";
   const currentPage = parseInt(searchParams?.page ?? "1", 10);
+
+  // Default to last 30 days
+  const today = new Date();
+  const defaultEnd = today.toISOString().slice(0, 10);
+  const defaultStartDate = new Date(today);
+  defaultStartDate.setDate(today.getDate() - 30);
+  const defaultStart = defaultStartDate.toISOString().slice(0, 10);
+  const activeStart = searchParams?.start ?? defaultStart;
+  const activeEnd = searchParams?.end ?? defaultEnd;
 
   const isAdmin = profile.role.toLowerCase() === "admin";
 
@@ -46,6 +57,9 @@ export default async function RentalsPage({
       search: searchParams?.q,
       status: activeStatus,
       agentId: activeAgent !== "all" ? activeAgent : undefined,
+      paymentMethod: activeMethod !== "all" ? activeMethod : undefined,
+      dateFrom: activeStart,
+      dateTo: activeEnd,
       page: currentPage,
     }),
     getAgents(),
@@ -58,6 +72,12 @@ export default async function RentalsPage({
   };
 
   const statusFilters = ["all", "pending", "approved", "paid", "refunded", "need_more_info"];
+  const methodFilters: { value: string; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "cash", label: "Cash 💵" },
+    { value: "transfer", label: "Transfer ⚡" },
+    { value: "card", label: "Card 💳" },
+  ];
 
   // Build URL helper
   const makeHref = (overrides: Record<string, string | undefined>) => {
@@ -66,9 +86,15 @@ export default async function RentalsPage({
     const s = overrides.status ?? activeStatus;
     const p = overrides.page ?? String(page);
     const a = overrides.agent ?? activeAgent;
+    const m = overrides.method ?? activeMethod;
+    const sd = overrides.start ?? searchParams?.start;
+    const ed = overrides.end ?? searchParams?.end;
     if (q) params.set("q", q);
     if (s && s !== "all") params.set("status", s);
     if (a && a !== "all") params.set("agent", a);
+    if (m && m !== "all") params.set("method", m);
+    if (sd) params.set("start", sd);
+    if (ed) params.set("end", ed);
     if (p && p !== "1") params.set("page", p);
     const qs = params.toString();
     return `/rentals${qs ? `?${qs}` : ""}`;
@@ -111,6 +137,9 @@ export default async function RentalsPage({
             initialQuery={searchParams?.q ?? ""}
             preserveStatus={activeStatus !== "all" ? activeStatus : undefined}
             preserveAgent={activeAgent !== "all" ? activeAgent : undefined}
+            preserveMethod={activeMethod !== "all" ? activeMethod : undefined}
+            preserveStart={searchParams?.start}
+            preserveEnd={searchParams?.end}
           />
         </div>
 
@@ -142,6 +171,30 @@ export default async function RentalsPage({
               {statusLabels[s] ?? s}
             </Link>
           ))}
+        </div>
+
+        {/* Payment method filter */}
+        <div className="flex items-center gap-2 mt-4">
+          <label className="text-xs text-foreground-secondary">Payment:</label>
+          <div className="flex flex-wrap gap-2">
+            {methodFilters.map((m) => (
+              <Link
+                key={m.value}
+                href={makeHref({ method: m.value, page: "1" })}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${activeMethod === m.value
+                    ? "bg-brand text-brand-fg shadow-sm"
+                    : "bg-surface-inset text-foreground-secondary hover:bg-surface-highlight"
+                  }`}
+              >
+                {m.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Date range filter */}
+        <div className="mt-4">
+          <RentalsDateRangeFilter start={activeStart} end={activeEnd} />
         </div>
       </div>
 

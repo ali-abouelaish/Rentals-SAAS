@@ -9,6 +9,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { loadAgencyContactEmail } from "@/lib/email/contact";
+import { logEmailSendError } from "@/lib/email/error-log";
+import { notifyAgencyOfNewInvoice } from "@/lib/email/notify-creation";
 import { invoiceFromBonusesSchema, invoiceManualSchema } from "../domain/schemas";
 import { InvoicePdf } from "../pdf/InvoicePdf";
 import { formatGBP } from "@/lib/utils/formatters";
@@ -122,6 +125,8 @@ export async function createInvoiceManual(formData: FormData) {
   const { error: itemError } = await supabase.from("invoice_items").insert(items);
   if (itemError) throw new Error(itemError.message);
 
+  await notifyAgencyOfNewInvoice(invoice.id);
+
   revalidatePath("/invoices");
   redirect(`/invoices/${invoice.id}`);
 }
@@ -223,6 +228,8 @@ export async function createInvoiceFromBonuses(formData: FormData) {
   }));
   const { error: linkError } = await supabase.from("invoice_bonus_links").insert(linkRows);
   if (linkError) throw new Error(linkError.message);
+
+  await notifyAgencyOfNewInvoice(invoice.id);
 
   revalidatePath("/invoices");
   redirect(`/invoices/${invoice.id}`);
@@ -537,21 +544,38 @@ export async function sendInvoice(formData: FormData) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error("Missing RESEND_API_KEY.");
   }
+  const fromDomain = process.env.EMAIL_FROM_DOMAIN;
+  if (!fromDomain) {
+    throw new Error("EMAIL_FROM_DOMAIN is not set");
+  }
+
+  const replyTo = await loadAgencyContactEmail(invoice.tenant_id);
+  const recipient = invoice.landlords?.email ?? "";
 
   const buffer = Buffer.from(await pdfFile.arrayBuffer());
-  await resend.emails.send({
-    from: process.env.INVOICE_FROM_EMAIL ?? "invoices@example.com",
-    to: invoice.landlords?.email ?? "",
-    reply_to: "info@harborops.co.uk",
-    subject,
-    html: `<p>${body}</p>`,
-    attachments: [
-      {
-        filename: `${invoice.invoice_number}.pdf`,
-        content: buffer
-      }
-    ]
-  });
+  try {
+    await resend.emails.send({
+      from: `Harbor Ops <noreply@${fromDomain}>`,
+      to: recipient,
+      reply_to: replyTo,
+      subject,
+      html: `<p>${body}</p>`,
+      attachments: [
+        {
+          filename: `${invoice.invoice_number}.pdf`,
+          content: buffer
+        }
+      ]
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logEmailSendError({
+      tenantId: invoice.tenant_id,
+      message,
+      context: { path: "invoice-send", invoiceId, to: recipient, subject }
+    });
+    throw err;
+  }
 
   const { error: updateError } = await supabase
     .from("invoices")

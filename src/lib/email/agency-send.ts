@@ -1,5 +1,7 @@
 import { getTransporter } from "./transporter";
 import type { Agency } from "./branding";
+import { loadAgencyContactEmail } from "./contact";
+import { logEmailSendError } from "./error-log";
 
 export type SendAgencyEmailParams = {
   agency: Agency;
@@ -18,9 +20,9 @@ export type SendAgencyEmailResult = { providerId: string };
 /**
  * Send a branded email on behalf of an agency.
  *
- * From address rules:
- *   - branding.custom_domain + custom_domain_verified  -> noreply@<custom_domain>
- *   - otherwise                                        -> noreply@<EMAIL_FROM_DOMAIN>
+ * From is pinned to the central Harbor Ops mailer; per-agency display name
+ * and custom-domain sending are paused pending a redo of branding.
+ * Reply-to is the agency's contact_email — refuses to send if unset.
  */
 export async function sendAgencyEmail({
   agency,
@@ -35,18 +37,8 @@ export async function sendAgencyEmail({
     throw new Error("EMAIL_FROM_DOMAIN is not set");
   }
 
-  const useCustom =
-    !!agency.branding.custom_domain && agency.branding.custom_domain_verified;
-  const sendingDomain = useCustom
-    ? (agency.branding.custom_domain as string)
-    : fallbackDomain;
-
-  const fromAddress = `noreply@${sendingDomain}`;
-  const displayName = agency.branding.from_display_name || agency.name;
-  const from = `"${displayName.replace(/"/g, "'")}" <${fromAddress}>`;
-  // Replies always route to the central Harbor Ops mailbox so they reach a
-  // monitored inbox even if an agency hasn't configured their own reply-to.
-  const replyTo = "info@harborops.co.uk";
+  const from = `Harbor Ops <noreply@${fallbackDomain}>`;
+  const replyTo = await loadAgencyContactEmail(agency.id);
 
   const headers: Record<string, string> = {};
   if (pmTenantId) {
@@ -56,16 +48,24 @@ export async function sendAgencyEmail({
   }
 
   const transporter = getTransporter();
-  const info = await transporter.sendMail({
-    from,
-    to,
-    subject,
-    html,
-    text,
-    replyTo,
-    headers,
-  });
-
-  const providerId = info.messageId ?? "";
-  return { providerId };
+  try {
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      text,
+      replyTo,
+      headers,
+    });
+    return { providerId: info.messageId ?? "" };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logEmailSendError({
+      tenantId: agency.id,
+      message,
+      context: { path: "agency-send", to, subject },
+    });
+    throw err;
+  }
 }

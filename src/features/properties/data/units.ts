@@ -9,7 +9,7 @@ const UNIT_SELECT = `
   ),
   resident:property_residents(*),
   pm_tenant:pm_tenants(id, full_name, email, phone),
-  current_contract:property_contracts(id, start_date, status, document_url, rent_pcm, deposit, pm_tenant_id, pro_rata_amount),
+  current_contract:property_contracts(id, start_date, status, document_url, rent_pcm, deposit, pm_tenant_id, pro_rata_amount, prepaid_first_full_month),
   recent_rent_payments:rent_payments(id, period_year, period_month, amount, paid_at, notes)
 ` as const;
 
@@ -24,6 +24,7 @@ type UnitContractRow = {
   deposit: number | null;
   pm_tenant_id: string | null;
   pro_rata_amount: number | null;
+  prepaid_first_full_month: boolean;
 };
 
 function pickUnitContract(rows: UnitContractRow[] | null | undefined) {

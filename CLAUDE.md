@@ -59,7 +59,7 @@ Core tables: `tenants`, `user_profiles`, `agent_profiles`, `clients`, `landlords
 
 ### Email
 
-Primary: Resend API. Fallback: AWS SES. Async delivery tracked via `email_outbox` table. Email utilities in `src/lib/email/`.
+Resend (SMTP via nodemailer) is the only delivery path. Async delivery tracked via `email_outbox` table; the worker drains it through `sendAgencyEmail`. Email utilities in `src/lib/email/`.
 
 ### Feature Flags
 
@@ -77,7 +77,7 @@ Required in `.env.local`:
 | `NEXT_PUBLIC_APP_URL` | App base URL |
 | `RESEND_API_KEY` | Email delivery |
 | `OPENAI_API_KEY` | AI features |
-| `AWS_REGION` / `SES_FROM_EMAIL` / `SES_FROM_NAME` | AWS SES fallback email |
+| `EMAIL_FROM_DOMAIN` | Domain used in the From address (`noreply@<domain>`) |
 | `EMAIL_WORKER_SECRET` | Email worker auth |
 | `SCRAPER_API_KEY` | Landlord scraper |
 | `APP_PORTAL_DOMAIN` | Portal domain for links |

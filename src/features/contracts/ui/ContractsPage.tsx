@@ -56,7 +56,7 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
 
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
-    defaultValues: { deposit_scheme: "none", deposit_protection_alert: true, status: "active", pro_rata_amount: null },
+    defaultValues: { deposit_scheme: "none", deposit_protection_alert: true, status: "active", pro_rata_amount: null, prepaid_first_full_month: false },
   });
 
   const watchedStart = watch("start_date");
@@ -234,12 +234,20 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
                 <Controller
                   name="pro_rata_amount"
                   control={control}
-                  render={({ field }) => (
-                    <ProRataField
-                      startDate={watchedStart}
-                      rentPcm={watchedRent ? Number(watchedRent) : undefined}
-                      value={field.value ?? null}
-                      onChange={field.onChange}
+                  render={({ field: proRataField }) => (
+                    <Controller
+                      name="prepaid_first_full_month"
+                      control={control}
+                      render={({ field: prepaidField }) => (
+                        <ProRataField
+                          startDate={watchedStart}
+                          rentPcm={watchedRent ? Number(watchedRent) : undefined}
+                          proRataValue={proRataField.value ?? null}
+                          onProRataChange={proRataField.onChange}
+                          prepaidValue={!!prepaidField.value}
+                          onPrepaidChange={prepaidField.onChange}
+                        />
+                      )}
                     />
                   )}
                 />

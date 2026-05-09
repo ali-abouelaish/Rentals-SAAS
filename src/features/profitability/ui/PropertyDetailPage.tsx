@@ -349,7 +349,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
                 <th className="text-right pb-3">Rent PCM</th>
                 <th
                   className="text-right pb-3 hidden sm:table-cell"
-                  title="Total vacant days = pre-let period (since owner-landlord contract) + currently vacant. Hover the number for the exact periods."
+                  title="Total empty days = Pre-let Gap (since owner-landlord contract start) + Re-let Gap (currently between tenants). Hover the number for the exact periods."
                 >
                   Vacant days
                 </th>
@@ -646,7 +646,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
       {/* Net Profit */}
       <div
         className="rounded-bento bg-surface-card shadow-bento p-6"
-        title="Net Profit = Total Income − Total Costs − Vacancy Loss (pre-let + currently vacant)"
+        title="Net Profit = Total Income − Total Costs − Vacancy Loss (Pre-let Gap + Re-let Gap)"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>

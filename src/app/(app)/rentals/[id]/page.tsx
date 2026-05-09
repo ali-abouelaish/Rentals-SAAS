@@ -15,6 +15,7 @@ import { RentalEditPanel } from "@/features/rentals/ui/RentalEditPanel";
 import { RentalDocumentsViewer } from "@/features/rentals/ui/RentalDocumentsViewer";
 import { RentalPayoutSummary } from "@/features/rentals/ui/RentalPayoutSummary";
 import { RentalStatusSelect } from "@/features/rentals/ui/RentalStatusSelect";
+import { BackButton } from "@/components/shared/BackButton";
 import { PoundSterling } from "lucide-react";
 
 export default async function RentalDetailPage({
@@ -177,6 +178,7 @@ export default async function RentalDetailPage({
 
   return (
     <div className="space-y-6">
+      <BackButton fallbackHref="/rentals" label="Back to rentals" />
       <PageHeader title={`Rental ${rental.code}`} subtitle="Rental code details" />
 
       <div className="flex items-center gap-3">

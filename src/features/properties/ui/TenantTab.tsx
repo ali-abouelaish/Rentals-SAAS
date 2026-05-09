@@ -101,6 +101,7 @@ function CreateContractDialog({
     deposit: number | null;
     pm_tenant_id: string | null;
     pro_rata_amount: number | null;
+    prepaid_first_full_month: boolean;
   }) => void;
 }) {
   const router = useRouter();
@@ -124,6 +125,7 @@ function CreateContractDialog({
       deposit_protection_alert: true,
       status: "draft",
       pro_rata_amount: null,
+      prepaid_first_full_month: false,
     },
   });
 
@@ -142,6 +144,7 @@ function CreateContractDialog({
           deposit: number | null;
           pm_tenant_id: string | null;
           pro_rata_amount: number | null;
+          prepaid_first_full_month: boolean;
         };
         toast.success("Contract created");
         onCreated(created);
@@ -214,12 +217,20 @@ function CreateContractDialog({
               <Controller
                 name="pro_rata_amount"
                 control={control}
-                render={({ field }) => (
-                  <ProRataField
-                    startDate={watchedStart}
-                    rentPcm={watchedRent ? Number(watchedRent) : undefined}
-                    value={field.value ?? null}
-                    onChange={field.onChange}
+                render={({ field: proRataField }) => (
+                  <Controller
+                    name="prepaid_first_full_month"
+                    control={control}
+                    render={({ field: prepaidField }) => (
+                      <ProRataField
+                        startDate={watchedStart}
+                        rentPcm={watchedRent ? Number(watchedRent) : undefined}
+                        proRataValue={proRataField.value ?? null}
+                        onProRataChange={proRataField.onChange}
+                        prepaidValue={!!prepaidField.value}
+                        onPrepaidChange={prepaidField.onChange}
+                      />
+                    )}
                   />
                 )}
               />
@@ -269,6 +280,7 @@ function ContractCard({
           deposit: number | null;
           pm_tenant_id: string | null;
           pro_rata_amount: number | null;
+          prepaid_first_full_month: boolean;
         };
         onUnitUpdated({
           ...unit,
@@ -281,6 +293,7 @@ function ContractCard({
             deposit: c.deposit,
             pm_tenant_id: c.pm_tenant_id,
             pro_rata_amount: c.pro_rata_amount,
+            prepaid_first_full_month: c.prepaid_first_full_month,
           },
         });
       })

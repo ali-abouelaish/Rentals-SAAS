@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { loadAgency } from "@/lib/email/agency-context";
 import { sendAgencyEmail } from "@/lib/email/agency-send";
 import {
@@ -64,23 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Agency not found" }, { status: 404 });
   }
 
-  // For test sends, if the agency hasn't configured a reply-to yet, fall back
-  // to the admin's own login email so replies during testing always reach
-  // someone. Production reminders use whatever is saved on tenants.branding.
-  if (!agency.branding.reply_to_email) {
-    const supabase = createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.email) {
-      agency.branding.reply_to_email = user.email;
-    }
-  }
-
-  const useCustom =
-    !!agency.branding.custom_domain && agency.branding.custom_domain_verified;
-  const sendingDomain = useCustom
-    ? (agency.branding.custom_domain as string)
-    : (process.env.EMAIL_FROM_DOMAIN as string);
-  const fromAddress = `noreply@${sendingDomain}`;
+  const fromAddress = `noreply@${process.env.EMAIL_FROM_DOMAIN as string}`;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://harborops.co.uk";
   const agencyName = agency.name || agency.branding.from_display_name;
@@ -156,7 +139,6 @@ export async function POST(request: Request) {
     template,
     from: fromAddress,
     to,
-    customDomainVerified: useCustom,
   });
 
   try {

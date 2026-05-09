@@ -51,8 +51,24 @@ export type PmTenant = {
   current_contract?: {
     id: string;
     start_date: string;
+    expiry_date: string | null;
+    rent_pcm: number;
+    deposit: number;
+    collection_date: number | null;
+    pro_rata_amount: number | null;
+    prepaid_first_full_month: boolean;
+    deposit_scheme: string | null;
+    deposit_scheme_ref: string | null;
+    deposit_protected_date: string | null;
+    signing_method: string | null;
     status: string;
+    notice_given_by: string | null;
+    notice_given_date: string | null;
+    vacate_date: string | null;
+    actual_end_date: string | null;
+    end_reason: string | null;
     document_url: string | null;
+    notes: string | null;
   } | null;
 };
 

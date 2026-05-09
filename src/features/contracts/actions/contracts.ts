@@ -18,6 +18,110 @@ import {
   type GiveNoticeValues,
   type CloseoutValues,
 } from "../domain/schemas";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Statuses where the contract is "live" — i.e. the tenant has actually moved in
+// (or will any moment). We only auto-record the move-in payments for these;
+// drafts/sent contracts haven't been signed yet, so payment hasn't happened.
+const LIVE_STATUSES = new Set(["active", "signed", "notice_given"]);
+
+type MoveInPayment = {
+  periodYear: number;
+  periodMonth: number;
+  amount: number;
+};
+
+// Build the payments implied by pro_rata_amount and prepaid_first_full_month
+// for a contract starting on `startDate`. Returns 0–2 rows.
+function moveInPayments({
+  startDate,
+  rentPcm,
+  proRataAmount,
+  prepaidFirstFullMonth,
+}: {
+  startDate: string;
+  rentPcm: number;
+  proRataAmount: number | null;
+  prepaidFirstFullMonth: boolean;
+}): MoveInPayment[] {
+  const out: MoveInPayment[] = [];
+  const d = new Date(startDate + "T00:00:00Z");
+  if (Number.isNaN(d.getTime())) return out;
+
+  const moveYear = d.getUTCFullYear();
+  const moveMonth = d.getUTCMonth() + 1;
+
+  if (proRataAmount != null && proRataAmount > 0) {
+    out.push({ periodYear: moveYear, periodMonth: moveMonth, amount: proRataAmount });
+  }
+
+  if (prepaidFirstFullMonth && rentPcm > 0) {
+    // Next calendar month after the move-in month.
+    const nextDate = new Date(Date.UTC(moveYear, moveMonth, 1));
+    out.push({
+      periodYear: nextDate.getUTCFullYear(),
+      periodMonth: nextDate.getUTCMonth() + 1,
+      amount: rentPcm,
+    });
+  }
+
+  return out;
+}
+
+// Insert any move-in payments implied by the contract's current pro-rata /
+// prepaid flags that don't already exist as rent_payments rows. We deliberately
+// DO NOT overwrite existing rows — they may have been edited by an agent (e.g.
+// corrected to the actual amount paid), and clobbering would destroy real
+// information. Idempotent: running this on every save is safe.
+async function ensureMoveInPayments(
+  supabase: SupabaseClient,
+  {
+    tenantId,
+    contractId,
+    unitId,
+    paidAtIso,
+    payments,
+  }: {
+    tenantId: string;
+    contractId: string;
+    unitId: string;
+    paidAtIso: string;
+    payments: MoveInPayment[];
+  }
+) {
+  if (payments.length === 0) return;
+
+  // Fetch existing periods for this contract so we can skip any already recorded.
+  const { data: existing, error: fetchErr } = await supabase
+    .from("rent_payments")
+    .select("period_year, period_month")
+    .eq("contract_id", contractId)
+    .eq("tenant_id", tenantId);
+  if (fetchErr) throw new Error(fetchErr.message);
+
+  const existingKeys = new Set(
+    (existing ?? []).map((r) => `${r.period_year}-${r.period_month}`)
+  );
+
+  const toInsert = payments.filter(
+    (p) => !existingKeys.has(`${p.periodYear}-${p.periodMonth}`)
+  );
+  if (toInsert.length === 0) return;
+
+  const rows = toInsert.map((p) => ({
+    tenant_id: tenantId,
+    contract_id: contractId,
+    unit_id: unitId,
+    period_year: p.periodYear,
+    period_month: p.periodMonth,
+    amount: p.amount,
+    paid_at: paidAtIso,
+    notes: "Auto-recorded at contract creation (move-in payment)",
+  }));
+
+  const { error } = await supabase.from("rent_payments").insert(rows);
+  if (error) throw new Error(error.message);
+}
 
 export async function createContract(values: ContractFormValues) {
   const profile = await requireRole([...ADMIN_ROLES]);
@@ -64,6 +168,7 @@ export async function createContract(values: ContractFormValues) {
       ...payload,
       expiry_date: payload.expiry_date ? payload.expiry_date : null,
       pro_rata_amount: proRata,
+      prepaid_first_full_month: payload.prepaid_first_full_month,
       status: contractStatus,
       deposit_protection_deadline: deadline,
       tenant_id: profile.tenant_id,
@@ -85,6 +190,23 @@ export async function createContract(values: ContractFormValues) {
       .eq("id", payload.unit_id)
       .eq("tenant_id", profile.tenant_id);
     if (unitErr) throw new Error(unitErr.message);
+  }
+
+  // Auto-record move-in payments. Skip for drafts/sent — those haven't been
+  // signed yet so the tenant hasn't paid.
+  if (LIVE_STATUSES.has(contractStatus)) {
+    await ensureMoveInPayments(supabase, {
+      tenantId: profile.tenant_id,
+      contractId: data.id,
+      unitId: payload.unit_id,
+      paidAtIso: `${payload.start_date}T12:00:00Z`,
+      payments: moveInPayments({
+        startDate: payload.start_date,
+        rentPcm: payload.rent_pcm,
+        proRataAmount: proRata,
+        prepaidFirstFullMonth: payload.prepaid_first_full_month,
+      }),
+    });
   }
 
   revalidatePath("/contracts");
@@ -135,7 +257,29 @@ export async function updateContract(id: string, values: Partial<ContractFormVal
     .single();
   if (error) throw new Error(error.message);
 
+  // Backfill move-in payments based on the contract's current state. We never
+  // overwrite or delete existing rent_payments rows here — only insert ones
+  // that are missing for periods implied by the current pro-rata / prepaid
+  // flags. This means turning a toggle off does NOT remove a previously
+  // recorded payment (use manual undo for that), but turning one on after the
+  // fact correctly creates the missing row.
+  if (LIVE_STATUSES.has(data.status)) {
+    await ensureMoveInPayments(supabase, {
+      tenantId: profile.tenant_id,
+      contractId: data.id,
+      unitId: data.unit_id,
+      paidAtIso: `${data.start_date}T12:00:00Z`,
+      payments: moveInPayments({
+        startDate: data.start_date,
+        rentPcm: Number(data.rent_pcm),
+        proRataAmount: data.pro_rata_amount == null ? null : Number(data.pro_rata_amount),
+        prepaidFirstFullMonth: !!data.prepaid_first_full_month,
+      }),
+    });
+  }
+
   revalidatePath("/contracts");
+  revalidatePath("/properties");
   return data;
 }
 
@@ -316,6 +460,62 @@ export async function fetchUnitTenantHistory(
     requireUserProfile(),
   ]);
   return { history, canCloseout: isAdminRole(profile.role) };
+}
+
+export type PropertyUnitOption = {
+  unit_id: string;
+  room_number: string | null;
+  unit_type: string;
+  status: string;
+  pm_tenant_id: string | null;
+};
+
+export type PropertyWithUnits = {
+  property_id: string;
+  property_name: string;
+  address_line_1: string | null;
+  units: PropertyUnitOption[];
+};
+
+export async function listPropertiesWithUnits(): Promise<PropertyWithUnits[]> {
+  await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("properties")
+    .select(
+      `id, name, address_line_1,
+       units(id, room_number, unit_type, status, pm_tenant_id)`
+    )
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((p) => {
+    const units = ((p.units ?? []) as Array<{
+      id: string;
+      room_number: string | null;
+      unit_type: string;
+      status: string;
+      pm_tenant_id: string | null;
+    }>).map((u) => ({
+      unit_id: u.id,
+      room_number: u.room_number,
+      unit_type: u.unit_type,
+      status: u.status,
+      pm_tenant_id: u.pm_tenant_id,
+    }));
+    units.sort((a, b) => {
+      const aLabel = a.room_number ?? a.unit_type;
+      const bLabel = b.room_number ?? b.unit_type;
+      return aLabel.localeCompare(bLabel, undefined, { numeric: true });
+    });
+    return {
+      property_id: p.id,
+      property_name: p.name,
+      address_line_1: p.address_line_1 ?? null,
+      units,
+    };
+  });
 }
 
 export async function deleteContract(id: string) {

@@ -141,6 +141,7 @@ export type Unit = {
     deposit: number | null;
     pm_tenant_id: string | null;
     pro_rata_amount: number | null;
+    prepaid_first_full_month: boolean;
   } | null;
   recent_rent_payments?: UnitRentPayment[];
 };

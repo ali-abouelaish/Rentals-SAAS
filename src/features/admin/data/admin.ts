@@ -110,7 +110,7 @@ export async function getTenants(params?: {
 
   let query = admin
     .from("tenants")
-    .select("id, name, slug, status, created_at", { count: "exact" })
+    .select("id, name, slug, status, created_at, contact_email", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -139,7 +139,7 @@ export async function getTenantDetails(tenantId: string): Promise<TenantDetails 
 
   const { data: tenant, error } = await admin
     .from("tenants")
-    .select("id, name, slug, status, created_at")
+    .select("id, name, slug, status, created_at, contact_email")
     .eq("id", tenantId)
     .single();
   if (error) return null;

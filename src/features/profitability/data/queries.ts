@@ -433,12 +433,159 @@ export async function getPropertyMonthlyTrend(
 }
 
 /** Build the portfolio line graph data for the past N months.
- * TODO: aggregate per-portfolio net profit by month from property_costs +
- * property_contracts. Currently returns an empty series until that aggregation
- * is implemented. */
-export async function getPortfolioGraphData(_months = 12): Promise<PortfolioMonthPoint[]> {
-  void _months;
-  return [];
+ *
+ * Approximations (mirror getPropertyMonthlyTrend so the per-property and
+ * per-portfolio views stay consistent):
+ *   - Income is pro-rated daily based on contract start_date / vacate_date overlap.
+ *   - Owner rent is added every month (no historical activation date tracked).
+ *   - Recurring costs are assumed active throughout.
+ *   - Amortised costs apply only within their amortisation window.
+ *   - One-off costs apply only in the month of date_incurred.
+ *   - Vacancy loss is not subtracted historically (no historical unit-state log).
+ */
+export async function getPortfolioGraphData(months = 12): Promise<PortfolioMonthPoint[]> {
+  const supabase = createSupabaseServerClient();
+
+  const { data: properties, error: propErr } = await supabase
+    .from("properties")
+    .select("id, monthly_rent_owed, payment_schedule, portfolios(id, name, color)");
+  if (propErr) throw propErr;
+  if (!properties?.length) return [];
+
+  const { data: units, error: unitErr } = await supabase
+    .from("units")
+    .select("id, property_id");
+  if (unitErr) throw unitErr;
+
+  const unitIds = (units ?? []).map((u) => u.id);
+  const contractsRes = unitIds.length
+    ? await supabase
+        .from("property_contracts")
+        .select("unit_id, rent_pcm, status, start_date, vacate_date")
+        .in("unit_id", unitIds)
+        .in("status", ["active", "signed", "notice_given", "terminated"])
+    : { data: [] as Array<{ unit_id: string; rent_pcm: number; status: string; start_date: string; vacate_date: string | null }>, error: null };
+  if (contractsRes.error) throw contractsRes.error;
+  const contracts = contractsRes.data ?? [];
+
+  const { data: costsList, error: costErr } = await supabase
+    .from("property_costs")
+    .select("*");
+  if (costErr) throw costErr;
+
+  // Lookups
+  const unitToProperty = new Map<string, string>();
+  for (const u of units ?? []) unitToProperty.set(u.id, u.property_id);
+
+  const propertyToPortfolio = new Map<string, string>();
+  const portfolioNames = new Set<string>();
+  for (const p of properties) {
+    const portfolio = Array.isArray(p.portfolios) ? p.portfolios[0] : p.portfolios;
+    const name = (portfolio as { name?: string } | null)?.name ?? "Unknown";
+    propertyToPortfolio.set(p.id, name);
+    portfolioNames.add(name);
+  }
+
+  const scheduleDivisor: Record<"monthly" | "quarterly" | "biannual" | "annual", number> = {
+    monthly: 1,
+    quarterly: 3,
+    biannual: 6,
+    annual: 12,
+  };
+  const ownerRentByProperty = new Map<string, number>();
+  for (const p of properties) {
+    const divisor = p.payment_schedule
+      ? scheduleDivisor[p.payment_schedule as keyof typeof scheduleDivisor] ?? 1
+      : 1;
+    ownerRentByProperty.set(
+      p.id,
+      Math.round((Number(p.monthly_rent_owed ?? 0) * 100) / divisor)
+    );
+  }
+
+  const costsByProperty = new Map<string, PropertyCost[]>();
+  for (const c of (costsList ?? []) as PropertyCost[]) {
+    if (!costsByProperty.has(c.property_id)) costsByProperty.set(c.property_id, []);
+    costsByProperty.get(c.property_id)!.push(c);
+  }
+
+  const result: PortfolioMonthPoint[] = [];
+  const now = new Date();
+
+  for (let i = months - 1; i >= 0; i--) {
+    const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+    const daysInMonth = monthEnd.getDate();
+    const msStr = monthStart.toISOString().split("T")[0];
+    const meStr = monthEnd.toISOString().split("T")[0];
+
+    const incomeByPortfolio = new Map<string, number>();
+    const costsByPortfolio = new Map<string, number>();
+    for (const name of portfolioNames) {
+      incomeByPortfolio.set(name, 0);
+      costsByPortfolio.set(name, 0);
+    }
+
+    // Income (pence) — pro-rated by overlap days
+    for (const c of contracts) {
+      const propertyId = unitToProperty.get(c.unit_id);
+      if (!propertyId) continue;
+      const portfolioName = propertyToPortfolio.get(propertyId);
+      if (!portfolioName) continue;
+
+      const cStart = c.start_date;
+      const cEnd = c.vacate_date ?? meStr;
+      if (cStart > meStr || cEnd < msStr) continue;
+      const overlapStart = cStart > msStr ? cStart : msStr;
+      const overlapEnd = cEnd < meStr ? cEnd : meStr;
+      const daysActive =
+        Math.floor(
+          (new Date(overlapEnd).getTime() - new Date(overlapStart).getTime()) / 86400000
+        ) + 1;
+      const incomePence = Math.round(((c.rent_pcm ?? 0) * 100 * daysActive) / daysInMonth);
+      incomeByPortfolio.set(portfolioName, (incomeByPortfolio.get(portfolioName) ?? 0) + incomePence);
+    }
+
+    // Costs (pence) — owner rent + property_costs
+    for (const p of properties) {
+      const portfolioName = propertyToPortfolio.get(p.id);
+      if (!portfolioName) continue;
+
+      let propCostPence = ownerRentByProperty.get(p.id) ?? 0;
+      const propCosts = costsByProperty.get(p.id) ?? [];
+      for (const c of propCosts) {
+        if (c.cost_mode === "recurring") {
+          propCostPence += c.amount;
+        } else if (c.cost_mode === "amortised") {
+          if (!c.amortise_months || !c.amortise_start_date) continue;
+          const aStart = new Date(c.amortise_start_date);
+          const aEnd = new Date(aStart);
+          aEnd.setMonth(aEnd.getMonth() + c.amortise_months);
+          if (monthStart >= aStart && monthStart < aEnd) {
+            propCostPence += Math.round(c.amount / c.amortise_months);
+          }
+        } else if (c.date_incurred >= msStr && c.date_incurred <= meStr) {
+          propCostPence += c.amount;
+        }
+      }
+      costsByPortfolio.set(portfolioName, (costsByPortfolio.get(portfolioName) ?? 0) + propCostPence);
+    }
+
+    const monthLabel = monthStart.toLocaleDateString("en-GB", {
+      month: "short",
+      year: "2-digit",
+    });
+
+    const point: PortfolioMonthPoint = { month: monthLabel };
+    for (const name of portfolioNames) {
+      const income = incomeByPortfolio.get(name) ?? 0;
+      const costs = costsByPortfolio.get(name) ?? 0;
+      point[name] = Math.round((income - costs) / 100); // £
+    }
+    result.push(point);
+  }
+
+  return result;
 }
 
 /** Dashboard aggregate data. */

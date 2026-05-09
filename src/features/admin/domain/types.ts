@@ -14,6 +14,7 @@ export type TenantListItem = {
   slug: string;
   status: string;
   created_at: string;
+  contact_email: string | null;
 };
 
 export type TenantDetails = TenantListItem & {

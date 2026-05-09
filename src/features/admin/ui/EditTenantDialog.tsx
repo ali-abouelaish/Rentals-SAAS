@@ -27,24 +27,28 @@ function toSlug(value: string) {
 export function EditTenantDialog({
   tenantId,
   initialName,
-  initialSlug
+  initialSlug,
+  initialContactEmail
 }: {
   tenantId: string;
   initialName: string;
   initialSlug: string;
+  initialContactEmail: string | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(initialName);
   const [slug, setSlug] = useState(initialSlug);
+  const [contactEmail, setContactEmail] = useState(initialContactEmail ?? "");
 
   const onSave = () => {
     startTransition(async () => {
       const result = await updateTenantAction({
         tenantId,
         name,
-        slug
+        slug,
+        contactEmail: contactEmail.trim()
       });
       if (!result.ok) {
         toast.error("Unable to update tenant", {
@@ -90,7 +94,22 @@ export function EditTenantDialog({
               disabled={isPending}
             />
           </div>
-          <Button onClick={onSave} disabled={isPending || !name.trim() || !slug.trim()} className="w-full">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Contact email</label>
+            <Input
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="agency@example.com"
+              disabled={isPending}
+            />
+            <p className="text-xs text-foreground-muted">Used for system update notifications.</p>
+          </div>
+          <Button
+            onClick={onSave}
+            disabled={isPending || !name.trim() || !slug.trim() || !contactEmail.trim()}
+            className="w-full"
+          >
             Save changes
           </Button>
         </div>
