@@ -95,7 +95,7 @@ export async function notifyAgencyOfNewRental(rentalId: string): Promise<void> {
     const admin = createSupabaseAdminClient();
     const { data: rental } = await admin
       .from("rental_codes")
-      .select("id, tenant_id, code, property_address, licensor_name, consultation_fee_amount, payment_method, client_snapshot")
+      .select("id, tenant_id, code, consultation_fee_amount, payment_method, client_snapshot, assisted_by_agent_id")
       .eq("id", rentalId)
       .maybeSingle();
     if (!rental) return;
@@ -103,11 +103,30 @@ export async function notifyAgencyOfNewRental(rentalId: string): Promise<void> {
     const snapshot = (rental.client_snapshot ?? {}) as Record<string, unknown>;
     const clientName = (snapshot.full_name as string | undefined) ?? "—";
 
+    const [{ data: assistedAgent }, { data: marketingAgents }] = await Promise.all([
+      admin
+        .from("user_profiles")
+        .select("display_name")
+        .eq("id", rental.assisted_by_agent_id)
+        .maybeSingle(),
+      admin
+        .from("rental_marketing_agents")
+        .select("user_profiles(display_name)")
+        .eq("rental_id", rental.id),
+    ]);
+
+    const marketingNames = (marketingAgents ?? [])
+      .map((row) => {
+        const up = (row as { user_profiles?: { display_name?: string } | { display_name?: string }[] | null }).user_profiles;
+        return Array.isArray(up) ? up[0]?.display_name : up?.display_name;
+      })
+      .filter((n): n is string => Boolean(n));
+
     const rows: SummaryRow[] = [
       ["Rental code", rental.code ?? "—"],
       ["Client", clientName],
-      ["Property", rental.property_address ?? "—"],
-      ["Licensor", rental.licensor_name ?? "—"],
+      ["Agent assisted", assistedAgent?.display_name ?? "—"],
+      ["Marketing agent", marketingNames.length ? marketingNames.join(", ") : "—"],
       ["Consultation fee", fmtMoney(rental.consultation_fee_amount)],
       ["Payment method", String(rental.payment_method ?? "—")],
     ];
@@ -128,7 +147,7 @@ export async function notifyAgencyOfNewBonus(bonusId: string): Promise<void> {
     const admin = createSupabaseAdminClient();
     const { data: bonus } = await admin
       .from("bonuses")
-      .select("id, tenant_id, code, client_name, property_address, amount_owed, bonus_date, landlords(name)")
+      .select("id, tenant_id, code, client_name, property_address, amount_owed, bonus_date, agent_id, landlords(name)")
       .eq("id", bonusId)
       .maybeSingle();
     if (!bonus) return;
@@ -136,9 +155,16 @@ export async function notifyAgencyOfNewBonus(bonusId: string): Promise<void> {
     const landlord = bonus.landlords as { name?: string } | { name?: string }[] | null;
     const landlordName = Array.isArray(landlord) ? landlord[0]?.name : landlord?.name;
 
+    const { data: agent } = await admin
+      .from("user_profiles")
+      .select("display_name")
+      .eq("id", bonus.agent_id)
+      .maybeSingle();
+
     const rows: SummaryRow[] = [
       ["Bonus code", bonus.code ?? "—"],
       ["Landlord", landlordName ?? "—"],
+      ["Agent", agent?.display_name ?? "—"],
       ["Client", bonus.client_name ?? "—"],
       ["Property", bonus.property_address ?? "—"],
       ["Amount", fmtMoney(bonus.amount_owed)],
@@ -161,7 +187,7 @@ export async function notifyAgencyOfNewInvoice(invoiceId: string): Promise<void>
     const admin = createSupabaseAdminClient();
     const { data: invoice } = await admin
       .from("invoices")
-      .select("id, tenant_id, invoice_number, issue_date, due_date, total, balance_due, landlords(name)")
+      .select("id, tenant_id, invoice_number, issue_date, due_date, total, balance_due, created_by_user_id, landlords(name)")
       .eq("id", invoiceId)
       .maybeSingle();
     if (!invoice) return;
@@ -169,9 +195,16 @@ export async function notifyAgencyOfNewInvoice(invoiceId: string): Promise<void>
     const landlord = invoice.landlords as { name?: string } | { name?: string }[] | null;
     const landlordName = Array.isArray(landlord) ? landlord[0]?.name : landlord?.name;
 
+    const { data: agent } = await admin
+      .from("user_profiles")
+      .select("display_name")
+      .eq("id", invoice.created_by_user_id)
+      .maybeSingle();
+
     const rows: SummaryRow[] = [
       ["Invoice number", invoice.invoice_number ?? "—"],
       ["Landlord", landlordName ?? "—"],
+      ["Agent", agent?.display_name ?? "—"],
       ["Issue date", fmtDate(invoice.issue_date)],
       ["Due date", fmtDate(invoice.due_date)],
       ["Total", fmtMoney(invoice.total)],

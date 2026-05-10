@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { BackButton } from "@/components/shared/BackButton";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatDate } from "@/lib/utils/formatters";
@@ -83,6 +84,7 @@ export default async function ClientDetailPage({
         subtitle={client.email ?? client.phone ?? null}
         href={`/clients/${client.id}`}
       />
+      <BackButton fallbackHref="/clients" label="Back to clients" />
       <PageHeader title={client.full_name} subtitle="Client profile overview" />
 
       <ClientDetailsCard
