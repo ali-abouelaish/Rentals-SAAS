@@ -7,6 +7,9 @@ export type EarningsStats = {
   avgPerAgent: number;
   topAgentName?: string | null;
   topAgentEarnings?: number | null;
+  totalCash: number;
+  totalCard: number;
+  totalTransfer: number;
 };
 
 export type EarningsTrendPoint = {

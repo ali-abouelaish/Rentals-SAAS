@@ -133,7 +133,7 @@ export default async function RentalsPage({
 
         <div className="flex items-center gap-3 mb-4">
           <LiveSearchInput
-            placeholder="Code, client name..."
+            placeholder="Code, client name, agent name..."
             initialQuery={searchParams?.q ?? ""}
             preserveStatus={activeStatus !== "all" ? activeStatus : undefined}
             preserveAgent={activeAgent !== "all" ? activeAgent : undefined}

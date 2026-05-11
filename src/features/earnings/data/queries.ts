@@ -97,13 +97,26 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
   const totalTransactions = (rentals ?? []).length;
   const avgPerAgent = totalAgents && totalAgents > 0 ? totalEarnings / totalAgents : 0;
 
+  let totalCash = 0;
+  let totalCard = 0;
+  let totalTransfer = 0;
+  for (const r of rentals ?? []) {
+    const amt = Number(r.consultation_fee_amount ?? 0);
+    if (r.payment_method === "cash") totalCash += amt;
+    else if (r.payment_method === "card") totalCard += amt;
+    else if (r.payment_method === "transfer") totalTransfer += amt;
+  }
+
   return {
     totalAgents: totalAgents ?? 0,
     totalEarnings,
     totalTransactions,
     totalRentalsClosed: totalTransactions,
     totalRentalsPending: totalRentalsPending ?? 0,
-    avgPerAgent
+    avgPerAgent,
+    totalCash: Math.round(totalCash * 100) / 100,
+    totalCard: Math.round(totalCard * 100) / 100,
+    totalTransfer: Math.round(totalTransfer * 100) / 100
   };
 }
 
@@ -167,6 +180,9 @@ export async function getEarningsStatsForAgent(
 
   let totalEarnings = 0;
   let rentalsCount = 0;
+  let totalCash = 0;
+  let totalCard = 0;
+  let totalTransfer = 0;
 
   for (const rental of rentals ?? []) {
     const hasMarketing = rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
@@ -179,14 +195,24 @@ export async function getEarningsStatsForAgent(
     const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
     const isMarketingAgent = agentRentalIds.has(rental.id) || rental.marketing_agent_id === agentId;
 
+    let involved = false;
     if (rental.assisted_by_agent_id === agentId) {
       rentalsCount++;
+      involved = true;
       const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
       const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
       totalEarnings += Math.round((gross - totalMktFee) * 100) / 100;
     } else if (isMarketingAgent) {
       rentalsCount++;
+      involved = true;
       totalEarnings += splitFee;
+    }
+
+    if (involved) {
+      const amt = Number((rental as any).consultation_fee_amount ?? 0);
+      if (rental.payment_method === "cash") totalCash += amt;
+      else if (rental.payment_method === "card") totalCard += amt;
+      else if (rental.payment_method === "transfer") totalTransfer += amt;
     }
   }
 
@@ -195,7 +221,10 @@ export async function getEarningsStatsForAgent(
     totalEarnings,
     totalTransactions: rentalsCount,
     totalRentalsPending: totalRentalsPending ?? 0,
-    avgPerAgent: totalEarnings
+    avgPerAgent: totalEarnings,
+    totalCash: Math.round(totalCash * 100) / 100,
+    totalCard: Math.round(totalCard * 100) / 100,
+    totalTransfer: Math.round(totalTransfer * 100) / 100
   };
 }
 
@@ -517,7 +546,8 @@ async function buildLeaderboard(
   return limit ? sorted.slice(0, limit) : sorted;
 }
 
-/** Transactions (closed rentals) in range for CSV export and agent profile */
+/** Transactions in range for CSV export and agent profile.
+ *  Includes pending rentals so they are visible alongside approved/paid. */
 export async function getTransactions(
   filters: EarningsFilterValues,
   options?: { agentId?: string }
@@ -541,7 +571,7 @@ export async function getTransactions(
     .from("rental_codes")
     .select("id, code, status, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
     .eq("tenant_id", profile.tenant_id)
-    .in("status", ["approved", "paid"])
+    .in("status", ["pending", "approved", "paid"])
     .gte("date", fromDate.toISOString())
     .lte("date", endOfDay(filters.to))
     .order("date", { ascending: false });

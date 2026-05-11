@@ -29,6 +29,9 @@ import {
   Trophy,
   Award,
   Clock,
+  Banknote,
+  CreditCard,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -85,11 +88,38 @@ export default async function EarningsPage({
       leaderboard.length > 0;
     const topAgent = leaderboard[0];
 
+    const fmt = (n: number) =>
+      `£${(n ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`;
+
+    const methodTiles = [
+      {
+        label: "Total Cash",
+        value: fmt(stats.totalCash ?? 0),
+        icon: Banknote,
+        color: "text-emerald-600",
+        bg: "bg-emerald-50"
+      },
+      {
+        label: "Total Card",
+        value: fmt(stats.totalCard ?? 0),
+        icon: CreditCard,
+        color: "text-blue-600",
+        bg: "bg-blue-50"
+      },
+      {
+        label: "Total Transfer",
+        value: fmt(stats.totalTransfer ?? 0),
+        icon: ArrowLeftRight,
+        color: "text-violet-600",
+        bg: "bg-violet-50"
+      }
+    ];
+
     const statTiles = isAdmin
       ? [
           {
             label: "Total Agency Earnings",
-            value: `£${(stats.totalEarnings ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`,
+            value: fmt(stats.totalEarnings ?? 0),
             icon: TrendingUp,
             color: "text-emerald-600",
             bg: "bg-emerald-50"
@@ -118,7 +148,7 @@ export default async function EarningsPage({
           {
             label: "Top Agent",
             value: topAgent
-              ? `${topAgent.agent_name} · £${(topAgent.combined_earnings ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`
+              ? `${topAgent.agent_name} · ${fmt(topAgent.combined_earnings ?? 0)}`
               : "—",
             icon: Award,
             color: "text-amber-600",
@@ -126,16 +156,17 @@ export default async function EarningsPage({
           },
           {
             label: "Avg Per Agent",
-            value: `£${(stats.avgPerAgent ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`,
+            value: fmt(stats.avgPerAgent ?? 0),
             icon: Calculator,
             color: "text-slate-600",
             bg: "bg-slate-50"
-          }
+          },
+          ...methodTiles
         ]
       : [
           {
             label: "Total Earnings",
-            value: `£${(stats.totalEarnings ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`,
+            value: fmt(stats.totalEarnings ?? 0),
             icon: TrendingUp,
             color: "text-emerald-600",
             bg: "bg-emerald-50"
@@ -156,11 +187,12 @@ export default async function EarningsPage({
           },
           {
             label: "Avg Per Agent",
-            value: `£${(stats.avgPerAgent ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`,
+            value: fmt(stats.avgPerAgent ?? 0),
             icon: Calculator,
             color: "text-amber-600",
             bg: "bg-amber-50"
-          }
+          },
+          ...methodTiles
         ];
 
     return (

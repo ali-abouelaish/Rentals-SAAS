@@ -31,7 +31,21 @@ export async function getRentalCodes({
     .order("created_at", { ascending: false });
 
   if (search) {
-    query = query.or(`code.ilike.%${search}%,client_snapshot->>full_name.ilike.%${search}%`);
+    const { data: matchedAgents } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .ilike("display_name", `%${search}%`);
+    const agentIds = (matchedAgents ?? []).map((a) => a.id);
+
+    const orParts = [
+      `code.ilike.%${search}%`,
+      `client_snapshot->>full_name.ilike.%${search}%`,
+    ];
+    if (agentIds.length > 0) {
+      orParts.push(`assisted_by_agent_id.in.(${agentIds.join(",")})`);
+      orParts.push(`marketing_agent_id.in.(${agentIds.join(",")})`);
+    }
+    query = query.or(orParts.join(","));
   }
   if (status && status !== "all") {
     query = query.eq("status", status);
