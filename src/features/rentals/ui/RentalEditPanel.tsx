@@ -24,6 +24,7 @@ type RentalEditPanelProps = {
   marketingFeeDefault: number;
   commissionPercent: number;
   agents: AgentOption[];
+  rentalDate: string;
 };
 
 export function RentalEditPanel({
@@ -35,6 +36,7 @@ export function RentalEditPanel({
   marketingFeeDefault,
   commissionPercent,
   agents,
+  rentalDate,
 }: RentalEditPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -109,6 +111,14 @@ export function RentalEditPanel({
           <input type="hidden" name="client_id" value={clientId} />
 
           <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-xs text-foreground-secondary">Rental date</label>
+              <Input
+                name="date"
+                type="date"
+                defaultValue={rentalDate ? new Date(rentalDate).toISOString().slice(0, 10) : ""}
+              />
+            </div>
             <div className="space-y-1">
               <label className="text-xs text-foreground-secondary">Consultation fee</label>
               <Input

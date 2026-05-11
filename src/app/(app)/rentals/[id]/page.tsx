@@ -267,6 +267,7 @@ export default async function RentalDetailPage({
               marketingFeeDefault={marketingAgent?.marketing_fee ?? 0}
               commissionPercent={assistedAgent?.commission_percent ?? 0}
               agents={agents ?? []}
+              rentalDate={rental.date}
             />
           </CardContent>
         </Card>

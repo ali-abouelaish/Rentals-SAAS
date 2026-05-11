@@ -33,6 +33,7 @@ export function RentalCodeForm({
   const [marketingAgentIds, setMarketingAgentIds] = useState<string[]>([""]);
   const [fee, setFee] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const hasMarketingAgent = marketingAgentIds.some((id) => id !== "");
 
@@ -205,6 +206,17 @@ export function RentalCodeForm({
             />
           </div>
         )}
+        <div className="md:col-span-2 space-y-1">
+          <label className="text-xs text-foreground-secondary mb-1 block">
+            Rental date
+          </label>
+          <Input
+            name="date"
+            type="date"
+            defaultValue={todayIso}
+            required
+          />
+        </div>
         <Input
           name="consultation_fee_amount"
           placeholder="Consultation fee"

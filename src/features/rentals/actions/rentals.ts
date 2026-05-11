@@ -109,6 +109,13 @@ export async function createRentalCodeWithDocuments(formData: FormData): Promise
     const licensorName = String(formData.get("licensor_name") ?? "");
     const marketingAgentIdList = (formData.getAll("marketing_agent_id_list") as string[]).filter(Boolean);
     const assistedByOverride = String(formData.get("assisted_by_agent_id") ?? "");
+    const dateRaw = formData.get("date");
+    let rentalDateIso = new Date().toISOString();
+    if (typeof dateRaw === "string" && dateRaw.length > 0) {
+      const d = new Date(dateRaw);
+      if (Number.isNaN(d.getTime())) return { ok: false, error: "Invalid rental date." };
+      rentalDateIso = d.toISOString();
+    }
 
     // Extract files
     const sourcingAgreementFiles = formData.getAll("sourcing_agreement") as File[];
@@ -170,7 +177,7 @@ export async function createRentalCodeWithDocuments(formData: FormData): Promise
       .insert({
         tenant_id: profile.tenant_id,
         code: codeValue,
-        date: new Date().toISOString(),
+        date: rentalDateIso,
         consultation_fee_amount: payload.consultation_fee_amount,
         rental_amount_gbp: payload.consultation_fee_amount,
         payment_method: payload.payment_method,
@@ -325,6 +332,14 @@ export async function updateRentalCode(formData: FormData): Promise<{ ok: boolea
     const propertyAddressRaw = formData.get("property_address");
     const licensorNameRaw = formData.get("licensor_name");
 
+    const dateRaw = formData.get("date");
+    let parsedDateIso: string | null = null;
+    if (typeof dateRaw === "string" && dateRaw.length > 0) {
+      const d = new Date(dateRaw);
+      if (!Number.isNaN(d.getTime())) parsedDateIso = d.toISOString();
+      else return { ok: false, error: "Invalid rental date." };
+    }
+
     const resolvedMarketingAgentIds = [...new Set(marketingAgentIdList)];
     const marketingAgentId = resolvedMarketingAgentIds[0] ?? null;
 
@@ -343,6 +358,7 @@ export async function updateRentalCode(formData: FormData): Promise<{ ok: boolea
         payment_method: paymentMethod,
         ...(propertyAddressRaw !== null ? { property_address: String(propertyAddressRaw) } : {}),
         ...(licensorNameRaw !== null ? { licensor_name: String(licensorNameRaw) } : {}),
+        ...(parsedDateIso ? { date: parsedDateIso } : {}),
         marketing_agent_id: marketingAgentId,
         ...(hasValidOverride
           ? {
