@@ -42,6 +42,23 @@ export function AgentTransactionsTable({
     0,
   );
 
+  const sumByMethod = (method: string) =>
+    filtered.reduce(
+      (sum, t) => (t.payment_method === method ? sum + (t.consultation_fee ?? 0) : sum),
+      0,
+    );
+  const sumEarningsByMethod = (method: string) =>
+    filtered.reduce(
+      (sum, t) => (t.payment_method === method ? sum + t.amount : sum),
+      0,
+    );
+  const totalCash = sumByMethod("cash");
+  const totalCard = sumByMethod("card");
+  const totalTransfer = sumByMethod("transfer");
+  const commissionCash = sumEarningsByMethod("cash");
+  const commissionCard = sumEarningsByMethod("card");
+  const commissionTransfer = sumEarningsByMethod("transfer");
+
   const applyFilters = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -168,6 +185,30 @@ export function AgentTransactionsTable({
                 </td>
                 <td className="pt-3 pr-4" />
                 <td className="pt-3 pl-4" />
+              </tr>
+              <tr className="text-emerald-600">
+                <td className="pr-4" colSpan={6}>
+                  Total cash
+                </td>
+                <td className="pr-4 text-right tabular-nums">
+                  {formatGBP(totalCash)}
+                </td>
+                <td className="pr-4 text-right tabular-nums">
+                  {formatGBP(commissionCash)}
+                </td>
+                <td className="pl-4" />
+              </tr>
+              <tr className="text-blue-600">
+                <td className="pr-4" colSpan={6}>
+                  Total card + transfer
+                </td>
+                <td className="pr-4 text-right tabular-nums">
+                  {formatGBP(totalCard + totalTransfer)}
+                </td>
+                <td className="pr-4 text-right tabular-nums">
+                  {formatGBP(commissionCard + commissionTransfer)}
+                </td>
+                <td className="pl-4" />
               </tr>
               <tr className="font-semibold">
                 <td className="pr-4 text-foreground-muted" colSpan={7}>
