@@ -1,3 +1,32 @@
+# Harbor Ops scripts
+
+## Deploy
+
+Fast deploy workflow that ships the local `.next` build to the VPS so the VPS does not have to rebuild.
+
+### Usage
+
+```bash
+npm run deploy     # build locally, rsync to VPS, reload PM2
+npm run rollback   # swap the previous build back in and reload PM2
+```
+
+### What each script does
+
+`scripts/deploy.sh` runs `npm run build` locally, backs up the remote `.next` to `.next.prev`, rsyncs `.next/` (minus `cache`), `public/`, `package.json`, `package-lock.json`, and `next.config.mjs` to the VPS, runs `npm ci --omit=dev` only if `package-lock.json` actually changed, then reloads the `harborops` PM2 process. It prints the deployed git SHA on success.
+
+`scripts/rollback.sh` swaps `.next` and `.next.prev` on the VPS so the previous build becomes active, then reloads PM2. It refuses to run if no `.next.prev` exists.
+
+### Notes
+
+- `git push` is a separate step. The deploy script does not push, and pushing does not deploy. Push first if you want the deployed code on the remote branch.
+- The first deploy with this workflow is slower because `.next.prev` does not exist yet and rsync has no prior `.next` on the VPS to delta against; subsequent deploys only ship changed chunks.
+- Native deps (Sharp, etc.) are still installed on the VPS via `npm ci` when `package-lock.json` changes, so macOS-vs-Linux binary mismatches are not an issue.
+- The scripts only need `bash`, `rsync`, and `ssh` locally. SSH key auth must be set up for `root@187.124.112.229`.
+- Make them executable once: `chmod +x scripts/deploy.sh scripts/rollback.sh` (the npm scripts invoke them via `bash` so this is optional).
+
+---
+
 # SpareRoom scraper – profiles from landlord profiles
 
 Profile URLs are loaded from the app’s **landlord profiles** (SpareRoom URL + paying/flag) instead of a Google Sheet.
