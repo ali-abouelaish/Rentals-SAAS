@@ -52,6 +52,21 @@ function getTenantFromHost(host: string | null): string | null {
   return null;
 }
 
+/**
+ * Copy any Set-Cookie entries Supabase wrote on `from` onto `to`. We must do
+ * this on every early return (redirect / rewrite), otherwise refreshed auth
+ * tokens get silently dropped. Because Supabase rotates the refresh token on
+ * every refresh, losing those Set-Cookies invalidates the user's session on
+ * the next request — the symptom users see as "logged in for a moment, then
+ * bounced to /login on the next click".
+ */
+function withAuthCookies(from: NextResponse, to: NextResponse): NextResponse {
+  for (const cookie of from.cookies.getAll()) {
+    to.cookies.set(cookie);
+  }
+  return to;
+}
+
 export async function middleware(request: NextRequest) {
   const host = request.headers.get("host");
   const tenantSlug = getTenantFromHost(host);
@@ -86,7 +101,7 @@ export async function middleware(request: NextRequest) {
         ? "/invite/set-password"
         : "/me");
     callbackUrl.searchParams.set("next", resolvedNext);
-    return NextResponse.redirect(callbackUrl);
+    return withAuthCookies(response, NextResponse.redirect(callbackUrl));
   }
 
   // Validate the tenant subdomain against the DB before letting any request
@@ -99,7 +114,7 @@ export async function middleware(request: NextRequest) {
     if (!resolvedTenantId) {
       const notFoundUrl = request.nextUrl.clone();
       notFoundUrl.pathname = "/tenant-not-found";
-      return NextResponse.rewrite(notFoundUrl, { status: 404 });
+      return withAuthCookies(response, NextResponse.rewrite(notFoundUrl, { status: 404 }));
     }
 
     // If the slug is valid but the signed-in user belongs to a different
@@ -116,7 +131,7 @@ export async function middleware(request: NextRequest) {
           : null;
         if (portal) {
           const target = new URL(`https://${userSlug}.${portal}/dashboard`);
-          return NextResponse.redirect(target);
+          return withAuthCookies(response, NextResponse.redirect(target));
         }
       }
     }
@@ -126,7 +141,7 @@ export async function middleware(request: NextRequest) {
   if (tenantSlug && pathname === "/") {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    return NextResponse.redirect(loginUrl);
+    return withAuthCookies(response, NextResponse.redirect(loginUrl));
   }
 
   const isPublic = PUBLIC_PATHS.some(
@@ -143,7 +158,7 @@ export async function middleware(request: NextRequest) {
   if (!user && !isPublic && !isApiRoute && !isApexLanding) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    return NextResponse.redirect(redirectUrl);
+    return withAuthCookies(response, NextResponse.redirect(redirectUrl));
   }
 
   // Attach tenant slug so server components / API routes can read it via headers().get("x-tenant")
