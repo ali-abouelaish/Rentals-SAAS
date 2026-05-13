@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseMiddlewareClient } from "./lib/supabase/middleware";
+import { getTenantIdBySlug, getUserTenant } from "./lib/tenant-slug-cache";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -20,7 +21,8 @@ const PUBLIC_PATHS = [
   "/s",
   "/api/shares",
   "/apply",
-  "/preferences"
+  "/preferences",
+  "/tenant-not-found"
 ];
 
 function getTenantFromHost(host: string | null): string | null {
@@ -85,6 +87,39 @@ export async function middleware(request: NextRequest) {
         : "/me");
     callbackUrl.searchParams.set("next", resolvedNext);
     return NextResponse.redirect(callbackUrl);
+  }
+
+  // Validate the tenant subdomain against the DB before letting any request
+  // through. Catches typos like "truehlod.harborops.co.uk" — without this the
+  // login page would render, sign-in would succeed, and the user would only
+  // get bounced once a tenant-scoped query failed downstream.
+  // Skip validation for the not-found page itself to avoid an infinite rewrite.
+  if (tenantSlug && pathname !== "/tenant-not-found") {
+    const resolvedTenantId = await getTenantIdBySlug(tenantSlug);
+    if (!resolvedTenantId) {
+      const notFoundUrl = request.nextUrl.clone();
+      notFoundUrl.pathname = "/tenant-not-found";
+      return NextResponse.rewrite(notFoundUrl, { status: 404 });
+    }
+
+    // If the slug is valid but the signed-in user belongs to a different
+    // tenant, send them to their own subdomain rather than letting them browse
+    // someone else's workspace shell (RLS would block reads anyway, but the
+    // dashboard chrome shouldn't render).
+    const sessionUser = session?.user;
+    if (sessionUser && process.env.NODE_ENV !== "development") {
+      const { tenantId: userTenantId, slug: userSlug } = await getUserTenant(sessionUser.id);
+      if (userTenantId && userSlug && userTenantId !== resolvedTenantId) {
+        const portalRaw = process.env.APP_PORTAL_DOMAIN;
+        const portal = portalRaw
+          ? portalRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
+          : null;
+        if (portal) {
+          const target = new URL(`https://${userSlug}.${portal}/dashboard`);
+          return NextResponse.redirect(target);
+        }
+      }
+    }
   }
 
   // On tenant subdomains, the root always redirects to login
