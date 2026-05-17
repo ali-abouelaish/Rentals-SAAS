@@ -114,16 +114,26 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
             <InfoRow label="Deposit" value={`£${contract.deposit.toLocaleString()}`} />
             <InfoRow label="Collection day" value={contract.collection_date ? `${contract.collection_date}${["st","nd","rd"][(contract.collection_date - 1) % 10] ?? "th"} of month` : null} />
             <InfoRow
-              label="First-period pro-rata"
+              label="Move-in payment mode"
+              value={
+                contract.prepaid_first_full_month
+                  ? "First full month at signing (deferred true-up)"
+                  : contract.pro_rata_amount != null
+                    ? "Pro-rata at signing"
+                    : "None"
+              }
+            />
+            <InfoRow
+              label={
+                contract.prepaid_first_full_month
+                  ? "Deferred true-up amount"
+                  : "First-period pro-rata"
+              }
               value={
                 contract.pro_rata_amount != null
                   ? `£${Number(contract.pro_rata_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   : null
               }
-            />
-            <InfoRow
-              label="First full month upfront"
-              value={contract.prepaid_first_full_month ? "Paid in advance" : "No"}
             />
             <InfoRow label="Signing method" value={contract.signing_method ? SIGNING_METHOD_LABELS[contract.signing_method] : null} />
           </div>

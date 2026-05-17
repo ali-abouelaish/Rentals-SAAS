@@ -31,8 +31,23 @@ type MoveInPayment = {
   amount: number;
 };
 
-// Build the payments implied by pro_rata_amount and prepaid_first_full_month
-// for a contract starting on `startDate`. Returns 0–2 rows.
+// Build the single move-in payment implied by the contract's flags. Capped
+// at exactly one row (≤ 1 month's rent) to comply with the 2025 fee rules:
+//
+//   prepaid_first_full_month = true  → Pattern B: £rent_pcm collected at
+//     signing, recorded against the first FULL calendar month after move-in.
+//     The pro_rata_amount on the contract represents the deferred true-up,
+//     paid on the 1st of the next month and recorded manually by the agent.
+//
+//   pro_rata_amount > 0 (and prepaid flag false) → Pattern A: £pro_rata
+//     collected at signing, recorded against the move-in calendar month.
+//
+//   neither → no auto-recorded payment.
+//
+// The two flags are mutually exclusive in the UI; if both somehow end up set
+// (legacy data from the old illegal "+ next month" pattern), Pattern B wins
+// because that's the legally-compliant re-interpretation of "full month at
+// signing" — leaving any old rent_payments rows untouched.
 function moveInPayments({
   startDate,
   rentPcm,
@@ -44,28 +59,28 @@ function moveInPayments({
   proRataAmount: number | null;
   prepaidFirstFullMonth: boolean;
 }): MoveInPayment[] {
-  const out: MoveInPayment[] = [];
   const d = new Date(startDate + "T00:00:00Z");
-  if (Number.isNaN(d.getTime())) return out;
+  if (Number.isNaN(d.getTime())) return [];
 
   const moveYear = d.getUTCFullYear();
   const moveMonth = d.getUTCMonth() + 1;
 
-  if (proRataAmount != null && proRataAmount > 0) {
-    out.push({ periodYear: moveYear, periodMonth: moveMonth, amount: proRataAmount });
-  }
-
   if (prepaidFirstFullMonth && rentPcm > 0) {
-    // Next calendar month after the move-in month.
     const nextDate = new Date(Date.UTC(moveYear, moveMonth, 1));
-    out.push({
-      periodYear: nextDate.getUTCFullYear(),
-      periodMonth: nextDate.getUTCMonth() + 1,
-      amount: rentPcm,
-    });
+    return [
+      {
+        periodYear: nextDate.getUTCFullYear(),
+        periodMonth: nextDate.getUTCMonth() + 1,
+        amount: rentPcm,
+      },
+    ];
   }
 
-  return out;
+  if (proRataAmount != null && proRataAmount > 0) {
+    return [{ periodYear: moveYear, periodMonth: moveMonth, amount: proRataAmount }];
+  }
+
+  return [];
 }
 
 // Insert any move-in payments implied by the contract's current pro-rata /
