@@ -1,6 +1,6 @@
-import "./legal.css";
-import { TocScrollSpy } from "./TocScrollSpy";
-import { PrintButton } from "./PrintButton";
+import "../_legal/legal.css";
+import { TocScrollSpy } from "../_legal/TocScrollSpy";
+import { PrintButton } from "../_legal/PrintButton";
 
 export const metadata = {
   title: "Harbor Ops — Terms & Conditions of Service",
