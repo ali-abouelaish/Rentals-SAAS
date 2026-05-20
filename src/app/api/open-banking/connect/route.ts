@@ -6,7 +6,8 @@ import { startAuth } from "@/lib/enablebanking";
 
 const bodySchema = z.object({
   aspsp_name: z.string().min(1),
-  aspsp_country: z.string().min(2).max(2).default("GB")
+  aspsp_country: z.string().min(2).max(2).default("GB"),
+  portfolio_id: z.string().uuid()
 });
 
 export async function POST(request: NextRequest) {
@@ -15,9 +16,21 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
-  const { aspsp_name, aspsp_country } = parsed.data;
+  const { aspsp_name, aspsp_country, portfolio_id } = parsed.data;
 
   const admin = createSupabaseAdminClient();
+
+  // Verify the portfolio belongs to this tenant before storing it on the
+  // connection — admin client bypasses RLS, so we check explicitly.
+  const { data: portfolio } = await admin
+    .from("portfolios")
+    .select("id, tenant_id")
+    .eq("id", portfolio_id)
+    .maybeSingle();
+  if (!portfolio || portfolio.tenant_id !== profile.tenant_id) {
+    return NextResponse.json({ error: "Portfolio not found" }, { status: 404 });
+  }
+
   // Insert with the user's tenant_id baked in — RLS would also enforce this
   // for the SSR client, but the admin client is what reaches EB; we scope
   // manually to keep the data tenant-isolated.
@@ -25,6 +38,7 @@ export async function POST(request: NextRequest) {
     .from("ob_connections")
     .insert({
       tenant_id: profile.tenant_id,
+      portfolio_id,
       aspsp_name,
       aspsp_country,
       status: "pending"

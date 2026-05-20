@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   const { data: connection } = await admin
     .from("ob_connections")
-    .select("id, tenant_id, status")
+    .select("id, tenant_id, status, portfolio_id")
     .eq("id", parsed.data.connection_id)
     .maybeSingle();
   if (!connection || connection.tenant_id !== profile.tenant_id) {
@@ -63,11 +63,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ inserted: 0, matched: 0, accounts: 0 });
   }
 
-  const { data: contracts } = await admin
+  // Scope the contract pool to the connection's portfolio:
+  // property_contracts.unit_id → units.property_id → properties.portfolio_id
+  let unitIds: string[] | null = null;
+  if (connection.portfolio_id) {
+    const { data: properties } = await admin
+      .from("properties")
+      .select("id")
+      .eq("tenant_id", profile.tenant_id)
+      .eq("portfolio_id", connection.portfolio_id);
+    const propertyIds = (properties ?? []).map((p) => p.id as string);
+    if (propertyIds.length === 0) {
+      unitIds = [];
+    } else {
+      const { data: units } = await admin
+        .from("units")
+        .select("id")
+        .in("property_id", propertyIds);
+      unitIds = (units ?? []).map((u) => u.id as string);
+    }
+  }
+
+  let contractQuery = admin
     .from("property_contracts")
     .select("id, rent_pcm")
     .eq("tenant_id", profile.tenant_id)
     .eq("status", "active");
+  if (unitIds !== null) {
+    if (unitIds.length === 0) {
+      contractQuery = contractQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+    } else {
+      contractQuery = contractQuery.in("unit_id", unitIds);
+    }
+  }
+  const { data: contracts } = await contractQuery;
   const contractRows: ContractRow[] = (contracts ?? []).map((c) => ({
     id: c.id as string,
     rent_pcm: Number(c.rent_pcm ?? 0)

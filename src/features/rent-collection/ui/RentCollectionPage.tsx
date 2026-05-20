@@ -1,4 +1,6 @@
-import { Banknote } from "lucide-react";
+import Link from "next/link";
+import { Banknote, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { RentCollectionList } from "./RentCollectionList";
 import type { RentCollectionRow } from "../data/queries";
 
@@ -41,7 +43,7 @@ export function RentCollectionPage({ rows }: { rows: RentCollectionRow[] }) {
         <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10">
           <Banknote className="h-5 w-5 text-brand" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
             Rent Collection
           </h1>
@@ -49,6 +51,12 @@ export function RentCollectionPage({ rows }: { rows: RentCollectionRow[] }) {
             {rows.length} active tenanc{rows.length === 1 ? "y" : "ies"} · Lifetime arrears across the portfolio.
           </p>
         </div>
+        <Button asChild variant="secondary" size="sm">
+          <Link href="/rent-collection/statements">
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Bank Statements
+          </Link>
+        </Button>
       </div>
 
       {rows.length > 0 && (

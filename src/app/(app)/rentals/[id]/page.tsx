@@ -15,7 +15,10 @@ import { RentalEditPanel } from "@/features/rentals/ui/RentalEditPanel";
 import { RentalDocumentsViewer } from "@/features/rentals/ui/RentalDocumentsViewer";
 import { RentalPayoutSummary } from "@/features/rentals/ui/RentalPayoutSummary";
 import { RentalStatusSelect } from "@/features/rentals/ui/RentalStatusSelect";
+import { MarketingClaimButton } from "@/features/rentals/ui/MarketingClaimButton";
+import { MarketingClaimsList, type MarketingClaimItem } from "@/features/rentals/ui/MarketingClaimsList";
 import { BackButton } from "@/components/shared/BackButton";
+import { isAdminRole } from "@/lib/auth/roles";
 import { PoundSterling } from "lucide-react";
 
 export default async function RentalDetailPage({
@@ -29,7 +32,7 @@ export default async function RentalDetailPage({
   ]);
   const supabase = createSupabaseServerClient();
 
-  const [{ data: documentSets }, { data: assistedAgent }, { data: marketingAgent }, { data: agents }, { data: rentalMarketingAgents }] =
+  const [{ data: documentSets }, { data: assistedAgent }, { data: marketingAgent }, { data: agents }, { data: rentalMarketingAgents }, { data: marketingClaims }] =
     await Promise.all([
       supabase
         .from("document_sets")
@@ -53,7 +56,12 @@ export default async function RentalDetailPage({
       supabase
         .from("rental_marketing_agents")
         .select("agent_id, user_profiles(display_name)")
+        .eq("rental_id", params.id),
+      supabase
+        .from("rental_marketing_claims")
+        .select("id, agent_id, status, note, created_at, reject_reason, user_profiles!rental_marketing_claims_agent_id_fkey(display_name), rental_marketing_claim_proofs(id, file_name, file_path)")
         .eq("rental_id", params.id)
+        .order("created_at", { ascending: false })
     ]);
 
   const allDocumentPaths =
@@ -87,6 +95,55 @@ export default async function RentalDetailPage({
           url: doc.file_path ? signedUrlMap.get(doc.file_path) ?? "" : "",
         })) ?? [],
     })) ?? [];
+
+  const claimProofPaths = (marketingClaims ?? []).flatMap((claim) =>
+    (claim.rental_marketing_claim_proofs ?? [])
+      .map((proof) => proof.file_path as string | null)
+      .filter((path): path is string => Boolean(path))
+  );
+  const claimProofSignedMap = new Map<string, string>();
+  if (claimProofPaths.length > 0) {
+    const { data: signedUrls } = await supabase.storage
+      .from("rental_docs")
+      .createSignedUrls(claimProofPaths, 60 * 60);
+    signedUrls?.forEach((entry, index) => {
+      const path = claimProofPaths[index];
+      if (path && entry?.signedUrl) claimProofSignedMap.set(path, entry.signedUrl);
+    });
+  }
+
+  const marketingClaimItems: MarketingClaimItem[] = (marketingClaims ?? []).map((claim) => {
+    const claimantProfile = claim.user_profiles as { display_name?: string | null } | { display_name?: string | null }[] | null;
+    const claimantName = Array.isArray(claimantProfile)
+      ? claimantProfile[0]?.display_name ?? "Agent"
+      : claimantProfile?.display_name ?? "Agent";
+    return {
+      id: claim.id as string,
+      agent_name: claimantName,
+      status: claim.status as MarketingClaimItem["status"],
+      note: (claim.note as string | null) ?? null,
+      created_at: claim.created_at as string,
+      reject_reason: (claim.reject_reason as string | null) ?? null,
+      proofs: (claim.rental_marketing_claim_proofs ?? []).map((proof) => ({
+        id: proof.id as string,
+        file_name: proof.file_name as string,
+        url: proof.file_path ? claimProofSignedMap.get(proof.file_path as string) ?? "" : "",
+      })),
+    };
+  });
+
+  const roleLower = (profile.role ?? "").toLowerCase();
+  const isAdmin = isAdminRole(roleLower);
+  const isMarketingCapable =
+    roleLower === "agent" || roleLower === "marketing_only" || isAdmin;
+  const hasOwnClaim = (marketingClaims ?? []).some(
+    (claim) => claim.agent_id === profile.id
+  );
+  const canClaimMarketing =
+    isMarketingCapable &&
+    rental.assisted_by_agent_id !== profile.id &&
+    !hasOwnClaim &&
+    rental.status !== "refunded";
 
   // Multi-agent support: get names from junction table
   const rentalMktAgents = rentalMarketingAgents ?? [];
@@ -181,8 +238,11 @@ export default async function RentalDetailPage({
       <BackButton fallbackHref="/rentals" label="Back to rentals" />
       <PageHeader title={`Rental ${rental.code}`} subtitle="Rental code details" />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <StatusBadge status={rental.status} />
+        {canClaimMarketing && (
+          <MarketingClaimButton rentalId={rental.id} rentalCode={rental.code} />
+        )}
         {rental.status === "pending" && profile.role.toLowerCase() === "admin" ? (
           <ConfirmDeleteForm
             action={deleteRentalCode}
@@ -254,8 +314,9 @@ export default async function RentalDetailPage({
         </Card>
       ) : null}
 
-      {(profile.role.toLowerCase() === "admin" ||
-        (rental.assisted_by_agent_id === profile.id && rental.status !== "paid")) && (
+      {profile.role.toLowerCase() !== "marketing_only" &&
+      (profile.role.toLowerCase() === "admin" ||
+        (rental.assisted_by_agent_id === profile.id && rental.status !== "paid")) ? (
         <Card>
           <CardContent className="space-y-3">
             <RentalEditPanel
@@ -271,7 +332,7 @@ export default async function RentalDetailPage({
             />
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {(profile.role.toLowerCase() === "admin" ||
         rental.assisted_by_agent_id === profile.id) &&
@@ -364,6 +425,18 @@ export default async function RentalDetailPage({
           <DocumentUploadForm rentalCodeId={rental.id} />
         </CardContent>
       </Card>
+
+      {marketingClaimItems.length > 0 && (
+        <Card>
+          <CardContent className="space-y-3">
+            <p className="text-sm font-medium text-brand">Marketing claims</p>
+            <MarketingClaimsList
+              claims={marketingClaimItems}
+              canReview={isAdmin || rental.assisted_by_agent_id === profile.id}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

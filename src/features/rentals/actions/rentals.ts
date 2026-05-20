@@ -313,7 +313,11 @@ export async function updateRentalCode(formData: FormData): Promise<{ ok: boolea
       .single();
     if (rentalError) return { ok: false, error: rentalError.message };
 
-    const isAdmin = profile.role.toLowerCase() === "admin";
+    const role = profile.role.toLowerCase();
+    const isAdmin = role === "admin";
+    if (role === "marketing_only") {
+      return { ok: false, error: "Marketing agents cannot edit rentals." };
+    }
     if (!isAdmin && rental.assisted_by_agent_id !== profile.id) {
       return { ok: false, error: "You do not have access to edit this rental." };
     }

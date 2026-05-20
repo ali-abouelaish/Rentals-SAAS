@@ -14,6 +14,13 @@ export type OpenBankingConnection = {
   status: "pending" | "authorized" | "expired";
   valid_until: string | null;
   created_at: string;
+  portfolio_id: string | null;
+};
+
+export type Portfolio = {
+  id: string;
+  name: string;
+  color: string | null;
 };
 
 export type OpenBankingAccount = {
@@ -56,22 +63,31 @@ function formatDate(iso: string | null): string {
 }
 
 export function OpenBankingDemoView({
+  portfolios,
   connections,
   accounts,
   connectedFlag,
   errorFlag
 }: {
+  portfolios: Portfolio[];
   connections: OpenBankingConnection[];
   accounts: OpenBankingAccount[];
   connectedFlag: boolean;
   errorFlag: string | null;
 }) {
+  const [selectedPortfolio, setSelectedPortfolio] = useState<string>("");
   const [banks, setBanks] = useState<Bank[]>([]);
   const [banksLoading, setBanksLoading] = useState(true);
   const [banksError, setBanksError] = useState<string | null>(null);
   const [banksSource, setBanksSource] = useState<string | null>(null);
   const [selectedBank, setSelectedBank] = useState<string>("");
   const [connecting, setConnecting] = useState(false);
+
+  const portfolioById = useMemo(() => {
+    const map = new Map<string, Portfolio>();
+    for (const p of portfolios) map.set(p.id, p);
+    return map;
+  }, [portfolios]);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
@@ -123,7 +139,7 @@ export function OpenBankingDemoView({
   }, [refreshTransactions]);
 
   const handleConnect = async () => {
-    if (!selectedBank) return;
+    if (!selectedBank || !selectedPortfolio) return;
     const bank = banks.find((b) => `${b.name}::${b.country}` === selectedBank);
     if (!bank) return;
     setConnecting(true);
@@ -131,7 +147,11 @@ export function OpenBankingDemoView({
       const res = await fetch("/api/open-banking/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ aspsp_name: bank.name, aspsp_country: bank.country })
+        body: JSON.stringify({
+          aspsp_name: bank.name,
+          aspsp_country: bank.country,
+          portfolio_id: selectedPortfolio
+        })
       });
       const json = await res.json();
       if (res.ok && json.url) {
@@ -205,16 +225,46 @@ export function OpenBankingDemoView({
           <Landmark className="h-4 w-4 text-brand" /> Connect a bank
         </h2>
         <p className="mt-1 text-xs text-foreground-secondary">
-          Sandbox banks only — use Enable Banking&apos;s test credentials when redirected.
+          Pick the portfolio whose rent will be reconciled, then choose a sandbox bank to authorize.
         </p>
 
-        <div className="mt-4 flex items-end gap-3">
-          <div className="flex-1 max-w-md">
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="w-full max-w-xs">
+            <label
+              htmlFor="ob-portfolio-select"
+              className="mb-1.5 block text-xs font-medium text-foreground-muted"
+            >
+              Portfolio
+            </label>
+            <select
+              id="ob-portfolio-select"
+              className="h-9 w-full rounded-lg border border-border/70 bg-surface-card px-3 text-sm text-foreground-secondary shadow-sm disabled:opacity-60"
+              disabled={portfolios.length === 0}
+              value={selectedPortfolio}
+              onChange={(e) => setSelectedPortfolio(e.target.value)}
+            >
+              <option value="">
+                {portfolios.length === 0 ? "No portfolios" : "Select a portfolio"}
+              </option>
+              {portfolios.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {portfolios.length === 0 && (
+              <p className="mt-1 text-xs text-foreground-muted">
+                Create a portfolio under Properties first.
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-[16rem] max-w-md">
             <label
               htmlFor="ob-bank-select"
               className="mb-1.5 block text-xs font-medium text-foreground-muted"
             >
-              UK bank
+              Bank
             </label>
             <select
               id="ob-bank-select"
@@ -256,7 +306,7 @@ export function OpenBankingDemoView({
           </div>
           <Button
             variant="secondary"
-            disabled={!selectedBank || connecting}
+            disabled={!selectedBank || !selectedPortfolio || connecting}
             loading={connecting}
             onClick={handleConnect}
           >
