@@ -1,18 +1,30 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export type AgentStatusFilter = "active" | "disabled" | "all";
+
 export async function getAgents({
   search,
-  role
+  role,
+  status = "active"
 }: {
   search?: string;
   role?: string;
+  status?: AgentStatusFilter;
 } = {}) {
   const supabase = createSupabaseServerClient();
+
+  // Inner join on user_profiles enforces tenant scoping: combined with RLS on user_profiles,
+  // it excludes any agent_profiles row whose user_profiles.tenant_id is a different tenant.
   let query = supabase
     .from("agent_profiles")
-    .select("*, user_profiles(display_name, role)")
-    .eq("is_disabled", false)
+    .select("*, user_profiles!inner(display_name, role)")
     .order("created_at", { ascending: false });
+
+  if (status === "active") {
+    query = query.eq("is_disabled", false);
+  } else if (status === "disabled") {
+    query = query.eq("is_disabled", true);
+  }
 
   if (role && role !== "all") {
     query = query.eq("user_profiles.role", role);

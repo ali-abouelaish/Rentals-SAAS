@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Pencil, Check, AlertTriangle } from "lucide-react";
+import { Pencil, Check, AlertTriangle, RefreshCw } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { DepositBadge } from "./DepositBadge";
 import { GiveNoticeModal } from "./GiveNoticeModal";
 import { ProRataField } from "./ProRataField";
 import { updateContract } from "../actions/contracts";
+import { regenerateContractPdf } from "../templates/actions/generate";
 import { contractSchema, type ContractFormValues } from "../domain/schemas";
 import {
   CONTRACT_STATUS_CONFIG,
@@ -354,6 +355,7 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
 
 function DocumentContent({ contract, isEditing, onSaved }: { contract: PropertyContract; isEditing: boolean; onSaved: (c: PropertyContract) => void }) {
   const [isPending, startTransition] = useTransition();
+  const [isRegenPending, startRegen] = useTransition();
   const { register, handleSubmit } = useForm({
     defaultValues: { document_url: contract.document_url ?? "" },
   });
@@ -366,6 +368,22 @@ function DocumentContent({ contract, isEditing, onSaved }: { contract: PropertyC
         onSaved(updated as unknown as PropertyContract);
       } catch {
         toast.error("Failed to save");
+      }
+    });
+  };
+
+  const canRegenerate =
+    !!contract.template_id &&
+    (contract.status === "draft" || contract.status === "sent");
+
+  const handleRegenerate = () => {
+    startRegen(async () => {
+      try {
+        const { signedUrl } = await regenerateContractPdf(contract.id);
+        toast.success("Contract regenerated");
+        onSaved({ ...contract, document_url: signedUrl, last_generated_at: new Date().toISOString() });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Regenerate failed");
       }
     });
   };
@@ -385,6 +403,24 @@ function DocumentContent({ contract, isEditing, onSaved }: { contract: PropertyC
         </div>
       ) : (
         <p className="text-sm text-foreground-secondary">No document linked yet.</p>
+      )}
+
+      {canRegenerate && (
+        <div className="rounded-lg border border-border bg-surface-inset p-3 space-y-2">
+          <p className="text-xs text-foreground-secondary">
+            This contract was generated from a template. Re-stamp it with the latest template fields and booking data.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRegenerate}
+            loading={isRegenPending}
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1" />
+            Regenerate from template
+          </Button>
+        </div>
       )}
       {isEditing && (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">

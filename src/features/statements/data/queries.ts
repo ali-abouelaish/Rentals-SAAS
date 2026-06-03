@@ -101,6 +101,8 @@ export interface StatementTransaction {
   match_status: "unmatched" | "matched" | "flagged";
   matched_contract_id: string | null;
   matched_tenant_name: string | null;
+  matched_property_address: string | null;
+  matched_expected_pence: number | null;
 }
 
 export async function getUploadTransactions(uploadId: string): Promise<StatementTransaction[]> {
@@ -110,7 +112,8 @@ export async function getUploadTransactions(uploadId: string): Promise<Statement
     .from("bank_transactions")
     .select(
       `id, transaction_date, description, amount_pence, transaction_type, balance_pence, reference,
-       match_status, matched_contract_id, matched_tenant_name`,
+       match_status, matched_contract_id, matched_tenant_name,
+       matched_property_address, matched_expected_pence`,
     )
     .eq("upload_id", uploadId)
     .order("transaction_date", { ascending: false });

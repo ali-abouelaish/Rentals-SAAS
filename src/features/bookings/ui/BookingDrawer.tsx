@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { ArrowRight, Check, ExternalLink } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, FileSignature } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils/cn";
 import { BookingStatusBadge } from "./BookingStatusBadge";
 import { approveBooking, rejectBooking, updateBookingStatus, updateBookingNotes } from "../actions/bookings";
 import type { Booking } from "../domain/types";
+import { CreateContractFromTemplateDialog } from "@/features/contracts/templates/ui/CreateContractFromTemplateDialog";
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -166,6 +167,7 @@ function ActionsContent({
   const [isPending, startTransition] = useTransition();
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const isTerminal = booking.status === "approved" || booking.status === "rejected";
 
@@ -217,6 +219,31 @@ function ActionsContent({
             <p className="text-xs text-red-700 mt-1">Reason: {booking.rejection_reason}</p>
           )}
         </div>
+
+        {booking.status === "approved" && booking.converted_pm_tenant_id && booking.unit_id && (
+          <div className="rounded-lg border border-border bg-surface-card p-4 space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">Generate contract from template</h3>
+            <p className="text-xs text-foreground-secondary">
+              Pick a template and we&apos;ll stamp the booking + property data onto your contract PDF, then attach it to the draft contract for signing.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setTemplateDialogOpen(true)}
+              className="w-full"
+            >
+              <FileSignature size={14} /> Create contract from template
+            </Button>
+          </div>
+        )}
+
+        <CreateContractFromTemplateDialog
+          open={templateDialogOpen}
+          onClose={() => setTemplateDialogOpen(false)}
+          bookingId={booking.id}
+          portfolioId={booking.portfolio_id}
+        />
       </div>
     );
   }

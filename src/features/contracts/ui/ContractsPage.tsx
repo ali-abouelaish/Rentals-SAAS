@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useEffect, useState, useMemo, useTransition } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
@@ -53,6 +54,21 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
   const [createOpen, setCreateOpen] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Deep-link: /contracts?focus={id} opens that contract's drawer (e.g. from the AI assistant).
+  useEffect(() => {
+    const focusId = searchParams.get("focus");
+    if (!focusId) return;
+    if (contracts.some((c) => c.id === focusId)) {
+      setSelectedId(focusId);
+      setDrawerOpen(true);
+      router.replace(pathname, { scroll: false });
+    }
+  }, [searchParams, contracts, router, pathname]);
 
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
