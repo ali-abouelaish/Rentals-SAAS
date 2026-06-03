@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ShieldCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { closeoutSchema, type CloseoutValues } from "../domain/schemas";
@@ -319,6 +320,23 @@ export function CloseoutDialog({
                   placeholder="e.g. £350 cleaning, £200 carpet damage…"
                 />
               </FormField>
+
+              {contract.depositScheme === "mydeposits" && (
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-surface-inset p-3">
+                  <ShieldCheck className="h-4 w-4 text-brand mt-0.5 shrink-0" />
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-foreground-secondary">
+                      This deposit is protected with mydeposits. Recording a return here is for your
+                      records — start the formal release request in Deposit Protection.
+                    </p>
+                    <Button asChild variant="secondary" size="sm">
+                      <Link href="/deposits">
+                        Start release request
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

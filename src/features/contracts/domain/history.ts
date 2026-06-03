@@ -11,6 +11,7 @@ export type TenancyEntry = {
   proRataAmount: number | null;    // pro-rated first period (null = no pro-rata)
   rentFrequency: "monthly";
   depositPence: number | null;     // whole pounds (matches deposit convention)
+  depositScheme: string | null;    // deposit_scheme; drives mydeposits release entry point
   endReason: EndReason | null;
   arrearsAtEndPence: number;       // whole pounds (matches arrears_at_end)
   wouldRelet: boolean | null;

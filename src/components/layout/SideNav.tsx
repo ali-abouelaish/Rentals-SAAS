@@ -36,6 +36,7 @@ import {
   Share2,
   Wallet,
   Key as KeyIcon,
+  ShieldCheck,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -51,6 +52,7 @@ interface SideNavProps {
   branding?: { logoUrl: string | null; brandName: string | null } | null;
   moduleConfig: PublishedModuleConfig;
   inboxPendingCount?: number;
+  entitlements?: string[];
 }
 
 type NavItem = {
@@ -58,6 +60,8 @@ type NavItem = {
   label: string;
   icon: typeof LayoutDashboard;
   allowedRoles?: readonly string[];
+  /** When set, the item only renders if the tenant has this feature entitlement. */
+  entitlement?: string;
 };
 
 const RA_NAV_ITEMS: NavItem[] = [
@@ -96,6 +100,7 @@ const PM_NAV_ITEMS: NavItem[] = [
   { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
   { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlement: "mydeposits" },
   { href: "/settings/billing-info", label: "Settings", icon: Settings, allowedRoles: ADMIN_ROLES },
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
 ];
@@ -117,6 +122,7 @@ const PM_ROUTE_PREFIXES = [
   "/shares",
   "/settings/booking-forms",
   "/settings/bank-details",
+  "/settings/deposits",
 ];
 
 function isPmRoute(pathname: string) {
@@ -126,7 +132,7 @@ function isPmRoute(pathname: string) {
 }
 
 /** Inner component — reads searchParams so must be inside Suspense. */
-function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0 }: SideNavProps) {
+function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, entitlements }: SideNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -220,6 +226,7 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0 }
           : navItems.filter((item) => item.href !== "/admin")
         ).map((item) => {
           if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
+          if (item.entitlement && !(entitlements ?? []).includes(item.entitlement)) return null;
           const active = isActive(item.href);
           // For shared routes (dashboard + settings), carry ?view=pm so the
           // sidebar stays in PM mode for tenants with both modules enabled.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useTransition } from "react";
 import { Pencil, Check, AlertTriangle, RefreshCw } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
@@ -317,6 +318,27 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
             <span className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Status</span>
             <DepositBadge contract={contract} />
           </div>
+          {contract.deposit_scheme === "mydeposits" && (
+            <div className="col-span-2 flex flex-wrap items-center gap-2 pt-1">
+              <SecureDepositWizard
+                contractId={contract.id}
+                depositPounds={contract.deposit}
+                defaultTenant={
+                  contract.pm_tenant
+                    ? {
+                        fullName: contract.pm_tenant.full_name,
+                        email: contract.pm_tenant.email,
+                        phone: contract.pm_tenant.phone,
+                      }
+                    : null
+                }
+                resume={!!contract.deposit_scheme_ref && !contract.deposit_protected_date}
+              />
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/deposits">View status</Link>
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">

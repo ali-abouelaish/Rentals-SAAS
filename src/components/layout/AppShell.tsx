@@ -3,6 +3,7 @@ import { requireUserProfile } from "@/lib/auth/requireRole";
 import { getTenantBrandingForApp, getPublishedModuleConfigForApp } from "@/features/admin/data/admin";
 import { getEntitlements } from "@/lib/entitlements/getEntitlements";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/entitlements/getEntitlements";
 import { AppShellClient } from "./AppShellClient";
 
 export async function AppShell({ children }: { children: ReactNode }) {
@@ -27,6 +28,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   ]);
 
   const inboxPendingCount = inboxCountRes?.count ?? 0;
+  const entitlements = [...entitlementSet];
 
   return (
     <AppShellClient
