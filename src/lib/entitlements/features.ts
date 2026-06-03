@@ -23,6 +23,7 @@ export type FeatureKey =
   | "property_shares"
   | "keys"
   | "rent_collection"
+  | "help_center"
   | "public_api_access"
   | "admin";
 
@@ -51,6 +52,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "property_shares",
   "keys",
   "rent_collection",
+  "help_center",
   "public_api_access",
   "admin",
 ];
@@ -124,6 +126,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   rent_collection: {
     label: "Rent Collection",
     description: "Track rent payments, record collections, and view lifetime arrears across active tenancies."
+  },
+  help_center: {
+    label: "Help Center",
+    description: "Contextual in-app help drawer with per-page onboarding guides."
   },
   public_api_access: {
     label: "Public API",
