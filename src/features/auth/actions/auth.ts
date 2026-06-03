@@ -29,6 +29,17 @@ export async function signInWithEmail(
 
   const userId = data.user?.id;
   if (userId) {
+    const { data: agentProfile } = await supabase
+      .from("agent_profiles")
+      .select("is_disabled")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (agentProfile?.is_disabled) {
+      await supabase.auth.signOut();
+      return { error: "This account has been disabled. Contact your admin." };
+    }
+
     const { data: profile } = await supabase
       .from("user_profiles")
       .select("role, tenant_id")

@@ -2,10 +2,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { PropertyContract, ContractFilters } from "../domain/types";
 
 const SELECT = `*,
-  pm_tenant:pm_tenants(full_name, email, phone),
+  pm_tenant:pm_tenants(id, full_name, email, phone),
   unit:units(
-    room_number, unit_type,
-    property:properties(name, address_line_1, portfolio:portfolios(name, color))
+    id, room_number, unit_type,
+    property:properties(id, name, address_line_1, portfolio:portfolios(id, name, color))
   )`;
 
 export async function getContracts(

@@ -26,6 +26,19 @@ export const requireUserProfile = cache(async () => {
     profile = await ensureTenantSetup(decoded.id, decoded.email);
   }
 
+  // Lock disabled agents out of every protected route. agent_profiles is optional
+  // (e.g. super_admin users have no row) — a missing row is treated as not disabled.
+  const { data: agentProfile } = await supabase
+    .from("agent_profiles")
+    .select("is_disabled")
+    .eq("user_id", decoded.id)
+    .maybeSingle();
+
+  if (agentProfile?.is_disabled) {
+    await supabase.auth.signOut();
+    redirect("/login?disabled=1");
+  }
+
   return profile;
 });
 

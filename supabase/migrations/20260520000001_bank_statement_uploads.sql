@@ -1,15 +1,14 @@
 -- ============================================================
 -- Bank Statement Uploads — schema, indexes, RLS
 -- ============================================================
--- Lets an agency upload a portfolio's bank statement (CSV/PDF),
+-- Lets an agency upload a manager_landlord's bank statement (CSV/PDF),
 -- auto-detects the bank, parses transactions, matches credits to
--- property_contracts, and flags missing rent per landlord.
+-- property_contracts, and flags missing rent per portfolio.
 --
 -- Spec name mapping (external spec → Harbor Ops):
 --   agency_id          → tenant_id
---   landlord_id        → portfolio_id  (the portfolio whose
---                        statement is being uploaded — replaces
---                        the original per-landlord scoping)
+--   landlord_id        → manager_landlord_id  (the client whose
+--                        statement is being uploaded)
 --   contracts          → property_contracts
 --   tenants (renter)   → pm_tenants
 --   property.address   → properties.address_line_1
@@ -19,7 +18,7 @@
 create table if not exists public.bank_statement_uploads (
   id                  uuid primary key default gen_random_uuid(),
   tenant_id           uuid not null references public.tenants(id) on delete cascade,
-  portfolio_id        uuid references public.portfolios(id) on delete set null,
+  manager_landlord_id uuid references public.manager_landlords(id) on delete set null,
   filename            text not null,
   bank_name           text check (bank_name in ('barclays','hsbc','lloyds','natwest','santander','unknown')),
   file_format         text check (file_format in ('csv','pdf')),
@@ -34,8 +33,8 @@ create table if not exists public.bank_statement_uploads (
 
 create index if not exists bank_statement_uploads_tenant_idx
   on public.bank_statement_uploads(tenant_id, uploaded_at desc);
-create index if not exists bank_statement_uploads_portfolio_idx
-  on public.bank_statement_uploads(portfolio_id);
+create index if not exists bank_statement_uploads_landlord_idx
+  on public.bank_statement_uploads(manager_landlord_id);
 
 -- ─── bank_transactions ─────────────────────────────────────
 create table if not exists public.bank_transactions (
@@ -71,7 +70,6 @@ create table if not exists public.rent_payment_flags (
   tenant_id               uuid not null references public.tenants(id) on delete cascade,
   contract_id             uuid not null references public.property_contracts(id) on delete cascade,
   manager_landlord_id     uuid references public.manager_landlords(id) on delete set null,
-  landlord_name           text,
   portfolio_id            uuid references public.portfolios(id) on delete set null,
   portfolio_name          text,
   tenant_name             text,

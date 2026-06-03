@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import { signInWithEmail } from "@/features/auth/actions/auth";
 import { AuthShell, CheckIcon, EyeIcon } from "@/components/auth/AuthShell";
 
@@ -20,6 +21,8 @@ const initialState: { error?: string } = {};
 export default function LoginPage() {
   const [state, formAction] = useFormState(signInWithEmail, initialState);
   const [showPw, setShowPw] = useState(false);
+  const searchParams = useSearchParams();
+  const disabledNotice = searchParams?.get("disabled") === "1";
 
   return (
     <AuthShell
@@ -79,6 +82,9 @@ export default function LoginPage() {
         </label>
 
         {state?.error ? <div className="alert err">{state.error}</div> : null}
+        {!state?.error && disabledNotice ? (
+          <div className="alert err">Your account has been disabled. Contact your admin.</div>
+        ) : null}
 
         <SubmitButton />
       </form>

@@ -26,6 +26,8 @@ interface MatchRow {
   match_status: "matched" | "flagged" | "unmatched";
   matched_contract_id: string | null;
   matched_tenant_name: string | null;
+  matched_property_address: string | null;
+  matched_expected_pence: number | null;
 }
 
 function tokenizeName(name: string): string[] {
@@ -159,7 +161,14 @@ export async function matchCredits(
       .sort((a, b) => b.score - a.score);
 
     if (scored.length === 0 || scored[0].score < 2) {
-      updates.push({ id: credit.id, match_status: "unmatched", matched_contract_id: null, matched_tenant_name: null });
+      updates.push({
+        id: credit.id,
+        match_status: "unmatched",
+        matched_contract_id: null,
+        matched_tenant_name: null,
+        matched_property_address: null,
+        matched_expected_pence: null,
+      });
       unmatched++;
       continue;
     }
@@ -168,7 +177,14 @@ export async function matchCredits(
     const tied = scored.filter((s) => s.score === top.score);
 
     if (tied.length > 1) {
-      updates.push({ id: credit.id, match_status: "flagged", matched_contract_id: null, matched_tenant_name: null });
+      updates.push({
+        id: credit.id,
+        match_status: "flagged",
+        matched_contract_id: null,
+        matched_tenant_name: null,
+        matched_property_address: null,
+        matched_expected_pence: null,
+      });
       flagged++;
     } else {
       updates.push({
@@ -176,6 +192,8 @@ export async function matchCredits(
         match_status: "matched",
         matched_contract_id: top.contract.id,
         matched_tenant_name: top.contract.tenant_name,
+        matched_property_address: top.contract.address || null,
+        matched_expected_pence: Math.round(top.contract.rent_pcm * 100),
       });
       matched++;
     }
@@ -188,6 +206,8 @@ export async function matchCredits(
         match_status: upd.match_status,
         matched_contract_id: upd.matched_contract_id,
         matched_tenant_name: upd.matched_tenant_name,
+        matched_property_address: upd.matched_property_address,
+        matched_expected_pence: upd.matched_expected_pence,
       })
       .eq("id", upd.id);
     if (error) throw new Error(error.message);

@@ -5,6 +5,12 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { assertMonthOpen } from "@/features/finances/lib/assertMonthOpen";
+
+function monthOfIso(dateIso: string): { year: number; month: number } {
+  const d = new Date(dateIso);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
+}
 
 // ──────────────────────────────────────────────────────────
 // Zod Schemas
@@ -44,6 +50,13 @@ export async function createPropertyCost(raw: z.infer<typeof CostSchema>) {
     return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
   }
   const data = parsed.data;
+
+  if (data.cost_mode === "one_off") {
+    const { year, month } = monthOfIso(data.date_incurred);
+    const guard = await assertMonthOpen(year, month);
+    if ("error" in guard) return { error: guard.error };
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase.from("property_costs").insert({
@@ -66,6 +79,7 @@ export async function createPropertyCost(raw: z.infer<typeof CostSchema>) {
 
   revalidatePath("/profitability");
   revalidatePath(`/profitability/${data.property_id}`);
+  revalidatePath("/finances");
   return { success: true };
 }
 
@@ -79,6 +93,13 @@ export async function updatePropertyCost(
     return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
   }
   const data = parsed.data;
+
+  if (data.cost_mode === "one_off") {
+    const { year, month } = monthOfIso(data.date_incurred);
+    const guard = await assertMonthOpen(year, month);
+    if ("error" in guard) return { error: guard.error };
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase
@@ -101,16 +122,31 @@ export async function updatePropertyCost(
 
   revalidatePath("/profitability");
   revalidatePath(`/profitability/${data.property_id}`);
+  revalidatePath("/finances");
   return { success: true };
 }
 
 export async function deletePropertyCost(id: string, propertyId: string) {
   await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
+
+  // Block deleting a one-off cost dated in a closed month so totals stay stable.
+  const { data: existing } = await supabase
+    .from("property_costs")
+    .select("cost_mode, date_incurred")
+    .eq("id", id)
+    .maybeSingle();
+  if (existing && existing.cost_mode === "one_off" && existing.date_incurred) {
+    const { year, month } = monthOfIso(existing.date_incurred);
+    const guard = await assertMonthOpen(year, month);
+    if ("error" in guard) return { error: guard.error };
+  }
+
   const { error } = await supabase.from("property_costs").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/profitability");
   revalidatePath(`/profitability/${propertyId}`);
+  revalidatePath("/finances");
   return { success: true };
 }
 

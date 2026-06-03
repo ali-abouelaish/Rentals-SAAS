@@ -34,6 +34,7 @@ import {
   Layers,
   Search,
   Share2,
+  Wallet,
   Key as KeyIcon,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
@@ -61,7 +62,6 @@ type NavItem = {
 
 const RA_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/inbox", label: "Inbox", icon: Inbox, allowedRoles: ADMIN_ROLES },
   { href: "/me", label: "My Profile", icon: User },
   { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
   { href: "/clients", label: "Clients", icon: Users },
@@ -84,9 +84,12 @@ const PM_NAV_ITEMS: NavItem[] = [
   { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
   { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
   { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
+  { href: "/contracts/templates", label: "Contract Templates", icon: FileText, allowedRoles: ADMIN_ROLES },
   { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
   { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
+  { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
   { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
+  { href: "/assistant", label: "AI Assistant", icon: Sparkles, allowedRoles: ADMIN_ROLES },
   { href: "/keys", label: "Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
   { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
   { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
@@ -105,7 +108,9 @@ const PM_ROUTE_PREFIXES = [
   "/contracts",
   "/profitability",
   "/rent-collection",
+  "/finances",
   "/maintenance",
+  "/assistant",
   "/keys",
   "/acquisition-insights",
   "/marketing",

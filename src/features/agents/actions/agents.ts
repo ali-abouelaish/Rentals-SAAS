@@ -165,6 +165,16 @@ export async function setAgentDisabled(userId: string, disabled: boolean) {
     .eq("tenant_id", profile.tenant_id);
   if (error) throw new Error(error.message);
 
+  // Lock/unlock the Supabase Auth user so refresh tokens and new sign-ins are
+  // blocked at the auth layer. Currently-valid JWTs may still work until expiry,
+  // but requireUserProfile() rejects disabled accounts on every protected route,
+  // so the user can't load anything in the app once disabled.
+  const admin = createSupabaseAdminClient();
+  const { error: banError } = await admin.auth.admin.updateUserById(userId, {
+    ban_duration: disabled ? "876000h" : "none"
+  });
+  if (banError) throw new Error(banError.message);
+
   revalidatePath("/agents");
   revalidatePath(`/agents/${userId}`);
   return { ok: true };
