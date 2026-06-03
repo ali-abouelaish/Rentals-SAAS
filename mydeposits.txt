@@ -1,0 +1,2574 @@
+Introduction
+Welcome to the Total Property API, your gateway to the UK property market’s dedicated home for private rented sector products and services. Total Property is the new, unified platform from the HFIS group, designed to bring all our award-winning brands together to support the entire tenancy lifecycle. This powerful integration simplifies processes for agents, landlords, and developers.
+
+Our Total Property API provides a robust, single point of integration for our services. Phase one successfully launched with our mydeposits custodial deposit protection scheme. Phase two will see the inclusion of our insured-backed scheme, with all our property brands to follow in subsequent updates. This phased rollout ensures a stable and scalable environment.
+
+By integrating with our secure and well-documented API, developers, online platforms, and agents can unlock streamlined operational capabilities. You can efficiently manage property portfolios, safeguard tenancy deposits, and handle the deposit release process through one seamless connection. Explore our sandbox environment to test your integration and rely on our dedicated developer support to guide you through the process, ensuring a swift, secure, and effective connection to our expanding ecosystem.
+
+Requirements
+To use the API requires familiarity with software development and web services. Requests and responses are in JSON format.
+
+Supported Schemes
+The API currently supports the following schemes:
+
+England & Wales Custodial
+Support for the following schemes will be added in a future version of the API:
+
+England & Wales Insurance
+Scotland Custodial
+API Domains
+The correct mydeposits endpoint must be used when issuing REST requests in your application. These endpoints can be found beneath one of the two domains listed below:
+
+api.totalproperty.co.uk/totalproperty
+api.sandbox.totalproperty.co.uk/totalproperty – this is used for verifying operations in a test environment.
+info
+All endpoints require a secure connection using HTTPS.
+
+API Endpoints
+Sandbox API Gateway
+API: https://api.sandbox.totalproperty.co.uk/totalproperty
+Auth API: https://authapi.sandbox.totalproperty.co.uk/totalpropertyauth
+Production API Gateway
+API: https://api.totalproperty.co.uk/totalproperty
+Auth API: https://authapi.totalproperty.co.uk/totalpropertyauth
+Next
+Audit Log
+Requirements
+Supported Schemes
+API Domains
+API Endpoints
+Sandbox API Gateway
+Production API 
+Audit Log
+Get all audit log general activities for the current user
+Audit Log API
+Consumer
+Audit Log API
+Consumer
+Get all general activities
+GET /api/{version}/general-activities
+200 OK - List of audit log entries in response
+Get specific audit log general activity for the current user
+Audit Log API
+Consumer
+Audit Log API
+Consumer
+Get specific activity
+GET /api/{version}/general-activities/{auditEntryId}
+200 OK - Details of audit log entry in response
+Get all access log activities for the current user
+Audit Log API
+Consumer
+Audit Log API
+Consumer
+Get all access log activities
+GET /api/{version}/access-log-activities
+200 OK - List of audit log entries in response
+Get specific access log activity for the current user
+Audit Log API
+Consumer
+Audit Log API
+Consumer
+Get access log activity
+GET /api/{version}/access-log-activities/{auditEntryId}
+200 OK - Details of audit log entry in response
+Additional Details
+Use the following endpoints to get lookups for action types and object types:
+
+GET /api/{version}/lookups/action-types
+GET /api/{version}/lookups/object-types
+
+Authentication
+The Total Property REST API uses the OAuth 2.0 framework to allow users of applications to securely access data without having to reveal username and password credentials to the third-party application.
+
+To authenticate using OAuth, you will need a Consumer Key and Consumer Secret from mydeposits. Please send requests to businessdevelopment@mydeposits.co.uk. With your request, please include the following details:
+
+Company Name
+
+Contact name and email information
+
+Consumer Type (Member of Software Company)
+
+Agent or Landlord ID (If you are a member of Total Property)
+
+Application Name
+
+Sandbox 2FA Authentication
+During 2FA on sandbox, users should always provide passcode '1111' as the OTP whenever prompted.
+
+Login
+Auth API
+Consumer
+Consumer API
+Auth API
+Consumer
+Consumer API
+Email will be sent to user with the auth token within
+the “Log in” link
+https://{siteURL}//login?token={token}&email={email}
+Authorisation token can be extracted from the email link
+opt
+[Login via email]
+Verify an email
+GET /api/v1/ui/login-options
+200 OK - Email info in response
+Verify by chosen login option
+POST /api/v1/ui/request-login-code
+200 OK - Empty body in response
+Email with link containing authorisation token
+Get authorisation token from email link
+Authorisation token
+Check if user is authenticated
+POST /api/v1/ui/userinfo
+200 OK - isAuthenticated in response
+Login via Email or Sms
+POST /api/v1/ui/login
+200 OK - Account data in response
+Request an access token
+POST /connect/token
+200 OK - New access and refresh tokens in response
+Login as a Third-Party Integrator
+Auth API
+Consumer API
+Auth API
+Consumer API
+Generate the 'codeVerifier' parameter. This should be a randomly generated string, e.g. GUID
+After this request, a browser will open, prompting you to sign in.
+After signing in, the browser will redirect to the 'redirect_uri' with added
+'code' query parameter. Subsequently, the following query will be executed:
+The request body must include the following:
+grant_type=authorization_code
+code={code from URL}
+redirect_uri={redirectUri}
+code_verifier={codeVerifier}
+client_id={clientId}
+client_secret={clientSecret}
+and Content-Type will be application/x-www-form-urlencoded
+Authorization request
+GET https://auth.totalproperty.co.uk/connect/authorize
+?client_id={clientId}
+&code_challenge={base64(sha256({codeVerifier}))}
+&code_challenge_method=S256
+&redirect_uri={redirectUri}
+&response_type=code
+200 OK - Empty body in response
+Request an access token
+POST https://auth.totalproperty.co.uk/connect/token
+200 OK - New access and refresh tokens in response
+
+
+Logout
+Auth API
+RealityStone API
+Consumer API
+Auth API
+RealityStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Agent
+Company Landlord
+Landlord
+opt
+[If checkout session exists]
+Delete checkout session
+POST /api/v1/checkout
+200 OK - Empty body in response
+Logout
+POST /api/v1/ui/logout
+200 OK - iframeUrl and postLogoutRedirectUri in response
+Previous
+
+
+Sign up
+Sign up (step 1: common for any account type)
+Auth API
+SpaceStone API
+Consumer
+Consumer API
+Auth API
+SpaceStone API
+Consumer
+Consumer API
+Email will be sent to user with the auth token within
+the “Create Account” link
+https://{siteURL}/continue-sign-up?invitation={token}
+Authorisation token can be extracted from the email link
+Register a new user account
+POST /api/v1/account/register
+200 OK - Empty body in response
+Email with link containing authorisation token
+Get authorisation token from email link
+Authorisation token
+Authorize invitation
+POST /api/v1/account/authorise-invitation
+200 OK - Authorization token in response
+Request a new access token (using authorisation token)
+POST /connect/token
+200 OK - New access and refresh tokens in response
+Sign up a new agent account
+Auth API
+SpaceStone API
+Agent
+Consumer API
+Auth API
+SpaceStone API
+Agent
+Consumer API
+Registration (step 1)
+Verification code will be sent to the phone number
+that was sent in the request
+opt
+[if company registration number was set]
+Verify mobile phone number
+POST /api/v1/phone-verification
+200 OK - Empty body in response
+Verification code
+Verify mobile phone number with verification code
+POST /api/v1/phone-verification/verified
+200 OK - Empty body in response
+Verify company registration number
+POST /api/v1/company/verify-company-registration-number
+200 OK - Empty body in response
+Get the list of honesty questions
+POST /api/v1/lookups/honesty-questions
+200 OK - List of honesty questions
+Register agent
+POST /api/v1/agent
+200 OK - Empty body in response
+Get access token
+POST /connect/token
+200 OK - New access and refresh tokens in response body
+Use the following endpoints to get appropriate lookups:
+
+Space Stone API GET /api/v1/lookups/companies-houses
+Space Stone API /api/v1/lookups/countries
+Space Stone API /api/v1/lookups/addresses
+Space Stone API /api/v1/lookups/countries/{countryId}/regions
+Space Stone API /api/v1/lookups/honesty-questions
+
+
+Sign up a company landlord account
+Auth API
+SpaceStone API
+Company Landlord
+Consumer API
+Auth API
+SpaceStone API
+Company Landlord
+Consumer API
+Registration (step 1)
+Verification code will be sent to the phone number
+that was sent in the request
+opt
+[if company registration number was set]
+Verify mobile phone number
+POST /api/v1/phone-verification
+200 OK - Empty body in response
+Verification code
+Verify mobile phone number with verification code
+POST /api/v1/phone-verification/verified
+200 OK - Empty body in response
+Verify company registration number
+POST /api/v1/company/verify-company-registration-number
+200 OK - Empty body in response
+Register company landlord
+POST /api/v1/corporate-landlord
+200 OK - Empty body in response
+Get access token
+POST /connect/token
+200 OK - New access and refresh tokens in response body
+Use the following endpoints to get appropriate lookups:
+
+Space Stone API GET /api/v1/lookups/companies-houses
+Space Stone API GET /api/v1/lookups/countries
+Space Stone API GET /api/v1/lookups/addresses
+Space Stone API GET /api/v1/lookups/countries/{countryId}/regions
+
+
+Sign up a new landlord account
+Auth API
+SpaceStone API
+Landlord
+Consumer API
+Auth API
+SpaceStone API
+Landlord
+Consumer API
+Registration (step 1)
+Verification code will be sent to the phone number
+that was sent in the request
+Verify mobile phone number
+POST /api/v1/phone-verification
+200 OK - Empty body in response
+Verification code
+Verify mobile phone number with verification code
+POST /api/v1/phone-verification/verified
+200 OK - Empty body in response
+Register landlord
+POST /api/v1/private-landlord
+200 OK - Empty body in response
+Get access token
+POST /connect/token
+200 OK - New access and refresh tokens in response body
+Use the following endpoints to get appropriate lookups:
+
+Space Stone API GET /api/v1/lookups/countries
+Space Stone API GET /api/v1/lookups/addresses
+Space Stone API GET /api/v1/lookups/countries/{countryId}/regions
+
+
+Sign up a new tenant account
+Auth API
+SpaceStone API
+Tenant
+Consumer API
+Auth API
+SpaceStone API
+Tenant
+Consumer API
+Registration (step 1)
+Verification code will be sent to the phone number
+that was sent in the request
+Verify mobile phone number
+POST /api/v1/phone-verification
+200 OK - Empty body in response
+Verification code
+Verify mobile phone number with verification code
+POST /api/v1/phone-verification/verified
+200 OK - Empty body in response
+Register tenant
+POST /api/v1/tenant
+200 OK - Access token from Auth API in response
+Get access token
+POST /connect/token
+200 OK - New access and refresh tokens in response body
+Invite a new agent user to an existing agent account
+Auth API
+SpaceStone API
+Agent
+Consumer API
+Auth API
+SpaceStone API
+Agent
+Consumer API
+Verification code will be sent to the phone number
+that was sent in the request
+Invite agent
+POST /api/v1/company/invitations
+200 OK - Agents user id in response body
+Authorize invitation
+POST /api/v1/account/authorise-invitation
+200 OK - Authorization token in response
+Request a new access token (using authorisation token)
+POST /connect/token
+200 OK - New access and refresh tokens in response
+Verify mobile phone number
+POST /api/v1/phone-verification
+200 OK - Empty body in response
+Verification code
+Verify mobile phone number with verification code
+POST /api/v1/phone-verification/verified
+200 OK - Empty body in response
+Register agent
+POST /api/v1/agent
+200 OK - Empty body in response
+Get access token
+POST /connect/token
+200 OK - New access and refresh tokens in response body
+Invite a new company user to an existing Company Landlord account
+Auth API
+SpaceStone API
+Company Landlord
+Consumer API
+Auth API
+SpaceStone API
+Company Landlord
+Consumer API
+Verification code will be sent to the phone number
+that was sent in the request
+opt
+[if company registration number was set]
+Invite company landlord
+POST /api/v1/company/invitations
+200 OK - Landlord user id in response body
+Authorize invitation
+POST /api/v1/account/authorise-invitation
+200 OK - Authorization token in response
+Request a new access token (using authorisation token)
+POST /connect/token
+200 OK - New access and refresh tokens in response
+Verify mobile phone number
+POST /api/v1/phone-verification
+200 OK - Empty body in response
+Verification code
+Verify mobile phone number with verification code
+POST /api/v1/phone-verification/verified
+200 OK - Empty body in response
+Verify company registration number
+POST /api/v1/company/verify-company-registration-number
+200 OK - Empty body in response
+Register company landlord
+POST /api/v1/corporate-landlord
+200 OK - Empty body in response
+Get access token
+POST /connect/token
+200 OK - New access and refresh tokens in response body
+Use the following endpoints to get appropriate lookups:
+
+Space Stone API GET /api/v1/lookups/companies-houses
+Space Stone API GET /api/v1/lookups/countries
+Space Stone API GET /api/v1/lookups/addresses
+Space Stone API GET /api/v1/lookups/countries/{countryId}/regions
+
+
+Previous
+Logout
+
+
+
+
+
+
+Dashboard
+Get deposit related statistics (Widgets)
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Company Landlord / Private Landlord
+Get deposit related statistics
+GET /api/{version}/dashboards/widgets
+200 OK - Deposit related statistics in response
+Get release and resolution management related widgets statistics
+TimeStone API
+Consumer API
+TimeStone API
+Consumer API
+Agent / Company Landlord / Private Landlord
+Get release and resolution management statistics
+GET /api/{version}/dashboards/widgets
+200 OK - Release and resolution management statistics in response
+Get recent deposits for the current user
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Company Landlord / Private Landlord
+Get recent deposits
+GET /api/{version}/dashboards/recent-activities/deposits
+200 OK - List of recent deposits models in response
+Get recent payments for the current user
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Company Landlord / Private Landlord
+Get recent payments
+GET /api/{version}/dashboards/recent-activities/payments
+200 OK - List of recent payments models in response
+
+
+Deposits
+Create deposit
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Create a new deposit for tenancy
+POST /api/{version}/deposits
+200 OK - ID of created deposit in response
+Update deposit
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Update deposit
+PUT /api/{version}/deposits/{depositId}
+200 OK - ID of deposit in response
+Get list of deposits
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord / Tenant
+Get list of deposits for current user
+GET /api/{version}/deposits
+200 OK - List of deposits in response
+Get deposit by ID
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get deposit by ID
+GET /api/{version}/deposits/{depositId}
+200 OK - Deposit in response
+Get deposit certificate
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get deposit certificate
+GET /api/{version}/deposits/{depositId}/certificate
+200 OK - Deposit certificate in response
+Get deposit certificates
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get deposit certificates
+GET /api/{version}/deposits/{depositId}/certificates
+200 OK - List of certificates in response
+Get deposit payment details
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get deposit payment details
+GET /api/{version}/deposits/{depositId}/payment-details
+200 OK - Deposit payment details in response
+Get deposit summary
+TimeStone API
+Consumer API
+TimeStone API
+Consumer API
+Get deposit summary
+GET /api/{version}/deposits/{depositId}/summary
+200 OK - Deposit summary in response
+Delete deposit
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Delete deposit
+DELETE /api/{version}/deposits/{depositId}
+200 OK - No response body
+Previous
+Dashboard
+Retrieve a list of unread notifications
+Notification API
+Consumer
+Notification API
+Consumer
+Get count of unread notifications
+GET /api/{version}/notifications/not-read-count
+200 OK - Count of unread notifications in response
+Retrieve a list of all notifications
+Notification API
+Consumer
+Notification API
+Consumer
+Get all notifications
+GET /api/{version}/notifications
+200 OK - List of notifications in response
+Mark all notifications as read
+Notification API
+Consumer
+Notification API
+Consumer
+Mark all notifications as read
+PUT /api/{version}/notifications/mark-as-read
+200 OK - Empty response body
+Remove a specified notification
+Notification API
+Consumer
+Notification API
+Consumer
+Removes a notification
+DELETE /api/{version}/notifications/{notificationId}
+200 OK - Empty response body
+Remove all notifications
+Notification API
+Consumer
+Notification API
+Consumer
+Remove all notifications
+DELETE /api/{version}/notifications
+200 OK - Empty response body
+Previous
+Deposits
+Nex
+
+In progress incoming payments
+Get in progress incoming payments
+RealityStone API
+API Consumer
+RealityStone API
+API Consumer
+Query value for in progress payments
+?filter=((paymentStatusId~eq~20~or~paymentStatusId~eq~30)~and~paymentDirectionId~eq~1)&page=1&pageSize=10&sort=createdDate-desc
+GET /api/{version}/deposits/payments
+200 OK - in progress incoming payments details
+Сancel in progress incoming payment
+RealityStone API
+API Consumer
+RealityStone API
+API Consumer
+POST /api/{version}/payments/{paymentId}/cancel
+200 OK
+Change in progress incoming payment method type
+RealityStone API
+API Consumer
+RealityStone API
+API Consumer
+New payment method type in request body
+POST /api/{version}/payments/{paymentId}/checkout
+200 OK
+Get checkout session details
+GET /api/{version}/checkout
+200 OK - checkout session details
+Process new payment
+POST /api/{version}/checkout/payments
+200 OK - payment details
+
+
+
+Manage linked bank accounts
+Manage linked bank accounts for a non-company account
+PaymentService API
+API Consumer
+PaymentService API
+API Consumer
+bank account details in request body
+new bank account details in request body
+alt
+[add]
+[update default]
+[get default]
+[delete]
+Get countries
+GET /api/{version}/lookups/countries
+200 OK - countries
+Add bank account for current user
+POST /api/{version}/bank-accounts
+200 OK - bank account id
+Get countries
+GET /api/{version}/lookups/countries
+200 OK - countries
+Update default bank account for current user
+PUT /api/{version}/accounts/{accountId}/bank-accounts/default
+200 OK - bank account id
+Get default bank account for user
+GET /api/{version}/accounts/{accountId}/bank-accounts/default
+200 OK - default bank account information in response body
+Delete default bank account
+DELETE /api/{version}/accounts/{accountId}/bank-accounts/default
+200 OK - empty response body
+Manage linked bank accounts for a company account
+PaymentService API
+API Consumer
+PaymentService API
+API Consumer
+bank account details in request body
+new bank account details in request body
+alt
+[add]
+[update default]
+[get default]
+[delete]
+Get countries
+GET /api/{version}/lookups/countries
+200 OK - countries
+Add bank account for current user
+POST /api/{vesion}/offices/{officeId}/bank-accounts
+200 OK - bank account id
+Get countries
+GET /api/{version}/lookups/countries
+200 OK - countries
+Update default bank account for current user
+PUT /api/{vesion}/offices/{officeId}/bank-accounts/default
+200 OK - bank account id
+Get default bank account for current user
+GET /api/{version}/offices/{officeId}/bank-accounts/default
+200 OK - default bank account information in response body
+Delete default bank account
+DELETE /api/{version}/offices/{officeId}/bank-accounts/default
+200 OK - empty response body
+
+Manage linked cards
+Manage linked cards for a non-company account
+Stripe API
+PaymentService API
+API Consumer
+Stripe API
+PaymentService API
+API Consumer
+More about setup intents and Stripe API
+https://docs.stripe.com/api/setup_intents
+the response contains an id (seti)
+the request body must contain:
+all information about the user's payment method
+(number, cvc, guid, uuid, sid, etc.),
+captcha token, key
+and secret that were received earlier
+payment method id in request body
+alt
+[add or replace]
+[get default]
+[delete]
+Get stripe configuration
+GET /api/{version}/settings/stripe-key
+200 OK - keys in response body
+Create setup intent
+POST /api/{version}/setup-intents
+200 OK - secret in response body
+Confirm a setup intent
+POST https://api.stripe.com/api.stripe.com/{version}/setup_intents/{seti}/confirm
+200 OK - status and payment method id in response body
+Add or update default debit card for current user
+POST /api/{version}/accounts/{accountId}/debit-cards/default
+200 OK - empty response body
+Get default debit card for user
+GET /api/{version}/accounts/{accountId}/debit-cards/default
+200 OK - default debit card information in response body
+Delete default debit card
+DELETE /api/{version}/accounts/{accountId}/debit-cards/default
+200 OK - empty response body
+Manage linked cards for a company account
+Stripe API
+PaymentService API
+API Consumer
+Stripe API
+PaymentService API
+API Consumer
+More about setup intents and Stripe API
+https://docs.stripe.com/api/setup_intents
+the response contains an id (seti)
+the request body must contain:
+all information about the user's payment method
+(number, cvc, guid, uuid, sid, etc.),
+captcha token, key,
+metadata[officeIds]
+and secret that were received earlier
+payment method id and office ids in request body
+alt
+[add or replace]
+[get default]
+[delete]
+Get stripe configuration
+GET /api/{version}/settings/stripe-key
+200 OK - keys in response body
+Create setup intent
+POST /api/{version}/setup-intents
+200 OK - secret in response body
+Confirm a setup intent
+POST https://api.stripe.com/api.stripe.com/{version}/setup_intents/{seti}/confirm
+200 OK - status and payment method id in response body
+Add or update default debit card for current user
+POST /api/{version}/accounts/{accountId}/debit-cards/default
+200 OK - empty response body
+Get default debit card for current user
+GET /api/{version}/offices/{officeId}/debit-cards/default
+200 OK - default debit card information in response body
+Delete default debit card
+DELETE /api/{version}/offices/{officeId}/debit-cards/default
+200 OK - empty response body
+Pay for basket
+Pay for deposits from the basket
+Stripe API
+PaymentService API
+RealityStone API
+API Consumer
+Stripe API
+PaymentService API
+RealityStone API
+API Consumer
+the response contains an id (pi)
+the request body must contain:
+all information about the user's payment method
+(number, cvc, guid, uuid, sid, etc.),
+captcha token, key,
+metadata[officeIds]
+and secret that were received earlier
+alt
+[debit card]
+[unallocated funds, bank transfer, cheque payment]
+Create a new checkout session for basket items
+POST /api/{version}/checkout
+200 OK - checkout session id in response body
+Get stripe configuration
+GET /api/v1/settings/stripe-key
+200 OK - key in response body
+Initiate a new payment intent for a checkout session
+POST /api/{version}/checkout/payment-intent
+200 OK - secret of the payment intent in response body
+Confirm payment intent
+POST /api.stripe.com/{version}/payment_intents/{pi}/confirm
+200 OK - payment details in response body
+Initiate payment for all deposit in session
+POST /api/{version}/checkout/payments
+200 OK - payment id in response body
+Initiate payment for all deposit in session
+POST /api/{version}/checkout/payments
+200 OK - payment id in response body
+Get payment details
+GET /api/{version}/payments/{paymentId}
+200 OK - payment details in response body
+Useful links
+
+Pay for deposit
+Pay for deposit
+Stripe API
+PaymentService API
+RealityStone API
+API Consumer
+Stripe API
+PaymentService API
+RealityStone API
+API Consumer
+the response contains an id (pi)
+the request body must contain:
+all information about the user's payment method
+(number, cvc, guid, uuid, sid, etc.),
+captcha token, key,
+metadata[officeIds]
+and secret that were received earlier
+alt
+[debit card]
+[unallocated funds, bank transfer, cheque payment]
+Get stripe configuration
+GET /api/v1/settings/stripe-key
+200 OK - key in response body
+Create payment intent
+POST /api/{version}/deposits/{depositId}/payment-intent
+200 OK - secret of the payment intent in response body
+Confirm payment intent
+POST /api.stripe.com/{version}/payment_intents/{pi}/confirm
+200 OK - payment details in response body
+Initiate payment for deposit
+POST /api/{version}/deposits/{depositId}/payments
+200 OK - payment details in response body
+Initiate payment for deposit
+POST /api/{version}/deposits/{depositId}/payments
+200 OK - payment details in response body
+Get payment details
+GET /api/{version}/payments/{paymentId}
+200 OK - payment details in response body
+Useful links
+Payment history
+Get Payments history
+PaymentService API
+RealityStone API
+API Consumer
+PaymentService API
+RealityStone API
+API Consumer
+alt
+[Account payment history]
+[Deposit payment history]
+[Unallocated funds payment history]
+Get payment directions
+GET /api/{version}/lookups/payment-directions
+200 OK - payment directions in response body
+Get payment method types
+GET /api/{version}/lookups/payment-method-types
+200 OK - payment method types in response body
+Get payment statuses
+GET /api/{version}/lookups/payment-statuses
+200 OK - payment statuses in response body
+Get all payment history by current account
+GET /api/{version}/account/payment-history
+200 OK - payment data in response body
+Get payment history for a separate deposit
+GET /api/{version}/deposits/{depositId}/payment-history
+200 OK - payment data in response body
+Get payment history for unallocated funds transactions by current account
+GET /api/{version}/account/unallocated-funds/payment-history
+200 OK - payment data in response body
+Export Deposits payment history
+RealityStone API
+API Consumer
+RealityStone API
+API Consumer
+alt
+[Export account payment history]
+[Export Deposit payment history]
+[Export Unallocated funds payment history]
+Export all payment history by current account
+POST /api/{version}/account/payment-history/export
+200 OK - access token in response body
+Export payment history for a separate deposit
+POST /api/{version}/deposits/{depositId}/payment-history/export
+200 OK - access token in response body
+Export payment history for unallocated funds transactions by current account
+POST /api/{version}/account/unallocated-funds/payment-history/export
+200 OK - access token in response body
+Get download link. Poll it to get the link when file is ready
+GET /api/{version}/background-file-tasks/{accessToken}
+200 OK - download link in response body
+
+
+Rejected outgoing payments
+Get deposit rejected outgoing payments details
+RealityStone API
+API Consumer
+RealityStone API
+API Consumer
+GET /api/{version}/deposits/{depositId}/rejected-details
+200 OK - deposit rejected payments details
+Get account unallocated rejected outgoing payments details
+RealityStone API
+API Consumer
+RealityStone API
+API Consumer
+GET /api/{version}/account/unallocated-funds/rejected-details
+200 OK - account unallocated rejected payments details
+Confirm rejected outgoing payments
+PaymentService API
+RealityStone API
+API Consumer
+PaymentService API
+RealityStone API
+API Consumer
+rejected payment ids and new bank details in request body
+Get countries
+GET /api/{version}/lookups/countries
+200 OK - countries
+PUT /api/{version}/payments/confirm
+200 OK
+Previous
+Payment history
+
+Unallocated funds
+Get account unallocated funds available actions
+PaymentService API
+API Consumer
+PaymentService API
+API Consumer
+GET /api/{version}/account/unallocated-funds/available-actions
+200 OK - unallocated funds available actions details
+Get account unallocated funds
+PaymentService API
+API Consumer
+PaymentService API
+API Consumer
+GET /api/{version}/account/unallocated-funds
+200 OK - unallocated funds details
+Refund account unallocated funds
+PaymentService API
+API Consumer
+PaymentService API
+API Consumer
+amount to refund and bank details
+Get countries
+GET /api/{version}/lookups/countries
+200 OK - countries
+POST /api/{version}/account/unallocated-funds/refunds
+200 OK
+Previous
+Rejected outgoing payments
+
+
+
+Create property
+Create property by landlord
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Landlord
+Create property
+POST /api/{version}/properties
+200 OK - Property details in response
+Additional Details
+Use the following endpoints to get lookups for action types and object types:
+
+GET /sps/api/{version}/lookups/countries
+GET /sps/api/{version}/lookups/countries/{countryId}/regions
+GET /sps/api/{version}/lookups/addresses
+
+
+Create property to landlord by Agent
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent
+Check whether landlord can be invited
+PUT /api/{version}/properties/can-landlord-be-invited
+200 OK - No response body
+Add property to Landlord
+POST /api/{version}/properties/manage-by-agency
+200 OK - Property details in response
+Additional Details
+Use the following endpoints to get lookups for action types and object types:
+
+GET /sps/api/{version}/lookups/countries
+GET /sps/api/{version}/lookups/countries/{countryId}/regions
+GET /sps/api/{version}/lookups/addresses
+GET /sps/api/{version}/lookups/offices
+GET /rs/api/{version}/look-up/landlords
+GET /rs/api/{version}/look-up/landlord-companies
+
+
+Previous
+Unallocated funds
+Next
+Get property
+
+Get property
+Get property summary
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get property summary
+POST /api/{version}/properties/{propertyId}/summary
+200 OK - Property summary in response
+Get property details
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get property details
+POST /api/{version}/properties/{propertyId}
+200 OK - Property details in response
+Get property tenancies
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get list of property tenancies
+POST /api/{version}/properties/{propertyId}/tenancies
+200 OK - List of property tenancies in response
+Get property agency
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get property agency details
+POST /api/{version}/properties/{propertyId}/agency
+200 OK - Property agency details in response
+Get property landlord
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get property landlord details
+POST /api/{version}/properties/{propertyId}/landlord
+200 OK - Property landlord details in response
+Get list of property
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get list of property for current user
+POST /api/{version}/properties
+200 OK - List of property in response
+
+
+Update property
+Update property
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Landlord / Agent
+Update current property
+PUT /api/{version}/properties/{propertyId}
+200 OK - Updated property in response
+Add joint landlord
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Landlord / Agent
+Add joint landlord
+POST /api/{version}/properties/{propertyId}/joint-landlords
+200 OK - ID of created joint landlord in response
+Update joint landlord
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Landlord / Agent
+Update joint landlord
+PUT /api/{version}/properties/{propertyId}/joint-landlords
+200 OK - No response body
+Previous
+Get property
+
+Cancel release request
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager
+Pass appropriate status in body
+Cancel the release request
+PUT /api/v1/release-requests/${releaseRequestId}/status
+200 OK - Empty response body
+
+
+Chat
+Notification Service API
+Time Stone API
+Consumer
+Notification Service API
+Time Stone API
+Consumer
+Property manager/Lead tenant
+opt
+[Chat is visible]
+There is an ability to send message
+opt
+[Chat is in discussion mode]
+There is an ability to attach message as evidence
+opt
+[Chat is in discussion mode]
+Create real-time connection with Notification Service API
+Connect chat to hub
+POST /api/v1/hubs/real-time/join
+200 OK - Empty body in response
+Get chat messages
+GET /api/v1/release-requests/${releaseRequestId}/chat/messages
+200 OK - List of messages in response
+Get attachments
+GET /api/v1/release-requests/${releaseRequestId}/chat/attachments
+200 OK - List of attachments in response
+connect to chat
+POST /api/v1/release-requests/${releaseRequestId}/chat/join
+200 OK - Empty body in response
+Mark new messages as read
+POST /api/v1/release-requests/${releaseRequestId}/chat/messages/mark-as-read
+200 OK - Empty body in response
+Send message to chat
+POST /api/v1/release-requests/${releaseRequestId}/chat/messages
+200 OK - Empty body in response
+Mark message as evidence
+POST /api/v1/release-requests/${releaseRequestId}/evidences/from-chat
+200 OK - Empty body in response
+Disconnect Notification Service API
+
+
+First response to RR
+First response to release request by Property manager
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager
+Respond release request
+POST /api/v1/release-requests
+200 OK - Release request id in response
+First response release request by Tenant
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Tenant
+Respond release request
+POST /api/v1/release-requests/${releaseRequestId}/tenant/respond
+200 OK - Empty body in response
+
+
+Initiate release request
+Initiate release request
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/ Lead tenant
+Create release request
+POST /api/v1/release-requests
+200 OK - Release request id in response
+Initiate release request from draft
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager
+Create release request from draft
+POST /api/v1/release-requests/${releaseRequestId}
+200 OK - Empty body in response
+Save release request as draft
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager
+Save release request as draft
+POST /api/v1/release-requests/draft
+200 OK - Empty body in response
+Useful links
+Use the following endpoints to get lookups for action types and object types:
+
+GET /api/v1/lookups/settlement-types
+
+Negotiate release request
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+When the respondent does not confirm the offer
+they make a new one,
+and the turn to respond passes to the other party.
+loop
+[Release request status is
+Negotiation - Tenant responds first
+Open - Property manager responds first]
+Release request initiator
+(Property manager/ Lead tenant)
+Initiate resolution or court process
+Initiate single release process
+alt
+[Response period is not expired]
+[Response period is expired]
+​
+Negotiate release request settlements
+POST /api/v1/release-requests/${releaseRequestId}/settlements/amendment
+200 OK - Empty response body
+Previous
+Initiate release request
+
+View release requests
+View release requests
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Get release requests
+POST /api/v1/release-requests
+200 OK - Release requests in response
+Use the following endpoints to get lookups for action types and object types:
+
+GET /api/v1/lookups/release-request-statuses
+
+View release request
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+View resolution/court
+opt
+[if resolution/court exists]
+View single release
+View statutory declaration
+Get signed statutory declarations
+opt
+[if single release exists]
+View settlements
+View bank details
+opt
+[if bank details exists]
+Get release request details
+Get /api/v1/release-requests/${releaseRequestId}
+200 OK - Release request data in response
+​
+Get available actions for release request
+GET /api/v1/release-requests/${releaseRequestId}/available-actions
+200 OK - List of available actions in response
+Get release request general evidences
+Get /api/v1/release-requests/${releaseRequestId}/general-evidences
+200 OK - List of evidences in response
+Get release request documents
+Get /api/v1/release-requests/${releaseRequestId}/documents
+200 OK - List of documents in response
+Use the following endpoints to get lookups for action types and object types:
+
+GET /api/v1/lookups/release-request-statuses
+
+Useful links
+View resolution/court
+View settlements
+View single release
+
+
+Resolution
+View court/resolution details
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Get resolution details
+GET /api/v1/resolutions/${resolutionId}
+200 OK - Resolution details in response
+Get resolution available actions
+GET /api/v1/resolutions/${resolutionId}/available-actions
+200 OK - Resolution available actions in response
+Get resolution stages
+GET /api/v1/resolutions/${resolutionId}/stages
+200 OK - Resolution stages in response
+Get court evidences
+GET /api/v1/resolutions/${resolutionId}/court/evidences
+200 OK - Court evidences in response
+Get court outcomes
+GET /api/v1/resolutions/${resolutionId}/court/outcomes
+200 OK - Court outcomes in response
+Court/resolution process initiation
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+Pass releaseRequestStatusId
+41 to start court
+51 to start resolution
+​
+​
+Initiate resolution/court
+POST /api/v1/resolutions
+200 OK - ResolutionId in response
+Agree with disclaimer and resolve court by responder
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Agree with disclaimer
+POST /api/v1/resolutions/${resolutionId}/court/approve
+200 OK - Empty body in response
+Move back to resolution
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Delete court
+DELETE /api/v1/resolutions/${resolutionId}/court
+200 OK - Empty body in response
+Court process finalization
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+Upload evidence of court initiation into blob storage
+Upload court outcome into blob storage
+Upload evidence of court initiation
+POST /api/v1/resolutions/${resolutionId}/court/evidences
+200 OK - Empty in response
+Upload court outcome
+POST /api/v1/resolutions/${resolutionId}/court/outcomes
+200 OK - Empty in response
+This may be useful: Upload files into blob storage
+
+Court process
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+Court process initiation
+Agree with disclaimer and resolve court by responder
+Move back to resolution
+Court process finalization
+alt
+[if The Responder agrees to receive
+money back if evidences were not provided within (configurable value)
+calendar days after Court initiation]
+[Initiator can move release request
+to resolution stage if there is no court evidences]
+Resolution process
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+Resolution process initiation
+Review evidences
+After (configurable value) days resolution will starts automatically
+alt
+[Evidence review stage]
+Review evidences
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+​
+Review evidences
+POST /api/v1/release-requests/${releaseRequestId}/review
+200 OK - Empty body in response
+Previous
+View release requests
+Next
+Settlements
+View court/resolution details
+Court/resolution process initiation
+Agree with disclaimer and resolve court by responder
+Move back to resolution
+Court process finalization
+Court process
+Resolution process
+
+Settlements
+View settlements
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+​
+Get the list of settlements
+GET /api/v1/release-requests/${releaseRequestId}/settlements
+200 OK - List of settlements in response
+Add settlement
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+​
+Add settlement
+POST /api/v1/release-requests/${releaseRequestId}/settlements
+200 OK - Empty body in response
+Update settlement
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+​
+Update settlement
+PUT /api/v1/release-requests/${releaseRequestId}/settlements/${settlementId}
+200 OK - Empty body in response
+Delete settlement
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+​
+Delete settlement
+DELETE /api/v1/release-requests/${releaseRequestId}/settlements/${settlementId}
+200 OK - Empty body in response
+Update evidences
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead Tenant
+Upload files into blob storage
+​
+Add evidences
+POST /api/v1/release-requests/${releaseRequestId}/settlements/${settlementId}/evidences
+200 OK - Empty body in response
+This may be useful: Upload files into blob storage
+
+
+Single release
+View single release
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Get single release details
+GET /api/v1/single-releases/${singleReleaseId}
+200 OK - Single release details in response
+Single release initiation
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Get single release initiation details
+GET /api/v1/release-requests/${releaseRequestId}/single-release-initiation-details
+200 OK - Single release initiation details in response
+Create single release
+POST/api/v1/single-releases
+200 OK - Single release id in response
+Update single release
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Update single release
+(available if there is no signed statutory declarations)
+Update single release
+PUT /api/v1/single-releases/${singleReleaseId}
+200 OK - Empty body in response
+View statutory declaration
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Get statutory declaration details
+GET /api/v1/single-releases/${singleReleaseId}/statutory-declaration
+200 OK - Statutory declaration details in response
+Create statutory declaration
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Upload files into blob storage
+Create statutory declaration
+POST /api/v1/signed-statutory-declarations
+200 OK - SignedStatutoryDeclarationId in response
+This may be useful: Upload files into blob storage
+
+Update statutory declaration
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Upload files into blob storage
+Update statutory declaration
+PUT /api/v1/signed-statutory-declarations/${signedStatutoryDeclarationId}
+200 OK - Empty body in response
+This may be useful: Upload files into blob storage
+
+Delete statutory declaration
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Delete statutory declaration
+DELETE /api/v1/signed-statutory-declarations/${signedStatutoryDeclarationId}
+200 OK - Empty body in response
+Get signed statutory declarations
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Get signed statutory declarations
+GET /api/v1/single-releases/${singleReleaseId}/signed-statutory-declarations
+200 OK - List of signed statutory declarations in response
+Single release process
+Time Stone API
+Consumer
+Time Stone API
+Consumer
+Property manager/Lead tenant
+Single release initiation
+Update is available for single release
+initiator(Property manager/ Lead Tenant)
+opt
+[Update single release
+(available if there is no
+signed statutory
+declarations)]
+Initiator (Property manager/
+Lead Tenant)
+Create statutory declaration
+Update statutory declaration
+opt
+​
+Delete statutory declaration
+opt
+​
+When there is at least
+one confirmed statutory declaration -
+other party has (configurable value) days
+to respond and continue negotiation stage
+
+
+Create tenancy
+Create tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Get calculated deposit amount for current frequency and rent
+GET /api/{version}/tenancies/deposit-amount
+200 OK - Calculated amount in response
+Validate given tenancy name
+POST /api/{version}/tenancies/name/validate
+200 OK - Validation result in response
+Check whether a tenant can be invited to a tenancy
+POST /api/{version}/tenants/can-be-invited-to-tenancy
+200 OK - List of tenants in response
+Create tenancy with tenants and interested parties
+POST /api/{version}/tenancies
+200 OK - ID of created tenancy in response
+Additional Details
+Use the following endpoints to get lookups for action types and object types:
+
+GET /rs/api/{version}/look-up/rent-frequencies
+GET /rs/api/{version}/look-up/free-tenants
+GET /sps/api/{version}/lookups/countries
+GET /sps/api/{version}/lookups/countries/{countryId}/regions
+
+Update tenancy
+Update tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Update tenancy details
+PUT /api/{version}/tenancies/{TenancyId}
+200 OK - No response body
+Additional Details
+Use the following endpoints to get lookups for action types and object types:
+
+GET /rs/api/{version}/look-up/rent-frequencies
+
+
+Get tenancy
+Get list of tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Get list of tenancy for current user
+GET /api/{version}/tenancies
+200 OK - List of tenancy in response
+Get tenancy summary details
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get tenancy summary details
+GET /api/{version}/tenancies/{tenancyId}/summary
+200 OK - Tenancy summary details in response
+Get tenancy details
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get tenancy details
+GET /api/{version}/tenancies/{tenancyId}
+200 OK - Tenancy details in response
+Get available actions for selected tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get available actions for selected tenancy
+GET /api/{version}/tenancies/{tenancyId}/available-actions
+200 OK - Available actions in response
+Get available deposit schemes
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get available deposit schemes
+GET /api/{version}/tenancies/{tenancyId}/available-deposit-schemes
+200 OK - Available deposit schemes in response
+Get tenants for selected tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get tenants for selected tenancy
+GET /api/{version}/tenancies/{tenancyId}/tenants
+200 OK - List of tenancy tenants in response
+Get interested parties
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Get interested parties
+GET /api/{version}/tenancies/{tenancyId}/interested-parties
+200 OK - List of interested parties in response
+Get calculated deposit amount
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Get calculated deposit amount for current frequency and rent
+GET /api/{version}/tenancies/deposit-amount
+200 OK - Calculated amount in response
+Use the following endpoints to get lookups for action types and object types:
+
+GET /rs/api/{version}/look-up/rent-frequencies
+GET /rs/api/{version}/look-up/free-tenants
+
+Manage interested party
+Add interested parties
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Add interested parties
+POST /api/{version}/tenancies/{tenancyId}/interested-parties
+200 OK - ID of created interested party in response
+Update interested party
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Update interested party
+PUT /api/{version}/tenancies/{tenancyId}/interested-parties/{interestedPartyId}
+200 OK - No response body
+Remove interested party
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Remove interested party
+DELETE /api/{version}/tenancies/{tenancyId}/interested-parties/{interestedPartyId}
+200 OK - No response body
+Additional Details
+Use the following endpoint to get tenancy tenants for action types and object types:
+
+GET /rs/api/v1/tenancies/{tenancyId}/tenants
+
+Manage tenants
+Add tenant
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Create tenant for existing tenancy
+POST /api/{version}/tenancies/{tenancyId}/tenants
+200 OK - ID of created tenant in response
+Update tenant
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Update tenant for existing tenancy
+PUT /api/{version}/tenancies/{tenancyId}/tenants/{tenancyTenantId}
+200 OK - No response body
+Delete tenant for existing tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Delete tenant for existing tenancy
+DELETE /api/{version}/tenancies/{tenancyId}/tenants/{tenancyTenantId}
+200 OK - No response body
+Update lead tenant within the tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Update lead tenant within the tenancy
+PUT /api/{version}/tenancies/{tenancyId}/lead-tenant
+200 OK - No response body
+Additional Details
+Use the following endpoints to get lookups for action types and object types:
+
+GET /rs/api/{version}/look-up/free-tenants
+GET /sps/api/{version}/lookups/countries
+GET /sps/api/{version}/lookups/countries/{countryId}/regions
+GET /sps/api/{version}/lookups/addresses
+
+
+Previous
+Manage interested party
+Next
+Renew tenancy
+Add tenant
+Update tenant
+Delete tenant for existing tenancy
+Update lead tenant within the tenancy
+
+
+Renew tenancy
+Set a new end date for the tenancy
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Set a new end date for the tenancy. Makes the tenancy non-periodic
+POST /api/{version}/tenancies/{tenancyId}/renew
+200 OK - No response body in response
+Convert tenancy to a periodic
+RealityStone API
+Consumer API
+RealityStone API
+Consumer API
+Agent / Landlord
+Convert tenancy to a periodic
+POST /api/{version}/tenancies/{tenancyId}/make-periodic
+200 OK - No response body in response
+
+
+Upload file
+Blob Storage API
+File Service API
+Consumer
+Blob Storage API
+File Service API
+Consumer
+Preload file and get file data
+GET /api/v1/sas-tokens/temp-upload-sas-uri
+200 OK - file data in response
+Save file in blob store
+PUT /file-service
+200 OK - Empty body in response
+
+Accounts
+View user accounts
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Get current user profile accounts
+GET /api/v1/profile/accounts
+200 OK - List of user profile accounts in response
+View user account
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Get current user profile account info
+GET /api/v1/profile/accounts/${accountId}
+200 OK - User profile account details in response
+Switch to selected account
+Auth API
+RealityStone API
+Consumer API
+Auth API
+RealityStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Agent
+Company Landlord
+Landlord
+opt
+[If checkout session exists]
+Delete checkout session
+POST /api/v1/checkout
+200 OK - Empty body in response
+Calculate code challenge
+Connect token
+POST /connect/token
+200 OK - Token details in response
+
+
+
+Authorized contacts
+View authorized contacts
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Get list of authorized contacts
+GET /api/v1/account/authorized-contacts/{authorizedContactId}
+200 OK - List of authorized contacts in response
+Create authorized contacts
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Create authorized contact
+POST /api/v1/account/authorized-contacts/{authorizedContactId}
+200 OK - Empty body in response
+Update authorized contacts
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Update authorized contact
+PUT /api/v1/account/authorized-contacts/{authorizedContactId}
+200 OK - Empty body in response
+Delete authorized contacts
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Delete authorized contact
+DELETE /api/v1/account/authorized-contacts/{authorizedContactId}
+200 OK - Empty body in response
+
+
+Profile
+Get user profile
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Get profile data
+GET /api/v1/profile
+200 OK - Profile data in response
+Get company user profile
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Get profile data
+GET /api/v1/company/users/${userId}
+200 OK - Profile data in response
+Update my profile email
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Change email address
+POST /api/v1/account/change-email-request
+200 OK - Empty body in response
+Update my profile primary mobile number
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Verify new phone number
+POST /api/v1/phone-verification/verified
+200 OK - Empty body in response
+Change phone number
+POST /api/v1/account/change-phone-request
+200 OK - Empty body in response
+Update company profile email
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Change email address
+POST /api/v1/company/users/${userId}/change-email-request
+200 OK - Empty body in response
+Update user profile (About)
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Agent
+Company Landlord
+Landlord
+Tenant
+Upload files into blob storage
+opt
+[if avatar was changed]
+Change profile data
+PUT /api/v1/profile
+200 OK - Empty body in response
+This may be useful: Upload files into blob storage
+
+Update correspondence address
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Update correspondence address
+PUT /api/v1/profile/address
+200 OK - Empty body in response
+Use the following endpoints to get lookups for action types and object types:
+
+/api/v1/lookups/countries
+/api/v1/lookups/countries/{countryId}/regions
+
+Get landlord's signature
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Get signature
+GET /api/v1/private-landlord/signature
+200 OK - File in response
+Get landlord's logo
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Get logo
+GET /api/v1/private-landlord/logo
+200 OK - File in response
+Update landlord's logo
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Upload files into blob storage
+Update logo
+PUT /api/v1/private-landlord/logo
+200 OK - Empty body in response
+This may be useful: Upload files into blob storage
+
+Update landlord's signature
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Upload files into blob storage
+Update signature
+PUT /api/v1/private-landlord/signature
+200 OK - Empty body in response
+This may be useful: Upload files into blob storage
+
+Delete landlord's signature
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Delete signature
+DELETE /api/v1/private-landlord/signature
+200 OK - Empty body in response
+Delete landlord's logo
+SpaceStone API
+Consumer API
+SpaceStone API
+Consumer API
+Landlord
+Delete logo
+DELETE /api/v1/private-landlord/logo
+200 OK - Empty body in response
+
+
+
+
+Validation message
+Error Code	Error Message
+AccountAlreadyParticipatesInMergeOperation	Account already participates in merge operation. Try again later.
+AccountDoesNotHaveCertificateCustomizationDetails	Current account doesn’t have certificate signature or logo.
+AccountLinkNotAvailable	Account can’t be linked to this primary user.
+AccountMembershipShouldBeActive	This user doesn't have an active Membership.
+AccountMembershipShouldBeActiveOrSuspended	This user doesn't have an active or suspended Membership.
+AccountMustBeActive	Account must have active status.
+AccountMustBelongToUser	Account must belong to non-primary user.
+AccountMustNotBelongToUser	Account must not belong to primary user.
+AccountsMustHaveSameType	Accounts must have same type.
+ActionNotAvailable	Action is not available anymore.
+ActionPerformedByUserWhichDoesNotExist	TBD ActionPerformedByUserID with ID = {PropertyName} doesn’t exist.
+ActiveUserAlreadyExists	Invitation can not be sent, because there is already an account of another user type, registered with this email.
+AdminIsLastActiveInTheCompany	You are unable to remove Admin permissions from this user until another active user has been assigned this role.
+AdminIsLastInTheCompany	Unable to remove the last Admin user from the system. To remove this user, please assign a new user to this position.
+AgencyDoesntExist	Agency with provided ID doesn’t exist.
+AgencyIdOrCompanyShouldBeUsed	AgencyID or Company only should be used.
+AgencyOrInvitationShouldBeUsed	To create an account, either the value of the "{PropertyName}" or "Invitation" parameter should be used.
+AgencyOrUserMustBeSet	Agency or User must be selected to generate vouchers invoice.
+AgentTryingToUpdateThePropertyThatNotBelongsToHisAgency	Agent trying to update the property that not belongs to his agency.
+AgeValidator	You must be older than 16.
+AllBlobsMustBeUnique	All blobs must be unique.
+AllowedOnlyForLiveDeposits	Allowed only for live deposits.
+AllowToDeleteUserFromYourCompanyOnly	You are only allowed to delete users from your Company.
+AllowToResendInvitationForUserFromYourCompanyOnly	You are only allowed to resend invitation for the user from your Company.
+AsyncPredicateValidator	The specified condition was not met for {PropertyName}.
+AtLeastOneContactDetailsFieldRequired	At least one field (address, contact number or email) is required.
+AtLeastOneReleaseRequestSettlementMustBeResolved	To resolve the resolution you have to provide resolution amount at least for one of the settlement.
+AtLeastOneTenantMustRemainInTheTenancy	At least one tenant must remain in the tenancy.
+AuthCodeError	User not found or code is invalid.
+AuthCodeExpired	Code is expired.
+AuthorizedContactAlreadyExists	Unable to share access with more than one user.
+AuthTokenError	User not found or token is invalid.
+AuthTokenExpired	Token is expired.
+BadFormatOfCsv	Wrong CSV format - check that all the columns are provided, no header line1, dates well formatted and file is not empty.
+BankDetailsUpdateMustBeAvailable	Bank details update is not available for this user.
+BasketItemCannotBeDeletedDueToProcessingByAnotherUser	It’s not possible to delete basket item that is currently processing by another user of your account.
+BasketItemIsAlreadyInBasket	This item is already in the basket.
+BasketItemNotManagedByYou	Basket item is not managed by current account.
+BasketTotalDraftAmountNotActual	Basket total draft amount not actual.
+BlobDoesNotExist	Blob ’{PropertyValue}’ does not exist.
+CanNotApproveOrRejectYourOwnModification	Can not approve or reject your own modification.
+CannotBeMoreThanNMonthsFuture	{PropertyName} should be no more than {ComparisonValue, plural, one {# month} other {# months}} in the future.
+CannotBeMoreThanNMonthsPast	{PropertyName} should be no more than {ComparisonValue, plural, one {# month} other {# months}} in the past.
+CannotBeMoreThanOneYearsFuture	{PropertyName} should be not greater than {ComparisonValue, plural, one {# year} other {# years}} from the current date.
+CannotBeMoreThanOneYearsPast	{PropertyName} cannot be more than one year in the past.
+CannotBeMoreThanToday	{PropertyName} should be no more than today.
+CannotEndMembership	Membership must be active, there is no active tenancy and there is no in progress payment for it.
+CaseAssessorAssignMustBeAvailable	Case assessor cannot be assigned to resolution in this state.
+CentralEmailMustBeDifferentFromOfficeEmail	Company email can’t be the same as Office email.
+CheckoutSessionContainsNonPayableBasketItems	Deposit(s) amounts has been updated. Please check amount to pay.
+CheckoutSessionMustHavePayment	Checkout session must have payment in Intended status.
+ClaimAlreadyExists	Claim already exists for this tenancy.
+ClaimCannotBeCreatedNow	Claim can not be started now.
+ClaimIsCreatedTooEarly	Less than {Days:plural:1 day|{} days} passed.
+ClaimIsCreatedTooLate	More than {Days:plural:1 day|{} days} passed.
+CodeGenerationUnavailable	The next resend will be available after some time. Please wait.
+CollectionShouldHaveAtLeastOneItem	Collection {PropertyName} should have at least one element.
+CollectionShouldHaveNotMoreThan	Collection {PropertyName} should have not more than {PropertyValue} items.
+CommandOnlyForLandlords	This command should be only called by landlords.
+CompanyHouseNumberIsInvalid	Invalid Companies House Number.
+CompanyHouseNumberMustBeUnique	An account with this company number already exists.
+CompanyHouseNumberMustNotBelongToAgency	CHN can not be added as it is already used for an account with another user type.
+CompanyHouseTemplate	{PropertyName} should contain only letters and numbers without spaces.
+CompanyLandlordCantBeInvited	Company landlord can’t be invited.
+CompanyNameMustBeDifferentFromOfficeName	Company name must be different from Office name.
+CompanyRegistrationNumberIsInconsistent	Invitation can not be sent to Landlord {Email}: company details are inconsistent.
+CompanyShouldHaveNoActiveUsers	Company should have no active users.
+ConnectedAccountsCannotBeMerged	The accounts cannot be merged.
+CountryCodeShouldBeGB	Country code should be equal to GB.
+CountryDoesNotExist	Invalid country name.
+CourtDueDateExpired	Court due date has expired.
+CourtResolveMustBeAvailable	Court resolve is not available.
+CourtStageFeatureNotAvailable	Court stage is not available.
+CreditCardValidator	{PropertyName} is not a valid credit card number.
+CurrentUserAlreadyRespondedToResolution	User already responded to resolution.
+CurrentUserCanNotAmendSettlements	You are not allowed to amend settlements for the release request at current state.
+CurrentUserMustBeOneOfResolutionParties	Current user doesn't belong to any resolution party.
+CurrentUserMustBeResolutionResponder	User must be resolution responder.
+CustomerDoesNotHaveUnallocatedFunds	There is nothing left to refund.
+CustomRoleDoesntExist	Role(s) does not exist.
+DateCanNotBeInTheFuture	{PropertyName} can’t be in the future.
+DateMustBeEarlierThanOrEqualToNow	{PropertyName} cannot be greater than the current date.
+DateMustBeEarlierThanOrEqualToProtectionStartDate	{PropertyName} cannot be later than the protection start date.
+DateMustBeEarlierThanOrEqualToTwoYearsFromNow	{PropertyName} should be not greater than 2 years in the future from the current date.
+DateMustBeGreaterThanOrEqualToOneYearInThePastFromNow	{PropertyName} should be not greater than 1 year in the past from the current date.
+DateMustBeGreaterThanOrEqualToTenancyStartDate	{PropertyName} should not be earlier than Tenancy start date.
+DateMustBeLaterThanOrEqualToProtectionStartDate	{PropertyName} cannot be earlier than the protection start date.
+DateMustBeLessOrEqualThanTenancyEndDate	{PropertyName} should not be later than Tenancy end date.
+DateMustBeOnOrAfterMinValue	{PropertyName} must be on or after {MinValue}.
+DateMustBeOnOrPriorToMaxValue	{PropertyName} must be on or prior to {MaxValue}.
+DateValidator	The leaving date can be today or no more than 12 months in the past.
+DeclarationMustBeConfirmed	The membership application declaration must be confirmed.
+DeleteUserWithCommitment	This user cannot be deleted because of commitments.
+DepositAlreadyHasReleaseRequest	Release request for this deposit has already been submitted.
+DepositDoesNotAllowReleaseRequest	Release requests are not allowed for this deposit.
+DepositDoesNotAllowTransfersToDeposit	Transfer is not allowed. Deposit must be non-transferred in Part protected or Protected statuses without release requests.
+DepositDoesNotAllowTransfersToUnallocatedFunds	Transfer is not allowed. Deposit must be in Part protected or Protected status without release requests.
+DepositDoesNotHaveInsuredBackedSchemeType	Deposit must have Deposit Insured-Backed scheme.
+DepositDoesNotHavePayableScheme	Deposit must have Deposit Custodial scheme.
+DepositDoesNotHavePaymentVariant	Deposit must have payment option.
+DepositHasNoOutstandingAmount	Deposit has no outstanding amount.
+DepositInActiveCheckoutSession	This deposit is in the checkout process.
+DepositLinkActiveTenancyTenant	It looks like your deposit protection is already linked to an existing account. Please contact us at {email} to discuss merging your accounts so you can access your deposit protection.
+DepositLinkDepositNotFound	Unfortunately, we cannot find your deposit. Please check the details you provided and try again. If you're still unable to link your deposit protection and have confirmed that the information matches your deposit protection certificate, please contact us at {email} for further assistance.
+DepositLinkLinkedDeposit	Deposit ID {DepositNumber} is already linked to this account. You can view the existing deposit protections under the ‘Deposits’ tab.
+DepositLinkTenantsHaveSameName	We found your deposit, but we cannot link it to your account due to multiple tenants with the same name. Please verify the details you provided and try again. If you're still unable to link your deposit protection and have confirmed that the information matches your deposit protection certificate, please contact us at {email} for further assistance.
+DepositMustBeRelatedToAccount	Deposit must be related to the account.
+DepositMustHaveAvailableDepositProtections	There are no remaining deposits in your current allocation.
+DepositMustHavePartOrProtectedStatus	Deposit must have part protected or protected status.
+DepositMustHaveProtectedStatusOrMembershipSetUp	Deposit must have protected status or set up fee must be confirmed.
+DepositNotInConfirmableStatus	Deposit must have not protected status.
+DepositNotInDeletableStatus	The deposit can’t be deleted as it is already protected.
+DepositNotInPayableStatus	There is nothing left to transfer for this item.
+DepositNotInProtectiveStatus	Deposit is not in correct status for protection.
+DepositNotManagedByYou	Deposit is not managed by current account.
+DepositPaymentVariantCannotBeChanged	Deposit must have not protected status.
+DepositsAreInCheckoutProcess	Active checkout session for some of deposits already exists.
+DepositShouldBeEqualToCalculatedValue	Deposit should be equal to calculated amount.
+DepositUnavailableForAllocation	The deposit is not available for allocating amount paid by Insurer or the lodged amount has been changed.
+DepositUnavailableForEndProtection	The deposit is not available for ending protection.
+DepositUnavailableForTransfer	The deposit is not available for transfer or the transfer amount has been changed.
+DocumentIsRequired	Please upload the required documents.
+DuplicateBankAccountDetails	There are two or more records with the same sort code and account number.
+DuplicateQuestionId	Field should contain only one object with a question Id.
+EmailBelongsToSeveralUsers	It looks like this email address belongs to another user. Please use another email address or click the link below to log in with your mydeposits Custodial username and password.
+EmailDoesNotBelongToActiveUser	Looks like an account with this email does not exist. Please enter another email address or Sign Up.
+EmailDoesNotBelongToDormantUser	Dormant user with email = {PropertyValue} doesn’t exist.
+EmailIsEqualToAccountOwnerEmail	Email should be unique.
+EmailIsEqualToAuthorizedUserEmail	Email should be unique.
+EmailIsUsedForAnotherAccountType	Email can not be added as it is already used for an account with another user type.
+EmailValidator	Invalid email address.
+EmptyValidator	{PropertyName} must be empty.
+EndDateIsRequired	End date is required.
+EndDateShouldBeGreaterThanStartDate	End date should be greater than start date.
+EndDepositRangeShouldBeGreaterThanStartDepositRange	End deposit range should be greater than start deposit range.
+EndOfTenancyLeavingDate	The leaving date can be today or no more than 12 months in the past.
+EntityDoesNotExist	{PropertyName} with specified ID doesn’t exist.
+EntityIsNotVerified	{PropertyName} is not verified.
+EntityShouldBeUnique	{PropertyName} should be unique.
+EntityWithIdDoesNotExist	{EntityName} with ID = {Id} doesn’t exist.
+EnumValidator	{PropertyName} has a range of values which does not include {PropertyValue}.
+EqualValidator	{PropertyName} must be equal to {ComparisonValue}.
+EvidenceReviewConfirmationMustBeAvailable	Evidence review confirmation is not available for current user.
+EvidencesCountExceeded	A maximum of {MaxCount} files can be attached.
+ExactLengthValidator	{PropertyName} must be {MaxLength} characters in length. You entered {TotalLength} characters.
+ExclusiveBetweenValidator	{PropertyName} must be between {From} and {To} (exclusive). You entered {Value}.
+ExpiredCodeValidator	Sorry, this code has already been used, is expired or is incorrect.
+FieldCanBeUsedOnlyByAdmin	{PropertyName} can be used only by CSA.
+FieldCanNotBeEmpty	Since {PropertyName} contains a value it is now a required field.
+FieldInvalid	The value {PropertyValue} is not valid for {PropertyName}.
+FieldInvalidOrEmpty	The value is not valid or not provided for {PropertyName}.
+FieldIsInvalid	Field {PropertyName} is invalid.
+FieldIsNotEditable	{PropertyName} can not be changed.
+FieldIsRequiredWithCheckboxAlternative	The {PropertyName} is required. If you don’t have one, please check the box under the field.
+FieldNameNoLongerThan	{PropertyName} should contain no more than {PropertyValue} characters.
+FieldShouldCorrespondToLandlordAccount	{PropertyName} should correspond to the Landlord account type.
+FileFormatValidator	Make sure to upload a valid file.
+FileIsEmptyOrHasIncorrectHeader	The import file has an improper structure.
+FileSizeMustBeActual	The value doesn’t match the size of the uploaded file.
+FileSizeValidator	Please make sure the file is smaller than {MaxLength} MB.
+GeneralEvidencesWithoutSettlements	General evidence cannot be provided without settlements.
+GreaterThanOrEqualValidator	{PropertyName} must be greater than or equal to {ComparisonValue}.
+GreaterThanValidator	{PropertyName} must be greater than {ComparisonValue}.
+GroupMustBeInOffice	Basket group must be related to the office.
+HybrisCredentialsAlreadyUsed	These credentials have already been used. Please provide different credentials or contact support for help.
+ImportAlreadyInProgress	There is already running import process. Only one import allowed per account at one time.
+InclusiveBetweenValidator	{PropertyName} must be between {From} and {To}. You entered {Value}.
+IncorrectBatchStatus	Incorrect batch status.
+IncorrectCredentials	Incorrect username and / or password. Please provide different credentials or contact support for help.
+IncorrectLodgeAmount	Lodge amount is incorrect for this deposit.
+IncorrectTenantAccountId	Incorrect tenant account ID.
+IncorrectValueFormat	{PropertyName} is not in correct format
+InsuredBackedMembershipRequired	Insured-backed membership is not activated.
+InterestAccruedCannotBeUpdatedForDeposit	The interest accrued can’t be updated for this deposit.
+InterestAccruedMustBeEmpty	Interest accrued must be empty for insured-backed.
+InterestedPartiesIsNoLongerCanBeAdded	Please contact Support for any amendments.
+InterestedPartyAddressIsEqualToPropertyAddress	Postal address cannot be the same as the rental property address.
+InterestedPartyDoesntBelongToTenancy	Interested party doesn’t belong to tenancy.
+InterestedPartyIsNoLongerDeletable	Please contact Support for any amendments.
+InterestedPartyIsNoLongerEditable	Please contact Support for any amendments.
+InternalErrorWithImporting	Error with importing. Please try again later.
+InvalidAccountType	Invalid account type.
+InvalidCompanyDetails	An invitation cannot be sent to the company landlord. Please provide the correct company details.
+InvalidDataSourceRequest	Invalid request.
+InvalidDateFormat	Invalid Date Format.
+InvalidEmailAddress	Invalid email address.
+InvalidFieldObject	Field should contain correct object.
+InvalidFileFormat	Invalid file format.
+InvalidPaymentMethodId	Invalid payment method.
+InvalidPaymentVariantId	Invalid payment variant ID.
+InvalidPropertyTypeId	Invalid property type.
+InvalidSettlementProposal	Only one of isAccepted, isDeleted, newDeduction can be specified.
+InvalidToken	Invalid Token.
+InvitationCanNotBeSendDuplicateEmail	Invitation can not be sent. Duplicate email.
+InvitationCanNotBeSendToLandlordEmailAccountIsDeactivated	Invitation can not be sent to Landlord {PropertyValue}: account is deactivated.
+InvitationCanNotBeSendToLandlordEmailIsInvalid	Invitation can not be sent to Landlord {PropertyValue}: invalid email.
+InvitationCanNotBeSendToLandlordEmailIsUsedForAnotherAccountType	Invitation can not be sent to Landlord {PropertyValue}: please contact support for more details.
+InvitationCanNotBeSendToTenantsInvalidEmail	Invitation can not be sent to Tenant {PropertyValue}: invalid email.
+InvitationCanNotBeSendToTenantsTenantEmailAccountIsDeactivated	Invitation can not be sent to Tenant {PropertyValue}: account is deactivated.
+InvitationCanNotBeSendToTenantsTenantEmailIsUsedForAnotherAccountType	Invitation can not be sent to Tenant {PropertyValue}: please contact support for more details.
+InvitationCanNotBeSendToTenantsTenantEmailSameAsLandlordEmail	Invitation can not be sent to Tenant {PropertyValue}: the same user cannot occupy the same property as the landlord, agent, and tenant.
+InvitationCanNotBeSentDuplicatedTenants	Invitation can not be sent to Tenant(s) {PropertyValue}: duplicated tenants.
+InvitationCanNotBeSentPropertyManagerIsDeactivated	Invitation can not be sent. Property manager is deactivated.
+InvitationCantBeSent	Invitation can’t be sent. Please contact support for more details.
+InvitationCompanyIdsAreNotEqual	Company IDs are different in registration and invitation requests.
+InvitationCompanyMustBeEmpty	Company must be empty when registering a new user via invitation.
+InvitationIsInvalid	Invitation is invalid.
+InvitationRolesAreNotEqual	Roles are different in registration and invitation requests.
+InvitationTokenExpired	Invitation is expired.
+InvitationTokenRevoked	Invitation is revoked.
+InvitationTokenUsed	Invitation is already used.
+InvitationUserIdsAreNotEqual	User IDs are different in registration and invitation requests.
+InvitedCustomerUserIsDeactivated	This user is deactivated. Please contact support for more details.
+InvitedInternalUserIsDeactivated	This user is deactivated. Please reactivate him first.
+InvitedUserHasSignedUp	The invited user with ID {UserId} has already signed up.
+InvitedUserIsDeactivated	Invitation can not be sent. This user is deactivated.
+InvoiceCanNotBeSentToDeactivatedUser	Invoice can not be sent. This user is deactivated.
+IsDepositAllowedForIncomingTransfers	Transfer is not allowed. Deposit must be non-transferred in Not protected, Part protected or Waiting for payment statuses without release requests.
+JointLandlordAlreadyExistsForProperty	Joint landlord with this email already exists for property.
+JointLandlordsEmailsAreNotUnique	Joint landlords should have unique emails within one property.
+JointLandlordShouldBelongToProperty	Joint landlord doesn’t belong to this property.
+JointLandlordsPhonesAreNotUnique	Joint landlords should have unique phones within one property.
+LandlordAccountIsInconsistent	Invitation can not be sent to Landlord {PropertyValue}: details are inconsistent with other data fields with this email address.
+LandlordAccountMustHaveAddress	Landlord address is required due to regional legislation.
+LandlordDoesNotHaveEnoughData	Invitation can not be sent to Landlord {Email}: not enough data.
+LandlordTryingToUpdateThePropertyThatNotBelongsToHisAgency	Landlord trying to update the property that not belongs to him.
+LeadTenantDoesNotHavePaymentMethod	Lead tenant does not have payment method.
+LeadTenantIsNoLongerInvitable	You can no longer edit Tenant details. Tenant can be updated through change tenants process or via Profile.
+LeavingDateMustBeEarlierThanDate	Leaving date should not be earlier than {MinDate}.
+LeavingDateMustBeTodayOrInThePast	The leaving date can be today or in the past.
+LeavingDateNotLaterThanTenancyStartDate	The leaving date should be later than ‘Tenancy start date’.
+LengthValidator	{PropertyName} must be between {MinLength} and {MaxLength} characters. You entered {TotalLength} characters.
+LessThanOrEqualValidator	{PropertyName} must be less than or equal to {ComparisonValue}.
+LessThanValidator	{PropertyName} must be less than {ComparisonValue}.
+LogoDoesNotBelongToAccount	Logo does not belong to this account.
+MaximumLengthValidator	{PropertyName} should contain no more than {MaxLength} characters.
+MaxLessOrEqualThanMinComparisonProperty	{PropertyName} should not be earlier than {ComparisonProperty}.
+MaxLessThanMin	{PropertyName} should be later than {ComparisonValue}.
+MaxLessThanMinComparisonProperty	{PropertyName} should be later than {ComparisonProperty}.
+MaxRolesCountExceeded	Each user is only allowed to have up to {ComparisonValue} roles assigned to them.
+MembershipCannotBeInitiated	A new membership cannot be initiated while there's an existing membership.
+MembershipCannotBeUpdated	Membership in the current status cannot be updated.
+MembershipIsNotInActiveStatus	Membership is not in Active status.
+MembershipIsNotInSuspendStatus	Membership is not in Suspend status.
+MembershipSchemeIsNotAvailable	The membership for this protection scheme is not available.
+MembershipSuspendReasonCommentIsTooLong	The suspend reason comment is too long.
+MergingAccountMustBeWithoutMembership	The accounts can’t be merged as account to merge has active membership.
+MergingAccountsMustBeWithoutParent	The accounts cannot be merged as it is either a parent account or connected to a parent account.
+MinimumLengthValidator	{PropertyName} should contain at least {MinLength} characters.
+MinMoreOrEqualThanMaxComparisonProperty	{PropertyName} should not be later than {ComparisonProperty}.
+MinMoreThanMaxComparisonProperty	{PropertyName} should be earlier than {ComparisonProperty}.
+MinValueValidator	{PropertyName} must be greater than {MinValue}.
+MoneyLessThanOrEqualValidator	{PropertyName} cannot be higher than {ComparisonValue}.
+MoneyLessThanValidator	{PropertyName} cannot be higher than {ComparisonValue}.
+MoveToCourtMustBeAvailable	Move to court is not available for this resolution.
+MoveToResolutionMustBeAvailable	Moving court to resolution is not available for this resolution.
+MustBeAvailableScheme	Scheme is not available for region.
+MustBeCorrectFinishedServiceId	Must be valid finished service id.
+MustBeDepositsWithoutGroup	There are no ungrouped deposits or the provided filter is not valid.
+MustBeDifferentAccounts	Must be different accounts.
+MustBeExistingClientIdAndSecret	Client with provided ID and secret does not exist.
+MustBeIncompleteOverseasPayments	Provided IDs must belong to incomplete overseas stripe payments.
+MustBeLessThanTotalDeductionAmount	Amount must less than max total deduction amount.
+MustBePrivateLandlordAccountType	Account must be private landlord account type.
+MustBeUnfinishedMergeOperation	Merge operation already finished.
+MustBeUserWithoutActiveCheckoutSession	Active checkout session already exists.
+MustBeValidBooleanValue	Must be valid boolean value (true or false).
+MustBeValidLandlordAccountType	Account type must be valid landlord account type.
+MustHaveAccountType	Must be tenant, landlord or agent account.
+MustNotBeInternalUserAccount	Account must not belong to internal user.
+NewDepositAmountCannotBeSetDuringCheckout	The deposit amount cannot be changed during an active checkout session.
+NewDepositAmountMustBeGreaterOrEqualProtectedAmount	The deposit amount must be greater or equal to {ComparisonValue}.
+NewLeadTenantMustBeLinkedOrAddedWithinChangeOfTenantsProcess	Tenant must be linked to this tenancy or added within change of tenants process.
+NewPaymentStatusDoesNotMatchStatusInPaymentProvider	New payment status does not match status in payment provider.
+NewProtectedAmountMustBeLessOrEqualDepositAmount	The protected amount must be less or equal to {ComparisonValue}.
+NoMatchedConnectingCompany	The company cannot be found, or this account is already connected to another parent company, or this account is parent company.
+NotAllTenantsHavePaymentMethod	Not all tenants have payment method.
+NotEmptyValidator	{PropertyName} is required.
+NotEqualValidator	{PropertyName} must not be equal to {ComparisonValue}.
+NothingToPayForTheDeposit	There is nothing left to transfer for this item.
+NotifiedUserIsNotInCompany	Notified user is not in current company or is not active.
+NotNullValidator	{PropertyName} is required.
+NoUnallocatedFundsToPayForTheDeposit	There is nothing left in your unallocated funds account. Please select another payment method.
+NrlaMembershipHasExpired	Your NRLA membership has expired. To apply the NRLA discount, please sign up again.
+NullValidator	{PropertyName} must be empty.
+OfficeAddressShouldNotBeEqualHeadquarters	Office address should not be equal to Headquarters Address.
+OfficeDoesNotBelongsToAgentsAgency	Selected office doesn’t belong to agent’s agency.
+OfficeDoesNotBelongToCompanyPropertyManagedBy	Office with specified ID doesn’t exist in this company.
+OfficeEmailMustBeDifferentFromCompanyCentralEmail	Office email must be different from Company Central Email.
+OfficeEmailMustBeUnique	Office must have a unique email address.
+OfficeMustBeActive	Office must be active.
+OfficeMustBeFromCurrentUserOffices	Office with specified ID doesn’t belong to current user.
+OfficeMustBeInactive	Office must be inactive.
+OfficeMustNotBeHeadOffice	Sorry, you do not have relevant permissions to use this feature.
+OfficeNameMustBeUnique	Office name should be unique.
+OfficeNameMustDifferFromCompanyAndTradingName	Office name must be different from Company name and Trading name.
+OfficesAreInactive	Office(s) are no longer active: {OfficeIds}.
+OfficesAreNotExist	Office(s) does not exist: {OfficeIds}.
+OfficesDoNotBelongToUserCompany	Office with specified ID doesn’t exist in this company.
+OnlyActiveUserCanBeAPrimaryContact	Only an active user can be a primary contact.
+OutgoingTransferredDepositPaymentInProgress	Payment is unavailable whilst deposit transfer is in progress.
+PartnerNameMustBeUnique	Company name should be unique.
+PasswordError	User not found or password is invalid.
+PaymentAmountMustMatch	Payment amount must match to the amount that was used during creation of payment intent.
+PaymentCannotBeApproved	Payment cannot be approved.
+PaymentCannotBeDiscarded	Payment cannot be discarded.
+PaymentCannotBeRejected	Payment cannot be rejected.
+PaymentMethodCannotBeChanged	Payment method cannot be changed.
+PaymentMethodCannotBeSetAsDefault	Payment method as default can be set only for credit card or bank transfer.
+PaymentMethodIsBusyByAnotherUser	Payment Method is busy by another user or cannot be used.
+PaymentMethodShouldExist	Payment method should exists.
+PaymentsCannotBeConfirmed	Payment(s) cannot be confirmed.
+PaymentsMustBelongToSingleDepositOrAccount	Payment(s) must belong to either one deposit or account.
+PermissionCanNotBeManuallySet	Permission {PropertyValue} can not be manually assigned.
+PermissionIsRequired	Sorry, you do not have relevant permissions to use this feature.
+PhoneNumberHasInvalidFormat	The phone number is not in the correct format.
+PhoneNumberIsAlreadyPresented	This phone number already exists.
+PhoneNumberIsAlreadyVerified	This is already your verified phone number.
+PhoneNumberValidator	Correct phone number is required.
+PhotoDoesNotBelongToAccount	Photo file id doesn’t belong to account.
+PhotoDoesNotBelongToUser	Photo file id doesn’t belong to user profile.
+PolicyAndTermsAccept	To continue, you must accept the Terms & Conditions and the Privacy Policy.
+PredicateValidator	The specified condition was not met for {PropertyName}.
+PrimaryContactUserDoesNotExist	User does not exist. Please select alternate user.
+PrimaryContactUserShouldBeSelected	User does not exist. Please select alternate user.
+PropertyAlreadyBelongsToAnotherAgency	Property already belongs to another agency.
+PropertyAlreadyExistsInSelectedAccount	This property already exists on this account. You can’t create the property with the same name and address.
+PropertyAlreadyExistsInTheOtherOffice	Property already exists in the other office.
+PropertyAlreadyExistsInYourAccount	This property already belongs to you. You can’t create the property with the same name and address.
+PropertyCanNotBeAssignedToDeactivatedUser	Property can not be assigned. This user is deactivated.
+PropertyCanNotBeMoved	There is a closed tenancy or selected deposit protection scheme.
+PropertyDoesNotBelongToLandlord	Property doesn’t belong to Landlord.
+PropertyDoesNotBelongToYou	Property doesn’t belong to you.
+PropertyDoesNotContainTenant	Property with provided id doesn’t contain tenant with provided id.
+PropertyDoesNotExist	Property does not exist.
+PropertyDoesNotHaveAnyTenancy	Property with provided id doesn’t have any tenancies.
+PropertyHasActiveEndOfTenancySettlements	Property has active end of tenancy settlements.
+PropertyImportItemDoesNotExist	Property import item does not exist.
+PropertyIsNotUnique	Property is not unique.
+PropertyIsNotUniqueForAgent	There is already a property with the same name and address that belongs to the same Landlord.
+PropertyIsNotUniqueForAgentByInternalUser	There is already a property with the same name and address in this Agency that belongs to the same Landlord.
+PropertyIsRequired	{Property} is required.
+PropertyListContainsTooManyItems	Property list contains too many items.
+PropertyManagerMustHaveAddress	You cannot select this PM as they have no Correspondence address set up.
+PropertyNotManagedByYou	Property is not managed by current account.
+PropertyRegionDoesNotExist	Region does not exist.
+PropertyShouldBeVacant	Property should be vacant.
+ProtectedAmountCannotBeUpdatedForDeposit	The protected amount can’t be updated for this deposit.
+ProtectionDateCannotBeUpdatedForDeposit	The protection date can’t be updated for this deposit.
+ProvidedAgencyHasNotAnyCreatedOrActiveImports	Provided agency does not have any created or active imports.
+ProvidedEmailExist	A user with this email is already registered.
+ProvidedUserHasNotAnyCreatedOrActiveImports	Provided user does not have any created or active imports.
+QuestionIdIsNotValid	Every question Id should be valid.
+ReceivedDateCanNotBeInTheFuture	Received date can’t be in the future.
+RefundUnavailableWhileStoppedRefundPayment	Refund is unavailable while there is a stopped refund payment.
+RegularExpressionValidator	{PropertyName} is not in correct format.
+ReleaseRequestAlreadyHasAmendHistory	Release request already has amend history.
+ReleaseRequestAlreadyHaveResponded	Release request already have been responded.
+ReleaseRequestCannotBeCancelled	Release request cannot be cancelled.
+ReleaseRequestCannotBeInitiatedByUserType	Release request cannot be initiated by user type.
+ReleaseRequestCannotBeInitiatedOnBehalfOfThisUser	Release request can be initiated only on behalf of Lead tenant or Property manager.
+ReleaseRequestChatMessageIdsIsInvalid	Not all passed message IDs belong to the given release request.
+ReleaseRequestDoesNotHaveEvidenceOrDocuments	Release request does not have evidence or documents.
+ReleaseRequestHaveTenantBankAccount	Release request has been responded and can’t be cancelled.
+ReleaseRequestInitiationIsNotAvailable	Release request cannot be initiated.
+ReleaseRequestIsNotInAcceptedOrNegotiationStatus	Release request is not in Accepted or Negotiation status.
+ReleaseRequestIsNotInAcceptedStatus	Release request is not in Accepted status.
+ReleaseRequestIsNotInCorrectStatus	Release request is not in correct status for this operation.
+ReleaseRequestIsNotInDraftStatus	Release request is not in Draft status.
+ReleaseRequestIsNotInDraftStatusOrDepositAlreadyHasReleaseRequest	Release request is not in Draft status or it’s already been submitted for this deposit.
+ReleaseRequestIsNotInNegotiationOrAcceptedStatus	Release request is not in Negotiation or Accepted status.
+ReleaseRequestIsNotInNegotiationOrResolutionStatus	Release request is not in Negotiation or Resolution status.
+ReleaseRequestIsNotInNegotiationStatus	Release request is not in Negotiation status.
+ReleaseRequestIsNotInOpenOrNegotiationStatus	Release request is not in Open or Negotiation status.
+ReleaseRequestIsNotInOpenStatus	Release request is not in Open status.
+ReleaseRequestLeavingDateMustNotBeInFuture	The leaving date can be today or no more than 12 months in the past.
+ReleaseRequestMustBeInEvidenceReviewStatus	Release request must be in evidence review status.
+ReleaseRequestMustBeInResolutionStatus	Release request must be in resolution status.
+ReleaseRequestMustNotHaveEvidenceConfirmationFromCurrentUser	Current user already confirmed release request evidences.
+ReleaseRequestResolutionMustBeWithAdjudicatedOutcome	Release request resolution should be with adjudicated outcome.
+ReleaseRequestSettlementDeductionMustNotChange	The settlement deduction must not be changed.
+ReleaseRequestSettlementIsAccepted	Settlement is in Accepted status.
+ReleaseRequestSettlementMustBeInNegotiationStatus	The settlement must be in Negotiation status.
+ReleaseRequestSettlementMustBeInResolvedOrRejectedStatus	The settlement must be either Resolved or Rejected.
+ReleaseRequestSettlementMustBeInResolvedStatus	The settlement must be Resolved.
+ReleaseRequestSettlementsDoNotExistOrNotInNegotiationStatus	Settlement doesn’t exist for release request or not in negotiation status.
+RequestedNumberIsMoreThanAvailable	Requested number is more than available.
+RequiredLengthValidator	{PropertyName} should contain {Length} characters.
+RequiredTwoLengthValidator	{PropertyName} should contain {Length} or {Length2} characters.
+ResolutionAlreadyContainsTheOutcome	Resolution already contains the outcome.
+ResolutionAlreadyMovedToAdjudicator	Resolution already moved to adjudicator.
+ResolutionCannotBeInitiated	Resolution can’t be initiated for this release request.
+ResolutionDoesNotContainTheOutcome	Resolution does not contain the outcome.
+ResolutionIsNotMovedToAdjudicator	Resolution is not moved to adjudicator.
+ResolutionMustBeWithoutOutcome	Resolution must be without court outcome.
+ResolutionMustHaveCourtDisclaimerApproveAvailable	Resolution must have court disclaimer approve available.
+ResolutionMustHaveCourtEvidence	Resolution must have at least one court evidence.
+ResolutionStageFeatureNotAvailable	Resolution stage is not available.
+RoleIsAssignedToUsers	Unable to delete this role while it is assigned to other users.
+RoleIsNotEditableOrDeletable	Unable to edit or delete this role.
+RoutingNumberMustBeValid	Routing number should be numeric and start with 0, 1, 2, or 3.
+RoutingNumberShouldStartWithCorrectNumber	Routing number should be numeric and start with 0, 1, 2, or 3.
+SameSchemeSelect	The same scheme can't be used twice. Please select a different scheme for this card.
+ScalePrecisionValidator	{PropertyName} must not be more than {ExpectedPrecision} digits in total, with allowance for {ExpectedScale} decimals. {Digits} digits and {ActualScale} decimals were found.
+SettlementProposalIsMissingOrRedundant	Some settlement proposals are missing or redundant. Only non-accepted settlements should be sent in the request.
+SignatureDoesNotBelongToAccount	Signature does not belong to this account.
+SignedStatutoryDeclarationCannotBeAdded	Document already exists.
+SignedStatutoryDeclarationIsNotInPendingStatus	Statutory declaration status has been renewed. There are no available actions for the current status.
+SingleReleaseFeatureNotAvailable	Single release feature is not available.
+SingleReleaseRequestCannotBeInitiated	The release request has been renegotiated. This action is not available anymore.
+SingleReleaseRequestCannotBeUpdated	Single release can’t be updated for this release request.
+SomeReleaseRequestDocumentsAreMissing	Please either upload the required documents or check the box stating you do not have these available to you.
+SortDirectionMustBeValid	Parameter ’SortDirection’ value must be equal to ’asc’ or ’desc’.
+StartDateIsRequired	Start date is required.
+StartDateShouldBeLessThan24MonthsInTheFutureFromNow	Start date should be no more than 24 months in future.
+TenancyAlreadyHasDeposit	The deposit is set up for this tenancy.
+TenancyCannotBeUpdatedAfterConfirmation	Tenancy details cannot be updated for a tenancy in a Pre-approved/Live/EoT status.
+TenancyDetailsAreNotProvidedToCreatedDeposit	Tenancy details or/and Tenant are not provided to created a Deposit.
+TenancyEndDateCantBeTheSameAsExistingTenancyEndDate	End date cannot be the same as the current tenancy end date.
+TenancyInterestedPartiesShouldBeLinkedOnlyToTenantsFromTheSameTenancy	Some tenant(s) can not be linked to Interested party as they are not associated with this tenancy.
+TenancyInterestedPartyShouldBeLinkedAtLeastToOneTenant	Interested Party should be linked to at least one Tenant from the Tenancy.
+TenancyIsNoLongerEditable	Please contact Support for any amendments.
+TenancyIsNoLongerEditableByInternalUser	You can no longer edit Tenancy details.
+TenancyMustBeActiveOrRegistered	Tenancy status must be registered or active.
+TenancyMustBeNotInClosedStatus	Tenancy must be not in closed status.
+TenancyMustHaveActiveChangeOfTenantsProcess	Tenancy must have active change of tenants process.
+TenancyMustHaveAtLeastOneTenant	There is no tenant yet to set up deposit.
+TenancyMustHaveDeposit	This tenancy must have deposit.
+TenancyMustHaveDepositReplacement	Tenancy must have Deposit Replacement scheme.
+TenancyMustHaveProtectedDepositReplacement	Tenancy must have the deposit with deposit replacement scheme in protected status.
+TenancyNameIsNotUnique	Tenancy name should be unique.
+TenancyNameMustNotLookLikeAutogenerated	This matches the default format. Leave blank or try another format.
+TenancyNotManagedByYou	Tenancy is not managed by current account.
+TenancyShouldBeActive	Tenancy should be active.
+TenancyShouldBeClosed	Tenancy should be closed.
+TenancyShouldHaveOnlyOneLeadTenant	Only one tenant can be selected as a lead.
+TenancyTenantDoesNotBelongsToTenancy	Tenant doesn’t belong to this tenancy.
+TenancyTenantEmailIsNotUnique	Email should be unique
+TenancyTenantIsLeadTenant	Lead tenant can’t be deleted.
+TenancyTenantIsNoLongerCanBeAdded	You can no longer edit Tenant details. Tenant can be updated through change tenants process or via Profile.
+TenancyTenantIsNoLongerDeletable	You can no longer edit Tenant details. Tenant can be updated through change tenants process or via Profile.
+TenancyTenantIsNoLongerEditable	You can no longer edit Tenant details. Tenant can be updated through change tenants process or via Profile.
+TenancyTenantIsNoLongerInvitable	You can no longer edit Tenant details. Tenant can be updated through change tenants process or via Profile.
+TenancyTenantMustNotManageCurrentProperty	The same user cannot occupy the same property as the landlord, agent, and tenant.
+TenantAccountIsInconsistent	Invitation can not be sent to Tenant {PropertyValue}: details are inconsistent with other data fields with this email address.
+TenantAddressIsEqualToPropertyAddress	Alternative address cannot be the same as the rental property address.
+TenantAlreadyAddedToTenancy	Tenant is already added to the tenancy.
+TenantCantBeEdited	You are no longer available to change tenant details.
+TenantInterestChangesAreAlreadyApproved	Tenant interest changes are already approved.
+TenantInterestIsInConfirmationRequiredStatus	Tenant interest is in confirmation required status.
+TenantIsDeactivated	{PropertyValue} can not be added. This user is deactivated.
+TenantMustBeLinkedToThisTenancy	Tenant must be linked to this tenancy.
+TenantsInvitationConfirmation	You should confirm this to invite tenants.
+TheCommandCanBeCalledOnlyIfClaimInOpenAcceptedOrOpenDeclinedStatus	The command can be called only if the claim in open accepted or open declined status.
+TheCommandCanBeCalledOnlyIfClaimInOpenStatus	The command can be called only if the claim in open status.
+ThereAreIntersectionsBetweenRanges	There are intersections between ranges.
+ThereAreNoDepositsToExport	There are no deposits to export.
+ThereAreNoPayments	There are no transactions.
+ThereIsAlreadyRunningImportProcessOnlyOneImportAllowedPerUserAtOneTime	There is already running import process only one import allowed per user at one time.
+ThereIsNoDataToExport	There is no data to export.
+ThisTenancyAlreadyHasActiveEndOfTenancyProcess	This tenancy already has active end of tenancy process.
+ThisTenancyDoesntHaveAnyActiveEndOfTenancyProcess	This tenancy doesn’t have any active end of tenancy process.
+ThisTenancyHasAlreadyActiveChangeOfTenantsProcess	This tenancy has already active change of tenants process.
+TotalAmountIsTooLarge	The total requested amount can’t exceed the traditional deposit equal to {Amount}.
+TradingNameMustBeDifferentFromOfficeName	Trading name must be different from Office name.
+TransferredDepositMustBeFullyTransferred	Transferred deposit must be fully transferred via transfer process.
+TryToResubmitReleaseRequest	The action is not available anymore. Try to submit the release request once more.
+UnableToSavePhoneWithoutConfirmation	Unable to save phone without confirmation.
+UniquePropertyReferenceNumberIsInvalid	Invalid Unique Property Reference Number.
+UnknownFrequencyOfRentValue	Unknown Frequency of Rent Value: {PropertyValue}.
+UrlHasInvalidFormat	URL has invalid format.
+UserAccountCanNotBeActivated	This user account can not be activated.
+UserAccountCanNotBeDeactivatedDueCommitments	This user account can not be deactivated because of commitments.
+UserAccountIsAlreadyDeactivated	This user account is already deactivated.
+UserAlreadyConfirmedEndOfTenancy	The user has already confirmed end of tenancy.
+UserCannotAccessEndpoint	You don't have access to this endpoint.
+UserCanNotAssignOwnRoles	Sorry, you do not have relevant permissions to use this feature.
+UserCanNotBeDeactivatedDueCommitments	This user can not be deactivated because of commitments.
+UserCanNotBeDeletedDueCommitments	This user can not be deleted because of commitments.
+UserCannotBeDeletedDueToNotExistence	This user can’t be deleted as they don’t exist in the system or have already activated their account.
+UserCompanyUpdateRequired	Company information is required.
+UserDoesntHavePhoneNumber	User doesn’t have a phone number.
+UserEmailAlreadyTaken	A user with this email is already registered.
+UserEmailDeactivated	A user with this email is deactivated.
+UserEmailVerificationTokenAlreadyUsed	Email verification token already used.
+UserEmailVerificationTokenExpired	Email verification token expired.
+UserEmailVerificationTokenNotExist	Email verification token hasn’t been found.
+UserIdShouldBeEmptyIfEmailDetermined	UserID should be empty if email determined.
+UserIdShouldNotBeEmptyIfEmailIsEmpty	UserID should not be empty if email is empty.
+UserIsAlreadyDeactivated	This user is already deactivated or dormant.
+UserIsDeactivated	This user is deactivated. Please reactivate him first.
+UserIsLocked	The user has been locked.
+UserIsNotInCompanyOrInactive	User with ID = {NewPrimaryContactId} is not in company {CompanyId} or is not active.
+UserIsNotPermittedToConfirmChangeOfTenants	User is not permitted to confirm change of tenants.
+UserMustBeActive	Sorry, you do not have relevant permissions to use this feature.
+UserMustBeActiveOrPending	Primary user must be active or pending.
+UserMustBeCurrentUser	Sorry, you do not have relevant permissions to use this feature.
+UserMustBelongToCompany	User must be a Company user.
+UserMustHaveAdminRole	Sorry, you do not have relevant permissions to use this feature.
+UserMustHavePermission	User doesn’t have permission to perform this action.
+UserMustNotBeCurrentUser	Sorry, you do not have relevant permissions to use this feature.
+UserMustNotBeNonManagingLandlord	User must not be non-managing landlord in any property.
+UserNotAllowedToRequestVouchersAnymore	You are not allowed to request vouchers anymore. Please contact Support.
+UsersAreAlreadyInTheOffice	User(s) with ID(s) {UserIds} are already in the office ID {OfficeId}.
+UsersMustHaveTheSameAccount	Sorry, you do not have relevant permissions to use this feature.
+UserUpdateRequired	User information is required.
+ValidatedFileNotFoundOrItDoesntHaveErrorLog	Current user doesn’t have any validated file or it doesn’t have error log.
+ValueGreaterThanCustomerUnallocatedFunds	The amount is more than unallocated funds balance.
+ValueGreaterThanDepositOutstandingAmount	Amount entered is more than outstanding amount.
+ValueGreaterThanUnallocatedFunds	There is only {UnallocatedFunds} in your unallocated funds. Please adjust the amount to pay and try again.
+ValueMustBeUnique	{PropertyName} should be unique.
+VoucherCannotBeExpired	Voucher with ID = {PropertyValue} cannot be expired.
+VoucherCodeCanNotBeAppliedToDeposit	Voucher cannot be applied to deposit.
+VoucherCodeDoesNotExist	Voucher code doesn’t exists.
+VoucherIsInvalid	Voucher is invalid or not in requested status or not belongs to property manager.
+VouchersAreDisabledForPropertyManager	Vouchers are disabled for property manager.
+

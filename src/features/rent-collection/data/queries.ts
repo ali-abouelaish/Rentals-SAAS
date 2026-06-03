@@ -28,6 +28,7 @@ export type RentCollectionRow = {
     phone: string | null;
   };
   property: {
+    id: string;
     name: string;
     addressLine1: string;
     portfolio: { name: string; color: string } | null;
@@ -45,7 +46,7 @@ const SELECT = `
   pm_tenant:pm_tenants(id, full_name, email, phone),
   unit:units(
     room_number, unit_type,
-    property:properties(name, address_line_1, portfolio:portfolios(name, color))
+    property:properties(id, name, address_line_1, portfolio:portfolios(name, color))
   )
 `;
 
@@ -68,6 +69,7 @@ type RawContract = {
     room_number: string | null;
     unit_type: string;
     property: {
+      id: string;
       name: string;
       address_line_1: string;
       portfolio: { name: string; color: string } | null;
@@ -154,6 +156,7 @@ export async function getRentCollectionRows(): Promise<RentCollectionRow[]> {
         phone: r.pm_tenant?.phone ?? null,
       },
       property: {
+        id: r.unit?.property?.id ?? "",
         name: r.unit?.property?.name ?? "—",
         addressLine1: r.unit?.property?.address_line_1 ?? "",
         portfolio: r.unit?.property?.portfolio ?? null,

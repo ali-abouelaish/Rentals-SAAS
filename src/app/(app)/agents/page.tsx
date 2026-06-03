@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FilterBar, FilterRow, FilterGroup, FilterActions } from "@/components/ui/filter-bar";
-import { getAgents } from "@/features/agents/data/agents";
+import { getAgents, type AgentStatusFilter } from "@/features/agents/data/agents";
 import { getEarningsLeaderboardAll } from "@/features/earnings/data/queries";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
@@ -32,15 +32,19 @@ function getDefaultRange() {
 export default async function AgentsPage({
   searchParams
 }: {
-  searchParams?: { q?: string; role?: string; sort?: string };
+  searchParams?: { q?: string; role?: string; sort?: string; status?: string };
 }) {
   await requireRole([...ADMIN_ROLES]);
   const search = searchParams?.q ?? "";
   const role = searchParams?.role ?? "all";
   const sort = searchParams?.sort ?? "earnings";
+  const status: AgentStatusFilter =
+    searchParams?.status === "disabled" || searchParams?.status === "all"
+      ? searchParams.status
+      : "active";
 
   const [agents, leaderboard] = await Promise.all([
-    getAgents({ search, role }),
+    getAgents({ search, role, status }),
     getEarningsLeaderboardAll(getDefaultRange())
   ]);
 
@@ -58,6 +62,7 @@ export default async function AgentsPage({
     rentals: number;
     earnings: number;
     last_activity: string | null;
+    is_disabled: boolean;
   };
 
   const rows: Row[] = agents.map((agent) => {
@@ -71,7 +76,8 @@ export default async function AgentsPage({
       rank: lb?.rank ?? 0,
       rentals: lb?.transactions_count ?? 0,
       earnings: lb?.agent_earnings ?? 0,
-      last_activity: lb?.last_activity ?? null
+      last_activity: lb?.last_activity ?? null,
+      is_disabled: agent.is_disabled ?? false
     };
   });
 
@@ -113,6 +119,17 @@ export default async function AgentsPage({
                     {opt.label}
                   </option>
                 ))}
+              </select>
+            </FilterGroup>
+            <FilterGroup label="Status">
+              <select
+                name="status"
+                defaultValue={status}
+                className="flex h-10 w-full rounded-lg border bg-surface-card px-3 py-2 text-sm border-border text-foreground-secondary"
+              >
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+                <option value="all">All</option>
               </select>
             </FilterGroup>
             <FilterGroup label="Sort by">

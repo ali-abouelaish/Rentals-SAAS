@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { expectedRent, inclusiveMonthsBetween } from "@/features/contracts/domain/pro-rata";
+import { assertMonthOpen } from "@/features/finances/lib/assertMonthOpen";
 
 export type RentPayment = {
   id: string;
@@ -144,6 +145,9 @@ export async function recordRentPayment({
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
+  const guard = await assertMonthOpen(periodYear, periodMonth);
+  if ("error" in guard) throw new Error(guard.error);
+
   const paidAtIso =
     paidAt && /^\d{4}-\d{2}-\d{2}$/.test(paidAt)
       ? `${paidAt}T12:00:00Z`
@@ -169,6 +173,7 @@ export async function recordRentPayment({
 
   if (error) throw new Error(error.message);
   revalidatePath("/properties");
+  revalidatePath("/finances");
   return data as {
     id: string;
     period_year: number;
@@ -196,6 +201,9 @@ export async function undoRentPayment({
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
+  const guard = await assertMonthOpen(periodYear, periodMonth);
+  if ("error" in guard) return { ok: false, error: guard.error };
+
   // RLS scopes by tenant_id; the explicit eq is belt-and-braces and lets the
   // SELECT below short-circuit when the row belongs to another agency.
   const { data: existing, error: findErr } = await supabase
@@ -216,5 +224,6 @@ export async function undoRentPayment({
   if (deleteErr) return { ok: false, error: deleteErr.message };
 
   revalidatePath("/properties");
+  revalidatePath("/finances");
   return { ok: true, deletedId: existing.id as string };
 }

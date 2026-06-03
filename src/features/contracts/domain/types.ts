@@ -59,17 +59,23 @@ export type PropertyContract = {
   deposit_release_notes: string | null;
   document_url: string | null;
   notes: string | null;
+  template_id: string | null;
+  generated_from_booking_id: string | null;
+  generated_pdf_path: string | null;
+  last_generated_at: string | null;
   created_at: string;
   updated_at: string;
   // joined
-  pm_tenant?: { full_name: string; email: string; phone: string } | null;
+  pm_tenant?: { id?: string; full_name: string; email: string; phone: string } | null;
   unit?: {
+    id?: string;
     room_number: string | null;
     unit_type: string;
     property: {
+      id?: string;
       name: string;
       address_line_1: string;
-      portfolio?: { name: string; color: string } | null;
+      portfolio?: { id?: string; name: string; color: string } | null;
     };
   } | null;
 };

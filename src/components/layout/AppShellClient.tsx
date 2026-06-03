@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { BrandingStyles } from "./BrandingStyles";
 import { SideNav } from "./SideNav";
 import { GlobalSearchBar } from "@/features/search/ui/GlobalSearchBar";
+import { HelpButton } from "@/features/help/ui/HelpButton";
 import type { PublishedModuleConfig, TenantBrandingSettings } from "@/features/admin/domain/types";
 
 type Profile = { display_name: string | null; role: string | null; avatar_url: string | null };
@@ -15,7 +16,7 @@ export function AppShellClient({
   branding,
   moduleConfig,
   inboxPendingCount,
-  entitlements,
+  helpEnabled,
   children,
 }: {
   profile: Profile;
@@ -23,7 +24,7 @@ export function AppShellClient({
   branding: TenantBrandingSettings | null;
   moduleConfig: PublishedModuleConfig;
   inboxPendingCount: number;
-  entitlements: string[];
+  helpEnabled: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -52,6 +53,7 @@ export function AppShellClient({
         {showSearch && (
           <div className="sticky top-0 z-30 flex items-center justify-end gap-3 border-b border-border/60 bg-surface-card/95 px-4 py-3 backdrop-blur-md md:justify-center lg:px-10">
             <GlobalSearchBar tenantId={tenantId} />
+            {helpEnabled && <HelpButton />}
           </div>
         )}
         <div className="px-6 pt-8 pb-4 lg:px-10 lg:pt-10 lg:pb-4">{children}</div>

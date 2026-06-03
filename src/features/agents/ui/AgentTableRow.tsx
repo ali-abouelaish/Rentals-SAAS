@@ -15,6 +15,7 @@ export type AgentTableRowData = {
   rentals: number;
   earnings: number;
   last_activity: string | null;
+  is_disabled: boolean;
 };
 
 function formatRoleLabel(role: string): string {
@@ -51,9 +52,20 @@ export function AgentTableRow({ row }: { row: AgentTableRowData }) {
           <div className="h-9 w-9 shrink-0">
             <AvatarCircle name={row.display_name} url={row.avatar_url} />
           </div>
-          <span className="font-medium text-foreground group-hover:text-brand">
+          <span
+            className={
+              row.is_disabled
+                ? "font-medium text-foreground-muted line-through group-hover:text-brand"
+                : "font-medium text-foreground group-hover:text-brand"
+            }
+          >
             {row.display_name}
           </span>
+          {row.is_disabled && (
+            <span className="px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium">
+              Disabled
+            </span>
+          )}
         </div>
       </TableCell>
       <TableCell>

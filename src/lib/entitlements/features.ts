@@ -17,13 +17,15 @@ export type FeatureKey =
   | "bookings"
   | "pm_tenants"
   | "contracts"
+  | "contract_templates"
   | "profitability"
   | "maintenance"
   | "acquisition_insights"
   | "property_shares"
   | "keys"
   | "rent_collection"
-  | "mydeposits"
+  | "finances"
+  | "ai_assistant"
   | "public_api_access"
   | "admin";
 
@@ -46,13 +48,15 @@ export const ALL_FEATURES: FeatureKey[] = [
   "bookings",
   "pm_tenants",
   "contracts",
+  "contract_templates",
   "profitability",
   "maintenance",
   "acquisition_insights",
   "property_shares",
   "keys",
   "rent_collection",
-  "mydeposits",
+  "finances",
+  "ai_assistant",
   "public_api_access",
   "admin",
 ];
@@ -103,6 +107,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
     label: "Contracts",
     description: "Periodic tenancy contracts, deposit protection tracking, and notice management."
   },
+  contract_templates: {
+    label: "Contract Templates",
+    description: "Upload tenancy contract PDFs, mark dynamic fields visually with AI assistance, and auto-stamp booking data into them."
+  },
   profitability: {
     label: "Profitability",
     description: "Property P&L tracking, cost management, and profitability alerts."
@@ -127,9 +135,13 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
     label: "Rent Collection",
     description: "Track rent payments, record collections, and view lifetime arrears across active tenancies."
   },
-  mydeposits: {
-    label: "Deposit Protection",
-    description: "Protect and release tenancy deposits via the mydeposits Total Property scheme — connect once, then secure and release deposits straight from a contract."
+  finances: {
+    label: "Finances",
+    description: "Portfolio-wide monthly P&L hub rolling up rent collected, property costs, owner rent, vacancy loss and bank reconciliation, with admin overheads and monthly close coming in later phases."
+  },
+  ai_assistant: {
+    label: "AI Assistant",
+    description: "Admin-only read-only AI chat that answers questions about your properties, tenants, contracts, rent, finances, bookings and leads."
   },
   public_api_access: {
     label: "Public API",
