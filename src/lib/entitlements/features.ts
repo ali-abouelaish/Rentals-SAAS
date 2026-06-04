@@ -28,6 +28,8 @@ export type FeatureKey =
   | "ai_assistant"
   | "help_center"
   | "public_api_access"
+  | "mydeposits"
+  | "help_center"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -60,6 +62,8 @@ export const ALL_FEATURES: FeatureKey[] = [
   "ai_assistant",
   "help_center",
   "public_api_access",
+  "mydeposits",
+  "help_center",
   "admin",
 ];
 
@@ -152,6 +156,14 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   public_api_access: {
     label: "Public API",
     description: "Issue API keys so external platforms can read scraped listings (and future endpoints) over HTTPS."
+  },
+  mydeposits: {
+    label: "Deposit Protection",
+    description: "Protect tenancy deposits via MyDeposits (Total Property) — secure deposits, track protection certificates, and manage release requests."
+  },
+  help_center: {
+    label: "Help Center",
+    description: "In-app contextual help — shows a Help button on supported pages that opens an authored guide for the current screen in a side drawer."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

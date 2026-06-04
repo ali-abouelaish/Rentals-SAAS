@@ -10,7 +10,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const profile = await requireUserProfile();
 
   const supabase = createSupabaseServerClient();
-  const [branding, agentRow, moduleConfig, inboxCountRes, entitlements] = await Promise.all([
+  const [branding, agentRow, moduleConfig, inboxCountRes, entitlementSet] = await Promise.all([
     getTenantBrandingForApp(profile.tenant_id),
     supabase
       .from("agent_profiles")
@@ -28,6 +28,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   ]);
 
   const inboxPendingCount = inboxCountRes?.count ?? 0;
+  const entitlements = [...entitlementSet];
 
   const assistantEnabled =
     isAdminRole(profile.role) &&

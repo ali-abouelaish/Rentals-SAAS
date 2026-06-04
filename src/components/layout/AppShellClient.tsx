@@ -50,6 +50,7 @@ export function AppShellClient({
         }
         moduleConfig={moduleConfig}
         inboxPendingCount={inboxPendingCount}
+        entitlements={entitlements}
       />
       <main className="flex-1 min-w-0 overflow-y-auto bg-surface-card rounded-bento shadow-bento">
         {showSearch && (
