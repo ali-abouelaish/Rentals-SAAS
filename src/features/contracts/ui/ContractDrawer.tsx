@@ -14,6 +14,7 @@ import { ContractStatusBadge } from "./ContractStatusBadge";
 import { DepositBadge } from "./DepositBadge";
 import { GiveNoticeModal } from "./GiveNoticeModal";
 import { ProRataField } from "./ProRataField";
+import { SecureDepositWizard } from "@/features/mydeposits/ui/SecureDepositWizard";
 import { updateContract } from "../actions/contracts";
 import { regenerateContractPdf } from "../templates/actions/generate";
 import { contractSchema, type ContractFormValues } from "../domain/schemas";

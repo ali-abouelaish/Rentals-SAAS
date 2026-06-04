@@ -17,6 +17,7 @@ export function AppShellClient({
   moduleConfig,
   inboxPendingCount,
   helpEnabled,
+  entitlements,
   children,
 }: {
   profile: Profile;
@@ -25,6 +26,7 @@ export function AppShellClient({
   moduleConfig: PublishedModuleConfig;
   inboxPendingCount: number;
   helpEnabled: boolean;
+  entitlements: string[];
   children: ReactNode;
 }) {
   const pathname = usePathname();

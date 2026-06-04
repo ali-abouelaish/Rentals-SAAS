@@ -20,6 +20,16 @@ type MdTokenResponse = {
 };
 
 /** Build the /connect/authorize URL the admin is redirected to. */
+/**
+ * Scopes requested at authorize time. Overridable via MYDEPOSITS_SCOPES so the
+ * grant can be tuned without a code change — the sandbox IdentityServer exposes
+ * per-service API scopes (RS.* deposits, TS.* releases, SpS.* lookups, PS.*
+ * payments) and the client registration decides which we're allowed to request.
+ */
+function requestedScopes(): string {
+  return process.env.MYDEPOSITS_SCOPES || "openid profile offline_access";
+}
+
 export function buildAuthorizeUrl(
   env: MdEnvironment,
   opts: { state: string; codeChallenge: string; redirectUri: string }
@@ -29,12 +39,20 @@ export function buildAuthorizeUrl(
     client_id: clientId,
     response_type: "code",
     redirect_uri: opts.redirectUri,
-    scope: "openid profile offline_access",
+    scope: requestedScopes(),
     state: opts.state,
     code_challenge: opts.codeChallenge,
     code_challenge_method: "S256",
   });
-  return `${mdUrls(env).authBase}/connect/authorize?${params.toString()}`;
+  // Quirk (verified against sandbox + their first-party portal SPA): hitting
+  // /connect/authorize without a session returns an EMPTY 200 — no redirect to
+  // a login page (their docs even note "200 OK - Empty body in response").
+  // The intended choreography is to land the user on the auth host's login SPA
+  // with the authorize URL as `returnUrl`; after email/SMS login (sandbox OTP
+  // 1111) the SPA replays the returnUrl with a session cookie, and IdentityServer
+  // then 302s back to our redirect_uri with ?code=...&state=...
+  const authorizePath = `/connect/authorize?${params.toString()}`;
+  return `${mdUrls(env).authBase}/login?returnUrl=${encodeURIComponent(authorizePath)}`;
 }
 
 async function postToken(env: MdEnvironment, body: URLSearchParams): Promise<MdTokenSet> {

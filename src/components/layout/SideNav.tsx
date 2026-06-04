@@ -31,12 +31,12 @@ import {
   Wrench,
   Megaphone,
   TrendingUp,
-  Layers,
   Search,
   Share2,
   Wallet,
-  Key as KeyIcon,
+  ChevronDown,
   ShieldCheck,
+  Key as KeyIcon,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -64,6 +64,11 @@ type NavItem = {
   entitlement?: string;
 };
 
+type NavGroup = {
+  title: string;
+  items: NavItem[];
+};
+
 const RA_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/me", label: "My Profile", icon: User },
@@ -81,29 +86,66 @@ const RA_NAV_ITEMS: NavItem[] = [
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
 ];
 
-const PM_NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/inbox", label: "Inbox", icon: Inbox, allowedRoles: ADMIN_ROLES },
-  { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
-  { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
-  { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
-  { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
-  { href: "/contracts/templates", label: "Contract Templates", icon: FileText, allowedRoles: ADMIN_ROLES },
-  { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
-  { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
-  { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
-  { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
-  { href: "/assistant", label: "AI Assistant", icon: Sparkles, allowedRoles: ADMIN_ROLES },
-  { href: "/keys", label: "Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
-  { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
-  { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
-  { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
+// PM navigation is organised into labelled sections (see SideNav redesign).
+const PM_NAV_GROUPS: NavGroup[] = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/inbox", label: "Inbox", icon: Inbox, allowedRoles: ADMIN_ROLES },
+    ],
+  },
+  {
+    title: "Lettings",
+    items: [
+      { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
+      { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
+      { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
+      { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
+      { href: "/contracts/templates", label: "Contract Templates", icon: FileText, allowedRoles: ADMIN_ROLES },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
+      { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
+      { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
+    ],
+  },
+  {
+    title: "Growth",
+    items: [
+      { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
+      { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
+      { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
+    ],
+  },
+  {
+    title: "Tools",
+    items: [
+      { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
+      { href: "/keys", label: "Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
+    ],
+  },
+];
+
+// Collapsible "Settings" section, rendered separately from the groups above.
+const PM_SETTINGS_ITEMS: NavItem[] = [
   { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
   { href: "/settings/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlement: "mydeposits" },
-  { href: "/settings/billing-info", label: "Settings", icon: Settings, allowedRoles: ADMIN_ROLES },
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES },
 ];
+
+// Relocated to a pinned pill at the foot of the PM sidebar.
+const PM_ASSISTANT_ITEM: NavItem = {
+  href: "/assistant",
+  label: "Ask AI Assistant",
+  icon: Sparkles,
+  allowedRoles: ADMIN_ROLES,
+};
 
 const PM_ROUTE_PREFIXES = [
   "/inbox",
@@ -131,12 +173,28 @@ function isPmRoute(pathname: string) {
   );
 }
 
+/** Initials fallback for the brand mark when no logo is set (e.g. "AP Real Estate" → "AP"). */
+function brandInitials(name: string): string {
+  const letters = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("");
+  return letters.toUpperCase() || "PM";
+}
+
 /** Inner component — reads searchParams so must be inside Suspense. */
 function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, entitlements }: SideNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+
+  const onSettingsRoute = PM_SETTINGS_ITEMS.some(
+    (i) => pathname === i.href || pathname.startsWith(i.href + "/")
+  );
+  const [settingsOpen, setSettingsOpen] = useState(onSettingsRoute);
 
   const isSuperAdminOnly = (profile.role ?? "").toLowerCase() === "super_admin";
   const hasBoth =
@@ -156,21 +214,96 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
   })();
 
   const isPm = activeModule === "pm";
-  const navItems = isPm ? PM_NAV_ITEMS : RA_NAV_ITEMS;
 
   // Brand identity
-  const raBrandName = branding?.brandName?.trim() || "Rental Agency";
+  const raBrandName = branding?.brandName?.trim() || (isPm ? "Property Co." : "Rental Agency");
   const raLogoUrl = branding?.logoUrl?.trim();
 
   useEffect(() => {
     setNavigatingTo(null);
   }, [pathname]);
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/");
+  // Auto-expand the Settings section when navigating onto one of its routes.
+  useEffect(() => {
+    if (PM_SETTINGS_ITEMS.some((i) => pathname === i.href || pathname.startsWith(i.href + "/"))) {
+      setSettingsOpen(true);
+    }
+  }, [pathname]);
 
-  // Logo block — differs between RA and PM
-  const logoBlock = isPm ? (
+  // Resolve the single best-matching href so nested routes (e.g. /contracts vs
+  // /contracts/templates) highlight only the most specific nav item.
+  const activeHrefs = isPm
+    ? [
+        ...PM_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href)),
+        ...PM_SETTINGS_ITEMS.map((i) => i.href),
+        PM_ASSISTANT_ITEM.href,
+        "/admin",
+      ]
+    : [...RA_NAV_ITEMS.map((i) => i.href), "/admin"];
+
+  const bestMatch =
+    activeHrefs
+      .filter((h) => pathname === h || pathname.startsWith(h + "/"))
+      .sort((a, b) => b.length - a.length)[0] ?? null;
+
+  const isActive = (href: string) => href === bestMatch;
+
+  const hasEntitlement = (key: string) => (entitlements ?? []).includes(key);
+
+  const renderLink = (item: NavItem) => {
+    if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
+    if (item.entitlement && !hasEntitlement(item.entitlement)) return null;
+    const active = isActive(item.href);
+    // For shared routes (dashboard + settings), carry ?view=pm so the sidebar
+    // stays in PM mode for tenants with both modules enabled.
+    const needsViewParam =
+      isPm && hasBoth && (item.href === "/dashboard" || item.href.startsWith("/settings"));
+    const linkHref = needsViewParam ? `${item.href}?view=pm` : item.href;
+
+    return (
+      <Link
+        key={item.href}
+        href={linkHref}
+        prefetch={false}
+        onClick={() => {
+          setMobileOpen(false);
+          setNavigatingTo(item.href);
+        }}
+        className={cn(
+          "group flex items-center gap-3 px-3 py-2 text-[13px] font-medium",
+          "transition-all duration-base ease-default",
+          active
+            ? "rounded-full bg-accent text-accent-fg shadow-glow"
+            : "rounded-lg text-sidebar-text hover:bg-white/[0.06] hover:text-white",
+          navigatingTo === item.href && "opacity-80"
+        )}
+      >
+        <item.icon
+          size={17}
+          strokeWidth={active ? 2.2 : 1.8}
+          className={cn(
+            "shrink-0 transition-colors",
+            active ? "text-accent-fg" : "text-sidebar-text group-hover:text-white"
+          )}
+        />
+        <span className="flex-1 truncate">{item.label}</span>
+        {item.href === "/inbox" && inboxPendingCount > 0 && (
+          <span
+            className={cn(
+              "ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
+              active ? "bg-white/20 text-white" : "bg-accent text-accent-fg"
+            )}
+            aria-label={`${inboxPendingCount} pending requests`}
+          >
+            {inboxPendingCount > 99 ? "99+" : inboxPendingCount}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
+  // Logo block — initials/logo mark with brand name + module label.
+  const logoBlock = (
     <div className="flex items-center gap-3 px-5 pt-6 pb-5">
       {raLogoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -180,37 +313,83 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
           className="h-10 w-10 rounded-xl object-contain bg-white/10 p-1 shrink-0"
         />
       ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
-          <Layers size={18} />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-semibold text-accent-fg text-[13px] shadow-glow shrink-0">
+          {isPm ? brandInitials(raBrandName) : "R"}
         </div>
       )}
       <div className="flex flex-col min-w-0">
         <span className="text-sm font-bold tracking-tight text-white truncate">
           {raBrandName}
         </span>
-        <span className="text-[11px] text-sidebar-text">Property Management</span>
+        <span className="text-[11px] text-sidebar-text">
+          {isPm ? "Property Management" : "Management"}
+        </span>
       </div>
     </div>
-  ) : (
-    <div className="flex items-center gap-3 px-5 pt-6 pb-5">
-      {raLogoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={raLogoUrl}
-          alt=""
-          className="h-10 w-10 rounded-xl object-contain bg-white/10 p-1 shrink-0"
-        />
-      ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-bold text-accent-fg text-sm shadow-glow shrink-0">
-          R
+  );
+
+  // PM body: labelled groups + collapsible settings. RA body: flat list.
+  const navBody = isSuperAdminOnly ? (
+    <div className="space-y-0.5">
+      {renderLink({ href: "/admin", label: "Super Admin", icon: Shield })}
+    </div>
+  ) : isPm ? (
+    <div className="space-y-0.5">
+      {PM_NAV_GROUPS.map((group) => {
+        const links = group.items.map(renderLink).filter(Boolean);
+        if (links.length === 0) return null;
+        return (
+          <div key={group.title}>
+            <div className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+              {group.title}
+            </div>
+            <div className="space-y-0.5">{links}</div>
+          </div>
+        );
+      })}
+
+      {/* Collapsible Settings section */}
+      {(() => {
+        const settingsLinks = PM_SETTINGS_ITEMS.map(renderLink).filter(Boolean);
+        if (settingsLinks.length === 0) return null;
+        return (
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((o) => !o)}
+              aria-expanded={settingsOpen}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-white transition-colors hover:opacity-80"
+            >
+              <span>Settings</span>
+              <ChevronDown
+                size={14}
+                className={cn(
+                  "transition-transform duration-base",
+                  settingsOpen ? "" : "-rotate-90"
+                )}
+              />
+            </button>
+            {settingsOpen && (
+              <div className="mt-0.5 ml-4 space-y-0.5 border-l border-white/[0.06] pl-1.5">
+                {settingsLinks}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Super admin link (rare cross-role case) */}
+      {canAccessRoute(profile.role, SUPER_ADMIN_ROLES) && (
+        <div className="pt-2">
+          {renderLink({ href: "/admin", label: "Super Admin", icon: Shield })}
         </div>
       )}
-      <div className="flex flex-col min-w-0">
-        <span className="text-sm font-bold tracking-tight text-white truncate">
-          {raBrandName}
-        </span>
-        <span className="text-[11px] text-sidebar-text">Management</span>
-      </div>
+    </div>
+  ) : (
+    <div className="space-y-0.5">
+      {RA_NAV_ITEMS.filter((item) => item.href !== "/admin").map(renderLink)}
+      {canAccessRoute(profile.role, SUPER_ADMIN_ROLES) &&
+        renderLink({ href: "/admin", label: "Super Admin", icon: Shield })}
     </div>
   );
 
@@ -220,100 +399,35 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
 
       <div className="mx-5 h-px bg-white/[0.06] mb-2" />
 
-      <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
-        {(isSuperAdminOnly
-          ? [{ href: "/admin", label: "Super Admin", icon: Shield } as NavItem]
-          : navItems.filter((item) => item.href !== "/admin")
-        ).map((item) => {
-          if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
-          if (item.entitlement && !(entitlements ?? []).includes(item.entitlement)) return null;
-          const active = isActive(item.href);
-          // For shared routes (dashboard + settings), carry ?view=pm so the
-          // sidebar stays in PM mode for tenants with both modules enabled.
-          const needsViewParam =
-            isPm && hasBoth && (item.href === "/dashboard" || item.href.startsWith("/settings"));
-          const linkHref = needsViewParam ? `${item.href}?view=pm` : item.href;
+      <nav className="flex-1 px-3 py-2 overflow-y-auto">{navBody}</nav>
 
-          return (
+      {/* Footer: Ask AI Assistant pill (PM) + user area */}
+      <div className="p-3 pt-2">
+        {isPm &&
+          canAccessRoute(profile.role, PM_ASSISTANT_ITEM.allowedRoles ?? []) && (
             <Link
-              key={item.href}
-              href={linkHref}
+              href={PM_ASSISTANT_ITEM.href}
               prefetch={false}
               onClick={() => {
                 setMobileOpen(false);
-                setNavigatingTo(item.href);
+                setNavigatingTo(PM_ASSISTANT_ITEM.href);
               }}
               className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium",
+                "mb-3 flex items-center gap-2.5 rounded-full px-3.5 py-2.5 text-[13px] font-medium",
                 "transition-all duration-base ease-default",
-                active
+                isActive(PM_ASSISTANT_ITEM.href)
                   ? "bg-accent text-accent-fg shadow-glow"
-                  : "text-sidebar-text hover:bg-white/[0.06] hover:text-white",
-                navigatingTo === item.href && "opacity-80"
+                  : "bg-white/[0.07] text-accent hover:bg-white/[0.12]"
               )}
             >
-              <item.icon
-                size={18}
-                strokeWidth={active ? 2.2 : 1.8}
-                className={cn(
-                  "shrink-0 transition-colors",
-                  active ? "text-accent-fg" : "text-sidebar-text group-hover:text-white"
-                )}
-              />
-              <span className="flex-1 truncate">{item.label}</span>
-              {item.href === "/inbox" && inboxPendingCount > 0 && (
-                <span
-                  className={cn(
-                    "ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
-                    active ? "bg-white/20 text-white" : "bg-accent text-accent-fg"
-                  )}
-                  aria-label={`${inboxPendingCount} pending requests`}
-                >
-                  {inboxPendingCount > 99 ? "99+" : inboxPendingCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-
-        {/* Super admin link for non-super-admin-only users */}
-        {!isSuperAdminOnly &&
-          canAccessRoute(profile.role, SUPER_ADMIN_ROLES) && (
-            <Link
-              href="/admin"
-              prefetch={false}
-              onClick={() => {
-                setMobileOpen(false);
-                setNavigatingTo("/admin");
-              }}
-              className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium",
-                "transition-all duration-base ease-default",
-                isActive("/admin")
-                  ? "bg-accent text-accent-fg shadow-glow"
-                  : "text-sidebar-text hover:bg-white/[0.06] hover:text-white",
-                navigatingTo === "/admin" && "opacity-80"
-              )}
-            >
-              <Shield
-                size={18}
-                strokeWidth={isActive("/admin") ? 2.2 : 1.8}
-                className={cn(
-                  "shrink-0 transition-colors",
-                  isActive("/admin")
-                    ? "text-accent-fg"
-                    : "text-sidebar-text group-hover:text-white"
-                )}
-              />
-              Super Admin
+              <Sparkles size={16} className="shrink-0" />
+              <span className="truncate">{PM_ASSISTANT_ITEM.label}</span>
             </Link>
           )}
-      </nav>
 
-      {/* User Area */}
-      <div className="p-4">
-        <div className="mx-1 h-px bg-white/[0.06] mb-4" />
-        <div className="flex items-center gap-3 px-2 mb-3">
+        <div className="mx-1 h-px bg-white/[0.06] mb-3" />
+
+        <div className="flex items-center gap-3 px-1">
           <div className="h-9 w-9 rounded-full overflow-hidden ring-1 ring-white/[0.08] shrink-0">
             {profile.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -328,7 +442,7 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
               </div>
             )}
           </div>
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="text-[13px] font-medium text-white truncate">
               {profile.display_name ?? "User"}
             </span>
@@ -338,14 +452,16 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
                 : profile.role?.replace(/_/g, " ")}
             </span>
           </div>
+          <form action={signOut}>
+            <button
+              type="submit"
+              aria-label="Sign out"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-text transition-colors duration-base hover:bg-white/[0.06] hover:text-red-400"
+            >
+              <LogOut size={17} />
+            </button>
+          </form>
         </div>
-
-        <form action={signOut}>
-          <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text transition-colors duration-base hover:text-red-400 hover:bg-white/[0.04]">
-            <LogOut size={15} />
-            Sign out
-          </button>
-        </form>
       </div>
     </>
   );

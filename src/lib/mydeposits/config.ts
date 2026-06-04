@@ -9,14 +9,18 @@ export type MdEnvironment = "sandbox" | "production";
 
 type MdEnvUrls = { apiBase: string; authBase: string };
 
+// authBase verified via OIDC discovery (GET {authBase}/.well-known/openid-configuration):
+// authorization_endpoint and token_endpoint both live on auth.{env}.totalproperty.co.uk.
+// Note: authapi.{env}.totalproperty.co.uk/totalpropertyauth is the *headless* Auth API
+// (email/SMS login endpoints) — it serves no browser UI, so do NOT send users there.
 const ENV_URLS: Record<MdEnvironment, MdEnvUrls> = {
   sandbox: {
     apiBase: "https://api.sandbox.totalproperty.co.uk/totalproperty",
-    authBase: "https://authapi.sandbox.totalproperty.co.uk/totalpropertyauth",
+    authBase: "https://auth.sandbox.totalproperty.co.uk",
   },
   production: {
     apiBase: "https://api.totalproperty.co.uk/totalproperty",
-    authBase: "https://authapi.totalproperty.co.uk/totalpropertyauth",
+    authBase: "https://auth.totalproperty.co.uk",
   },
 };
 
