@@ -25,7 +25,10 @@ import { propertiesNewArticle } from "./properties-new";
 import { bookingsArticle } from "./bookings";
 import { tenantsArticle } from "./tenants";
 import { contractsArticle } from "./contracts";
+import { contractTemplatesArticle } from "./contract-templates";
 import { profitabilityArticle } from "./profitability";
+import { financesArticle } from "./finances";
+import { assistantArticle } from "./assistant";
 import { rentCollectionArticle } from "./rent-collection";
 import { rentStatementsArticle } from "./rent-statements";
 import { maintenanceArticle } from "./maintenance";
@@ -71,7 +74,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
   bookingsArticle,
   tenantsArticle,
   contractsArticle,
+  contractTemplatesArticle,
   profitabilityArticle,
+  financesArticle,
+  assistantArticle,
   rentCollectionArticle,
   rentStatementsArticle,
   maintenanceArticle,

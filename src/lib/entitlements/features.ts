@@ -26,6 +26,7 @@ export type FeatureKey =
   | "rent_collection"
   | "finances"
   | "ai_assistant"
+  | "help_center"
   | "public_api_access"
   | "admin";
 
@@ -57,6 +58,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "rent_collection",
   "finances",
   "ai_assistant",
+  "help_center",
   "public_api_access",
   "admin",
 ];
@@ -142,6 +144,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   ai_assistant: {
     label: "AI Assistant",
     description: "Admin-only read-only AI chat that answers questions about your properties, tenants, contracts, rent, finances, bookings and leads."
+  },
+  help_center: {
+    label: "Help Center",
+    description: "Contextual in-app help drawer with per-page onboarding guides."
   },
   public_api_access: {
     label: "Public API",
