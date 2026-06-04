@@ -4,12 +4,9 @@ import { HELP_ARTICLES } from "../content/registry";
  * Concatenate every help article into a single markdown document.
  *
  * Pure and server-safe (no React imports) so it can be consumed directly as
- * AI context. There is no internal product assistant today (only the
- * tenant-facing maintenance-triage bot in `src/lib/ai/maintenance-triage.ts`),
- * so this is not wired anywhere yet. When an internal assistant is built,
- * append the output of this function to its system prompt, e.g.:
- *
- *   `${baseSystemPrompt}\n\n# PRODUCT GUIDE\n${buildHelpKnowledgeBase()}`
+ * AI context. This is wired into the admin AI assistant's system prompt in
+ * `src/lib/ai/assistant.ts` (under "USING THE APP — PRODUCT GUIDE") so it can
+ * answer "how do I…" / "where do I…" questions about using the app.
  */
 export function buildHelpKnowledgeBase(): string {
   return HELP_ARTICLES.map(

@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { ASSISTANT_TOOLS, type ToolName } from "@/features/assistant/domain/tools";
 import { DISPATCH } from "@/features/assistant/data/dispatch";
+import { buildHelpKnowledgeBase } from "@/features/help/lib/knowledgeBase";
 
 export type AssistantChatMessage = {
   role: "user" | "assistant";
@@ -17,6 +18,13 @@ const MAX_ITERS = 5;
 const MODEL = process.env.ASSISTANT_MODEL || "gpt-4o";
 const FALLBACK =
   "I couldn't pull that together in a reasonable number of steps — could you narrow the question a little?";
+
+/**
+ * The in-app help guides, concatenated once into a single markdown document
+ * and reused across turns. Injected into the system prompt so the assistant
+ * can answer "how do I…" / "where do I…" questions about using the app.
+ */
+const PRODUCT_GUIDE = buildHelpKnowledgeBase();
 
 let client: OpenAI | null = null;
 
@@ -72,7 +80,15 @@ export function buildAssistantSystemPrompt(companyName: string): string {
   - Property finances / profit / loss / costs → [Name](/profitability/{id})  — prefer this over /properties when the question is about money.
   - Tenant (occupant) → [Name](/tenants?focus={id})  — the pm-tenant id (id / tenantId from the tools).
   - Contract → [contract](/contracts?focus={id})  — the contract's id.
-- Only link when you actually have the id. If you don't have an id for something, just write its name as plain text. Never link a portfolio (no page exists).`;
+- Only link when you actually have the id. If you don't have an id for something, just write its name as plain text. Never link a portfolio (no page exists).
+
+# USING THE APP — PRODUCT GUIDE
+Besides data questions, you can also help the admin learn HOW TO USE the ${companyName} app — answering "how do I…", "where do I…", and "what is this page for" questions. The product guide below documents each page. When answering these:
+- Use ONLY what the guide describes — give concise, numbered steps and don't invent features, buttons, or pages that aren't in it.
+- Link to the relevant page using its route from the guide as a relative Markdown link, e.g. [Rent Collection](/rent-collection). These are fixed page routes and need no id.
+- This guide is about how the software works; for the user's actual records, keep using the read-only tools above. Don't quote the guide's headings verbatim — answer the question.
+
+${PRODUCT_GUIDE}`;
 }
 
 export async function runAssistantTurn(args: {
