@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { isAdminRole } from "@/lib/auth/roles";
 import { getTenantBrandingForApp, getPublishedModuleConfigForApp } from "@/features/admin/data/admin";
 import { getEntitlements } from "@/lib/entitlements/getEntitlements";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -28,6 +29,11 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
   const inboxPendingCount = inboxCountRes?.count ?? 0;
 
+  const assistantEnabled =
+    isAdminRole(profile.role) &&
+    moduleConfig.property_management_enabled &&
+    entitlements.has("ai_assistant");
+
   return (
     <AppShellClient
       profile={{
@@ -40,6 +46,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
       moduleConfig={moduleConfig}
       inboxPendingCount={inboxPendingCount}
       helpEnabled={entitlements.has("help_center")}
+      assistantEnabled={assistantEnabled}
     >
       {children}
     </AppShellClient>

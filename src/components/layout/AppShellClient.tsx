@@ -6,6 +6,7 @@ import { BrandingStyles } from "./BrandingStyles";
 import { SideNav } from "./SideNav";
 import { GlobalSearchBar } from "@/features/search/ui/GlobalSearchBar";
 import { HelpButton } from "@/features/help/ui/HelpButton";
+import { MiniAssistant } from "@/features/assistant/ui/MiniAssistant";
 import type { PublishedModuleConfig, TenantBrandingSettings } from "@/features/admin/domain/types";
 
 type Profile = { display_name: string | null; role: string | null; avatar_url: string | null };
@@ -17,6 +18,7 @@ export function AppShellClient({
   moduleConfig,
   inboxPendingCount,
   helpEnabled,
+  assistantEnabled,
   children,
 }: {
   profile: Profile;
@@ -25,6 +27,7 @@ export function AppShellClient({
   moduleConfig: PublishedModuleConfig;
   inboxPendingCount: number;
   helpEnabled: boolean;
+  assistantEnabled: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -57,6 +60,9 @@ export function AppShellClient({
         )}
         <div className="px-6 pt-8 pb-4 lg:px-10 lg:pt-10 lg:pb-4">{children}</div>
       </main>
+      {assistantEnabled && !isSuperAdminPanel && pathname !== "/assistant" && (
+        <MiniAssistant />
+      )}
     </div>
   );
 }
