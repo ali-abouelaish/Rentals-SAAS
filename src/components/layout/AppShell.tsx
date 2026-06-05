@@ -33,7 +33,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const assistantEnabled =
     isAdminRole(profile.role) &&
     moduleConfig.property_management_enabled &&
-    entitlements.has("ai_assistant");
+    entitlementSet.has("ai_assistant");
 
   return (
     <AppShellClient
@@ -46,7 +46,8 @@ export async function AppShell({ children }: { children: ReactNode }) {
       branding={branding}
       moduleConfig={moduleConfig}
       inboxPendingCount={inboxPendingCount}
-      helpEnabled={entitlements.has("help_center")}
+      entitlements={entitlements}
+      helpEnabled={entitlementSet.has("help_center")}
       assistantEnabled={assistantEnabled}
     >
       {children}

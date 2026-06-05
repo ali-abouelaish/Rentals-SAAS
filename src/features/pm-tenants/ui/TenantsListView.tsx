@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { AlertTriangle, Bell, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { RightToRentBadge } from "./RightToRentBadge";
 import { EMPLOYMENT_STATUS_LABELS } from "../domain/types";
 import type { PmTenant } from "../domain/types";
 import { SendReminderDialog } from "@/features/reminders/ui/SendReminderDialog";
@@ -101,11 +100,10 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
   return (
     <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
       {/* Header */}
-      <div className="grid grid-cols-[1fr_1.5fr_1fr_1fr_1fr_180px] gap-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted border-b border-border bg-surface-inset">
+      <div className="grid grid-cols-[1fr_1.5fr_1fr_1fr_180px] gap-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted border-b border-border bg-surface-inset">
         <span>Name</span>
         <span>Unit</span>
         <span>Nationality</span>
-        <span>Right to Rent</span>
         <span>Employment</span>
         <span className="text-right">Reminder</span>
       </div>
@@ -121,7 +119,7 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
             onClick={() => onTenantClick(tenant.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTenantClick(tenant.id); }}
             className={cn(
-              "w-full grid grid-cols-[1fr_1.5fr_1fr_1fr_1fr_180px] gap-4 px-4 py-3.5 text-left text-sm",
+              "w-full grid grid-cols-[1fr_1.5fr_1fr_1fr_180px] gap-4 px-4 py-3.5 text-left text-sm",
               "hover:bg-surface-inset transition-colors cursor-pointer",
               i % 2 === 0 ? "" : "bg-surface-inset/40"
             )}
@@ -137,10 +135,6 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
 
             <div className="text-foreground-secondary text-xs flex items-center">
               {tenant.nationality ?? "—"}
-            </div>
-
-            <div className="flex items-center">
-              <RightToRentBadge tenant={tenant} />
             </div>
 
             <div className="text-foreground-secondary text-xs flex items-center">

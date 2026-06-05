@@ -19,6 +19,9 @@ interface Props {
   suggestions?: string[];
   /** Overrides the root container's size/shape — used by the floating mini chat. */
   className?: string;
+  /** Hides the "Online" pill and reserves that header space instead — the
+   * floating mini chat overlays its own New chat / close buttons there. */
+  showStatus?: boolean;
 }
 
 const DEFAULT_SUGGESTIONS = [
@@ -34,6 +37,7 @@ export function AssistantChat({
   greeting,
   suggestions = DEFAULT_SUGGESTIONS,
   className,
+  showStatus = true,
 }: Props) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -143,7 +147,12 @@ export function AssistantChat({
       )}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border bg-surface-card/70 px-5 py-3 backdrop-blur">
+      <div
+        className={cn(
+          "flex items-center gap-3 border-b border-border bg-surface-card/70 px-5 py-3 backdrop-blur",
+          !showStatus && "pr-20"
+        )}
+      >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand ring-1 ring-brand/15">
           <Sparkles className="h-5 w-5" />
         </span>
@@ -153,10 +162,12 @@ export function AssistantChat({
             Read-only answers about your portfolio data
           </p>
         </div>
-        <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 sm:inline-flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Online
-        </span>
+        {showStatus && (
+          <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 sm:inline-flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Online
+          </span>
+        )}
       </div>
 
       {/* Messages */}

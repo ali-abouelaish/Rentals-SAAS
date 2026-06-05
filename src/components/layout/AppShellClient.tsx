@@ -17,6 +17,7 @@ export function AppShellClient({
   branding,
   moduleConfig,
   inboxPendingCount,
+  entitlements,
   helpEnabled,
   assistantEnabled,
   children,
@@ -26,6 +27,7 @@ export function AppShellClient({
   branding: TenantBrandingSettings | null;
   moduleConfig: PublishedModuleConfig;
   inboxPendingCount: number;
+  entitlements: string[];
   helpEnabled: boolean;
   assistantEnabled: boolean;
   children: ReactNode;

@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  assertConversationAccess,
   createAssistantConversation,
-  getOrCreateAssistantConversation,
   loadAssistantHistory,
   type AssistantMessage,
 } from "../data/conversations";
@@ -17,15 +17,19 @@ export async function startNewChatAction(): Promise<void> {
 }
 
 /**
- * Resolves the caller's most recent assistant conversation (creating one only
- * if none exists) and returns it with its history. Called by the floating mini
- * chat on first open, so no conversation is created until the user opens it.
+ * Resolves the floating mini chat's thread. Resumes the conversation id stored
+ * in the caller's browser session when it is still accessible; otherwise (first
+ * open this session, a stale id, or an explicit "New chat" passing null) it
+ * creates a fresh conversation — so every browser session starts a clean chat.
  */
-export async function getOrCreateMiniAssistantThread(): Promise<{
-  conversationId: string;
-  messages: AssistantMessage[];
-}> {
-  const { id } = await getOrCreateAssistantConversation();
-  const messages = await loadAssistantHistory(id);
-  return { conversationId: id, messages };
+export async function openMiniAssistantThread(
+  storedConversationId: string | null
+): Promise<{ conversationId: string; messages: AssistantMessage[] }> {
+  if (storedConversationId && (await assertConversationAccess(storedConversationId))) {
+    const messages = await loadAssistantHistory(storedConversationId);
+    return { conversationId: storedConversationId, messages };
+  }
+
+  const { id } = await createAssistantConversation();
+  return { conversationId: id, messages: [] };
 }

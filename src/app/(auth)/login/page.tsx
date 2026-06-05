@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { signInWithEmail } from "@/features/auth/actions/auth";
@@ -18,7 +18,7 @@ function SubmitButton() {
 
 const initialState: { error?: string } = {};
 
-export default function LoginPage() {
+function LoginForm() {
   const [state, formAction] = useFormState(signInWithEmail, initialState);
   const [showPw, setShowPw] = useState(false);
   const searchParams = useSearchParams();
@@ -89,5 +89,13 @@ export default function LoginPage() {
         <SubmitButton />
       </form>
     </AuthShell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

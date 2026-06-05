@@ -111,6 +111,7 @@ const PM_NAV_GROUPS: NavGroup[] = [
       { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
       { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
       { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
+      { href: "/settings/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlement: "mydeposits" },
     ],
   },
   {
@@ -134,7 +135,6 @@ const PM_NAV_GROUPS: NavGroup[] = [
 const PM_SETTINGS_ITEMS: NavItem[] = [
   { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlement: "mydeposits" },
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES },
 ];
