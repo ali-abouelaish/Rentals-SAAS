@@ -68,7 +68,7 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
   const profile = await requireUserProfile();
   const { from, to } = filters;
 
-  const [{ count: totalAgents }, { data: rentals }, { count: totalRentalsPending }] = await Promise.all([
+  const [{ count: totalAgents }, { data: rentals }] = await Promise.all([
     supabase
       .from("agent_profiles")
       .select("user_id", { count: "exact", head: true })
@@ -76,21 +76,23 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
       .eq("is_disabled", false),
     supabase
       .from("rental_codes")
-      .select("consultation_fee_amount, payment_method")
+      .select("consultation_fee_amount, payment_method, status")
       .eq("tenant_id", profile.tenant_id)
-      .in("status", ["approved", "paid"])
-      .gte("date", from)
-      .lte("date", endOfDay(to)),
-    supabase
-      .from("rental_codes")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", profile.tenant_id)
-      .eq("status", "pending")
+      .in("status", ["pending", "approved", "paid"])
       .gte("date", from)
       .lte("date", endOfDay(to))
   ]);
 
+  // Pending (unapproved) rentals are merged into the headline totals;
+  // totalRentalsPending/pendingEarnings break out the pending share.
+  const closed = (rentals ?? []).filter((r) => r.status !== "pending");
+  const pending = (rentals ?? []).filter((r) => r.status === "pending");
+
   const totalEarnings = (rentals ?? []).reduce(
+    (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method),
+    0
+  );
+  const pendingEarnings = pending.reduce(
     (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method),
     0
   );
@@ -111,8 +113,9 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
     totalAgents: totalAgents ?? 0,
     totalEarnings,
     totalTransactions,
-    totalRentalsClosed: totalTransactions,
-    totalRentalsPending: totalRentalsPending ?? 0,
+    totalRentalsClosed: closed.length,
+    totalRentalsPending: pending.length,
+    pendingEarnings: Math.round(pendingEarnings * 100) / 100,
     avgPerAgent,
     totalCash: Math.round(totalCash * 100) / 100,
     totalCard: Math.round(totalCard * 100) / 100,
@@ -140,7 +143,7 @@ export async function getEarningsStatsForAgent(
     ...(mktRentalIds.length > 0 ? [`id.in.(${mktRentalIds.join(",")})`] : [])
   ].join(",");
 
-  const [{ data: agentProfile }, { data: rentals }, { count: totalRentalsPending }] = await Promise.all([
+  const [{ data: agentProfile }, { data: rentals }] = await Promise.all([
     supabase
       .from("agent_profiles")
       .select("commission_percent, marketing_fee")
@@ -148,16 +151,9 @@ export async function getEarningsStatsForAgent(
       .single(),
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
+      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, status")
       .or(agentOrFilter)
-      .in("status", ["approved", "paid"])
-      .gte("date", from)
-      .lte("date", endOfDay(to)),
-    supabase
-      .from("rental_codes")
-      .select("id", { count: "exact", head: true })
-      .or(agentOrFilter)
-      .eq("status", "pending")
+      .in("status", ["pending", "approved", "paid"])
       .gte("date", from)
       .lte("date", endOfDay(to))
   ]);
@@ -180,6 +176,8 @@ export async function getEarningsStatsForAgent(
 
   let totalEarnings = 0;
   let rentalsCount = 0;
+  let pendingEarnings = 0;
+  let pendingCount = 0;
   let totalCash = 0;
   let totalCard = 0;
   let totalTransfer = 0;
@@ -195,32 +193,40 @@ export async function getEarningsStatsForAgent(
     const splitFee = agentCount > 0 ? Math.round(totalMktFee / agentCount * 100) / 100 : 0;
     const isMarketingAgent = agentRentalIds.has(rental.id) || rental.marketing_agent_id === agentId;
 
+    let earned = 0;
     let involved = false;
     if (rental.assisted_by_agent_id === agentId) {
-      rentalsCount++;
       involved = true;
       const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
       const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
-      totalEarnings += Math.round((gross - totalMktFee) * 100) / 100;
+      earned = Math.round((gross - totalMktFee) * 100) / 100;
     } else if (isMarketingAgent) {
-      rentalsCount++;
       involved = true;
-      totalEarnings += splitFee;
+      earned = splitFee;
+    }
+    if (!involved) continue;
+
+    // Pending (unapproved) rentals are merged into the totals;
+    // pendingCount/pendingEarnings break out the pending share.
+    if (rental.status === "pending") {
+      pendingCount++;
+      pendingEarnings += earned;
     }
 
-    if (involved) {
-      const amt = Number((rental as any).consultation_fee_amount ?? 0);
-      if (rental.payment_method === "cash") totalCash += amt;
-      else if (rental.payment_method === "card") totalCard += amt;
-      else if (rental.payment_method === "transfer") totalTransfer += amt;
-    }
+    rentalsCount++;
+    totalEarnings += earned;
+    const amt = Number(rental.consultation_fee_amount ?? 0);
+    if (rental.payment_method === "cash") totalCash += amt;
+    else if (rental.payment_method === "card") totalCard += amt;
+    else if (rental.payment_method === "transfer") totalTransfer += amt;
   }
 
   return {
     totalAgents: 1,
     totalEarnings,
     totalTransactions: rentalsCount,
-    totalRentalsPending: totalRentalsPending ?? 0,
+    totalRentalsPending: pendingCount,
+    pendingEarnings: Math.round(pendingEarnings * 100) / 100,
     avgPerAgent: totalEarnings,
     totalCash: Math.round(totalCash * 100) / 100,
     totalCard: Math.round(totalCard * 100) / 100,
@@ -417,6 +423,8 @@ async function buildLeaderboard(
       .from("bonuses")
       .select("agent_id, amount_owed, payout_mode")
       .eq("tenant_id", tenantId)
+      // Declined bonuses never count toward earnings
+      .neq("status", "declined")
       .gte("bonus_date", fromDate.toISOString().slice(0, 10))
       .lte("bonus_date", toStr)
   ]);
@@ -547,7 +555,9 @@ async function buildLeaderboard(
 }
 
 /** Transactions in range for CSV export and agent profile.
- *  Includes pending rentals so they are visible alongside approved/paid. */
+ *  Includes pending rentals so they are visible alongside approved/paid.
+ *  Unpaid rentals (pending/approved) are always included regardless of the
+ *  date range — the range only restricts paid rentals. */
 export async function getTransactions(
   filters: EarningsFilterValues,
   options?: { agentId?: string }
@@ -559,12 +569,25 @@ export async function getTransactions(
 
   // If filtering by agent, also find rentals where they are a secondary marketing agent
   let mktRentalIds: string[] = [];
+  let unpaidMktRentalIds: string[] = [];
   if (options?.agentId) {
     const { data: jRows } = await supabase
       .from("rental_marketing_agents")
-      .select("rental_id")
+      .select("rental_id, paid_at")
       .eq("agent_id", options.agentId);
     mktRentalIds = (jRows ?? []).map(r => r.rental_id);
+    unpaidMktRentalIds = (jRows ?? []).filter(r => !r.paid_at).map(r => r.rental_id);
+  }
+
+  // Date range applies to paid rentals only — unpaid ones always show.
+  // For an agent view, also keep rentals where the agent's marketing cut is
+  // still unpaid (junction paid_at null) even if the rental itself is paid.
+  const dateOrUnpaidParts = [
+    `and(date.gte.${fromDate.toISOString()},date.lte.${endOfDay(filters.to)})`,
+    "status.neq.paid",
+  ];
+  if (unpaidMktRentalIds.length > 0) {
+    dateOrUnpaidParts.push(`id.in.(${unpaidMktRentalIds.join(",")})`);
   }
 
   let query = supabase
@@ -572,8 +595,7 @@ export async function getTransactions(
     .select("id, code, status, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["pending", "approved", "paid"])
-    .gte("date", fromDate.toISOString())
-    .lte("date", endOfDay(filters.to))
+    .or(dateOrUnpaidParts.join(","))
     .order("date", { ascending: false });
 
   if (options?.agentId) {
@@ -666,6 +688,15 @@ export async function getTransactions(
       const paidAt = mktPaidByKey.get(`${rental.id}:${options.agentId}`);
       rowStatus = paidAt ? "paid" : "approved";
     }
+
+    // Outside the date range, only keep rows that are unpaid *for this viewer*.
+    // E.g. a marketing agent whose cut was already paid shouldn't see an old
+    // rental just because the assisted payout is still outstanding.
+    const rentalTime = new Date(rental.date).getTime();
+    const inRange =
+      rentalTime >= fromDate.getTime() &&
+      rentalTime <= new Date(endOfDay(filters.to)).getTime();
+    if (!inRange && rowStatus === "paid") continue;
 
     const assistedNet = Math.round((gross - totalMktFee) * 100) / 100;
 
@@ -836,14 +867,22 @@ export async function getPayments(
   const toEnd = endOfDay(filters.to);
 
   // ── Rentals ──────────────────────────────────────────────────────────
+  // Unpaid rentals always show regardless of date range; the range only
+  // restricts paid rentals.
   let rentalQuery = supabase
     .from("rental_codes")
-    .select("id, code, client_name, assisted_by_agent_id, marketing_agent_id, consultation_fee_amount, date, status, agent_profiles!rental_codes_assisted_by_agent_id_fkey(user_profiles(display_name))")
-    .gte("date", filters.from)
-    .lte("date", toEnd);
+    .select("id, code, client_name, assisted_by_agent_id, marketing_agent_id, consultation_fee_amount, date, status, agent_profiles!rental_codes_assisted_by_agent_id_fkey(user_profiles(display_name))");
 
-  if (statusFilter === "paid") rentalQuery = rentalQuery.eq("status", "paid");
-  else if (statusFilter === "unpaid") rentalQuery = rentalQuery.neq("status", "paid");
+  if (statusFilter === "paid") {
+    rentalQuery = rentalQuery.eq("status", "paid").gte("date", filters.from).lte("date", toEnd);
+  } else if (statusFilter === "unpaid") {
+    // Refunded rentals are not outstanding payments
+    rentalQuery = rentalQuery.not("status", "in", "(paid,refunded)");
+  } else {
+    rentalQuery = rentalQuery.or(
+      `and(date.gte.${filters.from},date.lte.${toEnd}),and(status.neq.paid,status.neq.refunded)`
+    );
+  }
 
   if (!isAdmin) rentalQuery = rentalQuery.eq("assisted_by_agent_id", profile.id);
 
@@ -885,14 +924,22 @@ export async function getPayments(
   }));
 
   // ── Bonuses ──────────────────────────────────────────────────────────
+  // Same rule as rentals: unpaid bonuses always show; the date filter
+  // applies to paid bonuses.
   let bonusQuery = supabase
     .from("bonuses")
-    .select("id, client_name, amount_owed, bonus_date, status, agent_id, agent_profiles(user_profiles(display_name))")
-    .gte("bonus_date", filters.from)
-    .lte("bonus_date", toEnd);
+    .select("id, client_name, amount_owed, bonus_date, status, agent_id, agent_profiles(user_profiles(display_name))");
 
-  if (statusFilter === "paid") bonusQuery = bonusQuery.eq("status", "paid");
-  else if (statusFilter === "unpaid") bonusQuery = bonusQuery.neq("status", "paid");
+  if (statusFilter === "paid") {
+    bonusQuery = bonusQuery.eq("status", "paid").gte("bonus_date", filters.from).lte("bonus_date", toEnd);
+  } else if (statusFilter === "unpaid") {
+    // Declined bonuses are not outstanding payments
+    bonusQuery = bonusQuery.not("status", "in", "(paid,declined)");
+  } else {
+    bonusQuery = bonusQuery.or(
+      `and(bonus_date.gte.${filters.from},bonus_date.lte.${toEnd}),and(status.neq.paid,status.neq.declined)`
+    );
+  }
 
   if (!isAdmin) bonusQuery = bonusQuery.eq("agent_id", profile.id);
 

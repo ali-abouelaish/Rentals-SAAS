@@ -4,6 +4,8 @@ export type EarningsStats = {
   totalTransactions: number;
   totalRentalsClosed?: number;
   totalRentalsPending?: number;
+  /** Net value of pending (unapproved) rentals in the period */
+  pendingEarnings?: number;
   avgPerAgent: number;
   topAgentName?: string | null;
   topAgentEarnings?: number | null;

@@ -12,7 +12,7 @@ import { requireUserProfile } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { canAccessRoute } from "@/lib/auth/roles";
 import { AvatarCircle } from "@/components/shared/AvatarCircle";
-import { formatGBP } from "@/lib/utils/formatters";
+import { formatGBP, formatDate } from "@/lib/utils/formatters";
 import { ArrowLeft, TrendingUp, Home, Gift, Clock } from "lucide-react";
 import { AgentProfileCharts } from "@/features/earnings/ui/AgentProfileCharts";
 import { AgentTransactionsTable } from "@/features/earnings/ui/AgentTransactionsTable";
@@ -21,7 +21,7 @@ import { AgentBonusesTable } from "@/features/bonuses/ui/AgentBonusesTable";
 function getDefaultRange() {
   const to = new Date();
   const from = new Date();
-  from.setDate(to.getDate() - 90);
+  from.setMonth(from.getMonth() - 1);
   return {
     from: from.toISOString().slice(0, 10),
     to: to.toISOString().slice(0, 10),
@@ -74,9 +74,11 @@ export default async function AgentEarningsPage({
   const bonusAgentShare = (b: { amount_owed: number; payout_mode?: string | null }) =>
     b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
 
-  const totalBonusAmount = bonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
+  // Declined bonuses stay visible in the table but never count toward earnings
+  const payableBonuses = bonuses.filter((b) => b.status !== "declined");
+  const totalBonusAmount = payableBonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
   const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonusAmount;
-  const totalBonusCount = bonuses.length;
+  const totalBonusCount = payableBonuses.length;
   const pendingBonusAmount = bonuses
     .filter((b) => ["pending", "approved", "sent"].includes(b.status))
     .reduce((sum, b) => sum + bonusAgentShare(b), 0);
@@ -102,7 +104,9 @@ export default async function AgentEarningsPage({
             </div>
             <div>
               <h1 className="text-lg font-semibold text-foreground">{displayName}</h1>
-              <p className="text-sm text-foreground-muted">Earnings · last 90 days</p>
+              <p className="text-sm text-foreground-muted">
+                Earnings · {formatDate(filters.from)} – {formatDate(filters.to)}
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -115,7 +119,7 @@ export default async function AgentEarningsPage({
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">
               <Clock className="h-3.5 w-3.5" />
-              {stats.totalRentalsPending ?? 0} pending approval
+              {stats.totalRentalsPending ?? 0} pending approval · {formatGBP(stats.pendingEarnings ?? 0)}
             </span>
             <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700">
               {formatGBP(avgPerRental)} avg / rental

@@ -38,7 +38,7 @@ import { Button } from "@/components/ui/button";
 function getDefaultRange() {
   const to = new Date();
   const from = new Date();
-  from.setDate(to.getDate() - 30);
+  from.setMonth(from.getMonth() - 1);
   return {
     from: from.toISOString().slice(0, 10),
     to: to.toISOString().slice(0, 10)
@@ -89,7 +89,7 @@ export default async function EarningsPage({
     const topAgent = leaderboard[0];
 
     const fmt = (n: number) =>
-      `£${(n ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`;
+      `£${(n ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     const methodTiles = [
       {
@@ -140,7 +140,7 @@ export default async function EarningsPage({
           },
           {
             label: "Pending Approval",
-            value: stats.totalRentalsPending ?? 0,
+            value: `${stats.totalRentalsPending ?? 0} · ${fmt(stats.pendingEarnings ?? 0)}`,
             icon: Clock,
             color: "text-amber-600",
             bg: "bg-amber-50"
@@ -184,6 +184,13 @@ export default async function EarningsPage({
             icon: Users,
             color: "text-blue-600",
             bg: "bg-blue-50"
+          },
+          {
+            label: "Pending Approval",
+            value: `${stats.totalRentalsPending ?? 0} · ${fmt(stats.pendingEarnings ?? 0)}`,
+            icon: Clock,
+            color: "text-amber-600",
+            bg: "bg-amber-50"
           },
           {
             label: "Avg Per Agent",

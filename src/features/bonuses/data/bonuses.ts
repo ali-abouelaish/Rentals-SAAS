@@ -63,7 +63,9 @@ export async function getBonusById(id: string) {
   return data;
 }
 
-/** Bonuses for a single agent (e.g. /me). */
+/** Bonuses for a single agent (e.g. /me).
+ *  Unpaid bonuses are always included regardless of the date range —
+ *  the range only restricts paid bonuses. */
 export async function getBonusesForAgent(
   agentId: string,
   filters: { from: string; to: string }
@@ -73,8 +75,7 @@ export async function getBonusesForAgent(
     .from("bonuses")
     .select("id, bonus_date, client_name, property_address, amount_owed, payout_mode, status, created_at")
     .eq("agent_id", agentId)
-    .gte("bonus_date", filters.from)
-    .lte("bonus_date", filters.to)
+    .or(`and(bonus_date.gte.${filters.from},bonus_date.lte.${filters.to}),and(status.neq.paid,status.neq.declined)`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];

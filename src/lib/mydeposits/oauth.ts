@@ -44,13 +44,19 @@ export function buildAuthorizeUrl(
     code_challenge: opts.codeChallenge,
     code_challenge_method: "S256",
   });
-  // Quirk (verified against sandbox + their first-party portal SPA): hitting
-  // /connect/authorize without a session returns an EMPTY 200 — no redirect to
-  // a login page (their docs even note "200 OK - Empty body in response").
-  // The intended choreography is to land the user on the auth host's login SPA
-  // with the authorize URL as `returnUrl`; after email/SMS login (sandbox OTP
-  // 1111) the SPA replays the returnUrl with a session cookie, and IdentityServer
-  // then 302s back to our redirect_uri with ?code=...&state=...
+  // Interactive flow for this provider: send the admin to the auth host's login
+  // SPA with the authorize request as `returnUrl`. The SPA authenticates (email
+  // magic-link / SMS code; sandbox OTP 1111), establishes the IdentityServer
+  // session, then replays returnUrl so /connect/authorize 302s back to our
+  // redirect_uri with ?code=...&state=...  Hitting /connect/authorize directly
+  // returns an empty 200 — it never redirects to a login page on its own.
+  //
+  // ⚠ BROKEN UPSTREAM (confirmed 2026-06-09, mydeposits SANDBOX): this exact
+  // redirect rendered a working login form ~2 days prior, but the auth host's
+  // /login now returns a blank SPA shell and /connect/authorize returns empty 200
+  // even WITH a valid idsrv session. A recent server-side regression on their
+  // side — no code change here can work around it. Escalated to mydeposits.
+  // See memory: project_mydeposits_sandbox_auth.
   const authorizePath = `/connect/authorize?${params.toString()}`;
   return `${mdUrls(env).authBase}/login?returnUrl=${encodeURIComponent(authorizePath)}`;
 }

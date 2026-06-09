@@ -31,7 +31,7 @@ import {
 function getDefaultRange() {
   const end = new Date();
   const start = new Date();
-  start.setDate(end.getDate() - 30);
+  start.setMonth(start.getMonth() - 1);
   return {
     start: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10),
@@ -66,7 +66,9 @@ export default async function MePage({
   const commissionPercent = agentProfile?.commission_percent ?? 50;
   const bonusAgentShare = (b: { amount_owed: number; payout_mode?: string | null }) =>
     b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
-  const totalBonuses = bonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
+  // Declined bonuses stay visible in the table but never count toward earnings
+  const payableBonuses = bonuses.filter((b) => b.status !== "declined");
+  const totalBonuses = payableBonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
   const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonuses;
   const avgPerRental =
     (stats.totalTransactions ?? 0) > 0
@@ -114,7 +116,7 @@ export default async function MePage({
             <StatCard label="Conversion" value="—" icon={Percent} iconColor="text-amber-600" iconBg="bg-amber-50" />
             <StatCard label="Avg per Rental" value={formatGBP(avgPerRental)} icon={Calculator} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
           </div>
-          <MeTrendChart trend={trend} transactions={transactions} bonuses={bonuses} commissionPercent={commissionPercent} />
+          <MeTrendChart trend={trend} transactions={transactions} bonuses={payableBonuses} commissionPercent={commissionPercent} />
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Transactions</h3>
             {transactions.length === 0 ? (
@@ -140,7 +142,7 @@ export default async function MePage({
             <StatCard label="Earnings (period)" value={formatGBP(totalCombinedEarnings)} icon={Receipt} iconColor="text-violet-600" iconBg="bg-violet-50" />
             <StatCard label="Avg per Rental" value={formatGBP(avgPerRental)} icon={Calculator} />
           </div>
-          <MeTrendChart trend={trend} transactions={transactions} bonuses={bonuses} commissionPercent={commissionPercent} />
+          <MeTrendChart trend={trend} transactions={transactions} bonuses={payableBonuses} commissionPercent={commissionPercent} />
         </TabsContent>
 
         <TabsContent value="rentals" className="space-y-8 mt-8">
