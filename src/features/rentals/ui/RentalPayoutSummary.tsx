@@ -27,10 +27,10 @@ export function RentalPayoutSummary({
   marketingAgentCount = 1
 }: Props) {
   const paymentFee = paymentMethod === "cash" ? 0 : paymentMethod === "transfer" ? 0.2 : 0.0175;
-  const vatRate = paymentMethod === "card" ? 0.2 : 0;
+  const hasVat = paymentMethod === "card" || paymentMethod === "transfer";
   const afterFee = useMemo(() => rentalAmount * (1 - paymentFee), [rentalAmount, paymentFee]);
-  const vatAmount = useMemo(() => afterFee * vatRate, [afterFee, vatRate]);
-  const base = useMemo(() => afterFee - vatAmount, [afterFee, vatAmount]);
+  const base = useMemo(() => (hasVat ? afterFee / 1.2 : afterFee), [afterFee, hasVat]);
+  const vatAmount = useMemo(() => afterFee - base, [afterFee, base]);
   const assistedGross = useMemo(() => base * (commissionPercent / 100), [base, commissionPercent]);
   const threshold = useMemo(() => base * 0.45, [base]);
 
@@ -65,7 +65,7 @@ export function RentalPayoutSummary({
             <span className="text-foreground-secondary">Payment fee</span>
             <span className="font-semibold text-navy">{(paymentFee * 100).toFixed(2)}%</span>
           </div>
-          {vatRate > 0 && (
+          {hasVat && (
             <div className="flex items-center justify-between">
               <span className="text-foreground-secondary">VAT (20%)</span>
               <span className="font-semibold text-navy">−{formatGBP(vatAmount)}</span>
@@ -73,7 +73,7 @@ export function RentalPayoutSummary({
           )}
           <div className="flex items-center justify-between">
             <span className="text-foreground-secondary">
-              {vatRate > 0 ? "Base after fee & VAT" : "Base after fee"}
+              {hasVat ? "Base after fee & VAT" : "Base after fee"}
             </span>
             <span className="font-semibold text-navy">{formatGBP(base)}</span>
           </div>

@@ -138,10 +138,11 @@ export async function getCommissionFileData({
     const rentalAmount = Number(rental.rental_amount_gbp ?? rental.consultation_fee_amount ?? 0);
     const feeRate = paymentFeeRate(rental.payment_method);
     const paymentFee = roundMoney(rentalAmount * feeRate);
-    const baseAmount = rental.payment_method === "card"
+    const hasVat = rental.payment_method === "card" || rental.payment_method === "transfer";
+    const baseAmount = hasVat
       ? roundMoney((rentalAmount - paymentFee) / 1.2)
       : roundMoney(rentalAmount - paymentFee);
-    const vat = rental.payment_method === "card"
+    const vat = hasVat
       ? roundMoney(rentalAmount - paymentFee - baseAmount)
       : 0;
 
