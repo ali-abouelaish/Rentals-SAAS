@@ -509,7 +509,8 @@ export async function approveRentalCode(formData: FormData): Promise<{ ok: boole
         : rental.payment_method === "transfer"
         ? 0.2
         : 0.0175;
-    const vatDivisor = rental.payment_method === "card" ? 1.2 : 1;
+    const vatDivisor =
+      rental.payment_method === "card" || rental.payment_method === "transfer" ? 1.2 : 1;
 
     const base = roundMoney(
       (rental.consultation_fee_amount * (1 - paymentFee)) / vatDivisor

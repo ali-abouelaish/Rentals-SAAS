@@ -27,15 +27,15 @@ function paymentFeeRate(method: string): number {
   return 0;
 }
 
-/** VAT deducted after the payment fee. Currently only card-machine rentals
+/** VAT deducted after the payment fee. Card-machine and transfer rentals
  *  are subject to VAT (20%). */
 function vatRate(method: string): number {
-  return method === "card" ? 0.2 : 0;
+  return method === "card" || method === "transfer" ? 0.2 : 0;
 }
 
 function computeRentalNet(amount: number, method: string): number {
   const afterFee = amount * (1 - paymentFeeRate(method));
-  const divisor = method === "card" ? 1.2 : 1;
+  const divisor = method === "card" || method === "transfer" ? 1.2 : 1;
   return Math.round((afterFee / divisor) * 100) / 100;
 }
 
