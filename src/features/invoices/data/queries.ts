@@ -23,6 +23,7 @@ export async function getInvoices({
   page?: number;
 } = {}) {
   const supabase = createSupabaseServerClient();
+  const profile = await requireUserProfile();
   const pageSize = 10;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -36,9 +37,28 @@ export async function getInvoices({
     .order("created_at", { ascending: false });
 
   if (search) {
-    query = query.or(
-      `invoice_number.ilike.%${search}%,landlords.name.ilike.%${search}%`
-    );
+    // PostgREST can't filter on an embedded table's column inside a top-level
+    // `.or()`, so resolve matching ids first, then OR on the invoice's own
+    // foreign-key columns (landlord_id / created_by_user_id).
+    const [{ data: matchingLandlords }, { data: matchingAgents }] = await Promise.all([
+      supabase.from("landlords").select("id").ilike("name", `%${search}%`),
+      supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("tenant_id", profile.tenant_id)
+        .ilike("display_name", `%${search}%`),
+    ]);
+    const landlordIds = (matchingLandlords ?? []).map((l) => l.id);
+    const agentIds = (matchingAgents ?? []).map((a) => a.id);
+
+    const orFilters = [`invoice_number.ilike.%${search}%`];
+    if (landlordIds.length > 0) {
+      orFilters.push(`landlord_id.in.(${landlordIds.join(",")})`);
+    }
+    if (agentIds.length > 0) {
+      orFilters.push(`created_by_user_id.in.(${agentIds.join(",")})`);
+    }
+    query = query.or(orFilters.join(","));
   }
   if (status && status !== "all") {
     query = query.eq("status", status);

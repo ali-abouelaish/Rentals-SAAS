@@ -94,7 +94,7 @@ export default async function InvoicesPage({
 
         <div className="flex flex-col md:flex-row gap-3">
           <LiveSearchInput
-            placeholder="Invoice # or landlord..."
+            placeholder="Invoice #, landlord, or agent..."
             initialQuery={search}
             preserveStatus={status !== "all" ? status : undefined}
           />

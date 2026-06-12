@@ -7,3 +7,8 @@ credentials/
 **/service_account.json
 .env
 .claude/
+backups/
+import/source/
+import/out/
+import/contracts/
+import/images/

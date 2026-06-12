@@ -20,6 +20,7 @@ type InvoiceRow = {
   created_by_user_id: string;
   pdf_storage_path: string | null;
   landlords?: { name: string | null } | null;
+  created_by?: { display_name: string | null } | null;
 };
 
 export function InvoicesTableWithBulkDelete({
@@ -168,7 +169,11 @@ export function InvoicesTableWithBulkDelete({
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-foreground-muted mt-0.5">
                   <span className="font-medium text-foreground-secondary truncate">
-                    {invoice.landlords?.name ?? "Unknown Landlord"}
+                    To {invoice.landlords?.name ?? "Unknown Landlord"}
+                  </span>
+                  <span className="hidden sm:inline">·</span>
+                  <span className="hidden sm:inline truncate">
+                    By {invoice.created_by?.display_name ?? "Unknown Agent"}
                   </span>
                   <span className="hidden sm:inline">·</span>
                   <span className="hidden sm:inline">Due {formatDate(invoice.due_date)}</span>

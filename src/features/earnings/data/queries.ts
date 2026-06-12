@@ -406,7 +406,9 @@ async function buildLeaderboard(
       .from("rental_codes")
       .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
       .eq("tenant_id", tenantId)
-      .in("status", ["approved", "paid"])
+      // Count every rental — approved and not-yet-approved (pending / need_more_info)
+      // alike. Only refunded rentals are excluded, mirroring the declined-bonus rule below.
+      .neq("status", "refunded")
       .gte("date", fromDate.toISOString())
       .lte("date", endOfDay(toStr)),
     supabase
