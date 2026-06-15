@@ -21,6 +21,7 @@ const PUBLIC_PATHS = [
   "/s",
   "/api/shares",
   "/apply",
+  "/f",
   "/preferences",
   "/tenant-not-found"
 ];
