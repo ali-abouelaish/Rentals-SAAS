@@ -37,6 +37,7 @@ import {
   ChevronDown,
   ShieldCheck,
   Key as KeyIcon,
+  ListChecks,
 } from "lucide-react";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
@@ -127,6 +128,7 @@ const PM_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
       { href: "/keys", label: "Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
+      { href: "/forms", label: "Forms", icon: ListChecks, allowedRoles: ADMIN_ROLES, entitlement: "forms" },
     ],
   },
 ];
@@ -165,6 +167,7 @@ const PM_ROUTE_PREFIXES = [
   "/settings/booking-forms",
   "/settings/bank-details",
   "/settings/deposits",
+  "/forms",
 ];
 
 function isPmRoute(pathname: string) {

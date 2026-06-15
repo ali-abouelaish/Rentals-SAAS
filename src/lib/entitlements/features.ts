@@ -29,6 +29,7 @@ export type FeatureKey =
   | "help_center"
   | "public_api_access"
   | "mydeposits"
+  | "forms"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -62,6 +63,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "help_center",
   "public_api_access",
   "mydeposits",
+  "forms",
   "admin",
 ];
 
@@ -158,6 +160,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   help_center: {
     label: "Help Center",
     description: "In-app contextual help — shows a Help button on supported pages that opens an authored guide for the current screen in a side drawer."
+  },
+  forms: {
+    label: "Forms",
+    description: "Create and send fully customisable forms and view all responses.",
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };
