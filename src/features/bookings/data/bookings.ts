@@ -6,7 +6,7 @@ const SELECT = `*,
     room_number, unit_type,
     property:properties(name, address_line_1, portfolio:portfolios(id, name, color))
   ),
-  form_responses(*, question:form_questions(question_text, question_type))`;
+  form_responses(*)`;
 
 export async function getBookings(filters: Partial<BookingFilters> = {}): Promise<Booking[]> {
   const supabase = createSupabaseServerClient();
@@ -59,5 +59,21 @@ export async function getBookingById(id: string): Promise<Booking | null> {
     .eq("id", id)
     .single();
   if (error) return null;
-  return data as Booking;
+
+  const booking = data as Booking;
+
+  // Enrich form_responses with question data via a separate query to avoid
+  // PostgREST needing to resolve the form_responses→form_questions FK in cache.
+  const responses = booking.form_responses ?? [];
+  if (responses.length > 0) {
+    const questionIds = [...new Set(responses.map((r) => r.question_id))];
+    const { data: questions } = await supabase
+      .from("form_questions")
+      .select("id, question_text, question_type")
+      .in("id", questionIds);
+    const qMap = Object.fromEntries((questions ?? []).map((q) => [q.id, q]));
+    booking.form_responses = responses.map((r) => ({ ...r, question: qMap[r.question_id] ?? null }));
+  }
+
+  return booking;
 }

@@ -9,9 +9,11 @@ export type Form = {
   description: string | null;
   is_active: boolean;
   public_slug: string;
+  portfolio_id: string | null;
   created_at: string;
   updated_at: string;
   questions?: FormQuestion[];
+  portfolio?: { id: string; name: string; color: string } | null;
   tenant?: {
     name: string;
     branding: { brand_name: string | null; logo_url: string | null } | null;

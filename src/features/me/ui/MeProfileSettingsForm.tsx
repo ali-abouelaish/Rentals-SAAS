@@ -91,7 +91,13 @@ export function MeProfileSettingsForm({
     setResetting(true);
     const result = await requestPasswordReset();
     setResetting(false);
-    if (result?.error) { toast.error(result.error); return; }
+    if (result?.error) {
+      const msg = result.error.toLowerCase().includes("rate limit")
+        ? "Too many requests — please wait a few minutes before trying again."
+        : result.error;
+      toast.error(msg);
+      return;
+    }
     toast.success("Check your email for the reset link.");
   };
 

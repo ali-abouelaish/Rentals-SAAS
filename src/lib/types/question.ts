@@ -7,7 +7,9 @@ export type QuestionType =
   | "select"
   | "checkbox"
   | "number"
-  | "info";
+  | "info"
+  | "file"
+  | "confirm";
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   text: "Short text",
@@ -16,7 +18,9 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   phone: "Phone number",
   date: "Date",
   select: "Dropdown (select one)",
-  checkbox: "Checkbox (yes/no)",
+  checkbox: "Yes / No",
   number: "Number",
   info: "Info / note block",
+  file: "File upload",
+  confirm: "Confirmation (must press Yes)",
 };

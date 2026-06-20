@@ -96,6 +96,14 @@ For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`
 - Every delete button must be red and use the `Trash2` icon from `lucide-react`.
 - Every action button (e.g. save, submit, confirm) must use the tenant's secondary button variant.
 
+## New Page Checklist
+
+When adding a new page or feature, you must also:
+
+1. **Tooltips** — Add `<Tooltip>` (Radix UI, from `src/components/ui/tooltip.tsx`) to every non-obvious field, button, or control on the page. Tooltip text should explain *why* or *when*, not just repeat the label.
+2. **Chatbot knowledge** — Create a new help article file in `src/features/help/content/<feature>.ts` following the same shape as existing articles (title, route, summary, markdown content), then register it in `src/features/help/content/registry.ts` so the AI assistant can answer questions about the new page.
+3. **Global search** — If the new page surfaces a searchable entity, add a new `SearchResultKind` to `src/features/search/domain/types.ts` (including its `href` mapping), extend the `global_search` Supabase RPC via a new migration, and render the new kind in `src/features/search/ui/SearchResultsList.tsx`.
+
 ## Feature Entitlement Rules
 
 - Any feature added to the sidebar must be gated by a corresponding row in the `tenant_feature_entitlements` table. The sidebar item must only render if the tenant has that entitlement. Use the existing entitlement check utilities in `src/lib/entitlements/`. A migration must also be added to insert the entitlement row for any tenant that should have access.

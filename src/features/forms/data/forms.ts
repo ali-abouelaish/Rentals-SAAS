@@ -9,31 +9,71 @@ export async function getForms(): Promise<Form[]> {
 
   const { data, error } = await supabase
     .from("forms")
-    .select("*")
+    .select("*, portfolio:portfolios(id, name, color), questions:form_questions(*)")
     .eq("tenant_id", profile.tenant_id)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as Form[];
+
+  return ((data ?? []) as unknown as Form[]).map((f) => ({
+    ...f,
+    questions: ((f.questions ?? []) as FormQuestion[])
+      .map((q) => ({
+        ...q,
+        options: q.options
+          ? typeof q.options === "string"
+            ? JSON.parse(q.options)
+            : q.options
+          : null,
+      }))
+      .sort((a, b) => a.sort_order - b.sort_order),
+  }));
+}
+
+export async function getActiveForms(): Promise<Form[]> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("forms")
+    .select("id, name, description, public_slug, portfolio_id, is_active, tenant_id, created_at, updated_at, portfolio:portfolios(id, name, color)")
+    .eq("tenant_id", profile.tenant_id)
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as Form[];
 }
 
 export async function getFormWithQuestions(id: string): Promise<Form | null> {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
-  const { data, error } = await supabase
+  const { data: formData, error: formError } = await supabase
     .from("forms")
-    .select("*, questions:form_questions(*)")
+    .select("*, portfolio:portfolios(id, name, color)")
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id)
-    .order("sort_order", { referencedTable: "form_questions", ascending: true })
     .single();
 
-  if (error || !data) return null;
+  if (formError || !formData) {
+    if (formError) console.error("[getFormWithQuestions] form fetch error:", formError.message);
+    return null;
+  }
+
+  const { data: questions, error: questionsError } = await supabase
+    .from("form_questions")
+    .select("*")
+    .eq("form_id", id)
+    .order("sort_order", { ascending: true });
+
+  if (questionsError) {
+    console.error("[getFormWithQuestions] questions fetch error:", questionsError.message);
+  }
 
   return {
-    ...data,
-    questions: ((data.questions as FormQuestion[]) ?? []).map((q) => ({
+    ...formData,
+    questions: ((questions ?? []) as FormQuestion[]).map((q) => ({
       ...q,
       options: q.options
         ? typeof q.options === "string"
@@ -41,7 +81,7 @@ export async function getFormWithQuestions(id: string): Promise<Form | null> {
           : q.options
         : null,
     })),
-  } as Form;
+  } as unknown as Form;
 }
 
 export async function getFormSubmissions(formId: string): Promise<FormSubmission[]> {

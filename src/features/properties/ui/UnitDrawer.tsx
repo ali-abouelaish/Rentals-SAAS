@@ -17,7 +17,9 @@ import { TenantTab } from "./TenantTab";
 import { PhotosTab } from "./PhotosTab";
 import { MarketingTab } from "./MarketingTab";
 import { UnitHistoryPanel } from "@/features/contracts/ui/UnitHistoryPanel";
+import { FormsTab } from "@/features/forms/ui/FormsTab";
 import type { Unit } from "../domain/types";
+import type { Form } from "@/features/forms/domain/types";
 
 function formatUnitLabel(unit: Unit): string {
   if (unit.unit_type === "room") {
@@ -43,9 +45,10 @@ interface UnitDrawerProps {
   onClose: () => void;
   onUnitUpdated: (unit: Unit) => void;
   pmTenants: PmTenantOption[];
+  forms?: Form[];
 }
 
-export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants }: UnitDrawerProps) {
+export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants, forms = [] }: UnitDrawerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [localUnit, setLocalUnit] = useState<Unit | null>(unit);
@@ -112,6 +115,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants }: Un
                 { value: "history", label: "History" },
                 { value: "photos", label: "Photos" },
                 { value: "marketing", label: "Marketing" },
+                { value: "forms", label: "Forms" },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -153,6 +157,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants }: Un
           {activeTab === "history" && <UnitHistoryPanel unitId={localUnit.id} />}
           {activeTab === "photos" && <PhotosTab unit={localUnit} />}
           {activeTab === "marketing" && <MarketingTab />}
+          {activeTab === "forms" && <FormsTab unit={localUnit} forms={forms} />}
         </div>
       </SheetContent>
     </Sheet>

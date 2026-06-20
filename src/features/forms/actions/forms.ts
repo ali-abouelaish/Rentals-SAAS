@@ -22,6 +22,7 @@ export async function createForm(values: FormValues) {
       description: values.description || null,
       is_active: values.is_active ?? true,
       public_slug: generateSlug(),
+      portfolio_id: values.portfolio_id ?? null,
     })
     .select("id")
     .single();
@@ -35,13 +36,15 @@ export async function updateForm(id: string, values: Partial<FormValues>) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
+  const patch: Record<string, unknown> = {};
+  if (values.name !== undefined) patch.name = values.name;
+  if (values.description !== undefined) patch.description = values.description ?? null;
+  if (values.is_active !== undefined) patch.is_active = values.is_active;
+  if ("portfolio_id" in values) patch.portfolio_id = values.portfolio_id ?? null;
+
   const { error } = await supabase
     .from("forms")
-    .update({
-      name: values.name,
-      description: values.description ?? null,
-      is_active: values.is_active,
-    })
+    .update(patch)
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id);
 
@@ -61,4 +64,56 @@ export async function deleteForm(id: string) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/forms");
+}
+
+export async function duplicateForm(id: string) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const { data: original, error: fetchError } = await supabase
+    .from("forms")
+    .select("*")
+    .eq("id", id)
+    .eq("tenant_id", profile.tenant_id)
+    .single();
+
+  if (fetchError || !original) throw new Error("Form not found");
+
+  const { data: newForm, error: insertError } = await supabase
+    .from("forms")
+    .insert({
+      tenant_id: profile.tenant_id,
+      name: `${original.name} (copy)`,
+      description: original.description,
+      is_active: false,
+      public_slug: generateSlug(),
+      portfolio_id: original.portfolio_id ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !newForm) throw new Error(insertError?.message ?? "Failed to duplicate form");
+
+  const { data: questions, error: qError } = await supabase
+    .from("form_questions")
+    .select("*")
+    .eq("form_id", id)
+    .order("sort_order", { ascending: true });
+
+  if (!qError && questions && questions.length > 0) {
+    const newQuestions = questions.map((q: Record<string, unknown>) => ({
+      tenant_id: profile.tenant_id,
+      form_id: newForm.id,
+      question_text: q.question_text,
+      question_type: q.question_type,
+      options: q.options ?? null,
+      is_required: q.is_required,
+      sort_order: q.sort_order,
+    }));
+
+    await supabase.from("form_questions").insert(newQuestions);
+  }
+
+  revalidatePath("/forms");
+  return newForm;
 }

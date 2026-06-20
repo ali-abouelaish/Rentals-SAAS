@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { requestPasswordResetForSignedOut } from "@/features/auth/actions/auth";
 
 function ForgotPasswordForm() {
   const searchParams = useSearchParams();
@@ -13,23 +13,27 @@ function ForgotPasswordForm() {
   const [pending, setPending] = useState(false);
   const [ok, setOk] = useState(false);
   const [error, setError] = useState<string | null>(callbackError);
+  const inFlight = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError(null);
     setPending(true);
 
-    const supabase = createSupabaseBrowserClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`;
+    const formData = new FormData();
+    formData.set("email", email.trim());
+    const result = await requestPasswordResetForSignedOut({}, formData);
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo,
-    });
-
+    inFlight.current = false;
     setPending(false);
 
-    if (resetError) {
-      setError(resetError.message);
+    if (result?.error) {
+      const msg = result.error.toLowerCase().includes("rate limit")
+        ? "Too many requests — please wait a few minutes before trying again."
+        : result.error;
+      setError(msg);
       return;
     }
 

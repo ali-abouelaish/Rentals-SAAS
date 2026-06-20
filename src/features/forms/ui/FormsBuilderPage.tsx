@@ -4,41 +4,54 @@ import { useMemo, useState, useTransition } from "react";
 import {
   Plus,
   Copy,
-  ToggleLeft,
-  ToggleRight,
   Trash2,
-  ExternalLink,
   Check,
   Pencil,
   X,
-  Home,
-  Landmark,
-  Info as InfoIcon,
+  ToggleLeft,
+  ToggleRight,
+  ExternalLink,
+  Send,
   Sparkles,
   ArrowRight,
-  UserRound,
   ClipboardList,
+  UserRound,
+  Info as InfoIcon,
+  ListChecks,
+  FileBarChart2,
+  ShieldCheck,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { QuestionEditor } from "./QuestionEditor";
-import {
-  createBookingForm,
-  updateBookingForm,
-  deleteBookingForm,
-} from "../actions/booking-forms";
-import { bookingFormSchema, type BookingFormValues } from "../domain/schemas";
-import type { BookingForm, FormQuestion } from "../domain/types";
+import { FormSendDialog } from "./FormSendDialog";
+import { GoogleFormImportDialog } from "./GoogleFormImportDialog";
+import { createForm, updateForm, deleteForm, duplicateForm } from "../actions/forms";
+import { formSchema, type FormValues } from "../domain/schemas";
+import type { Form, FormQuestion } from "../domain/types";
 import type { Portfolio } from "@/features/properties/domain/types";
+import type { Client } from "@/features/clients/domain/types";
+import { QUESTION_TYPE_LABELS } from "@/lib/types/question";
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls =
+  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls =
+  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
-function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function FormField({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-sm font-medium text-foreground">{label}</label>
@@ -48,20 +61,29 @@ function FormField({ label, error, children }: { label: string; error?: string; 
   );
 }
 
-interface FormBuilderPageProps {
-  initialForms: BookingForm[];
+interface FormsBuilderPageProps {
+  initialForms: Form[];
   portfolios: Portfolio[];
+  clients: Pick<Client, "id" | "full_name" | "email">[];
   appUrl: string;
 }
 
-export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilderPageProps) {
+export function FormsBuilderPage({
+  initialForms,
+  portfolios,
+  clients,
+  appUrl,
+}: FormsBuilderPageProps) {
   const router = useRouter();
-  const [forms, setForms] = useState<BookingForm[]>(initialForms);
+  const [forms, setForms] = useState<Form[]>(initialForms);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(
     initialForms[0]?.id ?? null
   );
   const [createOpen, setCreateOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingHeader, setEditingHeader] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const selectedForm = useMemo(
@@ -69,29 +91,26 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
     [forms, selectedFormId]
   );
 
-  const portfoliosMissingActiveForm = useMemo(() => {
-    const coveredPortfolioIds = new Set(
-      forms.filter((f) => f.is_active && f.portfolio_id).map((f) => f.portfolio_id as string)
-    );
-    return portfolios.filter((p) => !coveredPortfolioIds.has(p.id));
-  }, [forms, portfolios]);
-
-  const createFormHook = useForm<BookingFormValues>({
-    resolver: zodResolver(bookingFormSchema),
-    defaultValues: { is_active: true, portfolio_id: portfolios[0]?.id ?? "" },
+  const createFormHook = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { is_active: true, portfolio_id: null },
   });
 
-  const editFormHook = useForm<BookingFormValues>({
-    resolver: zodResolver(bookingFormSchema),
+  const editFormHook = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
   });
 
-  const handleCreate = (values: BookingFormValues) => {
+  /* ── handlers ─────────────────────────────────────────────────────────── */
+
+  const handleCreate = (values: FormValues) => {
     startTransition(async () => {
       try {
-        await createBookingForm(values);
+        const data = await createForm(values);
         toast.success("Form created");
-        createFormHook.reset({ is_active: true, portfolio_id: portfolios[0]?.id ?? "" });
+        createFormHook.reset({ is_active: true, portfolio_id: null });
         setCreateOpen(false);
+        // select the new form (will appear after router.refresh)
+        setSelectedFormId(data.id);
         router.refresh();
       } catch {
         toast.error("Failed to create form");
@@ -104,18 +123,18 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
     editFormHook.reset({
       name: selectedForm.name,
       description: selectedForm.description ?? "",
-      portfolio_id: selectedForm.portfolio_id ?? "",
       is_active: selectedForm.is_active,
+      portfolio_id: selectedForm.portfolio_id ?? null,
     });
     setEditingHeader(true);
   };
 
-  const handleUpdateHeader = (values: BookingFormValues) => {
+  const handleUpdateHeader = (values: FormValues) => {
     if (!selectedForm) return;
     startTransition(async () => {
       try {
-        await updateBookingForm(selectedForm.id, values);
-        const portfolio = portfolios.find((p) => p.id === values.portfolio_id);
+        await updateForm(selectedForm.id, values);
+        const portfolio = portfolios.find((p) => p.id === values.portfolio_id) ?? null;
         setForms((prev) =>
           prev.map((f) =>
             f.id === selectedForm.id
@@ -123,10 +142,9 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                   ...f,
                   name: values.name,
                   description: values.description ?? null,
-                  portfolio_id: values.portfolio_id,
-                  portfolio: portfolio
-                    ? { name: portfolio.name, color: portfolio.color }
-                    : null,
+                  is_active: values.is_active,
+                  portfolio_id: values.portfolio_id ?? null,
+                  portfolio,
                 }
               : f
           )
@@ -139,10 +157,10 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
     });
   };
 
-  const handleToggleActive = (form: BookingForm) => {
+  const handleToggleActive = (form: Form) => {
     startTransition(async () => {
       try {
-        await updateBookingForm(form.id, { is_active: !form.is_active });
+        await updateForm(form.id, { is_active: !form.is_active });
         setForms((prev) =>
           prev.map((f) => (f.id === form.id ? { ...f, is_active: !f.is_active } : f))
         );
@@ -153,12 +171,25 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
     });
   };
 
-  const handleDelete = (form: BookingForm) => {
+  const handleDuplicate = (form: Form) => {
     startTransition(async () => {
       try {
-        await deleteBookingForm(form.id);
+        await duplicateForm(form.id);
+        toast.success("Form duplicated");
+        router.refresh();
+      } catch {
+        toast.error("Failed to duplicate form");
+      }
+    });
+  };
+
+  const handleDelete = (form: Form) => {
+    startTransition(async () => {
+      try {
+        await deleteForm(form.id);
         setForms((prev) => prev.filter((f) => f.id !== form.id));
-        if (selectedFormId === form.id) setSelectedFormId(null);
+        if (selectedFormId === form.id) setSelectedFormId(forms.find((f) => f.id !== form.id)?.id ?? null);
+        setDeletingId(null);
         toast.success("Form deleted");
       } catch {
         toast.error("Failed to delete form");
@@ -167,7 +198,7 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
   };
 
   const copyLink = (slug: string) => {
-    const url = `${appUrl}/apply/${slug}`;
+    const url = `${appUrl}/f/${slug}`;
     navigator.clipboard.writeText(url);
     toast.success("Link copied to clipboard");
   };
@@ -177,65 +208,33 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
     setForms((prev) =>
       prev.map((f) => (f.id === selectedForm.id ? { ...f, questions } : f))
     );
-    router.refresh();
   };
+
+  /* ── render ───────────────────────────────────────────────────────────── */
 
   return (
     <div className="space-y-5">
-      {/* Header */}
+      {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Booking Forms</h1>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Forms</h1>
           <p className="text-sm text-foreground-secondary mt-0.5">
-            Build public-facing forms for rental applicants — one per portfolio.
+            Build and send customisable forms — referencing checks, onboarding, enquiries.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} disabled={portfolios.length === 0}>
+        <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-1.5" />
           New form
         </Button>
       </div>
 
-      {portfolios.length === 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Create a portfolio first — every booking form must belong to one so applications route correctly.
-        </div>
-      )}
-
-      {portfolios.length > 0 && portfoliosMissingActiveForm.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <div className="flex items-start gap-2">
-            <InfoIcon className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-            <div className="space-y-1.5">
-              <p className="font-medium">
-                {portfoliosMissingActiveForm.length === 1
-                  ? "1 portfolio has no active booking form"
-                  : `${portfoliosMissingActiveForm.length} portfolios have no active booking form`}
-              </p>
-              <p className="text-amber-800">
-                Booking links for units in these portfolios are blocked until a form exists:
-              </p>
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                {portfoliosMissingActiveForm.map((p) => (
-                  <span
-                    key={p.id}
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                    style={{ backgroundColor: p.color + "22", color: p.color }}
-                  >
-                    {p.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_minmax(0,420px)] gap-5 items-start">
-        {/* Form list */}
+      {/* 3-column layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_minmax(0,400px)] gap-5 items-start">
+        {/* ── Left: form list ───────────────────────────────────────────── */}
         <div className="space-y-2">
           {forms.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-8 text-center">
+              <ListChecks className="h-7 w-7 text-foreground-muted mx-auto mb-2" />
               <p className="text-sm text-foreground-muted">No forms yet.</p>
             </div>
           ) : (
@@ -254,41 +253,52 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{form.name}</p>
+                  <div className="min-w-0 flex-1">
                     {form.portfolio && (
                       <span
-                        className="inline-flex items-center mt-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                        style={{ backgroundColor: form.portfolio.color + "22", color: form.portfolio.color }}
+                        className="inline-flex items-center mb-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                        style={{
+                          backgroundColor: form.portfolio.color + "22",
+                          color: form.portfolio.color,
+                        }}
                       >
                         {form.portfolio.name}
                       </span>
                     )}
+                    <p className="text-sm font-medium text-foreground truncate">{form.name}</p>
                   </div>
-                  <span className={`text-[10px] font-medium shrink-0 rounded-full px-2 py-0.5 ${
-                    form.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                  }`}>
+                  <span
+                    className={`text-[10px] font-medium shrink-0 rounded-full px-2 py-0.5 ${
+                      form.is_active
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
                     {form.is_active ? "Active" : "Inactive"}
                   </span>
                 </div>
-                <p className="text-[11px] text-foreground-muted mt-1">
-                  /apply/{form.public_slug}
+                <p className="text-[11px] text-foreground-muted mt-1 truncate">
+                  /f/{form.public_slug}
                 </p>
               </button>
             ))
           )}
         </div>
 
-        {/* Editor panel */}
+        {/* ── Center: editor ────────────────────────────────────────────── */}
         {selectedForm ? (
           <div className="rounded-xl border border-border bg-surface-card p-5 space-y-5">
+            {/* Header */}
             {editingHeader ? (
               <form
                 onSubmit={editFormHook.handleSubmit(handleUpdateHeader)}
                 className="space-y-3 rounded-lg border border-brand/30 bg-brand/[0.04] p-4"
               >
-                <FormField label="Form name *" error={editFormHook.formState.errors.name?.message}>
-                  <input {...editFormHook.register("name")} className={inputCls} />
+                <FormField
+                  label="Form name *"
+                  error={editFormHook.formState.errors.name?.message}
+                >
+                  <input {...editFormHook.register("name")} className={inputCls} autoFocus />
                 </FormField>
                 <FormField label="Description">
                   <textarea
@@ -297,17 +307,18 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     className={`${inputCls} h-auto py-2`}
                   />
                 </FormField>
-                <FormField
-                  label="Portfolio *"
-                  error={editFormHook.formState.errors.portfolio_id?.message}
-                >
-                  <select {...editFormHook.register("portfolio_id")} className={selectCls}>
-                    <option value="">Select a portfolio…</option>
-                    {portfolios.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </FormField>
+                {portfolios.length > 0 && (
+                  <FormField label="Portfolio">
+                    <select {...editFormHook.register("portfolio_id")} className={selectCls}>
+                      <option value="">No portfolio (global form)</option>
+                      {portfolios.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                )}
                 <div className="flex justify-end gap-2 pt-1">
                   <Button
                     type="button"
@@ -326,9 +337,11 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
               </form>
             ) : (
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-semibold text-foreground">{selectedForm.name}</h2>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base font-semibold text-foreground">
+                      {selectedForm.name}
+                    </h2>
                     {selectedForm.portfolio && (
                       <span
                         className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
@@ -342,11 +355,21 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     )}
                   </div>
                   {selectedForm.description && (
-                    <p className="text-sm text-foreground-secondary mt-0.5">{selectedForm.description}</p>
+                    <p className="text-sm text-foreground-secondary mt-0.5">
+                      {selectedForm.description}
+                    </p>
                   )}
+                  <p className="text-[11px] text-foreground-muted mt-1">
+                    /f/{selectedForm.public_slug}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button type="button" variant="outline" size="sm" onClick={openHeaderEdit}>
+                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openHeaderEdit}
+                  >
                     <Pencil className="h-3.5 w-3.5 mr-1" />
                     Edit
                   </Button>
@@ -360,7 +383,7 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     Copy link
                   </Button>
                   <a
-                    href={`${appUrl}/apply/${selectedForm.public_slug}`}
+                    href={`${appUrl}/f/${selectedForm.public_slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
@@ -368,6 +391,32 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     <ExternalLink className="h-3.5 w-3.5" />
                     Open
                   </a>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setSendOpen(true)}
+                  >
+                    <Send className="h-3.5 w-3.5 mr-1" />
+                    Send
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImportOpen(true)}
+                    title="Import from Google Forms"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-1" />
+                    Import
+                  </Button>
+                  <Link
+                    href={`/forms/${selectedForm.id}/responses`}
+                    className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
+                  >
+                    <FileBarChart2 className="h-3.5 w-3.5" />
+                    Responses
+                  </Link>
                   <button
                     type="button"
                     onClick={() => handleToggleActive(selectedForm)}
@@ -382,7 +431,16 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(selectedForm)}
+                    onClick={() => handleDuplicate(selectedForm)}
+                    disabled={isPending}
+                    title="Duplicate form"
+                    className="text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingId(selectedForm.id)}
                     disabled={isPending}
                     title="Delete form"
                   >
@@ -402,11 +460,12 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border p-12 text-center">
+            <ListChecks className="h-8 w-8 text-foreground-muted mx-auto mb-2" />
             <p className="text-sm text-foreground-muted">Select a form to edit</p>
           </div>
         )}
 
-        {/* Live preview */}
+        {/* ── Right: live preview ───────────────────────────────────────── */}
         {selectedForm && (
           <div className="xl:sticky xl:top-4">
             <div className="flex items-center gap-1.5 mb-2">
@@ -414,28 +473,30 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                 <Sparkles className="h-3 w-3 text-brand" />
                 Live preview
               </span>
-              <span className="text-[11px] text-foreground-muted">How applicants see it</span>
+              <span className="text-[11px] text-foreground-muted">How respondents see it</span>
             </div>
             <FormPreview form={selectedForm} />
           </div>
         )}
       </div>
 
+      {/* ── Dialogs ─────────────────────────────────────────────────────── */}
+
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>New Booking Form</DialogTitle>
+            <DialogTitle>New Form</DialogTitle>
           </DialogHeader>
-          <form
-            onSubmit={createFormHook.handleSubmit(handleCreate)}
-            className="space-y-4 mt-2"
-          >
-            <FormField label="Form name *" error={createFormHook.formState.errors.name?.message}>
+          <form onSubmit={createFormHook.handleSubmit(handleCreate)} className="space-y-4 mt-2">
+            <FormField
+              label="Form name *"
+              error={createFormHook.formState.errors.name?.message}
+            >
               <input
                 {...createFormHook.register("name")}
                 className={inputCls}
-                placeholder="e.g. FENIX — Standard Application"
+                placeholder="e.g. Reference Check"
                 autoFocus
               />
             </FormField>
@@ -444,25 +505,30 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                 {...createFormHook.register("description")}
                 rows={2}
                 className={`${inputCls} h-auto py-2`}
-                placeholder="Brief description shown to applicants…"
+                placeholder="Brief description of this form…"
               />
             </FormField>
-            <FormField
-              label="Portfolio *"
-              error={createFormHook.formState.errors.portfolio_id?.message}
-            >
-              <select {...createFormHook.register("portfolio_id")} className={selectCls}>
-                <option value="">Select a portfolio…</option>
-                {portfolios.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <p className="text-[11px] text-foreground-muted mt-0.5">
-                Every booking from this form will be attached to this portfolio.
-              </p>
-            </FormField>
+            {portfolios.length > 0 && (
+              <FormField label="Portfolio">
+                <select {...createFormHook.register("portfolio_id")} className={selectCls}>
+                  <option value="">No portfolio (global form)</option>
+                  {portfolios.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
             <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCreateOpen(false)}
+              >
+                Cancel
+              </Button>
               <Button type="submit" variant="secondary" size="sm" loading={isPending}>
                 <Check className="h-3.5 w-3.5 mr-1" />
                 Create form
@@ -471,17 +537,72 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirm */}
+      {deletingId && (
+        <Dialog open onOpenChange={() => setDeletingId(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete form?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-foreground-secondary mt-1">
+              This will permanently delete the form and all its responses. This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={() => setDeletingId(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                loading={isPending}
+                onClick={() => {
+                  const form = forms.find((f) => f.id === deletingId);
+                  if (form) handleDelete(form);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Send dialog */}
+      {selectedForm && (
+        <FormSendDialog
+          formId={selectedForm.id}
+          formName={selectedForm.name}
+          clients={clients}
+          open={sendOpen}
+          onOpenChange={setSendOpen}
+        />
+      )}
+
+      {/* Google Forms import */}
+      {selectedForm && (
+        <GoogleFormImportDialog
+          formId={selectedForm.id}
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onImported={(newQuestions) => {
+            handleQuestionsChange([...(selectedForm.questions ?? []), ...newQuestions]);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// ── Live preview (non-interactive mirror of PublicBookingForm) ─────────────
+/* ── Live preview ──────────────────────────────────────────────────────────── */
 
 const SERIF: React.CSSProperties = {
   fontFamily: "var(--font-fraunces), Georgia, serif",
 };
 
-function FormPreview({ form }: { form: BookingForm }) {
+function FormPreview({ form }: { form: Form }) {
   const items = [...(form.questions ?? [])].sort((a, b) => a.sort_order - b.sort_order);
   const questionCount = items.filter((i) => i.question_type !== "info").length;
 
@@ -489,6 +610,18 @@ function FormPreview({ form }: { form: BookingForm }) {
     <div className="rounded-2xl border border-border bg-surface-ground p-5 shadow-inner space-y-6">
       {/* Title */}
       <div>
+        {form.portfolio && (
+          <span
+            className="inline-flex items-center mb-2 rounded-md font-semibold tracking-wide uppercase px-1.5 py-0.5 text-[10px]"
+            style={{
+              backgroundColor: `${form.portfolio.color}22`,
+              color: form.portfolio.color,
+              border: `1px solid ${form.portfolio.color}44`,
+            }}
+          >
+            {form.portfolio.name}
+          </span>
+        )}
         <h1
           className="text-[1.5rem] leading-[1.1] tracking-[-0.01em] text-foreground"
           style={{ ...SERIF, fontWeight: 500 }}
@@ -500,61 +633,7 @@ function FormPreview({ form }: { form: BookingForm }) {
         )}
       </div>
 
-      {/* Placeholder room card */}
-      <div
-        className="relative overflow-hidden rounded-2xl border border-border bg-surface-card p-4 shadow-sm"
-        style={{
-          backgroundImage:
-            "radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--brand-primary) 10%, transparent), transparent 55%)",
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand">
-            <Home className="h-4 w-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
-              You're applying for
-            </p>
-            <p
-              className="mt-0.5 text-[1rem] leading-tight tracking-[-0.005em] text-foreground"
-              style={{ ...SERIF, fontWeight: 500 }}
-            >
-              Room 3 · Double
-            </p>
-            <p className="mt-0.5 text-[11px] text-foreground-secondary">
-              12 Example Street, London, E1 6AN
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-surface-inset/50 p-2.5">
-            <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-foreground-muted">
-              Monthly rent
-            </span>
-            <p
-              className="mt-0.5 text-[0.95rem] leading-none text-foreground"
-              style={{ ...SERIF, fontWeight: 500 }}
-            >
-              £950
-              <span className="ml-1 text-[10px] font-normal text-foreground-secondary">pcm</span>
-            </p>
-          </div>
-          <div className="rounded-xl bg-surface-inset/50 p-2.5">
-            <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-foreground-muted">
-              Holding deposit
-            </span>
-            <p
-              className="mt-0.5 text-[0.95rem] leading-none text-foreground"
-              style={{ ...SERIF, fontWeight: 500 }}
-            >
-              £220
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Your details */}
+      {/* Respondent details */}
       <div>
         <PreviewEyebrow icon={<UserRound className="h-3 w-3" />} label="Your details" />
         <div className="rounded-2xl border border-border bg-surface-card p-4 shadow-sm space-y-3">
@@ -566,7 +645,7 @@ function FormPreview({ form }: { form: BookingForm }) {
         </div>
       </div>
 
-      {/* Questions + info blocks in order */}
+      {/* Questions + info blocks */}
       {items.length > 0 && (
         <div>
           <PreviewEyebrow
@@ -581,17 +660,7 @@ function FormPreview({ form }: { form: BookingForm }) {
         </div>
       )}
 
-      {/* Bank details placeholder */}
-      <div>
-        <PreviewEyebrow icon={<Landmark className="h-3 w-3" />} label="Where to pay" />
-        <div className="rounded-2xl border border-border bg-surface-card p-4 shadow-sm">
-          <p className="text-[11px] text-foreground-muted">
-            Bank details from Settings appear here once configured.
-          </p>
-        </div>
-      </div>
-
-      {/* CTA */}
+      {/* Submit button */}
       <div
         className="relative overflow-hidden rounded-2xl px-4 py-3.5 text-brand-fg shadow-[0_10px_30px_-10px_rgba(0,0,0,0.2)]"
         style={{
@@ -613,7 +682,7 @@ function FormPreview({ form }: { form: BookingForm }) {
               className="text-[0.95rem] leading-tight"
               style={{ ...SERIF, fontWeight: 500 }}
             >
-              Submit application
+              Submit response
             </span>
           </div>
           <ArrowRight className="h-4 w-4" />
@@ -657,6 +726,23 @@ function PreviewItem({ item }: { item: FormQuestion }) {
     );
   }
 
+  if (item.question_type === "confirm") {
+    return (
+      <div className="rounded-2xl border border-border bg-surface-card p-3.5 space-y-2.5">
+        <div className="flex gap-2">
+          <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-foreground-muted" />
+          <p className="text-[11px] leading-relaxed text-foreground whitespace-pre-wrap">
+            {item.question_text}
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-inset px-3 py-1.5 text-[11px] text-foreground-secondary">
+          <span className="inline-block h-3 w-3 rounded border border-border bg-surface-card" />
+          Yes, I confirm
+        </div>
+      </div>
+    );
+  }
+
   const displayType =
     item.question_type === "select"
       ? "Dropdown"
@@ -664,9 +750,9 @@ function PreviewItem({ item }: { item: FormQuestion }) {
       ? "Yes / no"
       : item.question_type === "textarea"
       ? "Long text"
-      : item.question_type === "file_upload"
+      : item.question_type === "file"
       ? "File upload"
-      : null;
+      : QUESTION_TYPE_LABELS[item.question_type] ?? null;
 
   return (
     <div className="rounded-2xl border border-border bg-surface-card p-3.5">
@@ -676,7 +762,9 @@ function PreviewItem({ item }: { item: FormQuestion }) {
           {item.is_required && <span className="ml-1 text-red-500">*</span>}
         </p>
         {displayType && (
-          <span className="text-[9px] text-foreground-muted uppercase tracking-wide">{displayType}</span>
+          <span className="text-[9px] text-foreground-muted uppercase tracking-wide shrink-0">
+            {displayType}
+          </span>
         )}
       </div>
       {item.question_type === "textarea" ? (

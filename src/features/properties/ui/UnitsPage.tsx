@@ -9,6 +9,7 @@ import { UnitsKanbanView } from "./UnitsKanbanView";
 import { UnitDrawer } from "./UnitDrawer";
 import { ManagePortfoliosDialog } from "./CreatePortfolioDialog";
 import type { Portfolio, Property, Unit, UnitFilters, UnitRentPayment } from "../domain/types";
+import type { Form } from "@/features/forms/domain/types";
 
 type ViewMode = "list" | "kanban";
 
@@ -38,9 +39,10 @@ interface UnitsPageProps {
   initialUnits: Unit[];
   pmTenants: PmTenantOption[];
   reminderStatus?: import("@/features/reminders/data/status").ReminderStatusMap;
+  forms?: Form[];
 }
 
-export function UnitsPage({ portfolios: initialPortfolios, initialProperties, initialUnits, pmTenants, reminderStatus }: UnitsPageProps) {
+export function UnitsPage({ portfolios: initialPortfolios, initialProperties, initialUnits, pmTenants, reminderStatus, forms = [] }: UnitsPageProps) {
   const [view, setView] = useState<ViewMode>("list");
   const [filters, setFilters] = useState<UnitFilters>(DEFAULT_FILTERS);
   const [portfolios, setPortfolios] = useState<Portfolio[]>(initialPortfolios);
@@ -250,6 +252,7 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
         onClose={() => setDrawerOpen(false)}
         onUnitUpdated={handleUnitUpdated}
         pmTenants={pmTenants}
+        forms={forms}
       />
     </div>
   );

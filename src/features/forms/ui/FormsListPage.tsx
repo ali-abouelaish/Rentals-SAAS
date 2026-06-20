@@ -2,16 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Check, ToggleLeft, ToggleRight, ListChecks } from "lucide-react";
+import { Plus, Trash2, Check, ToggleLeft, ToggleRight, ListChecks, Copy } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createForm, updateForm, deleteForm } from "../actions/forms";
+import { createForm, updateForm, deleteForm, duplicateForm } from "../actions/forms";
 import { formSchema, type FormValues } from "../domain/schemas";
 import type { Form } from "../domain/types";
+import type { Portfolio } from "@/features/properties/domain/types";
 
 const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
@@ -35,9 +36,10 @@ function FormField({
 
 interface FormsListPageProps {
   initialForms: Form[];
+  portfolios: Portfolio[];
 }
 
-export function FormsListPage({ initialForms }: FormsListPageProps) {
+export function FormsListPage({ initialForms, portfolios }: FormsListPageProps) {
   const router = useRouter();
   const [forms, setForms] = useState<Form[]>(initialForms);
   const [createOpen, setCreateOpen] = useState(false);
@@ -46,7 +48,7 @@ export function FormsListPage({ initialForms }: FormsListPageProps) {
 
   const createFormHook = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { is_active: true },
+    defaultValues: { is_active: true, portfolio_id: null },
   });
 
   const handleCreate = (values: FormValues) => {
@@ -54,7 +56,7 @@ export function FormsListPage({ initialForms }: FormsListPageProps) {
       try {
         const data = await createForm(values);
         toast.success("Form created");
-        createFormHook.reset({ is_active: true });
+        createFormHook.reset({ is_active: true, portfolio_id: null });
         setCreateOpen(false);
         router.push(`/forms/${data.id}`);
       } catch {
@@ -73,6 +75,18 @@ export function FormsListPage({ initialForms }: FormsListPageProps) {
         toast.success(form.is_active ? "Form deactivated" : "Form activated");
       } catch {
         toast.error("Failed to update form");
+      }
+    });
+  };
+
+  const handleDuplicate = (form: Form) => {
+    startTransition(async () => {
+      try {
+        const newForm = await duplicateForm(form.id);
+        toast.success("Form duplicated — opening copy");
+        router.push(`/forms/${newForm.id}`);
+      } catch {
+        toast.error("Failed to duplicate form");
       }
     });
   };
@@ -117,69 +131,93 @@ export function FormsListPage({ initialForms }: FormsListPageProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {forms.map((form) => (
-            <div
-              key={form.id}
-              className="rounded-xl border border-border bg-surface-card p-4 space-y-3 flex flex-col"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground truncate">{form.name}</p>
-                  {form.description && (
-                    <p className="text-xs text-foreground-muted mt-0.5 line-clamp-2">
-                      {form.description}
-                    </p>
-                  )}
+          {forms.map((form) => {
+            const portfolio = portfolios.find((p) => p.id === form.portfolio_id) ?? form.portfolio ?? null;
+            return (
+              <div
+                key={form.id}
+                className="rounded-xl border border-border bg-surface-card p-4 space-y-3 flex flex-col"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    {portfolio && (
+                      <span
+                        className="inline-flex items-center rounded-md font-semibold tracking-wide uppercase px-1.5 py-0.5 text-[10px]"
+                        style={{
+                          backgroundColor: `${portfolio.color}22`,
+                          color: portfolio.color,
+                          border: `1px solid ${portfolio.color}44`,
+                        }}
+                      >
+                        {portfolio.name}
+                      </span>
+                    )}
+                    <p className="text-sm font-semibold text-foreground truncate">{form.name}</p>
+                    {form.description && (
+                      <p className="text-xs text-foreground-muted mt-0.5 line-clamp-2">
+                        {form.description}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={`shrink-0 text-[10px] font-medium rounded-full px-2 py-0.5 ${
+                      form.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {form.is_active ? "Active" : "Inactive"}
+                  </span>
                 </div>
-                <span
-                  className={`shrink-0 text-[10px] font-medium rounded-full px-2 py-0.5 ${
-                    form.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  {form.is_active ? "Active" : "Inactive"}
-                </span>
-              </div>
 
-              <p className="text-[11px] text-foreground-muted">/f/{form.public_slug}</p>
+                <p className="text-[11px] text-foreground-muted">/f/{form.public_slug}</p>
 
-              <div className="flex items-center gap-2 pt-1 mt-auto">
-                <Link
-                  href={`/forms/${form.id}`}
-                  className="flex-1 inline-flex items-center justify-center h-8 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-surface-inset transition-colors"
-                >
-                  Builder
-                </Link>
-                <Link
-                  href={`/forms/${form.id}/responses`}
-                  className="flex-1 inline-flex items-center justify-center h-8 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-surface-inset transition-colors"
-                >
-                  Responses
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => handleToggleActive(form)}
-                  disabled={isPending}
-                  title={form.is_active ? "Deactivate" : "Activate"}
-                  className="flex h-8 w-8 items-center justify-center"
-                >
-                  {form.is_active ? (
-                    <ToggleRight className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <ToggleLeft className="h-5 w-5 text-foreground-muted" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeletingId(form.id)}
-                  disabled={isPending}
-                  title="Delete form"
-                  className="flex h-8 w-8 items-center justify-center"
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </button>
+                <div className="flex items-center gap-2 pt-1 mt-auto">
+                  <Link
+                    href={`/forms/${form.id}`}
+                    className="flex-1 inline-flex items-center justify-center h-8 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-surface-inset transition-colors"
+                  >
+                    Builder
+                  </Link>
+                  <Link
+                    href={`/forms/${form.id}/responses`}
+                    className="flex-1 inline-flex items-center justify-center h-8 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-surface-inset transition-colors"
+                  >
+                    Responses
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicate(form)}
+                    disabled={isPending}
+                    title="Duplicate form"
+                    className="flex h-8 w-8 items-center justify-center hover:bg-surface-inset rounded-lg transition-colors"
+                  >
+                    <Copy className="h-4 w-4 text-foreground-muted" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(form)}
+                    disabled={isPending}
+                    title={form.is_active ? "Deactivate form" : "Activate form"}
+                    className="flex h-8 w-8 items-center justify-center"
+                  >
+                    {form.is_active ? (
+                      <ToggleRight className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <ToggleLeft className="h-5 w-5 text-foreground-muted" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingId(form.id)}
+                    disabled={isPending}
+                    title="Delete form"
+                    className="flex h-8 w-8 items-center justify-center"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -206,6 +244,21 @@ export function FormsListPage({ initialForms }: FormsListPageProps) {
                 placeholder="Brief description of this form…"
               />
             </FormField>
+            {portfolios.length > 0 && (
+              <FormField label="Portfolio">
+                <select
+                  {...createFormHook.register("portfolio_id")}
+                  className={inputCls}
+                >
+                  <option value="">No portfolio (global form)</option>
+                  {portfolios.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
             <div className="flex justify-end gap-2 pt-2 border-t border-border">
               <Button
                 type="button"

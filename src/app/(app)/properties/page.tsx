@@ -6,6 +6,7 @@ import { getProperties } from "@/features/properties/data/properties";
 import { getUnits } from "@/features/properties/data/units";
 import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
 import { getRentReminderStatusMap } from "@/features/reminders/data/status";
+import { getActiveForms } from "@/features/forms/data/forms";
 import { UnitsPage } from "@/features/properties/ui/UnitsPage";
 import { Warehouse } from "lucide-react";
 
@@ -14,11 +15,12 @@ export default async function PropertiesPage() {
   await requireModuleAccess("property_management");
 
   try {
-    const [portfolios, propertiesData, unitsResult, pmTenantsData] = await Promise.all([
+    const [portfolios, propertiesData, unitsResult, pmTenantsData, activeForms] = await Promise.all([
       getPortfolios(),
       getProperties(),
       getUnits({}, 1, 200),
       getPmTenants().catch(() => []),
+      getActiveForms().catch(() => []),
     ]);
 
     const pmTenants = pmTenantsData.map((t) => ({
@@ -40,6 +42,7 @@ export default async function PropertiesPage() {
         initialUnits={unitsResult.units}
         pmTenants={pmTenants}
         reminderStatus={reminderStatus}
+        forms={activeForms}
       />
     );
   } catch (err) {

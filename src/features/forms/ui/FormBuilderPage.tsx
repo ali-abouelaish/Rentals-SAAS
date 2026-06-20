@@ -25,6 +25,7 @@ import { updateForm } from "../actions/forms";
 import { formSchema, type FormValues } from "../domain/schemas";
 import type { Form, FormQuestion } from "../domain/types";
 import type { Client } from "@/features/clients/domain/types";
+import type { Portfolio } from "@/features/properties/domain/types";
 
 const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
@@ -50,9 +51,10 @@ interface FormBuilderPageProps {
   form: Form;
   clients: Pick<Client, "id" | "full_name" | "email">[];
   appUrl: string;
+  portfolios: Portfolio[];
 }
 
-export function FormBuilderPage({ form: initialForm, clients, appUrl }: FormBuilderPageProps) {
+export function FormBuilderPage({ form: initialForm, clients, appUrl, portfolios }: FormBuilderPageProps) {
   const router = useRouter();
   const [form, setForm] = useState<Form>(initialForm);
   const [questions, setQuestions] = useState<FormQuestion[]>(initialForm.questions ?? []);
@@ -67,6 +69,7 @@ export function FormBuilderPage({ form: initialForm, clients, appUrl }: FormBuil
       name: form.name,
       description: form.description ?? "",
       is_active: form.is_active,
+      portfolio_id: form.portfolio_id ?? null,
     },
   });
 
@@ -74,11 +77,14 @@ export function FormBuilderPage({ form: initialForm, clients, appUrl }: FormBuil
     startTransition(async () => {
       try {
         await updateForm(form.id, values);
+        const portfolio = portfolios.find((p) => p.id === values.portfolio_id) ?? null;
         setForm((prev) => ({
           ...prev,
           name: values.name,
           description: values.description ?? null,
           is_active: values.is_active,
+          portfolio_id: values.portfolio_id ?? null,
+          portfolio,
         }));
         toast.success("Form updated");
         setEditingHeader(false);
@@ -136,6 +142,18 @@ export function FormBuilderPage({ form: initialForm, clients, appUrl }: FormBuil
                 className={`${inputCls} h-auto py-2`}
               />
             </FormField>
+            {portfolios.length > 0 && (
+              <FormField label="Portfolio">
+                <select {...editFormHook.register("portfolio_id")} className={inputCls}>
+                  <option value="">No portfolio (global form)</option>
+                  {portfolios.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
             <div className="flex justify-end gap-2 pt-1">
               <Button
                 type="button"
@@ -154,7 +172,19 @@ export function FormBuilderPage({ form: initialForm, clients, appUrl }: FormBuil
           </form>
         ) : (
           <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 space-y-1">
+              {form.portfolio && (
+                <span
+                  className="inline-flex items-center rounded-md font-semibold tracking-wide uppercase px-1.5 py-0.5 text-[10px]"
+                  style={{
+                    backgroundColor: `${form.portfolio.color}22`,
+                    color: form.portfolio.color,
+                    border: `1px solid ${form.portfolio.color}44`,
+                  }}
+                >
+                  {form.portfolio.name}
+                </span>
+              )}
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold text-foreground tracking-tight">{form.name}</h1>
                 <span

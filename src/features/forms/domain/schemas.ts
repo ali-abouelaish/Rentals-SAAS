@@ -4,6 +4,7 @@ export const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   is_active: z.boolean().default(true),
+  portfolio_id: z.string().uuid().nullable().optional(),
 });
 export type FormValues = z.infer<typeof formSchema>;
 
@@ -11,7 +12,7 @@ export const formQuestionSchema = z.object({
   question_text: z.string().min(1, "Content is required"),
   question_type: z.enum([
     "text", "textarea", "email", "phone", "date",
-    "select", "checkbox", "number", "info",
+    "select", "checkbox", "number", "info", "file", "confirm",
   ]),
   options: z.array(z.string()).optional(),
   is_required: z.boolean().default(false),
