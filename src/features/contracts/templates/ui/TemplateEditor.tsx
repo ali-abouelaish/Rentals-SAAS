@@ -21,7 +21,42 @@ import type { Portfolio } from "@/features/properties/domain/types";
 
 const RENDER_SCALE = 1.5;
 
+// Human-readable labels for each binding source, mirroring the "Bind to" dropdown.
+const SOURCE_LABELS: Record<FieldSource, string> = {
+  manual: "Manual entry at generation",
+  booking_response: "Booking form answer",
+  pm_tenant: "Tenant",
+  booking: "Booking",
+  property: "Property",
+  unit: "Unit",
+  landlord: "Landlord",
+  agency: "Agency",
+  computed: "Computed",
+};
+
+const DATA_KEY_SOURCES = ["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"];
+
 type EditableField = TemplateFieldInput & { localId: string };
+
+// Returns the first field whose binding is incomplete, plus a friendly message,
+// so we can surface a clear validation prompt instead of a raw server error.
+function findIncompleteField(
+  fields: EditableField[],
+): { localId: string; message: string } | null {
+  for (const f of fields) {
+    const name = f.label?.trim() ? `"${f.label.trim()}"` : "An unnamed field";
+    if (f.source === "booking_response" && !f.question_id) {
+      return { localId: f.localId, message: `${name} is bound to "Booking form answer" — please choose which question it should read before saving.` };
+    }
+    if (DATA_KEY_SOURCES.includes(f.source) && !f.data_key) {
+      return { localId: f.localId, message: `${name} is bound to "${SOURCE_LABELS[f.source]}" — please choose which field it should read before saving.` };
+    }
+    if (f.source === "manual" && !f.manual_key?.trim()) {
+      return { localId: f.localId, message: `${name} uses manual entry — please enter a field key before saving.` };
+    }
+  }
+  return null;
+}
 
 function toEditable(f: ContractTemplateField): EditableField {
   return {
@@ -108,6 +143,12 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
   };
 
   const handleSave = () => {
+    const incomplete = findIncompleteField(fields);
+    if (incomplete) {
+      setSelectedId(incomplete.localId);
+      toast.error(incomplete.message);
+      return;
+    }
     startSave(async () => {
       try {
         await saveContractTemplateFields({
@@ -655,20 +696,40 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
           <label className="text-xs font-medium text-foreground">Question</label>
           <select
             value={field.question_id ?? ""}
-            onChange={(e) => onChange({ question_id: e.target.value || null })}
+            onChange={(e) => {
+              const v = e.target.value;
+              // Built-in applicant fields live on the booking, not as questions —
+              // selecting one rebinds the field to the "Booking" source.
+              if (v.startsWith("booking:")) {
+                onChange({ source: "booking", data_key: v.slice("booking:".length), question_id: null });
+              } else {
+                onChange({ question_id: v || null });
+              }
+            }}
             className="w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm"
           >
             <option value="">Select a question…</option>
-            {questions.map((q) => {
-              const disabled = q.question_type === "file_upload" || q.question_type === "info";
-              return (
-                <option key={q.id} value={q.id} disabled={disabled}>
-                  {q.form_name ? `${q.form_name} → ` : ""}
-                  {q.question_text}
-                  {disabled ? " (not stampable)" : ""}
-                </option>
-              );
-            })}
+            <optgroup label="Collected on every booking form">
+              {(DATA_KEY_GROUPS["booking"] ?? [])
+                .filter((opt) => opt.key.startsWith("booking.applicant"))
+                .map((opt) => (
+                  <option key={opt.key} value={`booking:${opt.key}`}>
+                    {opt.label}
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="Custom questions">
+              {questions.map((q) => {
+                const disabled = q.question_type === "file_upload" || q.question_type === "info";
+                return (
+                  <option key={q.id} value={q.id} disabled={disabled}>
+                    {q.form_name ? `${q.form_name} → ` : ""}
+                    {q.question_text}
+                    {disabled ? " (not stampable)" : ""}
+                  </option>
+                );
+              })}
+            </optgroup>
           </select>
         </div>
       )}

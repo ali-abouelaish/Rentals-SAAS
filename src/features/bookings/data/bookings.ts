@@ -48,6 +48,24 @@ export async function getBookings(filters: Partial<BookingFilters> = {}): Promis
     );
   }
 
+  // Enrich form_responses with question text in one batched query so the
+  // drawer (responses tab + contract dialog) can show question labels.
+  const questionIds = [
+    ...new Set(result.flatMap((b) => (b.form_responses ?? []).map((r) => r.question_id))),
+  ];
+  if (questionIds.length > 0) {
+    const { data: questions } = await supabase
+      .from("booking_form_questions")
+      .select("id, question_text, question_type")
+      .in("id", questionIds);
+    const qMap = Object.fromEntries((questions ?? []).map((q) => [q.id, q]));
+    for (const b of result) {
+      if (b.form_responses?.length) {
+        b.form_responses = b.form_responses.map((r) => ({ ...r, question: qMap[r.question_id] ?? undefined }));
+      }
+    }
+  }
+
   return result;
 }
 
@@ -63,12 +81,12 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   const booking = data as Booking;
 
   // Enrich form_responses with question data via a separate query to avoid
-  // PostgREST needing to resolve the form_responses→form_questions FK in cache.
+  // PostgREST needing to resolve the form_responses→booking_form_questions FK in cache.
   const responses = booking.form_responses ?? [];
   if (responses.length > 0) {
     const questionIds = [...new Set(responses.map((r) => r.question_id))];
     const { data: questions } = await supabase
-      .from("form_questions")
+      .from("booking_form_questions")
       .select("id, question_text, question_type")
       .in("id", questionIds);
     const qMap = Object.fromEntries((questions ?? []).map((q) => [q.id, q]));

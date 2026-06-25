@@ -41,7 +41,7 @@ export type ResolverContext = {
     phone: string | null;
     current_address: string | null;
   } | null;
-  // booking_responses keyed by form_questions.id
+  // booking_responses keyed by booking_form_questions.id
   responses: Map<string, { answer_text: string | null; answer_file_url: string | null; question_type: string | null }>;
   manualValues: Record<string, string>;
   contractId: string;

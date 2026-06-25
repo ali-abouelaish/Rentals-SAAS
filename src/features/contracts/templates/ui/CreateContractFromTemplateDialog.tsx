@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,22 @@ type ManualField = {
   sort_order: number;
 };
 
+type ApplicantAnswer = {
+  id: string;
+  answer_text: string | null;
+  answer_file_url: string | null;
+  question?: { question_text: string } | null;
+};
+
 interface Props {
   open: boolean;
   onClose: () => void;
   bookingId: string;
   portfolioId: string | null;
+  /** The applicant's booking-form answers, shown read-only for reference. */
+  responses?: ApplicantAnswer[];
+  /** Built-in fields every booking form collects (stored on the booking, not as questions). */
+  applicant?: { name: string | null; email: string | null; phone: string | null };
 }
 
 export function CreateContractFromTemplateDialog({
@@ -34,7 +45,10 @@ export function CreateContractFromTemplateDialog({
   onClose,
   bookingId,
   portfolioId,
+  responses = [],
+  applicant,
 }: Props) {
+  const [showAnswers, setShowAnswers] = useState(false);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const router = useRouter();
@@ -64,6 +78,7 @@ export function CreateContractFromTemplateDialog({
       setRentPcm("");
       setDeposit("");
       setTemplates([]);
+      setShowAnswers(false);
       return;
     }
     setLoadingTemplates(true);
@@ -131,6 +146,24 @@ export function CreateContractFromTemplateDialog({
     });
   };
 
+  // Built-in applicant fields (name/email/phone) live on the booking, not in
+  // form_responses, so surface them ahead of the custom-question answers.
+  type AnswerRow = { id: string; label: string; value: string | null; fileUrl: string | null };
+  const builtinRows: AnswerRow[] = [
+    { id: "builtin-name", label: "Full name", value: applicant?.name ?? null, fileUrl: null },
+    { id: "builtin-email", label: "Email", value: applicant?.email ?? null, fileUrl: null },
+    { id: "builtin-phone", label: "Phone", value: applicant?.phone ?? null, fileUrl: null },
+  ].filter((r) => r.value);
+  const answerRows: AnswerRow[] = [
+    ...builtinRows,
+    ...responses.map((r) => ({
+      id: r.id,
+      label: r.question?.question_text ?? "Question",
+      value: r.answer_text,
+      fileUrl: r.answer_file_url,
+    })),
+  ];
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-xl">
@@ -177,6 +210,51 @@ export function CreateContractFromTemplateDialog({
 
         {step === "fill" && (
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {answerRows.length > 0 && (
+              <div className="rounded-lg border border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowAnswers((v) => !v)}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
+                    Applicant&apos;s answers ({answerRows.length})
+                  </span>
+                  {showAnswers ? (
+                    <ChevronDown size={14} className="text-foreground-muted" />
+                  ) : (
+                    <ChevronRight size={14} className="text-foreground-muted" />
+                  )}
+                </button>
+                {showAnswers && (
+                  <div className="space-y-3 border-t border-border px-3 py-3">
+                    {answerRows.map((r) => (
+                      <div key={r.id} className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">
+                          {r.label}
+                        </p>
+                        {r.fileUrl ? (
+                          <a
+                            href={r.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-sm text-brand hover:underline"
+                          >
+                            <ExternalLink size={13} />
+                            View uploaded file
+                          </a>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm text-foreground">
+                            {r.value || "—"}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">Start date *</label>

@@ -47,7 +47,7 @@ export async function listBookingFormQuestionsForTemplate(
   const formMap = new Map(forms.map((f) => [f.id, f]));
 
   const { data: questions, error: qError } = await supabase
-    .from("form_questions")
+    .from("booking_form_questions")
     .select("id, question_text, question_type, form_id, sort_order")
     .in("form_id", formIds)
     .eq("tenant_id", profile.tenant_id)

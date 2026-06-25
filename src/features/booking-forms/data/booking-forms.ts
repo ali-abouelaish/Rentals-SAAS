@@ -23,10 +23,10 @@ export async function getBookingFormWithQuestions(id: string): Promise<BookingFo
 
   const { data, error } = await supabase
     .from("booking_forms")
-    .select("*, portfolio:portfolios(name, color), questions:form_questions(*)")
+    .select("*, portfolio:portfolios(name, color), questions:booking_form_questions(*)")
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id)
-    .order("sort_order", { referencedTable: "form_questions", ascending: true })
+    .order("sort_order", { referencedTable: "booking_form_questions", ascending: true })
     .single();
 
   if (error) return null;
@@ -48,10 +48,10 @@ export async function getPublicBookingForm(slug: string): Promise<BookingForm | 
 
   const { data, error } = await supabase
     .from("booking_forms")
-    .select("*, questions:form_questions(*), tenant:tenants(name, branding:tenant_branding_settings(brand_name, logo_url))")
+    .select("*, questions:booking_form_questions(*), tenant:tenants(name, branding:tenant_branding_settings(brand_name, logo_url))")
     .eq("public_slug", slug)
     .eq("is_active", true)
-    .order("sort_order", { referencedTable: "form_questions", ascending: true })
+    .order("sort_order", { referencedTable: "booking_form_questions", ascending: true })
     .single();
 
   if (error || !data) return null;

@@ -38,7 +38,14 @@ const MANUAL_BINDINGS: AllowedBinding[] = [
   { source: "manual", manual_key: "witness_name", label_hint: "name of witness" },
 ];
 
-const SYSTEM_PROMPT = `You are a contract field detector for UK tenancy agreements. The user will give you positioned text extracted from a PDF (top-left origin, points) and a list of allowed bindings. For each blank or placeholder you find — underlines ("____"), tokens like "<<NAME>>", labelled blank boxes ("Tenant: ___"), date lines, signature blocks — emit one proposal that picks the most appropriate binding from the allowed list. If nothing obvious is a blank, do not emit anything. Return strictly JSON of the form {"proposals": [...]}. Each proposal has: page_index (0-based), x, y, width, height (PDF points, top-left origin), label (short human label), suggested_source (one of the allowed sources), suggested_key (the data_key OR manual_key — null if booking_response or unknown), suggested_question_id (the question id — null otherwise), and ai_confidence (0..1). Keep widths and heights to the visual extent of the blank, not the whole line.`;
+const SYSTEM_PROMPT = `You are a contract field detector for UK tenancy agreements. The user will give you positioned text extracted from a PDF (top-left origin, points) and a list of allowed bindings. For each blank or placeholder you find — underlines ("____"), tokens like "<<NAME>>", labelled blank boxes ("Tenant: ___"), date lines, signature blocks — emit one proposal that picks the most appropriate binding from the allowed list.
+
+Binding guidance for common blanks:
+- The applicant's / tenant's name, email or phone number → prefer the booking applicant fields: booking.applicant_name, booking.applicant_email, booking.applicant_phone. These are collected on every booking form and are always available at generation time, so prefer them over the equivalent pm_tenant.* fields unless the blank clearly refers to a different person.
+- Property name/address, room or unit, rent, deposit → use the property.* and unit.* data keys.
+- Values the agent fills in at signing (tenancy start date, signing date, witness name) → use the matching manual bindings.
+
+If nothing obvious is a blank, do not emit anything. Return strictly JSON of the form {"proposals": [...]}. Each proposal has: page_index (0-based), x, y, width, height (PDF points, top-left origin), label (short human label), suggested_source (one of the allowed sources), suggested_key (the data_key OR manual_key — null if booking_response or unknown), suggested_question_id (the question id — null otherwise), and ai_confidence (0..1). Keep widths and heights to the visual extent of the blank, not the whole line.`;
 
 export async function aiDetectFields(input: { templateId: string }): Promise<{ proposals: AiFieldProposal[] }> {
   const profile = await requireRole([...ADMIN_ROLES]);

@@ -243,6 +243,12 @@ function ActionsContent({
           onClose={() => setTemplateDialogOpen(false)}
           bookingId={booking.id}
           portfolioId={booking.portfolio_id}
+          responses={booking.form_responses ?? []}
+          applicant={{
+            name: booking.applicant_name,
+            email: booking.applicant_email,
+            phone: booking.applicant_phone,
+          }}
         />
       </div>
     );

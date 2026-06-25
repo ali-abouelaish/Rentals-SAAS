@@ -118,7 +118,7 @@ export async function getPmTenantFormResponses(pmTenantId: string) {
 
   const { data, error } = await supabase
     .from("form_responses")
-    .select("*, question:form_questions(*)")
+    .select("*, question:booking_form_questions(*)")
     .eq("booking_id", booking.id)
     .order("created_at", { ascending: true });
 

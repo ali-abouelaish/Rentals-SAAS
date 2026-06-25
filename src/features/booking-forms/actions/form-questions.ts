@@ -19,7 +19,7 @@ export async function createFormQuestion(formId: string, values: FormQuestionVal
     .single();
   if (!form) throw new Error("Form not found");
 
-  const { data, error } = await supabase.from("form_questions").insert({
+  const { data, error } = await supabase.from("booking_form_questions").insert({
     tenant_id: profile.tenant_id,
     form_id: formId,
     question_text: values.question_text,
@@ -39,7 +39,7 @@ export async function updateFormQuestion(id: string, values: Partial<FormQuestio
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase
-    .from("form_questions")
+    .from("booking_form_questions")
     .update({
       question_text: values.question_text,
       question_type: values.question_type,
@@ -59,7 +59,7 @@ export async function deleteFormQuestion(id: string) {
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase
-    .from("form_questions")
+    .from("booking_form_questions")
     .delete()
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id);
@@ -75,7 +75,7 @@ export async function reorderFormQuestions(questions: Array<{ id: string; sort_o
   await Promise.all(
     questions.map(({ id, sort_order }) =>
       supabase
-        .from("form_questions")
+        .from("booking_form_questions")
         .update({ sort_order })
         .eq("id", id)
         .eq("tenant_id", profile.tenant_id)

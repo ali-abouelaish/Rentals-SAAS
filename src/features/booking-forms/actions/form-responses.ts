@@ -33,7 +33,7 @@ export async function submitBookingForm(
 
   // Fetch required questions to validate
   const { data: requiredQuestions } = await supabase
-    .from("form_questions")
+    .from("booking_form_questions")
     .select("id")
     .eq("form_id", form.id)
     .eq("is_required", true);

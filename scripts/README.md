@@ -7,13 +7,21 @@ Fast deploy workflow that ships the local `.next` build to the VPS so the VPS do
 ### Usage
 
 ```bash
-npm run deploy     # build locally, rsync to VPS, reload PM2
+npm run deploy     # build locally, rsync to VPS, reload PM2, health check
+npm run deploy -- -y   # skip the confirmation prompt (CI / non-interactive)
 npm run rollback   # swap the previous build back in and reload PM2
 ```
 
 ### What each script does
 
-`scripts/deploy.sh` runs `npm run build` locally, backs up the remote `.next` to `.next.prev`, rsyncs `.next/` (minus `cache`), `public/`, `package.json`, `package-lock.json`, and `next.config.mjs` to the VPS, runs `npm ci --omit=dev` only if `package-lock.json` actually changed, then reloads the `harborops` PM2 process. It prints the deployed git SHA on success.
+`scripts/deploy.sh`:
+
+1. **Push guard** — warns if the working tree is dirty, the branch has no upstream, or the local branch is ahead of its remote (i.e. the deployed code is not all pushed). These are warnings, not hard stops.
+2. **Confirmation** — prints the target host/path/branch/SHA and the warnings above, then requires a `y/N` confirmation before touching the remote. Skip with `-y` / `--yes`, or `DEPLOY_YES=1`. In a non-interactive shell it aborts unless `-y` is given.
+3. Runs `npm run build` locally, backs up the remote `.next` to `.next.prev`, rsyncs `.next/` (minus `cache`), `public/`, `package.json`, `package-lock.json`, and `next.config.mjs` to the VPS, runs `npm ci --omit=dev` only if `package-lock.json` actually changed, then reloads the `harborops` PM2 process.
+4. **Health check + auto-rollback** — curls `http://127.0.0.1:3000/` on the VPS (up to 10 tries, 3s apart). A reachable response under HTTP 500 counts as healthy. If it never comes up, the script automatically swaps `.next.prev` back in, reloads PM2, and exits non-zero (the failed build is preserved at `.next.prev`). If this was the first deploy with no backup, it cannot auto-roll back and tells you to check `pm2 logs` instead.
+
+It prints the deployed git SHA on success.
 
 `scripts/rollback.sh` swaps `.next` and `.next.prev` on the VPS so the previous build becomes active, then reloads PM2. It refuses to run if no `.next.prev` exists.
 

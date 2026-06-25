@@ -101,7 +101,7 @@ export async function generateContractFromTemplate(
 
   const { data: responses } = await supabase
     .from("form_responses")
-    .select("question_id, answer_text, answer_file_url, question:form_questions(question_type)")
+    .select("question_id, answer_text, answer_file_url, question:booking_form_questions(question_type)")
     .eq("booking_id", booking.id)
     .eq("tenant_id", profile.tenant_id);
 

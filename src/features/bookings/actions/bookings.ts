@@ -47,7 +47,7 @@ export async function approveBooking(id: string, signedAndPaid = false) {
   // 1. Fetch the booking
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("*, form_responses(*, question:form_questions(question_text))")
+    .select("*, form_responses(*, question:booking_form_questions(question_text))")
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id)
     .single();
