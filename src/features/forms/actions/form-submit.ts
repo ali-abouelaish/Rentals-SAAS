@@ -16,6 +16,7 @@ const ALLOWED_MIME = new Set([
 
 export async function submitForm(formData: FormData): Promise<{ submissionId: string }> {
   const slug = String(formData.get("slug") ?? "");
+  const token = String(formData.get("token") ?? "").trim();
   const supabase = createSupabaseAdminClient();
 
   const { data: form, error: formError } = await supabase
@@ -110,6 +111,20 @@ export async function submitForm(formData: FormData): Promise<{ submissionId: st
   if (answerRows.length > 0) {
     const { error: ansErr } = await supabase.from("form_answers").insert(answerRows);
     if (ansErr) throw new Error(ansErr.message);
+  }
+
+  // If the link carried a send token, attribute this submission to that send
+  // (and, through it, the booking it was sent from).
+  if (token) {
+    await supabase
+      .from("booking_form_sends")
+      .update({
+        status: "completed",
+        submission_id: submission.id,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("token", token)
+      .eq("form_id", form.id);
   }
 
   return { submissionId: submission.id };

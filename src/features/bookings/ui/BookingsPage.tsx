@@ -30,6 +30,7 @@ interface BookingsPageProps {
   initialBookings: Booking[];
   portfolios: Portfolio[];
   bookingForms: ActiveForm[];
+  hasFormsEntitlement: boolean;
 }
 
 function FormLinksDropdown({ forms }: { forms: ActiveForm[] }) {
@@ -130,7 +131,7 @@ function FormLinksDropdown({ forms }: { forms: ActiveForm[] }) {
   );
 }
 
-export function BookingsPage({ initialBookings, portfolios, bookingForms }: BookingsPageProps) {
+export function BookingsPage({ initialBookings, portfolios, bookingForms, hasFormsEntitlement }: BookingsPageProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [filters, setFilters] = useState<BookingFilters>(DEFAULT_FILTERS);
   const [view, setView] = useState<"list" | "kanban">("list");
@@ -145,6 +146,7 @@ export function BookingsPage({ initialBookings, portfolios, bookingForms }: Book
         (b) =>
           b.applicant_name.toLowerCase().includes(s) ||
           b.applicant_email.toLowerCase().includes(s) ||
+          b.booking_reference?.toLowerCase().includes(s) ||
           b.unit?.property.name.toLowerCase().includes(s)
       );
     }
@@ -211,6 +213,7 @@ export function BookingsPage({ initialBookings, portfolios, bookingForms }: Book
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onBookingUpdated={handleBookingUpdated}
+        hasFormsEntitlement={hasFormsEntitlement}
       />
     </div>
   );

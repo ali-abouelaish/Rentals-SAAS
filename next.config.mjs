@@ -10,6 +10,8 @@ const nextConfig = {
     ]
   },
   experimental: {
+    // Enables src/instrumentation.ts (required on Next 14; default on 15+).
+    instrumentationHook: true,
     serverActions: {
       bodySizeLimit: "20mb"
     }

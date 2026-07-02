@@ -41,6 +41,32 @@ err()  { printf "%s  !!%s %s\n" "$RED" "$NC" "$1" >&2; }
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# ---------------------------------------------------------------------------
+# Windows / cwRsync compatibility.
+# Chocolatey's rsync is Cygwin-based; if it spawns a non-Cygwin ssh (Git Bash's
+# MSYS ssh or Windows OpenSSH) it dies with "dup() in/out/err failed". Pin
+# RSYNC_RSH to the ssh bundled with cwRsync, and disable MSYS path mangling so
+# the remote "host:/path" spec is passed through untouched. No-op on macOS/Linux.
+# ---------------------------------------------------------------------------
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    export MSYS_NO_PATHCONV=1
+    CWRSYNC_SSH_WIN="/c/ProgramData/chocolatey/lib/rsync/tools/bin/ssh.exe"
+    CWRSYNC_SSH_CYG="/cygdrive/c/ProgramData/chocolatey/lib/rsync/tools/bin/ssh"
+    if [ ! -e "$CWRSYNC_SSH_WIN" ]; then
+      err "cwRsync ssh not found at C:\\\\ProgramData\\\\chocolatey\\\\lib\\\\rsync\\\\tools\\\\bin\\\\ssh.exe"
+      err "Install rsync with 'choco install rsync' (elevated), or edit CWRSYNC_SSH_* in this script."
+      exit 1
+    fi
+    # Git Bash HOME (/c/Users/x) -> Cygwin path (/cygdrive/c/Users/x) so the
+    # Cygwin ssh resolves the key and known_hosts.
+    CYG_HOME="$(printf '%s' "$HOME" | sed -E 's#^/([a-zA-Z])/#/cygdrive/\1/#')"
+    RSYNC_RSH="$CWRSYNC_SSH_CYG -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=${CYG_HOME}/.ssh/known_hosts"
+    [ -f "$HOME/.ssh/id_ed25519" ] && RSYNC_RSH="$RSYNC_RSH -i ${CYG_HOME}/.ssh/id_ed25519"
+    export RSYNC_RSH
+    ;;
+esac
+
 GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 

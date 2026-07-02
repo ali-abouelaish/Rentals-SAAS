@@ -8,7 +8,8 @@ export type QuestionType =
   | "checkbox"
   | "file_upload"
   | "number"
-  | "info";
+  | "info"
+  | "confirm";
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   text: "Short text",
@@ -21,6 +22,7 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   file_upload: "File upload",
   number: "Number",
   info: "Info / note block",
+  confirm: "Confirmation (must press Yes)",
 };
 
 export type BookingForm = {
@@ -67,4 +69,11 @@ export type FormQuestion = {
   is_required: boolean;
   sort_order: number;
   created_at: string;
+};
+
+export type ParsedQuestion = {
+  label: string;
+  type: QuestionType;
+  options: string[] | null;
+  is_required: boolean;
 };

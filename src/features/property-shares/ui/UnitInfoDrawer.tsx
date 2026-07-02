@@ -23,6 +23,7 @@ import { STATUS_CONFIG } from "@/features/properties/domain/types";
 import type { UnitStatus } from "@/features/properties/domain/types";
 import type { PublicShareUnit } from "../data/public";
 import { formatPriceRange, unitLabel } from "./format";
+import { ShareBookingForm } from "./ShareBookingForm";
 
 const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
@@ -149,6 +150,10 @@ export function UnitInfoDrawer({
               <span className="text-foreground-muted">Commission: </span>
               <span className="font-medium text-foreground">{commissionPct}%</span>
             </div>
+
+            {unit.status === "available" && (
+              <ShareBookingForm unit={unit} token={token} />
+            )}
 
             {unit.contact && (
               <div className="rounded-xl border border-border bg-surface-card p-4 space-y-3">

@@ -3,6 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { Info } from "lucide-react";
 import { getPublicBookingForm } from "@/features/booking-forms/data/booking-forms";
 
+// Always fetch the current form — never serve a cached copy.
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: { slug: string };
   searchParams: { unit?: string };

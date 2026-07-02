@@ -241,23 +241,17 @@ export async function getEarningsTrend(filters: EarningsFilterValues): Promise<E
   const toDate = new Date(filters.to);
   const bucket = getBucket(fromDate, toDate);
 
-  const { data: rpcData, error: rpcError } = await supabase.rpc("get_earnings_trend", {
-    p_tenant_id: profile.tenant_id,
-    p_from: fromDate.toISOString(),
-    p_to: endOfDay(filters.to),
-    p_bucket: bucket
-  });
-
-  if (!rpcError && rpcData) {
-    return rpcData as EarningsTrendPoint[];
-  }
-
-  // Fallback: compute from rental_codes
+  // Compute the trend in JS rather than via the get_earnings_trend RPC.
+  // That RPC reads rental_earnings_view, whose rental_net only subtracts the
+  // payment fee and omits the VAT division (÷1.2 for card/transfer) that
+  // computeRentalNet applies — inflating card/transfer rentals by ~20% and
+  // making the chart disagree with the stat cards. Mirror getEarningsStats
+  // (same statuses + net formula) so the chart sums to "Total Agency Earnings".
   const { data: rentals } = await supabase
     .from("rental_codes")
     .select("consultation_fee_amount, payment_method, date")
     .eq("tenant_id", profile.tenant_id)
-    .in("status", ["approved", "paid"])
+    .in("status", ["pending", "approved", "paid"])
     .gte("date", fromDate.toISOString())
     .lte("date", endOfDay(filters.to));
 
@@ -270,12 +264,13 @@ export async function getEarningsTrend(filters: EarningsFilterValues): Promise<E
         : new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
     const key = bucketDate.toISOString().slice(0, 10);
     const current = buckets.get(key) ?? { bucket_date: key, total_earnings: 0, agent_earnings: 0 };
-    const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
-    current.total_earnings += rentalNet;
+    current.total_earnings += computeRentalNet(r.consultation_fee_amount, r.payment_method);
     buckets.set(key, current);
   });
 
-  return Array.from(buckets.values()).sort((a, b) => a.bucket_date.localeCompare(b.bucket_date));
+  return Array.from(buckets.values())
+    .map((b) => ({ ...b, total_earnings: Math.round(b.total_earnings * 100) / 100 }))
+    .sort((a, b) => a.bucket_date.localeCompare(b.bucket_date));
 }
 
 export async function getEarningsTrendForAgent(

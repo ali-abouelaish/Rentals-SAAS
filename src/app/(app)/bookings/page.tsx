@@ -5,6 +5,7 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getBookings } from "@/features/bookings/data/bookings";
 import { getPortfolios } from "@/features/properties/data/portfolios";
 import { getBookingForms } from "@/features/booking-forms/data/booking-forms";
+import { getEntitlements } from "@/lib/entitlements/getEntitlements";
 import { BookingsPage } from "@/features/bookings/ui/BookingsPage";
 
 export default async function BookingsRoute() {
@@ -12,10 +13,11 @@ export default async function BookingsRoute() {
   await requireModuleAccess("property_management");
 
   try {
-    const [bookings, portfolios, forms] = await Promise.all([
+    const [bookings, portfolios, forms, entitlements] = await Promise.all([
       getBookings(),
       getPortfolios(),
       getBookingForms().catch(() => []),
+      getEntitlements().catch(() => new Set<string>()),
     ]);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -23,7 +25,14 @@ export default async function BookingsRoute() {
       .filter((f) => f.is_active)
       .map((f) => ({ id: f.id, name: f.name, slug: f.public_slug, url: `${appUrl}/apply/${f.public_slug}` }));
 
-    return <BookingsPage initialBookings={bookings} portfolios={portfolios} bookingForms={activeForms} />;
+    return (
+      <BookingsPage
+        initialBookings={bookings}
+        portfolios={portfolios}
+        bookingForms={activeForms}
+        hasFormsEntitlement={entitlements.has("forms")}
+      />
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     const isMissingTable = message.includes("schema cache") || message.includes("does not exist");

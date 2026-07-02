@@ -5,6 +5,8 @@ import { getPropertyById } from "@/features/properties/data/properties";
 import { getUnitsByProperty } from "@/features/properties/data/units";
 import { getAllPropertyPhotos } from "@/features/properties/data/photos";
 import { getPropertyTenantHistory } from "@/features/contracts/data/tenant-history";
+import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
+import { getActiveForms } from "@/features/forms/data/forms";
 import { PropertyDetailPage } from "@/features/properties/ui/PropertyDetailPage";
 import { TrackEntityVisit } from "@/features/search/ui/TrackEntityVisit";
 import {
@@ -22,19 +24,36 @@ export default async function PropertyDetailRoute({
   const entitlements = await getEntitlements();
   const keysEnabled = entitlements.has("keys");
 
-  const [property, units, allPhotos, tenantHistory, keysPayload, agents] =
-    await Promise.all([
-      getPropertyById(params.id),
-      getUnitsByProperty(params.id),
-      getAllPropertyPhotos(params.id),
-      getPropertyTenantHistory(params.id),
-      keysEnabled ? getPropertyKeys(params.id) : Promise.resolve(null),
-      keysEnabled
-        ? getInternalAgentsForTenant(profile.tenant_id)
-        : Promise.resolve([]),
-    ]);
+  const [
+    property,
+    units,
+    allPhotos,
+    tenantHistory,
+    keysPayload,
+    agents,
+    pmTenantsData,
+    forms,
+  ] = await Promise.all([
+    getPropertyById(params.id),
+    getUnitsByProperty(params.id),
+    getAllPropertyPhotos(params.id),
+    getPropertyTenantHistory(params.id),
+    keysEnabled ? getPropertyKeys(params.id) : Promise.resolve(null),
+    keysEnabled
+      ? getInternalAgentsForTenant(profile.tenant_id)
+      : Promise.resolve([]),
+    getPmTenants().catch(() => []),
+    getActiveForms().catch(() => []),
+  ]);
 
   if (!property) notFound();
+
+  const pmTenants = pmTenantsData.map((t) => ({
+    id: t.id,
+    full_name: t.full_name,
+    email: t.email,
+    phone: t.phone,
+  }));
 
   return (
     <>
@@ -55,6 +74,8 @@ export default async function PropertyDetailRoute({
         keysPayload={keysPayload}
         agents={agents}
         keysEnabled={keysEnabled}
+        pmTenants={pmTenants}
+        forms={forms}
       />
     </>
   );

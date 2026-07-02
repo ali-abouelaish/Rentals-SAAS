@@ -79,6 +79,10 @@ export const updateTemplateMetaSchema = z.object({
 export const generateContractSchema = z.object({
   templateId: z.string().uuid(),
   bookingId: z.string().uuid(),
+  // When set, stamp this exact contract (e.g. the one approveBooking just
+  // created) instead of searching for a draft. Lets the convert-to-tenancy flow
+  // attach a PDF to an active contract too.
+  contractId: z.string().uuid().optional(),
   manualValues: z.record(z.string(), z.string()),
   contractDefaults: z.object({
     start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

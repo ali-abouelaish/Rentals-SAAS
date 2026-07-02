@@ -9,12 +9,25 @@ export async function getBookingForms(): Promise<BookingForm[]> {
 
   const { data, error } = await supabase
     .from("booking_forms")
-    .select("*, portfolio:portfolios(name, color)")
+    .select("*, portfolio:portfolios(name, color), questions:booking_form_questions(*)")
     .eq("tenant_id", profile.tenant_id)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as BookingForm[];
+
+  return ((data ?? []) as BookingForm[]).map((f) => ({
+    ...f,
+    questions: ((f.questions ?? []) as FormQuestion[])
+      .map((q) => ({
+        ...q,
+        options: q.options
+          ? typeof q.options === "string"
+            ? JSON.parse(q.options)
+            : q.options
+          : null,
+      }))
+      .sort((a, b) => a.sort_order - b.sort_order),
+  }));
 }
 
 export async function getBookingFormWithQuestions(id: string): Promise<BookingForm | null> {

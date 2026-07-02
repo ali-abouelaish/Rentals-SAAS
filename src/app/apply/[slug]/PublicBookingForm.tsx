@@ -3,12 +3,14 @@
 import { useState, useTransition } from "react";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   ClipboardList,
   Home,
   Info as InfoIcon,
   Landmark,
   Loader2,
+  ShieldCheck,
   Sparkles,
   UserRound,
 } from "lucide-react";
@@ -23,6 +25,9 @@ interface PublicBookingFormProps {
   unit: PublicUnitForBooking;
   bankDetails: PortfolioBankDetails | null;
   agreedPrice?: number | null;
+  // One-time token from an agent-sent share link; binds this submission to the
+  // booking the agent pre-created.
+  sendToken?: string;
 }
 
 const SERIF: React.CSSProperties = {
@@ -79,18 +84,49 @@ function QuestionInput({
           ))}
         </select>
       );
-    case "checkbox":
+    case "checkbox": {
+      const checked = value === "Yes";
       return (
-        <label className="inline-flex cursor-pointer items-center gap-2.5 rounded-2xl border border-border bg-surface-card px-4 py-3 text-sm text-foreground shadow-xs transition hover:border-brand/40">
-          <input
-            type="checkbox"
-            checked={value === "yes"}
-            onChange={(e) => onChange(e.target.checked ? "yes" : "no")}
-            className="h-4 w-4 rounded border-border accent-brand"
-          />
-          Yes
-        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onChange(checked ? "" : "Yes")}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all ${
+              checked
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-border bg-surface-card text-foreground hover:border-brand/50 hover:bg-surface-inset"
+            }`}
+          >
+            <span
+              className={`inline-flex h-4 w-4 items-center justify-center rounded border transition-colors ${
+                checked ? "border-brand bg-brand text-brand-fg" : "border-border bg-surface-inset"
+              }`}
+            >
+              {checked && <Check className="h-2.5 w-2.5" />}
+            </span>
+            Yes
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(value === "No" ? "" : "No")}
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all ${
+              value === "No"
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-border bg-surface-card text-foreground hover:border-brand/50 hover:bg-surface-inset"
+            }`}
+          >
+            <span
+              className={`inline-flex h-4 w-4 items-center justify-center rounded border transition-colors ${
+                value === "No" ? "border-brand bg-brand text-brand-fg" : "border-border bg-surface-inset"
+              }`}
+            >
+              {value === "No" && <Check className="h-2.5 w-2.5" />}
+            </span>
+            No
+          </button>
+        </div>
       );
+    }
     case "date":
       return <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={inputCls} />;
     case "number":
@@ -140,7 +176,7 @@ function SectionHeader({
   );
 }
 
-export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice }: PublicBookingFormProps) {
+export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice, sendToken }: PublicBookingFormProps) {
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -182,6 +218,14 @@ export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice }
       return;
     }
 
+    const unconfirmed = answerableQuestions.filter(
+      (q) => q.question_type === "confirm" && (answers[q.id] ?? "") !== "Yes"
+    );
+    if (unconfirmed.length > 0) {
+      setError("Please confirm all required statements before submitting.");
+      return;
+    }
+
     startTransition(async () => {
       try {
         const answerPayload = answerableQuestions.map((q) => ({
@@ -197,7 +241,8 @@ export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice }
             applicant_email: email.trim(),
             applicant_phone: phone.trim(),
           },
-          answerPayload
+          answerPayload,
+          sendToken
         );
         setSubmitted(true);
       } catch (err) {
@@ -403,18 +448,65 @@ export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice }
               icon={<ClipboardList className="h-3.5 w-3.5" />}
             />
             <div className="rounded-3xl border border-border bg-surface-card p-5 shadow-sm space-y-5">
-              {items.map((item) =>
-                item.question_type === "info" ? (
-                  <div
-                    key={item.id}
-                    className="flex gap-3 rounded-2xl border border-dashed border-brand/30 bg-brand/[0.04] p-4"
-                  >
-                    <InfoIcon className="h-4 w-4 text-brand mt-0.5 shrink-0" />
-                    <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                      {item.question_text}
-                    </p>
-                  </div>
-                ) : (
+              {items.map((item) => {
+                if (item.question_type === "info") {
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex gap-3 rounded-2xl border border-dashed border-brand/30 bg-brand/[0.04] p-4"
+                    >
+                      <InfoIcon className="h-4 w-4 text-brand mt-0.5 shrink-0" />
+                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                        {item.question_text}
+                      </p>
+                    </div>
+                  );
+                }
+
+                if (item.question_type === "confirm") {
+                  const confirmed = (answers[item.id] ?? "") === "Yes";
+                  return (
+                    <div
+                      key={item.id}
+                      className={`rounded-2xl border p-4 space-y-3 transition-colors ${
+                        confirmed ? "border-brand/40 bg-brand/[0.04]" : "border-border bg-surface-card"
+                      }`}
+                    >
+                      <div className="flex gap-2.5">
+                        <ShieldCheck
+                          className={`h-4 w-4 mt-0.5 shrink-0 transition-colors ${
+                            confirmed ? "text-brand" : "text-foreground-muted"
+                          }`}
+                        />
+                        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                          {item.question_text}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAnswers((prev) => ({ ...prev, [item.id]: confirmed ? "" : "Yes" }))
+                        }
+                        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all ${
+                          confirmed
+                            ? "border-brand bg-brand text-brand-fg shadow-sm"
+                            : "border-border bg-surface-inset text-foreground hover:border-brand/50 hover:bg-surface-card"
+                        }`}
+                      >
+                        <span
+                          className={`inline-flex h-4 w-4 items-center justify-center rounded border transition-colors ${
+                            confirmed ? "border-brand-fg bg-white/20" : "border-border bg-surface-card"
+                          }`}
+                        >
+                          {confirmed && <Check className="h-2.5 w-2.5" />}
+                        </span>
+                        Yes, I confirm
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
                   <div key={item.id} className="space-y-1.5">
                     <label className="block text-xs font-medium uppercase tracking-[0.14em] text-foreground-muted">
                       {item.question_text}
@@ -426,8 +518,8 @@ export function PublicBookingForm({ form, slug, unit, bankDetails, agreedPrice }
                       onChange={(v) => setAnswers((prev) => ({ ...prev, [item.id]: v }))}
                     />
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
           </section>
         )}

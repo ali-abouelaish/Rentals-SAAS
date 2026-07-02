@@ -264,9 +264,10 @@ function QuestionInput({
 interface PublicFormPageProps {
   form: Form;
   slug: string;
+  token?: string;
 }
 
-export function PublicFormPage({ form, slug }: PublicFormPageProps) {
+export function PublicFormPage({ form, slug, token }: PublicFormPageProps) {
   const questions = [...(form.questions ?? [])].sort((a, b) => a.sort_order - b.sort_order);
 
   const [respondentName, setRespondentName] = useState("");
@@ -313,6 +314,7 @@ export function PublicFormPage({ form, slug }: PublicFormPageProps) {
         setSubmitError(null);
         const fd = new FormData();
         fd.set("slug", slug);
+        if (token) fd.set("token", token);
         fd.set("respondent_name", respondentName);
         fd.set("respondent_email", respondentEmail);
         fd.set("respondent_phone", respondentPhone);

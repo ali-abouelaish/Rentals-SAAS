@@ -1,4 +1,4 @@
-import { getTransporter } from "./transporter";
+import { getResendClient } from "./resend-client";
 import type { Agency } from "./branding";
 import { loadAgencyContactEmail } from "./contact";
 import { logEmailSendError } from "./error-log";
@@ -47,18 +47,24 @@ export async function sendAgencyEmail({
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
   }
 
-  const transporter = getTransporter();
+  const resend = getResendClient();
   try {
-    const info = await transporter.sendMail({
+    const { data, error } = await resend.emails.send({
       from,
       to,
       subject,
       html,
       text,
-      replyTo,
+      reply_to: replyTo,
       headers,
     });
-    return { providerId: info.messageId ?? "" };
+    // The Resend HTTP API returns rejections (unverified domain, bad from,
+    // rate limits, etc.) as an `error` object rather than throwing. Surface it
+    // so the outbox drain retries and logEmailSendError records it.
+    if (error) {
+      throw new Error(`${error.name}: ${error.message}`);
+    }
+    return { providerId: data?.id ?? "" };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await logEmailSendError({

@@ -1,11 +1,24 @@
 "use server";
 
+import { randomInt } from "crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 interface FormAnswerInput {
   question_id: string;
   answer_text?: string;
   answer_file_url?: string;
+}
+
+// Unambiguous alphabet (no 0/O/1/I/L/U) for a short, random — not sequential —
+// booking reference, so the code can't be used to infer booking volume.
+const REF_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+function generateBookingReference(): string {
+  let suffix = "";
+  for (let i = 0; i < 5; i++) {
+    suffix += REF_ALPHABET[randomInt(REF_ALPHABET.length)];
+  }
+  return `BK-${suffix}`;
 }
 
 export async function submitBookingForm(
@@ -16,7 +29,10 @@ export async function submitBookingForm(
     applicant_email: string;
     applicant_phone: string;
   },
-  answers: FormAnswerInput[]
+  answers: FormAnswerInput[],
+  // Present when the link was sent from a share by an agent: binds this
+  // submission to the pre-created pending booking instead of inserting a new one.
+  token?: string
 ): Promise<{ bookingId: string }> {
   // Use admin client — no user session on public /apply pages
   const supabase = createSupabaseAdminClient();
@@ -57,24 +73,57 @@ export async function submitBookingForm(
     propertyId = unit?.property_id ?? null;
   }
 
-  // Insert booking
-  const { data: booking, error: bookingError } = await supabase
-    .from("bookings")
-    .insert({
-      tenant_id: form.tenant_id,
-      form_id: form.id,
-      unit_id: applicantData.unit_id ?? null,
-      property_id: propertyId,
-      portfolio_id: form.portfolio_id,
-      applicant_name: applicantData.applicant_name,
-      applicant_email: applicantData.applicant_email,
-      applicant_phone: applicantData.applicant_phone,
-      status: "pending",
-    })
-    .select("id")
-    .single();
+  // Agent-originated links carry a one-time token pointing at a pre-created
+  // pending booking. Bind this submission to it (filling in the real applicant
+  // details) rather than inserting a duplicate. The token is single-use.
+  let booking: { id: string } | null = null;
+  if (token) {
+    const { data: bound } = await supabase
+      .from("bookings")
+      .update({
+        applicant_name: applicantData.applicant_name,
+        applicant_email: applicantData.applicant_email,
+        applicant_phone: applicantData.applicant_phone,
+        form_send_token: null,
+      })
+      .eq("tenant_id", form.tenant_id)
+      .eq("form_send_token", token)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+    if (bound) booking = bound as { id: string };
+  }
 
-  if (bookingError || !booking) throw new Error(bookingError?.message ?? "Failed to submit application");
+  // Insert booking. The booking_reference is random, so on the rare unique
+  // collision (Postgres 23505) we regenerate and retry a few times.
+  let bookingError: { message?: string; code?: string } | null = null;
+  for (let attempt = 0; !booking && attempt < 5; attempt++) {
+    const { data, error } = await supabase
+      .from("bookings")
+      .insert({
+        tenant_id: form.tenant_id,
+        form_id: form.id,
+        unit_id: applicantData.unit_id ?? null,
+        property_id: propertyId,
+        portfolio_id: form.portfolio_id,
+        applicant_name: applicantData.applicant_name,
+        applicant_email: applicantData.applicant_email,
+        applicant_phone: applicantData.applicant_phone,
+        booking_reference: generateBookingReference(),
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+    if (!error && data) {
+      booking = data;
+      break;
+    }
+    bookingError = error;
+    if (error?.code !== "23505") break; // only retry on a unique-constraint collision
+  }
+
+  if (!booking) throw new Error(bookingError?.message ?? "Failed to submit application");
 
   // Insert form responses
   if (answers.length > 0) {

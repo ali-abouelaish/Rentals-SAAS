@@ -3,6 +3,7 @@ export type BookingStatus = "pending" | "under_review" | "approved" | "rejected"
 export type Booking = {
   id: string;
   tenant_id: string;
+  booking_reference: string | null;
   unit_id: string | null;
   property_id: string | null;
   portfolio_id: string | null;
@@ -18,6 +19,12 @@ export type Booking = {
   converted_pm_tenant_id: string | null;
   notes: string | null;
   created_at: string;
+  // agent-originated bookings (sent from a public property-share link)
+  offer_price_pcm: number | null;
+  agent_name: string | null;
+  agent_email: string | null;
+  source: "direct" | "share" | null;
+  share_id: string | null;
   // joined
   unit?: {
     room_number: string | null;
@@ -28,6 +35,7 @@ export type Booking = {
       portfolio?: { id: string; name: string; color: string } | null;
     };
   } | null;
+  form?: { name: string } | null;
   form_responses?: FormResponse[];
 };
 

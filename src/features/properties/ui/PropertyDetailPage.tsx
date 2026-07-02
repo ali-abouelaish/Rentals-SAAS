@@ -27,12 +27,21 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { UnitStatusBadge } from "./UnitStatusBadge";
+import { UnitDrawer } from "./UnitDrawer";
 import { PropertyTenantHistory } from "@/features/contracts/ui/PropertyTenantHistory";
 import { PropertyKeysTab } from "@/features/keys/ui/PropertyKeysTab";
 import type { PropertyHistory } from "@/features/contracts/domain/history";
 import type { PropertyKeysPayload } from "@/features/keys/domain/types";
 import type { Property, Unit, UnitPhoto } from "../domain/types";
+import type { Form } from "@/features/forms/domain/types";
 import { Key as KeyIcon } from "lucide-react";
+
+interface PmTenantOption {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+}
 
 /* ─── lightbox ───────────────────────────────────────────── */
 
@@ -142,15 +151,15 @@ function AmenityChip({ icon: Icon, label, active }: { icon: React.ElementType; l
 
 /* ─── room card ──────────────────────────────────────────── */
 
-function RoomCard({ unit, photos }: { unit: Unit; photos: UnitPhoto[] }) {
-  const [expanded, setExpanded] = useState(false);
+function RoomCard({ unit, photos, onOpen }: { unit: Unit; photos: UnitPhoto[]; onOpen: (unit: Unit) => void }) {
   const label = unit.room_number ? `Room ${unit.room_number}` : "Unnamed room";
 
   return (
     <div className="rounded-xl border border-border bg-surface-card overflow-hidden">
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => onOpen(unit)}
+        title="View tenant, contract & details"
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-surface-inset/40 transition-colors"
       >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-inset border border-border">
@@ -192,40 +201,9 @@ function RoomCard({ unit, photos }: { unit: Unit; photos: UnitPhoto[] }) {
               {photos.length} photo{photos.length !== 1 ? "s" : ""}
             </span>
           )}
-          <ChevronRight className={cn("h-4 w-4 text-foreground-muted transition-transform", expanded && "rotate-90")} />
+          <ChevronRight className="h-4 w-4 text-foreground-muted" />
         </div>
       </button>
-
-      {expanded && (
-        <div className="px-4 pb-4 pt-1 border-t border-border space-y-3">
-          {/* Room details grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-            {unit.furnishings && (
-              <div>
-                <p className="text-foreground-muted mb-0.5">Furnishings</p>
-                <p className="font-medium text-foreground capitalize">{unit.furnishings.replace("_", " ")}</p>
-              </div>
-            )}
-            {unit.deposit && (
-              <div>
-                <p className="text-foreground-muted mb-0.5">Deposit</p>
-                <p className="font-medium text-foreground">£{unit.deposit.toLocaleString()}</p>
-              </div>
-            )}
-            {unit.couples_allowed && (
-              <div>
-                <p className="text-foreground-muted mb-0.5">Couples</p>
-                <p className="font-medium text-foreground">
-                  {unit.couples_price_pcm ? `£${unit.couples_price_pcm.toLocaleString()} pcm` : "Allowed"}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Photos */}
-          <PhotoGrid photos={photos} emptyLabel="No photos for this room" />
-        </div>
-      )}
     </div>
   );
 }
@@ -263,6 +241,8 @@ export function PropertyDetailPage({
   keysPayload,
   agents,
   keysEnabled,
+  pmTenants,
+  forms = [],
 }: {
   property: Property;
   initialUnits: Unit[];
@@ -272,10 +252,25 @@ export function PropertyDetailPage({
   keysPayload: PropertyKeysPayload | null;
   agents: Array<{ id: string; name: string }>;
   keysEnabled: boolean;
+  pmTenants: PmTenantOption[];
+  forms?: Form[];
 }) {
   const router = useRouter();
-  const units = initialUnits;
+  const [units, setUnits] = useState<Unit[]>(initialUnits);
   const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "keys">("overview");
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const selectedUnit = selectedUnitId ? units.find((u) => u.id === selectedUnitId) ?? null : null;
+
+  const handleUnitOpen = (unit: Unit) => {
+    setSelectedUnitId(unit.id);
+    setDrawerOpen(true);
+  };
+
+  const handleUnitUpdated = (updated: Unit) => {
+    setUnits((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
+  };
 
   // Separate communal from unit photos
   const communalPhotos = allPhotos.filter((p) => !p.unit_id);
@@ -468,6 +463,7 @@ export function PropertyDetailPage({
                     key={unit.id}
                     unit={unit}
                     photos={photosByUnit[unit.id] ?? []}
+                    onOpen={handleUnitOpen}
                   />
                 ))}
               </div>
@@ -564,6 +560,16 @@ export function PropertyDetailPage({
         </div>
       </div>
       )}
+
+      {/* Unit drawer — tenant, contract, history, photos, forms */}
+      <UnitDrawer
+        unit={selectedUnit}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onUnitUpdated={handleUnitUpdated}
+        pmTenants={pmTenants}
+        forms={forms}
+      />
     </div>
   );
 }

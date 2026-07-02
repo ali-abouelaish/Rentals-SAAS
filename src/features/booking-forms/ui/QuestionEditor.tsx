@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Trash2, GripVertical, Check, Info as InfoIcon } from "lucide-react";
+import { Plus, Trash2, GripVertical, Check, Pencil, Info as InfoIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import {
   createFormQuestion,
+  updateFormQuestion,
   deleteFormQuestion,
   reorderFormQuestions,
 } from "../actions/form-questions";
@@ -170,12 +171,139 @@ function AddQuestionForm({ formId, nextSortOrder, onAdded, onCancel }: AddQuesti
   );
 }
 
+interface EditQuestionFormProps {
+  question: FormQuestion;
+  onSaved: (question: FormQuestion) => void;
+  onCancel: () => void;
+}
+
+function EditQuestionForm({ question, onSaved, onCancel }: EditQuestionFormProps) {
+  const [isPending, startTransition] = useTransition();
+  const [optionInput, setOptionInput] = useState("");
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormQuestionValues>({
+    resolver: zodResolver(formQuestionSchema),
+    defaultValues: {
+      question_text: question.question_text,
+      question_type: question.question_type,
+      is_required: question.is_required,
+      sort_order: question.sort_order,
+      options: question.options ?? [],
+    },
+  });
+
+  const questionType = watch("question_type");
+  const options = watch("options") ?? [];
+  const needsOptions = questionType === "select";
+  const isInfo = questionType === "info";
+
+  const addOption = () => {
+    const trimmed = optionInput.trim();
+    if (!trimmed) return;
+    setValue("options", [...options, trimmed]);
+    setOptionInput("");
+  };
+
+  const removeOption = (i: number) => {
+    setValue("options", options.filter((_, idx) => idx !== i));
+  };
+
+  const onSubmit = (values: FormQuestionValues) => {
+    startTransition(async () => {
+      try {
+        const payload = isInfo ? { ...values, is_required: false, options: [] } : values;
+        await updateFormQuestion(question.id, payload);
+        toast.success(isInfo ? "Info block updated" : "Question updated");
+        onSaved({
+          ...question,
+          ...payload,
+          options: payload.options && payload.options.length > 0 ? payload.options : null,
+        });
+      } catch {
+        toast.error("Failed to update item");
+      }
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-brand/30 bg-surface-card p-4 space-y-3">
+      <FormField label="Type">
+        <select {...register("question_type")} className={selectCls}>
+          {Object.entries(QUESTION_TYPE_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </FormField>
+
+      <FormField
+        label={isInfo ? "Note / info text *" : "Question text *"}
+        error={errors.question_text?.message}
+      >
+        {isInfo ? (
+          <textarea {...register("question_text")} rows={4} className={textareaCls} autoFocus />
+        ) : (
+          <input {...register("question_text")} className={inputCls} autoFocus />
+        )}
+      </FormField>
+
+      {!isInfo && (
+        <FormField label="Required">
+          <select
+            {...register("is_required", { setValueAs: (v) => v === "true" || v === true })}
+            className={selectCls}
+            defaultValue={question.is_required ? "true" : "false"}
+          >
+            <option value="false">Optional</option>
+            <option value="true">Required</option>
+          </select>
+        </FormField>
+      )}
+
+      {needsOptions && (
+        <FormField label="Options">
+          <div className="space-y-2">
+            {options.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="flex-1 text-sm text-foreground bg-surface-inset rounded-lg px-3 py-1.5">{opt}</span>
+                <button type="button" onClick={() => removeOption(i)}>
+                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <input
+                value={optionInput}
+                onChange={(e) => setOptionInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOption(); } }}
+                className={`${inputCls} flex-1`}
+                placeholder="Add an option…"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addOption}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </FormField>
+      )}
+
+      <div className="flex justify-end gap-2 pt-1">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" variant="secondary" size="sm" loading={isPending}>
+          <Check className="h-3.5 w-3.5 mr-1" />
+          Save
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 interface SortableQuestionItemProps {
   question: FormQuestion;
+  onUpdated: (question: FormQuestion) => void;
   onDeleted: () => void;
 }
 
-function SortableQuestionItem({ question, onDeleted }: SortableQuestionItemProps) {
+function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuestionItemProps) {
+  const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: question.id });
@@ -198,6 +326,18 @@ function SortableQuestionItem({ question, onDeleted }: SortableQuestionItemProps
       }
     });
   };
+
+  if (editing) {
+    return (
+      <div ref={setNodeRef} style={style}>
+        <EditQuestionForm
+          question={question}
+          onSaved={(updated) => { setEditing(false); onUpdated(updated); }}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
+    );
+  }
 
   const isInfo = question.question_type === "info";
 
@@ -244,15 +384,24 @@ function SortableQuestionItem({ question, onDeleted }: SortableQuestionItemProps
           </>
         )}
       </div>
-      <button
-        type="button"
-        onClick={handleDelete}
-        disabled={isPending}
-        className="opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Delete"
-      >
-        <Trash2 className="h-3.5 w-3.5 text-red-500" />
-      </button>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          title="Edit"
+          className="text-foreground-muted hover:text-foreground"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={isPending}
+          title="Delete"
+        >
+          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -319,6 +468,9 @@ export function QuestionEditor({ formId, questions, onQuestionsChange }: Questio
                 <SortableQuestionItem
                   key={q.id}
                   question={q}
+                  onUpdated={(updated) =>
+                    onQuestionsChange(questions.map((x) => (x.id === updated.id ? updated : x)))
+                  }
                   onDeleted={() => onQuestionsChange(questions.filter((x) => x.id !== q.id))}
                 />
               ))}

@@ -6,6 +6,7 @@ const SELECT = `*,
     room_number, unit_type,
     property:properties(name, address_line_1, portfolio:portfolios(id, name, color))
   ),
+  form:booking_forms(name),
   form_responses(*)`;
 
 export async function getBookings(filters: Partial<BookingFilters> = {}): Promise<Booking[]> {
@@ -37,6 +38,7 @@ export async function getBookings(filters: Partial<BookingFilters> = {}): Promis
       (b) =>
         b.applicant_name.toLowerCase().includes(s) ||
         b.applicant_email.toLowerCase().includes(s) ||
+        b.booking_reference?.toLowerCase().includes(s) ||
         b.unit?.property.name.toLowerCase().includes(s) ||
         b.unit?.property.address_line_1.toLowerCase().includes(s)
     );

@@ -41,11 +41,25 @@ export function BookingCard({ booking, onClick, dragHandleProps, isDragging }: B
         </span>
       )}
 
+      {/* Reference */}
+      {booking.booking_reference && (
+        <p className="font-mono text-[10px] font-medium text-foreground-muted">{booking.booking_reference}</p>
+      )}
+
       {/* Applicant name */}
       <p className="text-sm font-semibold text-foreground leading-tight">{booking.applicant_name}</p>
 
       {/* Unit */}
       <p className="text-[11px] text-foreground-secondary">{unitLabel}</p>
+
+      {/* Agent + offer (agent-originated bookings from a share link) */}
+      {booking.agent_name && (
+        <p className="text-[11px] text-foreground-muted">
+          Agent: <span className="font-medium text-foreground-secondary">{booking.agent_name}</span>
+          {booking.offer_price_pcm != null &&
+            ` · £${booking.offer_price_pcm.toLocaleString("en-GB")} pcm`}
+        </p>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-1">

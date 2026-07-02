@@ -2,6 +2,10 @@ import type { ReactNode } from "react";
 import { Fraunces } from "next/font/google";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+// Public form must always reflect the agency's latest questions/branding — never
+// serve a stale copy from Next's Data Cache (admin-client reads are cacheable).
+export const dynamic = "force-dynamic";
+
 interface LayoutProps {
   children: ReactNode;
   params: { slug: string };

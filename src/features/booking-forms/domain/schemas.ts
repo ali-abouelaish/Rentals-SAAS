@@ -37,7 +37,7 @@ export const formQuestionSchema = z.object({
   question_text: z.string().min(1, "Content is required"),
   question_type: z.enum([
     "text", "textarea", "email", "phone", "date",
-    "select", "checkbox", "file_upload", "number", "info",
+    "select", "checkbox", "file_upload", "number", "info", "confirm",
   ]),
   options: z.array(z.string()).optional(),
   is_required: z.boolean().default(false),

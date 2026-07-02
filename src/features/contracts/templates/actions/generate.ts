@@ -115,21 +115,25 @@ export async function generateContractFromTemplate(
     });
   }
 
-  // ── Find existing draft contract (created by approveBooking) ────
-  const { data: existingDraft } = await supabase
-    .from("property_contracts")
-    .select("id")
-    .eq("tenant_id", profile.tenant_id)
-    .eq("unit_id", booking.unit_id)
-    .eq("pm_tenant_id", booking.converted_pm_tenant_id)
-    .eq("status", "draft")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // ── Resolve the contract to stamp against ───────────────────────
+  // Prefer an explicit id (the contract approveBooking just created); else reuse
+  // the latest draft; else create one in-place so we can stamp against its id.
+  let contractId = parsed.contractId ?? null;
 
-  let contractId = existingDraft?.id ?? null;
+  if (!contractId) {
+    const { data: existingDraft } = await supabase
+      .from("property_contracts")
+      .select("id")
+      .eq("tenant_id", profile.tenant_id)
+      .eq("unit_id", booking.unit_id)
+      .eq("pm_tenant_id", booking.converted_pm_tenant_id)
+      .eq("status", "draft")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    contractId = existingDraft?.id ?? null;
+  }
 
-  // If no draft exists yet, create one in-place so we can stamp against its id.
   if (!contractId) {
     const { data: created, error: createError } = await supabase
       .from("property_contracts")
@@ -147,6 +151,8 @@ export async function generateContractFromTemplate(
     if (createError || !created) throw new Error(createError?.message ?? "Failed to create draft contract");
     contractId = created.id;
   }
+
+  if (!contractId) throw new Error("Could not resolve a contract to attach the PDF to");
 
   // ── Download source PDF ──────────────────────────────────────────
   const { data: sourceBlob, error: dlError } = await admin.storage
@@ -217,7 +223,10 @@ export async function generateContractFromTemplate(
   const outPath = `${profile.tenant_id}/${contractId}/generated/${template.id}-${ts}.pdf`;
   const { error: uploadError } = await admin.storage
     .from(CONTRACTS_BUCKET)
-    .upload(outPath, stamped, { contentType: "application/pdf", upsert: false });
+    // pdf-lib's pdf.save() returns a Uint8Array; Supabase Storage in the Node
+    // runtime must be handed a Buffer or it writes an empty/corrupt object
+    // (upload "succeeds" but the PDF won't open). Mirrors the invoice flow.
+    .upload(outPath, Buffer.from(stamped), { contentType: "application/pdf", upsert: false });
   if (uploadError) throw new Error(uploadError.message);
 
   const { data: signed, error: signError } = await admin.storage

@@ -59,7 +59,7 @@ Core tables: `tenants`, `user_profiles`, `agent_profiles`, `clients`, `landlords
 
 ### Email
 
-Resend (SMTP via nodemailer) is the only delivery path. Async delivery tracked via `email_outbox` table; the worker drains it through `sendAgencyEmail`. Email utilities in `src/lib/email/`.
+Resend (HTTP API via the `resend` SDK) is the only delivery path. Async delivery tracked via `email_outbox` table; the worker drains it through `sendAgencyEmail`. Email utilities in `src/lib/email/`.
 
 ### Feature Flags
 
@@ -86,6 +86,7 @@ Required in `.env.local`:
 | `MYDEPOSITS_CLIENT_SECRET` | mydeposits OAuth client secret |
 | `MYDEPOSITS_REDIRECT_URI` | OAuth callback URL (`https://<host>/api/mydeposits/callback`) |
 | `MYDEPOSITS_TOKEN_SECRET` | 32-byte hex key encrypting mydeposits tokens (`openssl rand -hex 32`) |
+| `TDS_TOKEN_SECRET` | 32-byte hex key encrypting per-agency TDS api keys (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (shared; also used by `mydeposits-poll`) |
 
 For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`, and optionally `DEV_TENANT_NAME`.

@@ -73,3 +73,28 @@ export async function getContractsByUnit(unitId: string): Promise<PropertyContra
   if (error) return [];
   return (data ?? []) as PropertyContract[];
 }
+
+// Contracts tied to a booking: ones explicitly generated from it, plus the draft
+// created at approval (linked only by unit + converted pm_tenant).
+export async function getContractsForBooking(booking: {
+  id: string;
+  unit_id: string | null;
+  converted_pm_tenant_id: string | null;
+}): Promise<PropertyContract[]> {
+  const supabase = createSupabaseServerClient();
+
+  const conditions = [`generated_from_booking_id.eq.${booking.id}`];
+  if (booking.unit_id && booking.converted_pm_tenant_id) {
+    conditions.push(
+      `and(unit_id.eq.${booking.unit_id},pm_tenant_id.eq.${booking.converted_pm_tenant_id})`
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("property_contracts")
+    .select(SELECT)
+    .or(conditions.join(","))
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []) as PropertyContract[];
+}

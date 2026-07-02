@@ -53,6 +53,9 @@ export function BookingsListView({ bookings, onBookingClick }: BookingsListViewP
             )}
           >
             <div className="flex flex-col gap-0.5 min-w-0">
+              {booking.booking_reference && (
+                <span className="font-mono text-[10px] font-medium text-foreground-muted">{booking.booking_reference}</span>
+              )}
               <span className="font-medium text-foreground truncate">{booking.applicant_name}</span>
               <span className="text-[11px] text-foreground-muted truncate">{booking.applicant_email}</span>
             </div>

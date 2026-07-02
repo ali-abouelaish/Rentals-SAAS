@@ -31,6 +31,7 @@ It prints the deployed git SHA on success.
 - The first deploy with this workflow is slower because `.next.prev` does not exist yet and rsync has no prior `.next` on the VPS to delta against; subsequent deploys only ship changed chunks.
 - Native deps (Sharp, etc.) are still installed on the VPS via `npm ci` when `package-lock.json` changes, so macOS-vs-Linux binary mismatches are not an issue.
 - The scripts only need `bash`, `rsync`, and `ssh` locally. SSH key auth must be set up for `root@187.124.112.229`.
+- **Windows:** run from Git Bash with npm's `script-shell` pointed at Git Bash (`npm config set script-shell "C:\Program Files\Git\bin\bash.exe"`) so the build's `NODE_OPTIONS=...` prefix works. Install rsync via `choco install rsync` (Chocolatey ships cwRsync). Because cwRsync is Cygwin-based, `deploy.sh` automatically pins `RSYNC_RSH` to the ssh bundled with cwRsync — mixing it with Git Bash/Windows ssh otherwise fails with `dup() in/out/err failed`.
 - Make them executable once: `chmod +x scripts/deploy.sh scripts/rollback.sh` (the npm scripts invoke them via `bash` so this is optional).
 
 ---

@@ -1,17 +1,28 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { ArrowRight, Check, ExternalLink, FileSignature } from "lucide-react";
+import { useState, useEffect, useTransition, useCallback, useMemo } from "react";
+import { ArrowRight, Check, ExternalLink, FileSignature, Send, FileText, Clock, CheckCircle2, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils/cn";
 import { BookingStatusBadge } from "./BookingStatusBadge";
-import { approveBooking, rejectBooking, updateBookingStatus, updateBookingNotes } from "../actions/bookings";
+import { rejectBooking, updateBookingStatus, updateBookingNotes } from "../actions/bookings";
+import { getBookingHubData, type BookingHubData } from "../actions/booking-hub";
+import { sendFormLinks } from "@/features/forms/actions/form-send";
 import type { Booking } from "../domain/types";
 import { CreateContractFromTemplateDialog } from "@/features/contracts/templates/ui/CreateContractFromTemplateDialog";
+import { ConvertToTenancyDialog } from "./ConvertToTenancyDialog";
+
+const CONTRACT_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  sent: "Sent",
+  signed: "Signed",
+  active: "Active",
+  notice_given: "Notice given",
+  terminated: "Terminated",
+};
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -22,11 +33,6 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-const TABS = [
-  { value: "overview", label: "Overview" },
-  { value: "responses", label: "Form Responses" },
-  { value: "actions", label: "Actions" },
-];
 
 function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: Booking) => void }) {
   const [isPending, startTransition] = useTransition();
@@ -98,6 +104,27 @@ function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: 
         </div>
       </section>
 
+      {(booking.agent_name || booking.source === "share") && (
+        <section>
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">
+            Agent &amp; offer
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <InfoRow label="Agent" value={booking.agent_name} />
+            <InfoRow label="Agent email" value={booking.agent_email} />
+            <InfoRow
+              label="Offer price"
+              value={
+                booking.offer_price_pcm != null
+                  ? `£${booking.offer_price_pcm.toLocaleString("en-GB")} pcm`
+                  : null
+              }
+            />
+            {booking.source === "share" && <InfoRow label="Source" value="Share link" />}
+          </div>
+        </section>
+      )}
+
       <section>
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-2">Notes</h3>
         <textarea
@@ -120,6 +147,79 @@ function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: 
   );
 }
 
+// Collapsible "grouped by form" wrapper used by both the application responses
+// and the sent-form responses.
+function CollapsibleSection({
+  title,
+  meta,
+  count,
+  defaultOpen = false,
+  children,
+}: {
+  title: React.ReactNode;
+  meta?: React.ReactNode;
+  count?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-lg border border-border bg-surface-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-surface-inset transition-colors"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <ChevronDown
+            className={cn("h-4 w-4 shrink-0 text-foreground-muted transition-transform", open ? "" : "-rotate-90")}
+          />
+          <span className="truncate text-sm font-semibold text-foreground">{title}</span>
+          {typeof count === "number" && (
+            <span className="shrink-0 text-[11px] text-foreground-muted">
+              {count} answer{count === 1 ? "" : "s"}
+            </span>
+          )}
+        </span>
+        {meta && <span className="shrink-0">{meta}</span>}
+      </button>
+      {open && <div className="border-t border-border px-3 py-3">{children}</div>}
+    </div>
+  );
+}
+
+function ResponseCard({
+  questionText,
+  answerText,
+  fileUrl,
+}: {
+  questionText?: string | null;
+  answerText?: string | null;
+  fileUrl?: string | null;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface-inset p-3 space-y-1">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">
+        {questionText ?? "Question"}
+      </p>
+      {fileUrl ? (
+        <a
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-sm text-brand hover:underline"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          View uploaded file
+        </a>
+      ) : (
+        <p className="text-sm text-foreground whitespace-pre-wrap">{answerText || "—"}</p>
+      )}
+    </div>
+  );
+}
+
 function ResponsesContent({ booking }: { booking: Booking }) {
   const responses = booking.form_responses ?? [];
 
@@ -132,27 +232,189 @@ function ResponsesContent({ booking }: { booking: Booking }) {
   }
 
   return (
-    <div className="space-y-4 py-1">
-      {responses.map((r) => (
-        <div key={r.id} className="rounded-lg border border-border bg-surface-inset p-3 space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">
-            {r.question?.question_text ?? "Question"}
-          </p>
-          {r.answer_file_url ? (
-            <a
-              href={r.answer_file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-brand hover:underline"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              View uploaded file
-            </a>
-          ) : (
-            <p className="text-sm text-foreground whitespace-pre-wrap">{r.answer_text || "—"}</p>
-          )}
+    <div className="space-y-3 py-1">
+      <CollapsibleSection
+        title={booking.form?.name ?? "Application form"}
+        count={responses.length}
+        defaultOpen
+      >
+        <div className="space-y-3">
+          {responses.map((r) => (
+            <ResponseCard
+              key={r.id}
+              questionText={r.question?.question_text}
+              answerText={r.answer_text}
+              fileUrl={r.answer_file_url}
+            />
+          ))}
         </div>
-      ))}
+      </CollapsibleSection>
+    </div>
+  );
+}
+
+function FormsContent({
+  booking,
+  hub,
+  loading,
+  onSent,
+}: {
+  booking: Booking;
+  hub: BookingHubData | null;
+  loading: boolean;
+  onSent: () => void;
+}) {
+  const [formId, setFormId] = useState("");
+  const [email, setEmail] = useState(booking.applicant_email);
+  const [isPending, startTransition] = useTransition();
+
+  const activeForms = hub?.activeForms ?? [];
+  const sends = hub?.sends ?? [];
+
+  // Group sends by the form they belong to so responses are grouped per form.
+  const sendGroups = useMemo(() => {
+    const map = new Map<string, { name: string; sends: typeof sends }>();
+    for (const s of sends) {
+      const existing = map.get(s.form_id);
+      if (existing) existing.sends.push(s);
+      else map.set(s.form_id, { name: s.form?.name ?? "Form", sends: [s] });
+    }
+    return [...map.values()];
+  }, [sends]);
+
+  const handleSend = () => {
+    if (!formId) {
+      toast.error("Pick a form to send");
+      return;
+    }
+    if (!email.trim()) {
+      toast.error("Enter a recipient email");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const res = await sendFormLinks(formId, [email.trim()], booking.id);
+        if (res.sent > 0) {
+          toast.success("Form sent");
+          setFormId("");
+          onSent();
+        } else {
+          toast.error(res.errors[0] ?? "Failed to send form");
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to send form");
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-5 py-1">
+      <section className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">Send a form to this applicant</h3>
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Form</label>
+          <select
+            value={formId}
+            onChange={(e) => setFormId(e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          >
+            <option value="">Select a form…</option>
+            {activeForms.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Recipient email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            placeholder="applicant@example.com"
+          />
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          loading={isPending}
+          onClick={handleSend}
+          className="w-full"
+          title="Email this applicant a link to the selected form; their response is tracked against this booking"
+        >
+          <Send size={14} /> Send form
+        </Button>
+        {activeForms.length === 0 && !loading && (
+          <p className="text-xs text-foreground-muted">No active forms yet — create one under Forms first.</p>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">Forms sent</h3>
+        {loading && sends.length === 0 ? (
+          <p className="py-6 text-center text-sm text-foreground-muted">Loading…</p>
+        ) : sends.length === 0 ? (
+          <p className="py-6 text-center text-sm text-foreground-muted">
+            No forms have been sent for this booking yet.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {sendGroups.map((g, gi) => {
+              const completed = g.sends.filter((s) => s.status === "completed").length;
+              const total = g.sends.length;
+              return (
+                <CollapsibleSection
+                  key={g.name + gi}
+                  title={g.name}
+                  defaultOpen={sendGroups.length === 1}
+                  meta={
+                    completed > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">
+                        <CheckCircle2 className="h-3 w-3" /> {completed}/{total} completed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+                        <Clock className="h-3 w-3" /> Awaiting
+                      </span>
+                    )
+                  }
+                >
+                  <div className="space-y-3">
+                    {g.sends.map((s) => (
+                      <div key={s.id} className="rounded-lg border border-border bg-surface-inset p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[11px] text-foreground-muted truncate">{s.recipient_email}</p>
+                          {s.status === "completed" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 shrink-0">
+                              <CheckCircle2 className="h-3 w-3" /> Completed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 shrink-0">
+                              <Clock className="h-3 w-3" /> Sent
+                            </span>
+                          )}
+                        </div>
+                        {s.submission?.answers?.length ? (
+                          <div className="space-y-2 border-t border-border pt-2">
+                            {s.submission.answers.map((a, i) => (
+                              <ResponseCard key={i} questionText={a.question_text} answerText={a.answer_text} />
+                            ))}
+                          </div>
+                        ) : null}
+                        <p className="text-[10px] text-foreground-muted">
+                          Sent {format(new Date(s.sent_at), "d MMM yyyy, HH:mm")}
+                          {s.completed_at && ` · Completed ${format(new Date(s.completed_at), "d MMM yyyy, HH:mm")}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleSection>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -160,9 +422,13 @@ function ResponsesContent({ booking }: { booking: Booking }) {
 function ActionsContent({
   booking,
   onBookingUpdated,
+  contracts,
+  onContractsChanged,
 }: {
   booking: Booking;
   onBookingUpdated: (b: Booking) => void;
+  contracts: BookingHubData["contracts"];
+  onContractsChanged: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [rejectMode, setRejectMode] = useState(false);
@@ -220,6 +486,43 @@ function ActionsContent({
           )}
         </div>
 
+        {contracts.length > 0 && (
+          <div className="rounded-lg border border-border bg-surface-card p-4 space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">Contracts</h3>
+            <div className="space-y-2">
+              {contracts.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-inset px-3 py-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-foreground-muted shrink-0" />
+                    <span className="text-xs font-medium text-foreground">
+                      {CONTRACT_STATUS_LABELS[c.status] ?? c.status}
+                    </span>
+                    {c.last_generated_at && (
+                      <span className="text-[11px] text-foreground-muted truncate">
+                        · generated {format(new Date(c.last_generated_at), "d MMM yyyy")}
+                      </span>
+                    )}
+                  </div>
+                  {c.document_url && (
+                    <a
+                      href={c.document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-brand hover:underline shrink-0"
+                      title="Open the generated contract PDF"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> View PDF
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {booking.status === "approved" && booking.converted_pm_tenant_id && booking.unit_id && (
           <div className="rounded-lg border border-border bg-surface-card p-4 space-y-2">
             <h3 className="text-sm font-semibold text-foreground">Generate contract from template</h3>
@@ -232,6 +535,7 @@ function ActionsContent({
               size="sm"
               onClick={() => setTemplateDialogOpen(true)}
               className="w-full"
+              title="Stamp this booking's data onto a contract template and attach the PDF for signing"
             >
               <FileSignature size={14} /> Create contract from template
             </Button>
@@ -240,7 +544,10 @@ function ActionsContent({
 
         <CreateContractFromTemplateDialog
           open={templateDialogOpen}
-          onClose={() => setTemplateDialogOpen(false)}
+          onClose={() => {
+            setTemplateDialogOpen(false);
+            onContractsChanged();
+          }}
           bookingId={booking.id}
           portfolioId={booking.portfolio_id}
           responses={booking.form_responses ?? []}
@@ -325,21 +632,47 @@ interface BookingDrawerProps {
   open: boolean;
   onClose: () => void;
   onBookingUpdated: (b: Booking) => void;
+  hasFormsEntitlement: boolean;
 }
 
-export function BookingDrawer({ booking, open, onClose, onBookingUpdated }: BookingDrawerProps) {
+export function BookingDrawer({ booking, open, onClose, onBookingUpdated, hasFormsEntitlement }: BookingDrawerProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [localBooking, setLocalBooking] = useState<Booking | null>(booking);
   const [convertOpen, setConvertOpen] = useState(false);
-  const [isConverting, startConvertTransition] = useTransition();
+  const [hubData, setHubData] = useState<BookingHubData | null>(null);
+  const [hubLoading, setHubLoading] = useState(false);
+
+  const loadHub = useCallback((bookingId: string) => {
+    setHubLoading(true);
+    getBookingHubData(bookingId)
+      .then(setHubData)
+      .catch(() => toast.error("Failed to load booking details"))
+      .finally(() => setHubLoading(false));
+  }, []);
 
   useEffect(() => {
     setLocalBooking(booking);
     setActiveTab("overview");
     setConvertOpen(false);
+    setHubData(null);
   }, [booking?.id]);
 
+  // Lazily load forms-sent + contracts the first time those tabs are opened.
+  useEffect(() => {
+    if (!localBooking) return;
+    if ((activeTab === "forms" || activeTab === "actions") && !hubData && !hubLoading) {
+      loadHub(localBooking.id);
+    }
+  }, [activeTab, localBooking, hubData, hubLoading, loadHub]);
+
   if (!localBooking) return null;
+
+  const tabs = [
+    { value: "overview", label: "Overview" },
+    { value: "responses", label: "Form Responses" },
+    ...(hasFormsEntitlement ? [{ value: "forms", label: "Sent Forms" }] : []),
+    { value: "actions", label: "Actions" },
+  ];
 
   const handleUpdated = (updated: Booking) => {
     setLocalBooking(updated);
@@ -349,21 +682,11 @@ export function BookingDrawer({ booking, open, onClose, onBookingUpdated }: Book
   const canConvert =
     localBooking.status === "pending" || localBooking.status === "under_review";
 
-  const handleConvert = (signedAndPaid: boolean) => {
-    startConvertTransition(async () => {
-      try {
-        await approveBooking(localBooking.id, signedAndPaid);
-        toast.success(
-          signedAndPaid
-            ? "Tenancy is active — room marked occupied."
-            : "Booking approved — contract draft created, room marked booked."
-        );
-        handleUpdated({ ...localBooking, status: "approved" });
-        setConvertOpen(false);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to convert booking");
-      }
-    });
+  const handleConverted = (patch: Partial<Booking>) => {
+    handleUpdated({ ...localBooking, ...patch });
+    // Reload so the Actions tab's contracts list shows the freshly attached PDF.
+    setActiveTab("actions");
+    loadHub(localBooking.id);
   };
 
   return (
@@ -373,7 +696,17 @@ export function BookingDrawer({ booking, open, onClose, onBookingUpdated }: Book
         <SheetHeader className="shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1.5 min-w-0">
-              <BookingStatusBadge status={localBooking.status} />
+              <div className="flex items-center gap-2">
+                <BookingStatusBadge status={localBooking.status} />
+                {localBooking.booking_reference && (
+                  <span
+                    className="inline-flex items-center rounded-md bg-surface-inset px-1.5 py-0.5 font-mono text-[11px] font-medium text-foreground-secondary"
+                    title="Booking reference — use it to track this application end to end"
+                  >
+                    {localBooking.booking_reference}
+                  </span>
+                )}
+              </div>
               <h2 className="text-base font-semibold text-foreground">{localBooking.applicant_name}</h2>
               <p className="text-xs text-foreground-secondary">{localBooking.applicant_email}</p>
             </div>
@@ -392,57 +725,17 @@ export function BookingDrawer({ booking, open, onClose, onBookingUpdated }: Book
           </div>
         </SheetHeader>
 
-        <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Convert to tenancy</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-foreground-secondary">
-                Has the tenant signed the contract and paid the holding deposit?
-              </p>
-              <ul className="rounded-lg bg-surface-inset px-3 py-2.5 text-xs text-foreground-muted space-y-1">
-                <li><span className="font-medium text-foreground">Yes</span> — contract becomes <span className="font-medium">active</span> and the room is marked <span className="font-medium">occupied</span>.</li>
-                <li><span className="font-medium text-foreground">Not yet</span> — contract stays as a <span className="font-medium">draft</span> and the room is held as <span className="font-medium">booked</span> until activated later.</li>
-              </ul>
-              <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setConvertOpen(false)}
-                  disabled={isConverting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  loading={isConverting}
-                  onClick={() => handleConvert(false)}
-                >
-                  Not yet — keep as draft
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  loading={isConverting}
-                  onClick={() => handleConvert(true)}
-                >
-                  <Check className="h-3.5 w-3.5 mr-1" />
-                  Yes — activate now
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <ConvertToTenancyDialog
+          open={convertOpen}
+          onClose={() => setConvertOpen(false)}
+          booking={localBooking}
+          onConverted={handleConverted}
+        />
 
         {/* Tabs */}
         <div className="border-b border-border px-6 pt-2 pb-0 shrink-0">
           <div className="flex">
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.value}
                 type="button"
@@ -468,8 +761,21 @@ export function BookingDrawer({ booking, open, onClose, onBookingUpdated }: Book
           {activeTab === "responses" && (
             <ResponsesContent booking={localBooking} />
           )}
+          {activeTab === "forms" && hasFormsEntitlement && (
+            <FormsContent
+              booking={localBooking}
+              hub={hubData}
+              loading={hubLoading}
+              onSent={() => loadHub(localBooking.id)}
+            />
+          )}
           {activeTab === "actions" && (
-            <ActionsContent booking={localBooking} onBookingUpdated={handleUpdated} />
+            <ActionsContent
+              booking={localBooking}
+              onBookingUpdated={handleUpdated}
+              contracts={hubData?.contracts ?? []}
+              onContractsChanged={() => loadHub(localBooking.id)}
+            />
           )}
         </div>
       </SheetContent>

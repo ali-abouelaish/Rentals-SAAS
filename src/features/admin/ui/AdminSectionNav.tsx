@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils/cn";
 const adminNav = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/tenants", label: "Tenants" },
+  { href: "/admin/deposit-schemes", label: "Deposit Schemes" },
   { href: "/admin/activity", label: "Activity" }
 ];
 

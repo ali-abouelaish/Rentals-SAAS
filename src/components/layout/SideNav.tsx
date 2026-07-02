@@ -124,18 +124,23 @@ const PM_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    title: "Forms",
+    items: [
+      { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
+      { href: "/forms", label: "Forms", icon: ListChecks, allowedRoles: ADMIN_ROLES, entitlement: "forms" },
+    ],
+  },
+  {
     title: "Tools",
     items: [
       { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
       { href: "/keys", label: "Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
-      { href: "/forms", label: "Forms", icon: ListChecks, allowedRoles: ADMIN_ROLES, entitlement: "forms" },
     ],
   },
 ];
 
 // Collapsible "Settings" section, rendered separately from the groups above.
 const PM_SETTINGS_ITEMS: NavItem[] = [
-  { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES },

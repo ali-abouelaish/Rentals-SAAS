@@ -14,8 +14,9 @@ Booking Forms is the form builder for your public rental applications. Each form
 
 1. **Create a form.** Add a new form and give it a name (forms can be scoped per portfolio).
 2. **Build the questions.** Add, edit, delete, and reorder questions to capture exactly what you need from applicants.
-3. **Activate it.** Mark a form active so it becomes available to share.
-4. **Share the link.** Copy the public \`/apply/{slug}\` link to send to applicants or embed it.
+3. **Import with AI.** Click **Import** on a selected form to paste in the text of an existing form (e.g. from Google Forms). The AI detects each question, its type, and any options; review and adjust them, then import to add them to the form in one step.
+4. **Activate it.** Mark a form active so it becomes available to share.
+5. **Share the link.** Copy the public \`/apply/{slug}\` link to send to applicants or embed it.
 
 ## Tips
 

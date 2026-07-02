@@ -5,9 +5,12 @@ import { getPublicBankDetailsForForm } from "@/features/booking-forms/data/bank-
 import { getPublicUnitForBooking } from "@/features/booking-forms/data/public-unit";
 import { PublicBookingForm } from "../PublicBookingForm";
 
+// Always fetch the current form/questions — never serve a cached copy.
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: { slug: string; unitId: string };
-  searchParams: { price?: string };
+  searchParams: { price?: string; t?: string };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -61,6 +64,7 @@ export default async function ApplyForRoomPage({ params, searchParams }: PagePro
       unit={unit}
       bankDetails={bankDetails}
       agreedPrice={agreedPrice}
+      sendToken={searchParams.t}
     />
   );
 }

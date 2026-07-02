@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import type { FormQuestionValues } from "../domain/schemas";
+import type { ParsedQuestion, FormQuestion } from "../domain/types";
 
 export async function createFormQuestion(formId: string, values: FormQuestionValues) {
   const profile = await requireRole([...ADMIN_ROLES]);
@@ -83,4 +84,57 @@ export async function reorderFormQuestions(questions: Array<{ id: string; sort_o
   );
 
   revalidatePath("/settings/booking-forms");
+}
+
+export async function bulkCreateFormQuestions(formId: string, questions: ParsedQuestion[]) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  // Verify form belongs to tenant
+  const { data: form } = await supabase
+    .from("booking_forms")
+    .select("id")
+    .eq("id", formId)
+    .eq("tenant_id", profile.tenant_id)
+    .single();
+  if (!form) throw new Error("Form not found");
+
+  // Get current max sort_order to append after existing questions
+  const { data: existing } = await supabase
+    .from("booking_form_questions")
+    .select("sort_order")
+    .eq("form_id", formId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  const startOrder = (existing?.[0]?.sort_order ?? -1) + 1;
+
+  const rows = questions.map((q, i) => ({
+    tenant_id: profile.tenant_id,
+    form_id: formId,
+    question_text: q.label,
+    question_type: q.type,
+    options: q.options && q.options.length > 0 ? JSON.stringify(q.options) : null,
+    is_required: q.is_required,
+    sort_order: startOrder + i,
+  }));
+
+  const { data, error } = await supabase
+    .from("booking_form_questions")
+    .insert(rows)
+    .select("*");
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/settings/booking-forms");
+
+  // Return the inserted rows (with real ids, options parsed back to arrays) so the
+  // builder can render them optimistically without waiting for a refetch.
+  return ((data ?? []) as FormQuestion[]).map((q) => ({
+    ...q,
+    options: q.options
+      ? typeof q.options === "string"
+        ? JSON.parse(q.options)
+        : q.options
+      : null,
+  }));
 }

@@ -14,6 +14,7 @@ import {
   Home,
   Landmark,
   Info as InfoIcon,
+  ShieldCheck,
   Sparkles,
   ArrowRight,
   UserRound,
@@ -26,6 +27,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { QuestionEditor } from "./QuestionEditor";
+import { BookingFormImportDialog } from "./BookingFormImportDialog";
 import {
   createBookingForm,
   updateBookingForm,
@@ -61,6 +63,7 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
     initialForms[0]?.id ?? null
   );
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -368,6 +371,16 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     <ExternalLink className="h-3.5 w-3.5" />
                     Open
                   </a>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImportOpen(true)}
+                    title="Import questions with AI"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-1" />
+                    Import
+                  </Button>
                   <button
                     type="button"
                     onClick={() => handleToggleActive(selectedForm)}
@@ -471,6 +484,18 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* AI import */}
+      {selectedForm && (
+        <BookingFormImportDialog
+          formId={selectedForm.id}
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onImported={(newQuestions) => {
+            handleQuestionsChange([...(selectedForm.questions ?? []), ...newQuestions]);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -653,6 +678,24 @@ function PreviewItem({ item }: { item: FormQuestion }) {
         <p className="text-[11.5px] leading-relaxed text-foreground whitespace-pre-wrap">
           {item.question_text}
         </p>
+      </div>
+    );
+  }
+
+  if (item.question_type === "confirm") {
+    return (
+      <div className="rounded-2xl border border-border bg-surface-card p-3.5 space-y-2">
+        <div className="flex gap-2">
+          <ShieldCheck className="h-3.5 w-3.5 text-brand mt-0.5 shrink-0" />
+          <p className="text-[11px] font-medium text-foreground flex-1">
+            {item.question_text}
+            <span className="ml-1 text-red-500">*</span>
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-inset px-3 py-1.5 text-[11px] text-foreground-secondary">
+          <span className="inline-block h-3 w-3 rounded border border-border bg-surface-card" />
+          Yes, I confirm
+        </div>
       </div>
     );
   }
