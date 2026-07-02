@@ -9,7 +9,7 @@ import { sendAgencyEmail } from "@/lib/email/agency-send";
 import { generateFormLinkEmail } from "@/lib/email/templates/form-link";
 import { rateLimitCheck } from "../lib/rate-limit";
 import { getPublicShareByToken, getPublicShareUnits } from "../data/public";
-import { deriveShareStatus } from "../domain/types";
+import { deriveShareStatus, isShareUnitBookable } from "../domain/types";
 import type { PropertyShare } from "../domain/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,8 +53,8 @@ async function resolveShareUnit(
   const units = await getPublicShareUnits(share);
   const unit = units.find((u) => u.id === unitId);
   if (!unit) return { ok: false, error: "Unit not found in this share" };
-  if (unit.status !== "available") {
-    return { ok: false, error: "Booking forms can only be sent for available units" };
+  if (!isShareUnitBookable(unit.status)) {
+    return { ok: false, error: "Booking forms can only be sent for available or upcoming (move-out) units" };
   }
 
   // Portfolio drives which booking forms apply — not exposed by the public units

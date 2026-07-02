@@ -22,6 +22,7 @@ import {
 import { STATUS_CONFIG } from "@/features/properties/domain/types";
 import type { UnitStatus } from "@/features/properties/domain/types";
 import type { PublicShareUnit } from "../data/public";
+import { isShareUnitBookable } from "../domain/types";
 import { formatPriceRange, unitLabel } from "./format";
 import { ShareBookingForm } from "./ShareBookingForm";
 
@@ -41,7 +42,7 @@ interface UnitInfoDrawerProps {
 }
 
 function availabilityText(unit: PublicShareUnit): string {
-  if (unit.notice_given && unit.available_date) {
+  if ((unit.notice_given || unit.status === "move_out") && unit.available_date) {
     return `Available from ${DATE_FMT.format(new Date(unit.available_date))}`;
   }
   if (unit.status === "available") {
@@ -151,7 +152,7 @@ export function UnitInfoDrawer({
               <span className="font-medium text-foreground">{commissionPct}%</span>
             </div>
 
-            {unit.status === "available" && (
+            {isShareUnitBookable(unit.status) && (
               <ShareBookingForm unit={unit} token={token} />
             )}
 

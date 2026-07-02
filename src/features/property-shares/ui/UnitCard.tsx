@@ -19,7 +19,7 @@ const SERIF: React.CSSProperties = {
 };
 
 function availabilityLabel(unit: PublicShareUnit): { label: string; tone: "green" | "amber" | "slate" } {
-  if (unit.notice_given && unit.available_date) {
+  if ((unit.notice_given || unit.status === "move_out") && unit.available_date) {
     return { label: `Available from ${MONTH_DAY.format(new Date(unit.available_date))}`, tone: "amber" };
   }
   if (unit.status === "available") {

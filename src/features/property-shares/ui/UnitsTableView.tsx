@@ -16,7 +16,7 @@ function unitLabel(u: PublicShareUnit): string {
 }
 
 function availabilityChip(u: PublicShareUnit) {
-  if (u.notice_given && u.available_date) {
+  if ((u.notice_given || u.status === "move_out") && u.available_date) {
     return {
       label: `Available ${MONTH_DAY.format(new Date(u.available_date))}`,
       className: "bg-amber-100 text-amber-800",

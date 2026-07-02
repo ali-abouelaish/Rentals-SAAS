@@ -38,6 +38,14 @@ export type ShareView = {
   user_agent: string | null;
 };
 
+// Unit statuses on which an agent may send a booking form from a share:
+// available now, or moving out (becomes available on its available_date).
+export const SHARE_BOOKABLE_STATUSES: readonly string[] = ["available", "move_out"];
+
+export function isShareUnitBookable(status: string): boolean {
+  return SHARE_BOOKABLE_STATUSES.includes(status);
+}
+
 export type ShareStatus = "active" | "expired" | "revoked";
 
 export function deriveShareStatus(share: Pick<PropertyShare, "revoked_at" | "expires_at">): ShareStatus {
