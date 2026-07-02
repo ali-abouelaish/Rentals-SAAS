@@ -200,7 +200,6 @@ export function ShareBookingForm({ unit, token }: ShareBookingFormProps) {
             type="number"
             inputMode="numeric"
             min={minPrice ?? 0}
-            max={maxPrice ?? undefined}
             value={offerPrice}
             onChange={(e) => setOfferPrice(e.target.value)}
             placeholder={minPrice != null ? String(minPrice) : "Monthly rent"}

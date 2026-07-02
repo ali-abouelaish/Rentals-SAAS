@@ -266,7 +266,7 @@ export function CreateContractFromTemplateDialog({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-foreground">Expiry date</label>
+                <label className="text-xs font-medium text-foreground">Expiry date (optional)</label>
                 <input
                   type="date"
                   value={expiryDate}

@@ -221,3 +221,56 @@ export async function notifyAgencyOfNewInvoice(invoiceId: string): Promise<void>
     console.error("[notify-creation] notifyAgencyOfNewInvoice failed", err);
   }
 }
+
+type PropRel = { name?: string | null } | { name?: string | null }[] | null;
+type UnitRel =
+  | { room_number?: string | null; unit_type?: string | null; property?: PropRel }
+  | { room_number?: string | null; unit_type?: string | null; property?: PropRel }[]
+  | null;
+
+export async function notifyAgencyOfNewBooking(bookingId: string): Promise<void> {
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data: booking } = await admin
+      .from("bookings")
+      .select(
+        "id, tenant_id, booking_reference, applicant_name, applicant_email, applicant_phone, offer_price_pcm, agent_name, source, submitted_at, unit:units(room_number, unit_type, property:properties(name))"
+      )
+      .eq("id", bookingId)
+      .maybeSingle();
+    if (!booking) return;
+
+    const unitRaw = booking.unit as UnitRel;
+    const unit = Array.isArray(unitRaw) ? unitRaw[0] ?? null : unitRaw;
+    const propRaw = unit?.property ?? null;
+    const property = Array.isArray(propRaw) ? propRaw[0] ?? null : propRaw;
+    const unitLabel = unit
+      ? `${property?.name ?? "Property"} — ${
+          unit.unit_type === "room" && unit.room_number ? `Room ${unit.room_number}` : unit.unit_type ?? "Unit"
+        }`
+      : "—";
+
+    const rows: SummaryRow[] = [
+      ["Reference", booking.booking_reference ?? "—"],
+      ["Applicant", booking.applicant_name ?? "—"],
+      ["Email", booking.applicant_email ?? "—"],
+      ["Phone", booking.applicant_phone ?? "—"],
+      ["Unit", unitLabel],
+    ];
+    if (booking.source === "share") {
+      rows.push(["Source", booking.agent_name ? `Share link — ${booking.agent_name}` : "Share link"]);
+      if (booking.offer_price_pcm != null) rows.push(["Offer (pcm)", fmtMoney(booking.offer_price_pcm)]);
+    }
+    rows.push(["Submitted", fmtDate(booking.submitted_at)]);
+
+    const url = `${APP_URL}/bookings`;
+    await safelySend({
+      tenantId: booking.tenant_id,
+      subject: `New booking received — ${booking.booking_reference ?? "application"}`,
+      html: renderHtml("New booking received", rows, url, "View bookings"),
+      text: renderText("New booking received", rows, url),
+    });
+  } catch (err) {
+    console.error("[notify-creation] notifyAgencyOfNewBooking failed", err);
+  }
+}

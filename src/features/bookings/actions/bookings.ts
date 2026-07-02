@@ -105,6 +105,9 @@ export async function approveBooking(id: string, signedAndPaid = false) {
       .update({
         status: unitStatus,
         pm_tenant_id: pmTenant.id,
+        // Tenancies are rolling (no expiry), so the unit has no known next-free
+        // date — clear it (renders as "—") once a contract exists.
+        available_date: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", booking.unit_id)

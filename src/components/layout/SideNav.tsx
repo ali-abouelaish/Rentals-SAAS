@@ -63,6 +63,8 @@ type NavItem = {
   allowedRoles?: readonly string[];
   /** When set, the item only renders if the tenant has this feature entitlement. */
   entitlement?: string;
+  /** When set, the item renders if the tenant has ANY of these entitlements. */
+  entitlementAny?: readonly string[];
 };
 
 type NavGroup = {
@@ -112,7 +114,7 @@ const PM_NAV_GROUPS: NavGroup[] = [
       { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
       { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
       { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
-      { href: "/settings/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlement: "mydeposits" },
+      { href: "/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlementAny: ["mydeposits", "tds"] },
     ],
   },
   {
@@ -171,6 +173,7 @@ const PM_ROUTE_PREFIXES = [
   "/shares",
   "/settings/booking-forms",
   "/settings/bank-details",
+  "/deposits",
   "/settings/deposits",
   "/forms",
 ];
@@ -261,6 +264,7 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
   const renderLink = (item: NavItem) => {
     if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
     if (item.entitlement && !hasEntitlement(item.entitlement)) return null;
+    if (item.entitlementAny && !item.entitlementAny.some(hasEntitlement)) return null;
     const active = isActive(item.href);
     // For shared routes (dashboard + settings), carry ?view=pm so the sidebar
     // stays in PM mode for tenants with both modules enabled.

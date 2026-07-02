@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Check } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 import {
   convertBookingToTenancy,
   getBookingContractSetup,
@@ -29,8 +30,27 @@ interface Props {
   onConverted: (patch: Partial<Booking>) => void;
 }
 
-const inputCls =
-  "w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const fieldCls = (hasError: boolean) =>
+  cn(
+    "w-full rounded-lg border bg-surface-inset px-2 py-1.5 text-sm focus:outline-none focus:ring-2",
+    hasError
+      ? "border-red-400 focus:ring-red-500/20 focus:border-red-500"
+      : "border-border focus:ring-brand/20 focus:border-brand"
+  );
+
+function Hint({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] leading-snug text-foreground-muted">{children}</p>;
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="flex items-center gap-1 text-[11px] text-red-500">
+      <AlertCircle className="h-3 w-3 shrink-0" />
+      {message}
+    </p>
+  );
+}
 
 export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: Props) {
   const today = new Date().toISOString().slice(0, 10);
@@ -44,6 +64,7 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
   const [expiryDate, setExpiryDate] = useState("");
   const [rentPcm, setRentPcm] = useState("");
   const [deposit, setDeposit] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -54,6 +75,7 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
     setExpiryDate("");
     setRentPcm("");
     setDeposit("");
+    setErrors({});
     setLoadingSetup(true);
     getBookingContractSetup(booking.id)
       .then(({ templates: t, defaults }) => {
@@ -66,10 +88,20 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, booking.id]);
 
+  // Clear a single field's error as the user corrects it.
+  const clearError = (key: string) =>
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
   const handlePickTemplate = (id: string) => {
     setTemplateId(id);
     setManualFields([]);
     setManualValues({});
+    setErrors({});
     if (!id) return;
     startTransition(async () => {
       try {
@@ -84,29 +116,52 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
     });
   };
 
+  // Required-field validation for the contract details (only when a template is
+  // chosen — converting without a template skips PDF generation entirely).
+  const validateContract = (): Record<string, string> => {
+    const errs: Record<string, string> = {};
+
+    if (!startDate) errs.startDate = "Start date is required";
+    if (expiryDate && startDate && expiryDate <= startDate) {
+      errs.expiryDate = "Expiry must be after the start date";
+    }
+
+    if (rentPcm.trim() === "") {
+      errs.rentPcm = "Rent is required";
+    } else if (!Number.isFinite(Number(rentPcm)) || Number(rentPcm) <= 0) {
+      errs.rentPcm = "Enter a rent amount greater than 0";
+    }
+
+    if (deposit.trim() === "") {
+      errs.deposit = "Deposit is required";
+    } else if (!Number.isFinite(Number(deposit)) || Number(deposit) < 0) {
+      errs.deposit = "Enter a valid deposit (0 or more)";
+    }
+
+    for (const f of manualFields) {
+      const key = f.manual_key ?? "";
+      if (!key) continue;
+      if (!(manualValues[key] ?? "").trim()) errs[`manual_${key}`] = `${f.label} is required`;
+    }
+
+    return errs;
+  };
+
   const handleConvert = (signedAndPaid: boolean) => {
     let contract: ConvertContractInput | undefined;
     if (templateId) {
-      const rentNum = Number(rentPcm);
-      const depositNum = Number(deposit);
-      if (!Number.isFinite(rentNum) || rentNum < 0) {
-        toast.error("Rent PCM must be a positive number");
-        return;
-      }
-      if (!Number.isFinite(depositNum) || depositNum < 0) {
-        toast.error("Deposit must be a positive number");
-        return;
-      }
-      if (!startDate) {
-        toast.error("Start date is required");
+      const errs = validateContract();
+      if (Object.keys(errs).length > 0) {
+        setErrors(errs);
+        toast.error("Please complete the required contract fields");
         return;
       }
       contract = {
         templateId,
         start_date: startDate,
         expiry_date: expiryDate || null,
-        rent_pcm: Math.round(rentNum),
-        deposit: Math.round(depositNum),
+        rent_pcm: Math.round(Number(rentPcm)),
+        deposit: Math.round(Number(deposit)),
         manualValues,
       };
     }
@@ -145,8 +200,7 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
                 value={templateId}
                 onChange={(e) => handlePickTemplate(e.target.value)}
                 disabled={loadingSetup || isPending}
-                className={inputCls}
-                title="Pick a template and we'll stamp the tenancy details onto a PDF and attach it to the new contract"
+                className={fieldCls(false)}
               >
                 <option value="">
                   {loadingSetup ? "Loading templates…" : "Generate later (no PDF now)"}
@@ -157,10 +211,17 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
                   </option>
                 ))}
               </select>
-              {templates.length === 0 && !loadingSetup && (
-                <p className="text-[11px] text-foreground-muted">
-                  No templates yet — the contract will be created without a PDF. Add one at /contracts/templates.
-                </p>
+              {templates.length === 0 && !loadingSetup ? (
+                <Hint>
+                  No templates yet — the contract will be created without a PDF. Add one at
+                  /contracts/templates.
+                </Hint>
+              ) : (
+                <Hint>
+                  Pick the tenancy agreement to stamp with these details, or leave as{" "}
+                  <span className="font-medium">Generate later</span> to convert now and create the PDF
+                  afterwards.
+                </Hint>
               )}
             </div>
 
@@ -169,37 +230,88 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Start date *</label>
-                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        clearError("startDate");
+                        clearError("expiryDate");
+                      }}
+                      className={fieldCls(!!errors.startDate)}
+                    />
+                    <FieldError message={errors.startDate} />
+                    {!errors.startDate && <Hint>First day of the tenancy.</Hint>}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-foreground">Expiry date</label>
-                    <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className={inputCls} />
+                    <label className="text-xs font-medium text-foreground">Expiry date (optional)</label>
+                    <input
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => {
+                        setExpiryDate(e.target.value);
+                        clearError("expiryDate");
+                      }}
+                      className={fieldCls(!!errors.expiryDate)}
+                    />
+                    <FieldError message={errors.expiryDate} />
+                    {!errors.expiryDate && <Hint>Tenancies are rolling — leave blank.</Hint>}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Rent PCM (£) *</label>
-                    <input type="number" min={0} value={rentPcm} onChange={(e) => setRentPcm(e.target.value)} className={inputCls} />
+                    <input
+                      type="number"
+                      min={0}
+                      value={rentPcm}
+                      onChange={(e) => {
+                        setRentPcm(e.target.value);
+                        clearError("rentPcm");
+                      }}
+                      className={fieldCls(!!errors.rentPcm)}
+                    />
+                    <FieldError message={errors.rentPcm} />
+                    {!errors.rentPcm && <Hint>Monthly rent in pounds.</Hint>}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Deposit (£) *</label>
-                    <input type="number" min={0} value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} />
+                    <input
+                      type="number"
+                      min={0}
+                      value={deposit}
+                      onChange={(e) => {
+                        setDeposit(e.target.value);
+                        clearError("deposit");
+                      }}
+                      className={fieldCls(!!errors.deposit)}
+                    />
+                    <FieldError message={errors.deposit} />
+                    {!errors.deposit && <Hint>Deposit amount in pounds.</Hint>}
                   </div>
                 </div>
 
                 {manualFields.length > 0 && (
                   <div className="space-y-3 pt-2 border-t border-border">
-                    <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
-                      Template-specific fields
-                    </p>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide">
+                        Template-specific fields
+                      </p>
+                      <Hint>These are stamped onto the contract PDF, so all are required.</Hint>
+                    </div>
                     {manualFields.map((f) => {
                       const key = f.manual_key ?? "";
+                      const errKey = `manual_${key}`;
                       return (
                         <div key={f.id} className="space-y-1">
-                          <label className="text-xs font-medium text-foreground">{f.label}</label>
+                          <label className="text-xs font-medium text-foreground">{f.label} *</label>
                           <input
                             value={manualValues[key] ?? ""}
-                            onChange={(e) => setManualValues((p) => ({ ...p, [key]: e.target.value }))}
-                            className={inputCls}
+                            onChange={(e) => {
+                              setManualValues((p) => ({ ...p, [key]: e.target.value }));
+                              clearError(errKey);
+                            }}
+                            className={fieldCls(!!errors[errKey])}
                           />
+                          <FieldError message={errors[errKey]} />
                         </div>
                       );
                     })}

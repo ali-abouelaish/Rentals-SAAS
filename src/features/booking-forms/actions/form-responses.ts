@@ -2,6 +2,7 @@
 
 import { randomInt } from "crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { notifyAgencyOfNewBooking } from "@/lib/email/notify-creation";
 
 interface FormAnswerInput {
   question_id: string;
@@ -144,6 +145,10 @@ export async function submitBookingForm(
       if (responsesError) throw new Error(responsesError.message);
     }
   }
+
+  // Let the agency know a booking came in. Best-effort: the helper swallows its
+  // own errors (incl. no agency contact_email), so it never fails the submission.
+  await notifyAgencyOfNewBooking(booking.id);
 
   return { bookingId: booking.id };
 }

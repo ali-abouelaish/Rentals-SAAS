@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   Plus,
   Copy,
+  CopyPlus,
   ToggleLeft,
   ToggleRight,
   Trash2,
@@ -32,6 +33,7 @@ import {
   createBookingForm,
   updateBookingForm,
   deleteBookingForm,
+  duplicateBookingForm,
 } from "../actions/booking-forms";
 import { bookingFormSchema, type BookingFormValues } from "../domain/schemas";
 import type { BookingForm, FormQuestion } from "../domain/types";
@@ -165,6 +167,21 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
         toast.success("Form deleted");
       } catch {
         toast.error("Failed to delete form");
+      }
+    });
+  };
+
+  const handleDuplicate = (form: BookingForm) => {
+    startTransition(async () => {
+      try {
+        const copy = await duplicateBookingForm(form.id);
+        if (!copy) throw new Error("no copy");
+        setForms((prev) => [copy, ...prev]);
+        setSelectedFormId(copy.id);
+        setEditingHeader(false);
+        toast.success("Form duplicated — copy is inactive until you activate it");
+      } catch {
+        toast.error("Failed to duplicate form");
       }
     });
   };
@@ -361,6 +378,17 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                   >
                     <Copy className="h-3.5 w-3.5 mr-1" />
                     Copy link
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDuplicate(selectedForm)}
+                    disabled={isPending}
+                    title="Create an inactive copy of this form, including all its questions"
+                  >
+                    <CopyPlus className="h-3.5 w-3.5 mr-1" />
+                    Duplicate
                   </Button>
                   <a
                     href={`${appUrl}/apply/${selectedForm.public_slug}`}

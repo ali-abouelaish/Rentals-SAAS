@@ -237,6 +237,8 @@ export async function generateContractFromTemplate(
   // ── Patch the draft contract ─────────────────────────────────────
   const protectionDeadline = addDays(parsed.contractDefaults.start_date, 30);
 
+  const expiryDate = parsed.contractDefaults.expiry_date ?? null;
+
   const { error: patchError } = await supabase
     .from("property_contracts")
     .update({
@@ -246,6 +248,7 @@ export async function generateContractFromTemplate(
       last_generated_at: new Date().toISOString(),
       document_url: signed.signedUrl,
       start_date: parsed.contractDefaults.start_date,
+      expiry_date: expiryDate,
       rent_pcm: parsed.contractDefaults.rent_pcm,
       deposit: parsed.contractDefaults.deposit,
       collection_date: parsed.contractDefaults.collection_date ?? undefined,
@@ -256,6 +259,15 @@ export async function generateContractFromTemplate(
     .eq("tenant_id", profile.tenant_id);
   if (patchError) throw new Error(patchError.message);
 
+  // Starting a tenancy changes when the unit is next free: it becomes available
+  // again on the contract's expiry date (rolling tenancy ⇒ unknown, cleared).
+  await supabase
+    .from("units")
+    .update({ available_date: expiryDate, updated_at: new Date().toISOString() })
+    .eq("id", booking.unit_id)
+    .eq("tenant_id", profile.tenant_id);
+
+  revalidatePath("/properties");
   revalidatePath("/contracts");
   revalidatePath("/bookings");
 

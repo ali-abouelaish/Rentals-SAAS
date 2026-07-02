@@ -38,6 +38,7 @@ import { marketingArticle } from "./marketing";
 import { sharesArticle } from "./shares";
 import { settingsBookingFormsArticle } from "./settings-booking-forms";
 import { settingsBankDetailsArticle } from "./settings-bank-details";
+import { depositsTdsArticle } from "./deposits-tds";
 // Generic Forms module
 import { formsArticle } from "./forms";
 import { formsBuilderArticle } from "./forms-builder";
@@ -90,6 +91,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   sharesArticle,
   settingsBookingFormsArticle,
   settingsBankDetailsArticle,
+  depositsTdsArticle,
   // Generic Forms module
   formsArticle,
   formsBuilderArticle,

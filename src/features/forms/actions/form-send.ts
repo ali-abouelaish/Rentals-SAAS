@@ -20,7 +20,7 @@ export async function sendFormLinks(
 
   const { data: form } = await supabase
     .from("forms")
-    .select("id, name, public_slug")
+    .select("id, name, public_slug, portfolio:portfolios(name)")
     .eq("id", formId)
     .eq("tenant_id", profile.tenant_id)
     .single();
@@ -37,6 +37,12 @@ export async function sendFormLinks(
     (tenant?.branding as { brand_name?: string | null } | null)?.brand_name ??
     tenant?.name ??
     "Your agency";
+
+  // An agency can run several portfolios/brands. Send the form under the form's
+  // portfolio name when it has one, so the recipient sees the right brand.
+  const portfolioRel = (form as { portfolio?: { name?: string | null } | { name?: string | null }[] | null }).portfolio;
+  const portfolioObj = Array.isArray(portfolioRel) ? portfolioRel[0] : portfolioRel;
+  const senderName = portfolioObj?.name?.trim() || agencyName;
 
   // Agency record (branding + reply-to) used to send directly via Resend.
   const agency = await loadAgency(profile.tenant_id);
@@ -78,7 +84,7 @@ export async function sendFormLinks(
         const { subject, html, text } = generateFormLinkEmail({
           formName: form.name,
           formUrl,
-          agencyName,
+          agencyName: senderName,
         });
 
         try {

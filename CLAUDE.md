@@ -94,6 +94,8 @@ For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`
 ## UI Rules
 
 - Every input field must have a visible `<label>` element positioned above it (not placeholder-only).
+- Every user input field must be validated with a Zod schema (via React Hook Form), and the resulting validation error message must render inline directly below the field. Validation must run on both the client and the server action — never trust client validation alone.
+- Every user input field must show a hint below the label (or below the field) explaining the expected format or constraint (e.g. "Use DD/MM/YYYY", "Max 200 characters", "Include country code"). The hint must be distinct from the validation error and remain visible before the user interacts with the field.
 - Every delete button must be red and use the `Trash2` icon from `lucide-react`.
 - Every action button (e.g. save, submit, confirm) must use the tenant's secondary button variant.
 

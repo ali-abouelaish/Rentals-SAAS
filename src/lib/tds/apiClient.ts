@@ -4,6 +4,7 @@
 // in the URL (see "api docs/TDS API.md").
 
 import { tdsApiBase, type TdsEnvironment } from "./config";
+import { extractError, isSuccessBody } from "./parse";
 
 export type TdsCredentials = {
   environment: TdsEnvironment;
@@ -13,36 +14,6 @@ export type TdsCredentials = {
 };
 
 export type TdsVerifyResult = { ok: boolean; error?: string };
-
-// TDS responses are inconsistent: success bodies use `isSuccess: true`, error
-// bodies use `success: "false"` plus an `errors` map/array. Pull a human message
-// out of whatever shape comes back.
-function extractError(body: unknown): string | null {
-  if (!body || typeof body !== "object") return null;
-  const errors = (body as Record<string, unknown>).errors;
-  const collect = (obj: Record<string, unknown>): string | null => {
-    const parts = Object.entries(obj)
-      .filter(([, v]) => typeof v === "string")
-      .map(([k, v]) => `${k}: ${v as string}`);
-    return parts.length ? parts.join("; ") : null;
-  };
-  if (Array.isArray(errors)) {
-    const msgs = errors
-      .map((e) => (e && typeof e === "object" ? collect(e as Record<string, unknown>) : null))
-      .filter(Boolean);
-    return msgs.length ? msgs.join("; ") : null;
-  }
-  if (errors && typeof errors === "object") {
-    return collect(errors as Record<string, unknown>);
-  }
-  return null;
-}
-
-function isSuccessBody(body: unknown): boolean {
-  if (!body || typeof body !== "object") return false;
-  const b = body as Record<string, unknown>;
-  return b.isSuccess === true || b.success === true || b.success === "true";
-}
 
 /**
  * Verify a set of TDS credentials authenticate, using the read-only landlord

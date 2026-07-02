@@ -77,10 +77,6 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
       setPriceError(`Must be at least £${ready.minPrice.toLocaleString()}.`);
       return;
     }
-    if (ready.maxPrice !== null && price > ready.maxPrice) {
-      setPriceError(`Must be at most £${ready.maxPrice.toLocaleString()}.`);
-      return;
-    }
 
     const form = ready.forms.find((f) => f.id === selectedFormId);
     if (!form) {
@@ -208,7 +204,6 @@ export function CopyBookingLinkButton({ unitId, size = "sm" }: CopyBookingLinkBu
                 type="number"
                 inputMode="numeric"
                 min={status.minPrice ?? undefined}
-                max={status.maxPrice ?? undefined}
                 value={priceInput}
                 onChange={(e) => {
                   setPriceInput(e.target.value);

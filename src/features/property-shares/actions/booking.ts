@@ -156,19 +156,16 @@ export async function sendShareBookingForm(
 
   const resolved = await resolveShareUnit(input.token, input.unitId);
   if (!resolved.ok) return resolved;
-  const { share, minPrice, maxPrice } = resolved;
+  const { share, minPrice } = resolved;
 
-  // Offer must be a positive number within the listed range (matches the auth'd
-  // booking-link flow, so the /apply page renders the offer rather than ignoring it).
+  // Offer must be a positive number, at least the listed minimum. No upper bound
+  // — agents may propose above the listed max.
   const offer = input.offerPricePcm;
   if (offer == null || !Number.isFinite(offer) || offer <= 0) {
     return { ok: false, error: "Enter an offer price" };
   }
   if (minPrice != null && offer < minPrice) {
     return { ok: false, error: `Offer must be at least £${minPrice.toLocaleString("en-GB")}` };
-  }
-  if (maxPrice != null && offer > maxPrice) {
-    return { ok: false, error: `Offer must be at most £${maxPrice.toLocaleString("en-GB")}` };
   }
   const offerRounded = Math.round(offer);
 
@@ -238,6 +235,22 @@ export async function sendShareBookingForm(
   try {
     const agency = await loadAgency(share.tenant_id);
     if (!agency) throw new Error("Agency not found");
+
+    // Prefer the portfolio's name as the sender brand (an agency can run several
+    // portfolios/brands), falling back to the agency name when the unit/form
+    // isn't scoped to a portfolio.
+    let senderName = agency.name?.trim() || "Your agency";
+    const portfolioId = form.portfolio_id ?? resolved.portfolioId;
+    if (portfolioId) {
+      const { data: pf } = await supabase
+        .from("portfolios")
+        .select("name")
+        .eq("id", portfolioId)
+        .eq("tenant_id", share.tenant_id)
+        .maybeSingle<{ name: string | null }>();
+      if (pf?.name?.trim()) senderName = pf.name.trim();
+    }
+
     const appUrl = buildTenantAppUrl(h);
     const formUrl =
       `${appUrl}/apply/${form.public_slug}/${input.unitId}` +
@@ -245,7 +258,7 @@ export async function sendShareBookingForm(
     const { subject, html, text } = generateFormLinkEmail({
       formName: form.name,
       formUrl,
-      agencyName: agency.name?.trim() || "Your agency",
+      agencyName: senderName,
     });
     await sendAgencyEmail({ agency, to: applicantEmail, subject, html, text });
   } catch (err) {
