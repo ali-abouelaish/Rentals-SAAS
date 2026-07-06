@@ -91,13 +91,10 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-xs text-brand hover:underline"
-        >
-          <Plus className="h-3 w-3" />
-          New
-        </button>
+        <Button type="button" variant="outline" size="sm">
+          <Plus className="h-3 w-3 mr-1" />
+          New landlord
+        </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -185,13 +182,10 @@ export function CreatePropertyManagerDialog({ onCreated }: CreatePropertyManager
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-xs text-brand hover:underline"
-        >
-          <Plus className="h-3 w-3" />
-          New
-        </button>
+        <Button type="button" variant="outline" size="sm">
+          <Plus className="h-3 w-3 mr-1" />
+          New manager
+        </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">

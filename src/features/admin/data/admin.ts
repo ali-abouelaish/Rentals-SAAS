@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/auth/requireRole";
+import { sanitizeFilterTerm } from "@/lib/utils/search";
 import type {
   AdminActivityRow,
   AdminOverviewStats,
@@ -115,7 +116,10 @@ export async function getTenants(params?: {
     .range(from, to);
 
   if (params?.search) {
-    query = query.or(`name.ilike.%${params.search}%,slug.ilike.%${params.search}%`);
+    const term = sanitizeFilterTerm(params.search);
+    if (term) {
+      query = query.or(`name.ilike.%${term}%,slug.ilike.%${term}%`);
+    }
   }
   if (params?.status && params.status !== "all") {
     query = query.eq("status", params.status);

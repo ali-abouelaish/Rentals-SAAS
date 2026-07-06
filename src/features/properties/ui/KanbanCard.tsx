@@ -60,7 +60,7 @@ export function KanbanCard({ unit, onClick, isDragging: isDraggingProp }: Kanban
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative rounded-xl border border-border bg-surface-card p-3 shadow-xs",
+        "group relative rounded-xl border border-border bg-surface-card p-2.5 shadow-xs",
         "transition-all duration-150",
         (isDragging || isDraggingProp)
           ? "opacity-50 shadow-lg rotate-1 scale-105 z-50 cursor-grabbing"
@@ -82,7 +82,7 @@ export function KanbanCard({ unit, onClick, isDragging: isDraggingProp }: Kanban
       {/* Card body — clickable for drawer */}
       <div
         onClick={() => !isDragging && onClick(unit.id)}
-        className="space-y-2"
+        className="space-y-1.5"
       >
         {/* Portfolio badge */}
         {portfolio && <PortfolioBadge portfolio={portfolio} />}

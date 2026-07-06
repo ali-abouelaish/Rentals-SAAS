@@ -6,12 +6,13 @@ import { Plus } from "lucide-react";
 import { UnitFilterBar } from "./UnitFilterBar";
 import { UnitsListView } from "./UnitsListView";
 import { UnitsKanbanView } from "./UnitsKanbanView";
+import { UnitsSheetView } from "./UnitsSheetView";
 import { UnitDrawer } from "./UnitDrawer";
 import { ManagePortfoliosDialog } from "./CreatePortfolioDialog";
 import type { Portfolio, Property, Unit, UnitFilters, UnitRentPayment } from "../domain/types";
 import type { Form } from "@/features/forms/domain/types";
 
-type ViewMode = "list" | "kanban";
+type ViewMode = "list" | "kanban" | "sheet";
 
 const DEFAULT_FILTERS: UnitFilters = {
   search: "",
@@ -152,6 +153,14 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
     setUnits((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
   };
 
+  const handleStatusChanged = (change: { id: string; status: Unit["status"]; available_date: string | null }) => {
+    setUnits((prev) =>
+      prev.map((u) =>
+        u.id === change.id ? { ...u, status: change.status, available_date: change.available_date } : u
+      )
+    );
+  };
+
   const handleUnitCreated = (unit: Unit) => {
     setUnits((prev) => [...prev, unit]);
   };
@@ -192,7 +201,7 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
   return (
     <div className="space-y-5">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Properties</h1>
           <p className="text-sm text-foreground-secondary mt-0.5">
@@ -232,10 +241,17 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
           units={filteredUnits}
           reminderStatus={reminderStatus ?? {}}
           onUnitClick={handleUnitClick}
+          onStatusChanged={handleStatusChanged}
           onUnitCreated={handleUnitCreated}
           onPropertyDeleted={handlePropertyDeleted}
           onPaymentRecorded={handlePaymentRecorded}
           onPaymentUndone={handlePaymentUndone}
+        />
+      ) : view === "sheet" ? (
+        <UnitsSheetView
+          units={filteredUnits}
+          onUnitClick={handleUnitClick}
+          onStatusChanged={handleStatusChanged}
         />
       ) : (
         <UnitsKanbanView

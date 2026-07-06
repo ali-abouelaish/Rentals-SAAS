@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getGmailClientForTenant, fetchMessagesByHistoryId, fetchMessage } from "@/lib/gmail/apiClient";
 import { processEmail } from "@/lib/gmail/processEmail";
 
+function secretsMatch(provided: string | null, expected: string | undefined): boolean {
+  if (!provided || !expected) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 export async function POST(request: NextRequest) {
-  // Validate shared secret (passed as query param by Pub/Sub subscription config)
-  const secret = request.nextUrl.searchParams.get("secret");
-  if (secret !== process.env.GMAIL_WEBHOOK_SECRET) {
+  // Validate the shared secret. Prefer a header so the secret doesn't leak into
+  // nginx access logs / proxy referrers. Google Pub/Sub push can't set custom
+  // headers, so the `?secret=` query param is kept as a fallback — the robust
+  // fix for the Pub/Sub path is to enable OIDC push auth and verify the Bearer
+  // token against Google's public keys (audience + service-account email).
+  const headerSecret =
+    request.headers.get("x-webhook-secret") ??
+    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
+    null;
+  const querySecret = request.nextUrl.searchParams.get("secret");
+  const provided = headerSecret ?? querySecret;
+  if (!secretsMatch(provided, process.env.GMAIL_WEBHOOK_SECRET)) {
     // Return 200 anyway to prevent Pub/Sub retry storms on misconfiguration
     return NextResponse.json({ ok: false, reason: "invalid_secret" });
   }

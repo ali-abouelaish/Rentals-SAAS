@@ -29,7 +29,6 @@ import {
   Banknote,
   Landmark,
   Wrench,
-  Megaphone,
   TrendingUp,
   Search,
   Share2,
@@ -121,7 +120,6 @@ const PM_NAV_GROUPS: NavGroup[] = [
     title: "Growth",
     items: [
       { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
-      { href: "/marketing", label: "Marketing", icon: Megaphone, allowedRoles: ADMIN_ROLES },
       { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
     ],
   },
@@ -143,6 +141,7 @@ const PM_NAV_GROUPS: NavGroup[] = [
 
 // Collapsible "Settings" section, rendered separately from the groups above.
 const PM_SETTINGS_ITEMS: NavItem[] = [
+  { href: "/settings/team", label: "Team", icon: Users2, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES },
@@ -173,6 +172,7 @@ const PM_ROUTE_PREFIXES = [
   "/shares",
   "/settings/booking-forms",
   "/settings/bank-details",
+  "/settings/team",
   "/deposits",
   "/settings/deposits",
   "/forms",

@@ -121,8 +121,8 @@ export type CreateDepositStatusResult = {
 };
 
 /**
- * GET /CreateDepositStatus/<member>/<branch>/<api_key>/<batch_id> (no version
- * segment). Throws TdsApiError on 401/403 so the poller can flag the connection.
+ * GET /v1.2/CreateDepositStatus/<member>/<branch>/<api_key>/<batch_id>. Throws
+ * TdsApiError on 401/403 so the poller can flag the connection.
  */
 export async function getCreateDepositStatus(
   ctx: TdsContext,
@@ -130,8 +130,8 @@ export async function getCreateDepositStatus(
   depositId?: string
 ): Promise<CreateDepositStatusResult> {
   const { memberId, branchId, apiKey } = ctx;
-  const url = `${ctx.apiBase}/CreateDepositStatus/${enc(memberId)}/${enc(branchId)}/${enc(apiKey)}/${enc(batchId)}`;
-  const logPath = `CreateDepositStatus/${memberId}/${branchId}/***/${batchId}`;
+  const url = `${ctx.apiBase}/${TDS_API_VERSION}/CreateDepositStatus/${enc(memberId)}/${enc(branchId)}/${enc(apiKey)}/${enc(batchId)}`;
+  const logPath = `${TDS_API_VERSION}/CreateDepositStatus/${memberId}/${branchId}/***/${batchId}`;
   const { status: httpStatus, json } = await requestJson(ctx, {
     method: "GET",
     url,
@@ -166,7 +166,7 @@ export async function getCreateDepositStatus(
 
 // ── Deposit Protection Certificate (DPC) ────────────────────────────────────
 /**
- * GET /dpc/<member>/<branch>/<api_key>/<dan> → PDF bytes. TDS returns a JSON
+ * GET /v1.2/dpc/<member>/<branch>/<api_key>/<dan> → PDF bytes. TDS returns a JSON
  * error body (not a PDF) on failure; we detect that and throw TdsApiError.
  */
 export async function getDpcCertificate(
@@ -175,8 +175,8 @@ export async function getDpcCertificate(
   depositId?: string
 ): Promise<ArrayBuffer> {
   const { memberId, branchId, apiKey } = ctx;
-  const url = `${ctx.apiBase}/dpc/${enc(memberId)}/${enc(branchId)}/${enc(apiKey)}/${enc(dan)}`;
-  const logPath = `dpc/${memberId}/${branchId}/***/${dan}`;
+  const url = `${ctx.apiBase}/${TDS_API_VERSION}/dpc/${enc(memberId)}/${enc(branchId)}/${enc(apiKey)}/${enc(dan)}`;
+  const logPath = `${TDS_API_VERSION}/dpc/${memberId}/${branchId}/***/${dan}`;
   let status = 0;
   let ok = false;
   let errorForLog: string | null = null;
@@ -206,7 +206,7 @@ export async function getDpcCertificate(
 export type RepaymentResult = { success: boolean; error: string | null };
 
 /**
- * POST /RaiseRepaymentRequest/. `body` must contain api_key / member_id /
+ * POST /v1.2/RaiseRepaymentRequest/. `body` must contain api_key / member_id /
  * branch_id / dan / tenancy_end_date / tenant_repayment(_type) / agent_repayment.
  */
 export async function raiseRepaymentRequest(
@@ -216,8 +216,8 @@ export async function raiseRepaymentRequest(
 ): Promise<RepaymentResult> {
   const { status, json } = await requestJson(ctx, {
     method: "POST",
-    url: `${ctx.apiBase}/RaiseRepaymentRequest/`,
-    logPath: "RaiseRepaymentRequest/",
+    url: `${ctx.apiBase}/${TDS_API_VERSION}/RaiseRepaymentRequest/`,
+    logPath: `${TDS_API_VERSION}/RaiseRepaymentRequest/`,
     body,
     depositId,
   });

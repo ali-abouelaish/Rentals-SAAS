@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Plus,
   Copy,
@@ -69,6 +69,13 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
   const [editingHeader, setEditingHeader] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  // router.refresh() re-renders the server component with fresh data, but
+  // useState(initialForms) ignores prop changes — sync it so newly created
+  // records appear without a manual reload.
+  useEffect(() => {
+    setForms(initialForms);
+  }, [initialForms]);
+
   const selectedForm = useMemo(
     () => forms.find((f) => f.id === selectedFormId) ?? null,
     [forms, selectedFormId]
@@ -93,10 +100,12 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
   const handleCreate = (values: BookingFormValues) => {
     startTransition(async () => {
       try {
-        await createBookingForm(values);
+        const created = await createBookingForm(values);
         toast.success("Form created");
         createFormHook.reset({ is_active: true, portfolio_id: portfolios[0]?.id ?? "" });
         setCreateOpen(false);
+        // Select the new form; the list itself arrives with router.refresh().
+        setSelectedFormId(created.id);
         router.refresh();
       } catch {
         toast.error("Failed to create form");

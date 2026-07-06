@@ -116,8 +116,9 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
     });
   };
 
-  // Required-field validation for the contract details (only when a template is
-  // chosen — converting without a template skips PDF generation entirely).
+  // Required-field validation for the contract details. These apply whether or
+  // not a template is chosen — without one we skip the PDF but still record the
+  // agreed terms on the contract.
   const validateContract = (): Record<string, string> => {
     const errs: Record<string, string> = {};
 
@@ -148,23 +149,20 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
   };
 
   const handleConvert = (signedAndPaid: boolean) => {
-    let contract: ConvertContractInput | undefined;
-    if (templateId) {
-      const errs = validateContract();
-      if (Object.keys(errs).length > 0) {
-        setErrors(errs);
-        toast.error("Please complete the required contract fields");
-        return;
-      }
-      contract = {
-        templateId,
-        start_date: startDate,
-        expiry_date: expiryDate || null,
-        rent_pcm: Math.round(Number(rentPcm)),
-        deposit: Math.round(Number(deposit)),
-        manualValues,
-      };
+    const errs = validateContract();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      toast.error("Please complete the required contract fields");
+      return;
     }
+    const contract: ConvertContractInput = {
+      templateId: templateId || null,
+      start_date: startDate,
+      expiry_date: expiryDate || null,
+      rent_pcm: Math.round(Number(rentPcm)),
+      deposit: Math.round(Number(deposit)),
+      manualValues,
+    };
 
     startTransition(async () => {
       try {
@@ -225,8 +223,6 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
               )}
             </div>
 
-            {templateId && (
-              <>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-foreground">Start date *</label>
@@ -317,8 +313,6 @@ export function ConvertToTenancyDialog({ open, onClose, booking, onConverted }: 
                     })}
                   </div>
                 )}
-              </>
-            )}
           </div>
 
           {/* Signed & paid */}

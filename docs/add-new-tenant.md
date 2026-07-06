@@ -21,7 +21,7 @@ This doc has two parts:
 
 The tenant row is created with `status = active`, and the action is written to the activity log.
 
-> **DNS:** No DNS work is required. Wildcard `*.{APP_PORTAL_DOMAIN}` is already pointed at Vercel, and middleware resolves the slug from the host automatically.
+> **DNS:** No DNS work is required. Wildcard `*.{APP_PORTAL_DOMAIN}` is already pointed at the app server, and middleware resolves the slug from the host automatically.
 
 ### 2. Enable features (required)
 

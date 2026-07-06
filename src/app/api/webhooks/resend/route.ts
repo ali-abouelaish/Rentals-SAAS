@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   }
 
   // Respond 200 quickly; do DB work synchronously since it's just a couple of
-  // small updates, and Vercel handlers don't outlive the response.
+  // small updates (no background continuation to rely on).
   try {
     await handle(event);
   } catch (err) {

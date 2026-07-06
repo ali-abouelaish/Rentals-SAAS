@@ -3,7 +3,7 @@
 // a follow-up. Auth is path-based: member_id / branch_id / api_key are segments
 // in the URL (see "api docs/TDS API.md").
 
-import { tdsApiBase, type TdsEnvironment } from "./config";
+import { tdsApiBase, TDS_API_VERSION, type TdsEnvironment } from "./config";
 import { extractError, isSuccessBody } from "./parse";
 
 export type TdsCredentials = {
@@ -23,7 +23,7 @@ export type TdsVerifyResult = { ok: boolean; error?: string };
 export async function verifyTdsCredentials(creds: TdsCredentials): Promise<TdsVerifyResult> {
   const { environment, memberId, branchId, apiKey } = creds;
   const base = tdsApiBase(environment);
-  const url = `${base}/landlord/${encodeURIComponent(memberId)}/${encodeURIComponent(
+  const url = `${base}/${TDS_API_VERSION}/landlord/${encodeURIComponent(memberId)}/${encodeURIComponent(
     branchId
   )}/${encodeURIComponent(apiKey)}/?limit=1`;
 

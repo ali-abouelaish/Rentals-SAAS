@@ -12,9 +12,11 @@ const ENV_URLS: Record<TdsEnvironment, { apiBase: string }> = {
   production: { apiBase: "https://api.custodial.tenancydepositscheme.com" },
 };
 
-// Per the docs the version segment (e.g. /v1.2/CreateDeposit) is only used by the
-// CreateDeposit POST. The read endpoints used for credential verification carry
-// no version segment. Kept here for the future deposit-lifecycle work.
+// Every TDS endpoint is served under the version segment (e.g. /v1.2/landlord,
+// /v1.2/CreateDeposit, /v1.2/CreateDepositStatus, /v1.2/dpc,
+// /v1.2/RaiseRepaymentRequest). Verified against the sandbox: the un-versioned
+// paths 404; only the /v1.2/-prefixed paths resolve. The docs' claim that read
+// endpoints omit the version was wrong.
 export const TDS_API_VERSION = "v1.2";
 
 export function tdsApiBase(env: TdsEnvironment): string {

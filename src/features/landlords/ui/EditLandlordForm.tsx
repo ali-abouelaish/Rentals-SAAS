@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { updateLandlord } from "@/features/landlords/actions/landlords";
 import { toast } from "sonner";
+import { LandlordForm } from "./LandlordForm";
+import { landlordValuesToFormData } from "./CreateLandlordForm";
+import type { LandlordFormValues } from "../domain/schemas";
 
 type Landlord = {
   id: string;
@@ -27,10 +28,12 @@ export function EditLandlordForm({ landlord }: { landlord: Landlord }) {
   const [isPending, setIsPending] = useState(false);
   const router = useRouter();
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(values: LandlordFormValues) {
     setIsPending(true);
     try {
-      await updateLandlord(formData);
+      const fd = landlordValuesToFormData(values);
+      fd.set("landlord_id", landlord.id);
+      await updateLandlord(fd);
       toast.success("Changes saved");
       setIsEditing(false);
       router.refresh();
@@ -58,68 +61,24 @@ export function EditLandlordForm({ landlord }: { landlord: Landlord }) {
       </div>
 
       {isEditing && (
-        <form action={handleSubmit} className="grid gap-3 md:grid-cols-2">
-          <input type="hidden" name="landlord_id" value={landlord.id} />
-          <Input name="name" defaultValue={landlord.name} placeholder="Name" required />
-          <Input name="contact" defaultValue={landlord.contact ?? ""} placeholder="Contact" />
-          <Input
-            name="billing_address"
-            defaultValue={landlord.billing_address ?? ""}
-            placeholder="Billing address"
-          />
-          <Input name="email" defaultValue={landlord.email ?? ""} placeholder="Email" />
-          <Input
-            name="spareroom_profile_url"
-            defaultValue={landlord.spareroom_profile_url ?? ""}
-            placeholder="Spareroom profile URL"
-          />
-          <div>
-            <label className="text-xs text-foreground-secondary">Pays commission</label>
-            <select
-              name="pays_commission"
-              defaultValue={landlord.pays_commission ? "yes" : "no"}
-              className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
-            >
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-          <Input
-            name="commission_amount_gbp"
-            type="number"
-            step="0.01"
-            defaultValue={String(landlord.commission_amount_gbp ?? 0)}
-            placeholder="Commission amount (£)"
-          />
-          <Input
-            name="commission_term_text"
-            defaultValue={landlord.commission_term_text ?? ""}
-            placeholder="Commission term text (e.g. 1 week)"
-          />
-          <div>
-            <label className="text-xs text-foreground-secondary">We do viewing</label>
-            <select
-              name="we_do_viewing"
-              defaultValue={landlord.we_do_viewing ? "yes" : "no"}
-              className="h-10 w-full rounded-xl border border-border-muted bg-surface-card px-3 text-sm shadow-sm"
-            >
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <Textarea
-              name="profile_notes"
-              defaultValue={landlord.profile_notes ?? ""}
-              placeholder="Profile notes"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Button type="submit" variant="secondary" disabled={isPending}>
-              {isPending ? "Saving…" : "Save changes"}
-            </Button>
-          </div>
-        </form>
+        <LandlordForm
+          defaultValues={{
+            name: landlord.name,
+            contact: landlord.contact ?? "",
+            billing_address: landlord.billing_address ?? "",
+            email: landlord.email ?? "",
+            spareroom_profile_url: landlord.spareroom_profile_url ?? "",
+            pays_commission: landlord.pays_commission ? "yes" : "no",
+            commission_amount_gbp: landlord.commission_amount_gbp ?? 0,
+            commission_term_text: landlord.commission_term_text ?? "",
+            we_do_viewing: landlord.we_do_viewing ? "yes" : "no",
+            profile_notes: landlord.profile_notes ?? "",
+          }}
+          submitLabel="Save changes"
+          pendingLabel="Saving…"
+          isPending={isPending}
+          onSubmit={handleSubmit}
+        />
       )}
     </div>
   );

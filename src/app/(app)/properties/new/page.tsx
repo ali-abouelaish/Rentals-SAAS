@@ -6,10 +6,12 @@ import { CreatePropertyPage } from "@/features/properties/ui/CreatePropertyPage"
 
 export default async function NewPropertyPage() {
   await requireRole([...ADMIN_ROLES]);
+  // Let failures surface via the error boundary — swallowing them here would
+  // render a misleading empty dropdown instead of an error.
   const [portfolios, ownerLandlords, propertyManagers] = await Promise.all([
-    getPortfolios().catch(() => []),
-    getOwnerLandlords().catch(() => []),
-    getPropertyManagers().catch(() => []),
+    getPortfolios(),
+    getOwnerLandlords(),
+    getPropertyManagers(),
   ]);
 
   return (

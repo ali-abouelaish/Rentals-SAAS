@@ -153,7 +153,9 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-1">
+    // noValidate: Zod owns validation — native min/max tooltips would fire
+    // before submit and mask the inline errors.
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4 py-1">
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Start date *" error={errors.start_date?.message}>
           <input type="date" {...register("start_date")} className={inputCls} />
@@ -161,7 +163,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
         <FormField label="Expiry date" error={errors.expiry_date?.message}>
           <input type="date" {...register("expiry_date")} className={inputCls} />
         </FormField>
-        <FormField label="Collection day">
+        <FormField label="Collection day" error={errors.collection_date?.message}>
           <input type="number" min="1" max="31" {...register("collection_date")} className={inputCls} />
         </FormField>
         <FormField label="Rent PCM (£) *" error={errors.rent_pcm?.message}>
@@ -199,7 +201,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
             ))}
           </select>
         </FormField>
-        <FormField label="Signing method">
+        <FormField label="Signing method" error={errors.signing_method?.message}>
           <select {...register("signing_method")} className={selectCls}>
             <option value="">Select…</option>
             {Object.entries(SIGNING_METHOD_LABELS).map(([v, l]) => (
@@ -345,7 +347,7 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
             <div className="col-span-2 flex flex-wrap items-center gap-2 pt-1">
               <TdsProtectWizard
                 contractId={contract.id}
-                depositPounds={contract.deposit}
+                depositPounds={contract.deposit || contract.unit?.deposit || 0}
                 defaultTenant={
                   contract.pm_tenant
                     ? {
@@ -355,7 +357,21 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
                       }
                     : null
                 }
-                defaultProperty={{ street: contract.unit?.property?.address_line_1 ?? null }}
+                defaultProperty={{
+                  street: contract.unit?.property?.address_line_1 ?? null,
+                  saon: contract.unit?.property?.address_line_2 ?? null,
+                  town: contract.unit?.property?.area ?? null,
+                  postcode: contract.unit?.property?.postcode ?? null,
+                }}
+                defaultLandlord={
+                  contract.unit?.property?.owner_landlord
+                    ? {
+                        name: contract.unit.property.owner_landlord.name,
+                        email: contract.unit.property.owner_landlord.email,
+                        phone: contract.unit.property.owner_landlord.phone,
+                      }
+                    : null
+                }
                 startDate={contract.start_date}
                 endDate={contract.expiry_date}
                 resume={!!contract.deposit_scheme_ref && !contract.deposit_protected_date}

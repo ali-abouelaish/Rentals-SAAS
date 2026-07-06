@@ -117,21 +117,23 @@ export async function generateContractFromTemplate(
 
   // ── Resolve the contract to stamp against ───────────────────────
   // Prefer an explicit id (the contract approveBooking just created); else reuse
-  // the latest draft; else create one in-place so we can stamp against its id.
+  // the tenancy's current contract (any non-terminated status — approveBooking
+  // may have already activated it); else create one in-place so we can stamp
+  // against its id. Never duplicate an existing live contract.
   let contractId = parsed.contractId ?? null;
 
   if (!contractId) {
-    const { data: existingDraft } = await supabase
+    const { data: existingContract } = await supabase
       .from("property_contracts")
       .select("id")
       .eq("tenant_id", profile.tenant_id)
       .eq("unit_id", booking.unit_id)
       .eq("pm_tenant_id", booking.converted_pm_tenant_id)
-      .eq("status", "draft")
+      .neq("status", "terminated")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    contractId = existingDraft?.id ?? null;
+    contractId = existingContract?.id ?? null;
   }
 
   if (!contractId) {

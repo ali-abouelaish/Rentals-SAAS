@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   List,
@@ -175,8 +176,19 @@ export function MaintenancePage({
   initialJobId,
   initialTicketId,
 }: MaintenancePageProps) {
+  const router = useRouter();
   const [jobs, setJobs] = useState<MaintenanceJob[]>(initialJobs);
   const [tickets, setTickets] = useState<MaintenanceTicketListItem[]>(initialTickets);
+
+  // router.refresh() re-renders the server component with fresh data, but
+  // useState(initialJobs) ignores prop changes — sync so newly raised jobs
+  // appear without a manual reload.
+  useEffect(() => {
+    setJobs(initialJobs);
+  }, [initialJobs]);
+  useEffect(() => {
+    setTickets(initialTickets);
+  }, [initialTickets]);
   const [activeTab, setActiveTab] = useState<"jobs" | "tickets">(
     initialTicketId ? "tickets" : "jobs"
   );
@@ -540,7 +552,7 @@ export function MaintenancePage({
         <RaiseJobModal
           properties={properties}
           onClose={() => setRaiseOpen(false)}
-          onSuccess={() => { setRaiseOpen(false); window.location.reload(); }}
+          onSuccess={() => { setRaiseOpen(false); router.refresh(); }}
         />
       )}
     </div>

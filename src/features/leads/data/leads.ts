@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { sanitizeFilterTerm } from "@/lib/utils/search";
 import type { Lead } from "../domain/types";
 
 const PAGE_SIZE = 15;
@@ -27,7 +28,10 @@ export async function getLeads({
     .order("created_at", { ascending: false });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,telephone.ilike.%${search}%`);
+    const term = sanitizeFilterTerm(search);
+    if (term) {
+      query = query.or(`name.ilike.%${term}%,email.ilike.%${term}%,telephone.ilike.%${term}%`);
+    }
   }
   if (status && status !== "all") {
     query = query.eq("status", status);

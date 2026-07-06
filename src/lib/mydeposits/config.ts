@@ -44,6 +44,17 @@ export function resolveMdEnvironment(): MdEnvironment {
   return process.env.MYDEPOSITS_ENV === "production" ? "production" : "sandbox";
 }
 
+/**
+ * Which auth flow to drive when an admin connects mydeposits:
+ *   - "browser"  (default): authorization-code redirect via /connect/authorize (./oauth.ts).
+ *   - "headless": email/SMS "Login" (Consumer) flow via /api/v1/ui/* (./headlessAuth.ts),
+ *     the fallback while the browser authorize endpoint dead-ends on a blank page.
+ */
+export type MdAuthMode = "browser" | "headless";
+export function resolveMdAuthMode(): MdAuthMode {
+  return process.env.MYDEPOSITS_AUTH_MODE === "headless" ? "headless" : "browser";
+}
+
 export function mdUrls(env: MdEnvironment = resolveMdEnvironment()): MdEnvUrls {
   return ENV_URLS[env];
 }

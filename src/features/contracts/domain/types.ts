@@ -71,11 +71,21 @@ export type PropertyContract = {
     id?: string;
     room_number: string | null;
     unit_type: string;
+    deposit?: number | null;
     property: {
       id?: string;
       name: string;
       address_line_1: string;
+      address_line_2?: string | null;
+      area?: string | null;
+      postcode?: string | null;
       portfolio?: { id?: string; name: string; color: string } | null;
+      owner_landlord?: {
+        id?: string;
+        name: string | null;
+        email: string | null;
+        phone: string | null;
+      } | null;
     };
   } | null;
 };

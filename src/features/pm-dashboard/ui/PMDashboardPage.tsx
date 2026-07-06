@@ -17,13 +17,19 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldAlert,
+  ShieldCheck,
   FileWarning,
   Banknote,
+  PoundSterling,
   CalendarOff,
   Wrench,
 } from "lucide-react";
-import type { DashboardData, ProfitabilityAlert, AlertType } from "@/features/profitability/domain/types";
-import { ALERT_CONFIG } from "@/features/profitability/domain/types";
+import type {
+  DashboardData,
+  DashboardAction,
+  DashboardActionSeverity,
+  DashboardActionCategory,
+} from "@/features/profitability/domain/types";
 
 // ──────────────────────────────────────────────────────────
 // Formatters
@@ -38,65 +44,6 @@ function fmtPounds(pounds: number): string {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Math.abs(pounds));
 }
 
-function daysSince(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-}
-
-// ──────────────────────────────────────────────────────────
-// Alert type → icon + colours
-// ──────────────────────────────────────────────────────────
-
-const ALERT_ICON_MAP: Record<AlertType, { Icon: typeof AlertTriangle; urgencyClass: string; bgClass: string; borderClass: string }> = {
-  profitability_below_target: { Icon: TrendingDown, urgencyClass: "text-red-600", bgClass: "bg-red-50", borderClass: "border-red-200" },
-  vacancy_running:            { Icon: Home,         urgencyClass: "text-amber-600", bgClass: "bg-amber-50", borderClass: "border-amber-200" },
-  vacancy_upcoming:           { Icon: Calendar,     urgencyClass: "text-yellow-600", bgClass: "bg-yellow-50", borderClass: "border-yellow-200" },
-  cost_spike:                 { Icon: AlertTriangle, urgencyClass: "text-orange-600", bgClass: "bg-orange-50", borderClass: "border-orange-200" },
-  deposit_deadline:           { Icon: ShieldAlert,  urgencyClass: "text-red-600", bgClass: "bg-red-50", borderClass: "border-red-200" },
-  landlord_contract_expiry:   { Icon: FileWarning,  urgencyClass: "text-red-600", bgClass: "bg-red-50", borderClass: "border-red-200" },
-  notice_vacate_approaching:  { Icon: CalendarOff,  urgencyClass: "text-amber-600", bgClass: "bg-amber-50", borderClass: "border-amber-200" },
-};
-
-function alertDescription(alert: ProfitabilityAlert): string {
-  const m = alert.metadata as Record<string, unknown>;
-  switch (alert.alert_type) {
-    case "profitability_below_target":
-      return `Below £${m.target_pcm} target for ${m.months_below} months. Currently ${Number(m.actual_pcm) < 0 ? "-" : ""}£${Math.abs(Number(m.actual_pcm))}/mo.`;
-    case "vacancy_running":
-      return `${m.days_vacant} days vacant · £${Math.round(Number(m.total_loss) / 100)} lost so far`;
-    case "vacancy_upcoming":
-      return `Becomes vacant in ${m.days_until_vacant} days`;
-    case "cost_spike":
-      return `${m.cost_label ?? m.cost_type} of ${fmt(Number(m.amount))} logged — pushed below target`;
-    case "deposit_deadline":
-      return `${m.deposit_scheme} protection deadline in ${m.days_until_deadline} days`;
-    case "landlord_contract_expiry":
-      return `${m.owner_landlord_name} — contract expires in ${m.days_until_expiry} days`;
-    case "notice_vacate_approaching":
-      return `${m.tenant_name} vacates in ${m.days_until_vacate} days`;
-    default:
-      return "";
-  }
-}
-
-function alertAction(alert: ProfitabilityAlert): { label: string; href: string } {
-  switch (alert.alert_type) {
-    case "profitability_below_target":
-    case "cost_spike":
-      return { label: "View P&L", href: `/profitability/${alert.property_id}` };
-    case "vacancy_running":
-    case "vacancy_upcoming":
-      return { label: "View Unit", href: `/properties?unit=${alert.unit_id}` };
-    case "deposit_deadline":
-      return { label: "View Contract", href: `/contracts` };
-    case "landlord_contract_expiry":
-      return { label: "View Property", href: `/properties/${alert.property_id}` };
-    case "notice_vacate_approaching":
-      return { label: "View Unit", href: `/properties?unit=${alert.unit_id}` };
-    default:
-      return { label: "View", href: "/profitability" };
-  }
-}
-
 // ──────────────────────────────────────────────────────────
 // Portfolio Badge
 // ──────────────────────────────────────────────────────────
@@ -109,6 +56,245 @@ function PortfolioBadge({ name, color }: { name: string; color: string }) {
     >
       {name}
     </span>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// Action queue (the "needs attention today" centrepiece)
+// ──────────────────────────────────────────────────────────
+
+const SEVERITY_STYLES: Record<
+  DashboardActionSeverity,
+  { row: string; iconWrap: string; icon: string; dot: string }
+> = {
+  critical: {
+    row: "border-red-200 bg-red-50/70 hover:bg-red-50",
+    iconWrap: "bg-red-100",
+    icon: "text-red-600",
+    dot: "bg-red-500",
+  },
+  high: {
+    row: "border-amber-200 bg-amber-50/60 hover:bg-amber-50",
+    iconWrap: "bg-amber-100",
+    icon: "text-amber-600",
+    dot: "bg-amber-500",
+  },
+  medium: {
+    row: "border-border bg-surface-inset hover:bg-surface-card",
+    iconWrap: "bg-surface-card",
+    icon: "text-foreground-secondary",
+    dot: "bg-slate-400",
+  },
+};
+
+const CATEGORY_ICON: Record<DashboardActionCategory, typeof Home> = {
+  arrears: PoundSterling,
+  deposit: ShieldAlert,
+  maintenance: Wrench,
+  move_out: CalendarOff,
+  vacancy: Home,
+  contract: FileWarning,
+  cost: TrendingDown,
+};
+
+function ActionQueue({ actions }: { actions: DashboardAction[] }) {
+  const MAX = 6;
+  const shown = actions.slice(0, MAX);
+  const remaining = actions.length - shown.length;
+  const critical = actions.filter((a) => a.severity === "critical").length;
+
+  return (
+    <div className="rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className={cn("p-2 rounded-lg", actions.length > 0 ? "bg-red-50" : "bg-emerald-50")}>
+            {actions.length > 0 ? (
+              <AlertTriangle className="h-4 w-4 text-red-600" strokeWidth={2} />
+            ) : (
+              <ShieldCheck className="h-4 w-4 text-emerald-500" strokeWidth={2} />
+            )}
+          </div>
+          <h2 className="text-base font-semibold text-foreground">Needs attention today</h2>
+          {actions.length > 0 && (
+            <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+              {actions.length}
+            </span>
+          )}
+        </div>
+        {critical > 0 && (
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-red-600">
+            {critical} critical
+          </span>
+        )}
+      </div>
+
+      {actions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 mb-3">
+            <ShieldCheck className="h-6 w-6 text-emerald-500" strokeWidth={1.6} />
+          </div>
+          <p className="text-sm font-semibold text-foreground">You&apos;re all caught up</p>
+          <p className="text-xs text-foreground-secondary mt-1 max-w-xs">
+            No arrears, deadlines, or urgent tasks across your portfolio right now.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {shown.map((a) => {
+            const s = SEVERITY_STYLES[a.severity];
+            const Icon = CATEGORY_ICON[a.category];
+            return (
+              <Link
+                key={a.id}
+                href={a.href}
+                className={cn(
+                  "group flex items-center gap-3.5 p-3.5 rounded-xl border transition-colors",
+                  s.row
+                )}
+              >
+                <div className={cn("shrink-0 p-2 rounded-lg", s.iconWrap)}>
+                  <Icon size={17} className={s.icon} strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", s.dot)} />
+                    <p className="text-sm font-semibold text-foreground truncate">{a.title}</p>
+                  </div>
+                  <p className="text-xs text-foreground-secondary truncate mt-0.5">{a.subject}</p>
+                  <p className="text-[11px] text-foreground-muted truncate">{a.context}</p>
+                </div>
+                <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-card border border-border text-foreground group-hover:border-brand group-hover:text-brand transition-colors">
+                  {a.action_label}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </Link>
+            );
+          })}
+          {remaining > 0 && (
+            <p className="text-[11px] text-foreground-muted text-center pt-1">
+              +{remaining} more lower-priority {remaining === 1 ? "item" : "items"}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// Compact KPI strip
+// ──────────────────────────────────────────────────────────
+
+const TONE: Record<string, { iconBg: string; icon: string; bar: string }> = {
+  blue: { iconBg: "bg-blue-50", icon: "text-blue-600", bar: "bg-blue-500" },
+  emerald: { iconBg: "bg-emerald-50", icon: "text-emerald-600", bar: "bg-emerald-500" },
+  amber: { iconBg: "bg-amber-50", icon: "text-amber-600", bar: "bg-amber-500" },
+  red: { iconBg: "bg-red-50", icon: "text-red-600", bar: "bg-red-500" },
+  violet: { iconBg: "bg-violet-50", icon: "text-violet-600", bar: "bg-violet-500" },
+};
+
+type KpiDef = {
+  label: string;
+  value: string;
+  sub: string;
+  href: string;
+  icon: typeof Home;
+  tone: keyof typeof TONE;
+  bar?: number;
+};
+
+function KpiCard({ label, value, sub, href, icon: Icon, tone, bar }: KpiDef) {
+  const t = TONE[tone];
+  return (
+    <Link
+      href={href}
+      className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5 block"
+    >
+      <div className="flex items-start justify-between">
+        <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">{label}</p>
+        <div className={cn("p-2 rounded-lg", t.iconBg)}>
+          <Icon className={cn("h-4 w-4", t.icon)} strokeWidth={1.8} />
+        </div>
+      </div>
+      <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">{value}</p>
+      {typeof bar === "number" && (
+        <div className="mt-2 h-1.5 w-full rounded-full bg-surface-inset overflow-hidden">
+          <div
+            className={cn("h-full rounded-full", t.bar)}
+            style={{ width: `${Math.min(100, Math.max(0, bar))}%` }}
+          />
+        </div>
+      )}
+      <p className="text-xs text-foreground-secondary mt-1.5">{sub}</p>
+    </Link>
+  );
+}
+
+function KpiStrip({ data }: { data: DashboardData }) {
+  const occupancyPct =
+    data.total_units > 0 ? Math.round((data.occupied_units / data.total_units) * 100) : 0;
+
+  const kpis: KpiDef[] = [
+    {
+      label: "Occupancy",
+      value: `${occupancyPct}%`,
+      sub: `${data.occupied_units}/${data.total_units} units let`,
+      href: "/properties",
+      icon: Building2,
+      tone: "blue",
+      bar: occupancyPct,
+    },
+  ];
+
+  if (data.collection) {
+    const pct = data.collection.collected_pct;
+    kpis.push({
+      label: "Collected this month",
+      value: `${pct}%`,
+      sub:
+        data.collection.tenants_behind > 0
+          ? `${data.collection.tenants_behind} tenant${data.collection.tenants_behind === 1 ? "" : "s"} behind`
+          : "everyone paid",
+      href: "/rent-collection",
+      icon: PoundSterling,
+      tone: pct >= 90 ? "emerald" : pct >= 70 ? "amber" : "red",
+      bar: pct,
+    });
+  } else {
+    kpis.push({
+      label: "Vacant",
+      value: `${data.vacant_units}`,
+      sub: `£${data.daily_vacancy_loss}/day loss`,
+      href: "/properties?status=available",
+      icon: AlertCircle,
+      tone: data.vacant_units > 0 ? "amber" : "emerald",
+    });
+  }
+
+  kpis.push({
+    label: "Rent roll",
+    value: `£${data.total_rent_roll.toLocaleString()}`,
+    sub: "PCM contracted",
+    href: "/rent-collection",
+    icon: Banknote,
+    tone: "violet",
+  });
+
+  kpis.push({
+    label: "At risk",
+    value: `£${Math.round(data.at_risk_total).toLocaleString()}`,
+    sub: "arrears + vacancy lost",
+    href: data.collection ? "/rent-collection" : "/properties?status=available",
+    icon: AlertCircle,
+    tone: data.at_risk_total > 0 ? "amber" : "emerald",
+  });
+
+  return (
+    <div className="grid grid-cols-2 xl:grid-cols-4 gap-[var(--gap-bento)]">
+      {kpis.map((k) => (
+        <KpiCard key={k.label} {...k} />
+      ))}
+    </div>
   );
 }
 
@@ -133,15 +319,21 @@ interface PMDashboardPageProps {
 }
 
 export function PMDashboardPage({ data, userName, activity }: PMDashboardPageProps) {
-  const today = new Date().toLocaleDateString("en-GB", {
+  const now = new Date();
+  const today = now.toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const occupancyPct = data.total_units > 0
-    ? Math.round((data.occupied_units / data.total_units) * 100)
-    : 0;
+  const attentionCount = data.actions.length;
+  const summary = attentionCount > 0
+    ? `${attentionCount} ${attentionCount === 1 ? "thing needs" : "things need"} your attention`
+    : "Nothing urgent — portfolio is on track";
+  const riskSuffix =
+    data.at_risk_total > 0 ? ` · £${Math.round(data.at_risk_total).toLocaleString()} at risk` : "";
 
   const netTrend = data.portfolio_net_profit_this_month > data.portfolio_net_profit_last_month
     ? "up"
@@ -157,145 +349,22 @@ export function PMDashboardPage({ data, userName, activity }: PMDashboardPagePro
         <div>
           <p className="text-foreground-secondary text-sm">{today}</p>
           <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">
-            Welcome back, {userName}
+            {greeting}, {userName}
           </h1>
         </div>
-        <p className="text-[13px] text-foreground-muted">Portfolio overview</p>
+        <p className="text-[13px] text-foreground-muted">
+          {summary}
+          {riskSuffix}
+        </p>
       </div>
 
-      {/* ── Section 1: Portfolio Summary (4 stat cards) ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-[var(--gap-bento)]">
-        {/* Total Units */}
-        <Link href="/properties" className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5 block">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">Total Units</p>
-              <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">{data.total_units}</p>
-              <p className="text-xs text-foreground-secondary mt-1">across all properties</p>
-            </div>
-            <div className="p-3 rounded-xl bg-blue-50">
-              <Building2 className="h-5 w-5 text-blue-600" strokeWidth={1.8} />
-            </div>
-          </div>
-        </Link>
+      {/* ── Needs attention today (action queue) ── */}
+      <ActionQueue actions={data.actions} />
 
-        {/* Occupied */}
-        <Link href="/properties?status=occupied" className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5 block">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">Occupied</p>
-              <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">{data.occupied_units}</p>
-              <p className="text-xs text-foreground-secondary mt-1">{occupancyPct}% occupancy rate</p>
-            </div>
-            <div className="p-3 rounded-xl bg-emerald-50">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" strokeWidth={1.8} />
-            </div>
-          </div>
-        </Link>
+      {/* ── Compact KPI strip ── */}
+      <KpiStrip data={data} />
 
-        {/* Vacant */}
-        <Link href="/properties?status=available" className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5 block">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">Vacant</p>
-              <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">{data.vacant_units}</p>
-              <p className="text-xs text-amber-600 font-medium mt-1">
-                £{data.daily_vacancy_loss}/day loss
-              </p>
-            </div>
-            <div className="p-3 rounded-xl bg-amber-50">
-              <AlertCircle className="h-5 w-5 text-amber-600" strokeWidth={1.8} />
-            </div>
-          </div>
-        </Link>
-
-        {/* Rent Roll */}
-        <Link href="/rent-collection" className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5 block">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">Rent Roll</p>
-              <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">
-                £{data.total_rent_roll.toLocaleString()}
-              </p>
-              <p className="text-xs text-foreground-secondary mt-1">PCM contracted</p>
-            </div>
-            <div className="p-3 rounded-xl bg-violet-50">
-              <Banknote className="h-5 w-5 text-violet-600" strokeWidth={1.8} />
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      {/* ── Section 2: Alerts Panel ── */}
-      {data.alerts.length > 0 && (
-        <div className="rounded-bento bg-surface-card shadow-bento p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-red-50">
-                <AlertTriangle className="h-4 w-4 text-red-600" strokeWidth={2} />
-              </div>
-              <h2 className="text-base font-semibold text-foreground">Alerts</h2>
-              <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-                {data.alerts.filter((a) => !a.is_resolved).length}
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {data.alerts.filter((a) => !a.is_resolved).map((alert) => {
-              const cfg = ALERT_ICON_MAP[alert.alert_type];
-              const action = alertAction(alert);
-              return (
-                <div
-                  key={alert.id}
-                  className={cn(
-                    "flex items-start gap-3 p-4 rounded-xl border",
-                    cfg.bgClass,
-                    cfg.borderClass
-                  )}
-                >
-                  <div className={cn("mt-0.5 shrink-0", cfg.urgencyClass)}>
-                    <cfg.Icon size={18} strokeWidth={2} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-sm font-semibold text-foreground">
-                        {alert.property_name}
-                      </span>
-                      {alert.unit_label && (
-                        <span className="text-xs text-foreground-secondary">· {alert.unit_label}</span>
-                      )}
-                      <PortfolioBadge
-                        name={alert.portfolio_name ?? ""}
-                        color={alert.portfolio_color ?? "#6b7280"}
-                      />
-                    </div>
-                    <p className="text-xs text-foreground-secondary">
-                      {ALERT_CONFIG[alert.alert_type].label} · {alertDescription(alert)}
-                    </p>
-                    <p className="text-[11px] text-foreground-muted mt-0.5">
-                      {daysSince(alert.triggered_at)}d ago
-                    </p>
-                  </div>
-                  <Link
-                    href={action.href}
-                    className={cn(
-                      "shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
-                      cfg.urgencyClass,
-                      cfg.bgClass,
-                      "hover:opacity-80"
-                    )}
-                  >
-                    {action.label}
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Section 3 + 4: Vacancy Overview + Upcoming Move-Outs (side by side) ── */}
+      {/* ── Vacancy Overview + Upcoming Move-Outs (side by side) ── */}
       <div className="grid lg:grid-cols-2 gap-[var(--gap-bento)]">
 
         {/* Vacancy Overview */}
@@ -396,7 +465,7 @@ export function PMDashboardPage({ data, userName, activity }: PMDashboardPagePro
         </div>
       </div>
 
-      {/* ── Section 5: Maintenance Summary ── */}
+      {/* ── Maintenance Summary ── */}
       <div className="rounded-bento bg-surface-card shadow-bento p-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
@@ -468,7 +537,7 @@ export function PMDashboardPage({ data, userName, activity }: PMDashboardPagePro
         </div>
       </div>
 
-      {/* ── Section 6: Profitability Snapshot ── */}
+      {/* ── Profitability Snapshot ── */}
       <div className="rounded-bento bg-surface-card shadow-bento p-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
@@ -556,7 +625,7 @@ export function PMDashboardPage({ data, userName, activity }: PMDashboardPagePro
         </div>
       </div>
 
-      {/* ── Section 7: Recent Activity Feed ── */}
+      {/* ── Recent Activity Feed ── */}
       <div className="rounded-bento bg-surface-card shadow-bento p-6">
         <div className="flex items-center gap-2.5 mb-5">
           <div className="p-2 rounded-lg bg-brand-subtle">

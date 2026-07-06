@@ -26,6 +26,11 @@ type FormValues = RegisterTdsDepositInput;
 const selectCls =
   "flex h-10 w-full rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-foreground focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20";
 
+// Temporarily hide the schema-optional fields to keep the form lean.
+// Flip to true to restore SAON / locality / furnished status / monthly rent /
+// landlord email+mobile / landlord SAON+locality+country.
+const SHOW_OPTIONAL_FIELDS = false;
+
 function Field({
   label,
   hint,
@@ -118,6 +123,7 @@ export function TdsProtectWizard({
   depositPounds,
   defaultTenant,
   defaultProperty,
+  defaultLandlord,
   startDate,
   endDate,
   triggerLabel = "Register with TDS",
@@ -126,7 +132,17 @@ export function TdsProtectWizard({
   contractId: string;
   depositPounds: number;
   defaultTenant?: { fullName: string; email: string; phone: string } | null;
-  defaultProperty?: { street?: string | null } | null;
+  defaultProperty?: {
+    street?: string | null;
+    saon?: string | null;
+    town?: string | null;
+    postcode?: string | null;
+  } | null;
+  defaultLandlord?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
   startDate?: string | null;
   endDate?: string | null;
   triggerLabel?: string;
@@ -136,6 +152,7 @@ export function TdsProtectWizard({
   const [result, setResult] = useState<RegisterTdsDepositResult | null>(null);
 
   const leadName = splitName(defaultTenant?.fullName);
+  const landlordName = splitName(defaultLandlord?.name);
 
   const {
     register,
@@ -149,12 +166,12 @@ export function TdsProtectWizard({
       contractId,
       property: {
         paon: "",
-        saon: "",
+        saon: defaultProperty?.saon ?? "",
         street: defaultProperty?.street ?? "",
         locality: "",
-        town: "",
+        town: defaultProperty?.town ?? "",
         administrativeArea: "",
-        postcode: "",
+        postcode: defaultProperty?.postcode ?? "",
         furnishedStatus: undefined,
       },
       tenancy: {
@@ -175,8 +192,8 @@ export function TdsProtectWizard({
       relatedParties: [],
       landlord: {
         title: "",
-        firstName: "",
-        surname: "",
+        firstName: landlordName.firstName,
+        surname: landlordName.surname,
         isBusiness: false,
         businessName: "",
         paon: "",
@@ -187,8 +204,8 @@ export function TdsProtectWizard({
         administrativeArea: "",
         postcode: "",
         country: "United Kingdom",
-        email: "",
-        mobile: "",
+        email: defaultLandlord?.email ?? "",
+        mobile: defaultLandlord?.phone ?? "",
       },
     },
   });
@@ -280,14 +297,16 @@ export function TdsProtectWizard({
                   >
                     <Input id="tds-paon" {...register("property.paon")} />
                   </Field>
-                  <Field
-                    label="Sub-building (SAON)"
-                    hint="Optional — e.g. Flat 6, Room 2"
-                    htmlFor="tds-saon"
-                    error={errors.property?.saon?.message}
-                  >
-                    <Input id="tds-saon" {...register("property.saon")} />
-                  </Field>
+                  {SHOW_OPTIONAL_FIELDS && (
+                    <Field
+                      label="Sub-building (SAON)"
+                      hint="Optional — e.g. Flat 6, Room 2"
+                      htmlFor="tds-saon"
+                      error={errors.property?.saon?.message}
+                    >
+                      <Input id="tds-saon" {...register("property.saon")} />
+                    </Field>
+                  )}
                   <Field
                     label="Street"
                     hint="Max 100 characters"
@@ -296,14 +315,16 @@ export function TdsProtectWizard({
                   >
                     <Input id="tds-street" {...register("property.street")} />
                   </Field>
-                  <Field
-                    label="Locality"
-                    hint="Optional — suburb / estate"
-                    htmlFor="tds-locality"
-                    error={errors.property?.locality?.message}
-                  >
-                    <Input id="tds-locality" {...register("property.locality")} />
-                  </Field>
+                  {SHOW_OPTIONAL_FIELDS && (
+                    <Field
+                      label="Locality"
+                      hint="Optional — suburb / estate"
+                      htmlFor="tds-locality"
+                      error={errors.property?.locality?.message}
+                    >
+                      <Input id="tds-locality" {...register("property.locality")} />
+                    </Field>
+                  )}
                   <Field
                     label="Town"
                     hint="Min 3 characters"
@@ -328,27 +349,29 @@ export function TdsProtectWizard({
                   >
                     <Input id="tds-postcode" {...register("property.postcode")} />
                   </Field>
-                  <Field
-                    label="Furnished status"
-                    hint="Optional"
-                    htmlFor="tds-furnished"
-                    error={errors.property?.furnishedStatus?.message}
-                  >
-                    <select
-                      id="tds-furnished"
-                      className={selectCls}
-                      {...register("property.furnishedStatus", {
-                        setValueAs: (v) => (v ? v : undefined),
-                      })}
+                  {SHOW_OPTIONAL_FIELDS && (
+                    <Field
+                      label="Furnished status"
+                      hint="Optional"
+                      htmlFor="tds-furnished"
+                      error={errors.property?.furnishedStatus?.message}
                     >
-                      <option value="">Not specified</option>
-                      {FURNISHED_STATUSES.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
+                      <select
+                        id="tds-furnished"
+                        className={selectCls}
+                        {...register("property.furnishedStatus", {
+                          setValueAs: (v) => (v ? v : undefined),
+                        })}
+                      >
+                        <option value="">Not specified</option>
+                        {FURNISHED_STATUSES.map((f) => (
+                          <option key={f} value={f}>
+                            {f}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
                 </div>
               </section>
 
@@ -399,14 +422,16 @@ export function TdsProtectWizard({
                       {...register("tenancy.depositReceivedDate")}
                     />
                   </Field>
-                  <Field
-                    label="Monthly rent (£)"
-                    hint="Optional"
-                    htmlFor="tds-rent"
-                    error={errors.tenancy?.rentAmount?.message}
-                  >
-                    <Input id="tds-rent" type="number" step="0.01" {...register("tenancy.rentAmount")} />
-                  </Field>
+                  {SHOW_OPTIONAL_FIELDS && (
+                    <Field
+                      label="Monthly rent (£)"
+                      hint="Optional"
+                      htmlFor="tds-rent"
+                      error={errors.tenancy?.rentAmount?.message}
+                    >
+                      <Input id="tds-rent" type="number" step="0.01" {...register("tenancy.rentAmount")} />
+                    </Field>
+                  )}
                 </div>
               </section>
 
@@ -523,12 +548,16 @@ export function TdsProtectWizard({
                     <Field label="Surname" htmlFor="tds-ll-surname" error={errors.landlord?.surname?.message}>
                       <Input id="tds-ll-surname" {...register("landlord.surname")} />
                     </Field>
-                    <Field label="Email" hint="Optional" htmlFor="tds-ll-email" error={errors.landlord?.email?.message}>
-                      <Input id="tds-ll-email" type="email" {...register("landlord.email")} />
-                    </Field>
-                    <Field label="Mobile" hint="Optional" htmlFor="tds-ll-mobile" error={errors.landlord?.mobile?.message}>
-                      <Input id="tds-ll-mobile" {...register("landlord.mobile")} />
-                    </Field>
+                    {SHOW_OPTIONAL_FIELDS && (
+                      <>
+                        <Field label="Email" hint="Optional" htmlFor="tds-ll-email" error={errors.landlord?.email?.message}>
+                          <Input id="tds-ll-email" type="email" {...register("landlord.email")} />
+                        </Field>
+                        <Field label="Mobile" hint="Optional" htmlFor="tds-ll-mobile" error={errors.landlord?.mobile?.message}>
+                          <Input id="tds-ll-mobile" {...register("landlord.mobile")} />
+                        </Field>
+                      </>
+                    )}
                   </div>
 
                   <label className="flex items-center gap-2 text-xs text-foreground">
@@ -553,15 +582,19 @@ export function TdsProtectWizard({
                     <Field label="Building name / number" htmlFor="tds-ll-paon" error={errors.landlord?.paon?.message}>
                       <Input id="tds-ll-paon" {...register("landlord.paon")} />
                     </Field>
-                    <Field label="Sub-building (optional)" htmlFor="tds-ll-saon" error={errors.landlord?.saon?.message}>
-                      <Input id="tds-ll-saon" {...register("landlord.saon")} />
-                    </Field>
+                    {SHOW_OPTIONAL_FIELDS && (
+                      <Field label="Sub-building (optional)" htmlFor="tds-ll-saon" error={errors.landlord?.saon?.message}>
+                        <Input id="tds-ll-saon" {...register("landlord.saon")} />
+                      </Field>
+                    )}
                     <Field label="Street" htmlFor="tds-ll-street" error={errors.landlord?.street?.message}>
                       <Input id="tds-ll-street" {...register("landlord.street")} />
                     </Field>
-                    <Field label="Locality (optional)" htmlFor="tds-ll-locality" error={errors.landlord?.locality?.message}>
-                      <Input id="tds-ll-locality" {...register("landlord.locality")} />
-                    </Field>
+                    {SHOW_OPTIONAL_FIELDS && (
+                      <Field label="Locality (optional)" htmlFor="tds-ll-locality" error={errors.landlord?.locality?.message}>
+                        <Input id="tds-ll-locality" {...register("landlord.locality")} />
+                      </Field>
+                    )}
                     <Field label="Town" htmlFor="tds-ll-town" error={errors.landlord?.town?.message}>
                       <Input id="tds-ll-town" {...register("landlord.town")} />
                     </Field>
@@ -571,9 +604,11 @@ export function TdsProtectWizard({
                     <Field label="Postcode" htmlFor="tds-ll-postcode" error={errors.landlord?.postcode?.message}>
                       <Input id="tds-ll-postcode" {...register("landlord.postcode")} />
                     </Field>
-                    <Field label="Country" hint="Defaults to United Kingdom" htmlFor="tds-ll-country" error={errors.landlord?.country?.message}>
-                      <Input id="tds-ll-country" {...register("landlord.country")} />
-                    </Field>
+                    {SHOW_OPTIONAL_FIELDS && (
+                      <Field label="Country" hint="Defaults to United Kingdom" htmlFor="tds-ll-country" error={errors.landlord?.country?.message}>
+                        <Input id="tds-ll-country" {...register("landlord.country")} />
+                      </Field>
+                    )}
                   </div>
                 </div>
               </section>

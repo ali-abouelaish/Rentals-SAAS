@@ -13,11 +13,13 @@ export default async function PropertyEditRoute({
 }) {
   await requireRole([...ADMIN_ROLES]);
 
+  // Let failures surface via the error boundary — swallowing them here would
+  // render a misleading empty dropdown instead of an error.
   const [property, portfolios, ownerLandlords, propertyManagers] = await Promise.all([
     getPropertyById(params.id),
     getPortfolios(),
-    getOwnerLandlords().catch(() => []),
-    getPropertyManagers().catch(() => []),
+    getOwnerLandlords(),
+    getPropertyManagers(),
   ]);
 
   if (!property) notFound();

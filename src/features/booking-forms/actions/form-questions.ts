@@ -32,7 +32,17 @@ export async function createFormQuestion(formId: string, values: FormQuestionVal
 
   if (error) throw new Error(error.message);
   revalidatePath("/settings/booking-forms");
-  return data;
+
+  // Options are stored as a JSON string — parse back to an array so the builder
+  // can render the returned row optimistically (same as bulkCreateFormQuestions).
+  return {
+    ...data,
+    options: data.options
+      ? typeof data.options === "string"
+        ? JSON.parse(data.options)
+        : data.options
+      : null,
+  };
 }
 
 export async function updateFormQuestion(id: string, values: Partial<FormQuestionValues>) {

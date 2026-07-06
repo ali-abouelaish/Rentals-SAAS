@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, List, LayoutGrid, X, ChevronDown } from "lucide-react";
+import { Search, List, LayoutGrid, Table2, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import {
   UNIT_STATUSES,
@@ -13,7 +13,7 @@ import {
   type Portfolio,
 } from "../domain/types";
 
-type ViewMode = "list" | "kanban";
+type ViewMode = "list" | "kanban" | "sheet";
 
 interface UnitFilterBarProps {
   filters: UnitFilters;
@@ -313,6 +313,19 @@ export function UnitFilterBar({
               title="Kanban view"
             >
               <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewChange("sheet")}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center transition-colors",
+                view === "sheet"
+                  ? "bg-brand text-brand-fg"
+                  : "text-foreground-muted hover:text-foreground hover:bg-surface-inset"
+              )}
+              title="Spreadsheet view"
+            >
+              <Table2 className="h-4 w-4" />
             </button>
           </div>
         </div>

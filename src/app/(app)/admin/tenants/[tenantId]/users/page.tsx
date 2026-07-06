@@ -13,6 +13,7 @@ import {
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { getTenantAccessProfiles, getTenantDetails, getTenantUsers } from "@/features/admin/data/admin";
 import { TenantUserActions } from "@/features/admin/ui/TenantUserActions";
+import { InviteTenantUserDialog } from "@/features/admin/ui/InviteTenantUserDialog";
 import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils/formatters";
@@ -43,7 +44,8 @@ export default async function AdminTenantUsersPage({
 
       <PageHeader
         title={`Tenant Users · ${tenant.name}`}
-        subtitle="Assign roles, profiles, and activation status."
+        subtitle="Invite users, and assign roles, profiles, and activation status."
+        action={<InviteTenantUserDialog tenantId={tenant.id} tenantName={tenant.name} />}
       />
 
       <Card>

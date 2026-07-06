@@ -1,9 +1,41 @@
 import { cookies } from "next/headers";
+import { createHmac, timingSafeEqual } from "crypto";
 
 export interface DecodedAccessTokenUser {
   id: string;
   email?: string;
   exp: number;
+}
+
+/**
+ * Verify a Supabase access token's HS256 signature against the project JWT
+ * secret. Opt-in: enabled only when SUPABASE_JWT_SECRET is set. We always
+ * recompute the HMAC-SHA256 ourselves and constant-time compare — we never
+ * read the `alg` header from the token, so an attacker cannot downgrade to
+ * `none`/RS256 (algorithm-confusion) to bypass the check.
+ *
+ * Note: only symmetric (HS256) signing is supported here. Projects using
+ * Supabase's asymmetric JWT signing keys (ES256/RS256) must leave
+ * SUPABASE_JWT_SECRET unset — verification stays off and the decode-only path
+ * (guarded by RLS at the DB) is used, matching prior behaviour.
+ */
+function hasValidHs256Signature(token: string, secret: string): boolean {
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  const [header, payload, signature] = parts;
+  try {
+    const expected = createHmac("sha256", secret)
+      .update(`${header}.${payload}`)
+      .digest();
+    const provided = Buffer.from(
+      signature.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64"
+    );
+    if (provided.length !== expected.length) return false;
+    return timingSafeEqual(provided, expected);
+  } catch {
+    return false;
+  }
 }
 
 const SUPABASE_REF = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")
@@ -82,6 +114,14 @@ export function getUserFromAccessTokenCookie(): DecodedAccessTokenUser | null {
 
   const token = extractAccessToken(raw);
   if (!token) return null;
+
+  // Opt-in signature verification (defense-in-depth). When the project JWT
+  // secret is configured, reject any token whose HS256 signature doesn't check
+  // out so the app layer no longer relies solely on RLS to catch a forged sub.
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (jwtSecret && !hasValidHs256Signature(token, jwtSecret)) {
+    return null;
+  }
 
   const payload = decodeJwtPayload(token);
   if (!payload) return null;

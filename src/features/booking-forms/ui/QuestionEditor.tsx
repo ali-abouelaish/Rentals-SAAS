@@ -304,6 +304,7 @@ interface SortableQuestionItemProps {
 
 function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuestionItemProps) {
   const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: question.id });
@@ -320,9 +321,11 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
       try {
         await deleteFormQuestion(question.id);
         toast.success("Deleted");
+        setConfirmingDelete(false);
         onDeleted();
       } catch {
         toast.error("Failed to delete");
+        setConfirmingDelete(false);
       }
     });
   };
@@ -395,13 +398,46 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
         </button>
         <button
           type="button"
-          onClick={handleDelete}
+          onClick={() => setConfirmingDelete(true)}
           disabled={isPending}
           title="Delete"
         >
           <Trash2 className="h-3.5 w-3.5 text-red-500" />
         </button>
       </div>
+
+      {confirmingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-bento bg-surface-card shadow-bento p-6 space-y-4 mx-4">
+            <h3 className="text-base font-semibold text-foreground">Delete question</h3>
+            <p className="text-sm text-foreground-muted">
+              Are you sure you want to delete{" "}
+              <strong className="text-foreground">“{question.question_text}”</strong>? Existing
+              applications keep their answers, but new applicants won&apos;t be asked this. This
+              cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={isPending}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {isPending ? "Deleting…" : "Delete question"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

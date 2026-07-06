@@ -171,6 +171,54 @@ export type MaintenanceSummary = {
   total_cost_this_month: number; // pence
 };
 
+// Slim per-property summary for the dashboard's top/bottom lists — avoids
+// serialising full PropertyProfitability objects (unit_breakdown, costs) into
+// the client component payload, which only reads these five fields.
+export type DashboardPropertySummary = {
+  property_id: string;
+  property_name: string;
+  portfolio_name: string;
+  portfolio_color: string;
+  net_profit: number; // pence
+};
+
+// ── Action-first dashboard ────────────────────────────────
+// The "Needs attention today" queue unifies every actionable signal (arrears,
+// deposit deadlines, move-outs, vacancy burn, critical repairs, contract
+// expiries) into one ranked list so a PM sees what to do, not just numbers.
+
+export type DashboardActionSeverity = "critical" | "high" | "medium";
+
+export type DashboardActionCategory =
+  | "arrears"
+  | "deposit"
+  | "maintenance"
+  | "move_out"
+  | "vacancy"
+  | "contract"
+  | "cost";
+
+export type DashboardAction = {
+  id: string;
+  severity: DashboardActionSeverity;
+  category: DashboardActionCategory;
+  title: string; // primary line, e.g. "£2,400 in arrears"
+  subject: string; // who / where, e.g. "J. Smith · 22 Oak St"
+  context: string; // why it matters, e.g. "2.1 months behind"
+  href: string; // where the action button goes
+  action_label: string; // "Chase", "Protect", "Re-let"…
+  sort_value: number; // magnitude for ranking within a severity/category tier
+};
+
+// Rent-collection health, folded into the KPI strip. null when the viewer is
+// not an admin (arrears data is admin-scoped).
+export type CollectionSummary = {
+  collected_pct: number; // % of active tenancies paid this month
+  arrears_total: number; // £
+  tenants_behind: number;
+  total_tenancies: number;
+};
+
 export type DashboardData = {
   total_units: number;
   occupied_units: number;
@@ -180,11 +228,15 @@ export type DashboardData = {
   alerts: ProfitabilityAlert[];
   vacancy_units: VacancyUnit[];
   upcoming_move_outs: UpcomingMoveOut[];
-  top_properties: PropertyProfitability[]; // top 3 by net profit
-  worst_properties: PropertyProfitability[]; // bottom 3 by net profit
+  top_properties: DashboardPropertySummary[]; // top 3 by net profit
+  worst_properties: DashboardPropertySummary[]; // bottom 3 by net profit
   portfolio_net_profit_this_month: number; // £
   portfolio_net_profit_last_month: number; // £
   maintenance_summary: MaintenanceSummary;
+  // Action-first additions
+  actions: DashboardAction[]; // prioritised "needs attention" queue
+  collection: CollectionSummary | null; // rent-collection health (admin only)
+  at_risk_total: number; // £ — arrears + run-to-date vacancy loss
 };
 
 export const COST_TYPE_LABELS: Record<CostType, string> = {

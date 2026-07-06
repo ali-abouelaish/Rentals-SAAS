@@ -6,11 +6,17 @@ import type {
   PropertyCost,
   ProfitabilityAlert,
   DashboardData,
+  DashboardPropertySummary,
+  DashboardAction,
+  DashboardActionSeverity,
+  CollectionSummary,
   PortfolioMonthPoint,
   PropertyMonthPoint,
   UnitProfitRow,
 } from "../domain/types";
 import { getMaintenanceSummary } from "@/features/maintenance/data/queries";
+import { getRentCollectionRows } from "@/features/rent-collection/data/queries";
+import type { RentCollectionRow } from "@/features/rent-collection/data/queries";
 
 // ──────────────────────────────────────────────────────────
 // Helpers
@@ -65,64 +71,83 @@ function computeMonthlyCosts(costs: PropertyCost[]): number {
 // Public API
 // ──────────────────────────────────────────────────────────
 
-/** Fetch all property profitabilities for the current tenant, current month. */
-export async function getAllPropertyProfitabilities(): Promise<PropertyProfitability[]> {
+/** Raw inputs for property profitability, fetched in parallel. Shared between
+ *  getAllPropertyProfitabilities and getDashboardData so the dashboard doesn't
+ *  re-query units/contracts. */
+async function fetchProfitabilityInputs() {
   const supabase = createSupabaseServerClient();
 
-  // Properties + portfolios + owner landlord rent details
-  const { data: properties, error: propErr } = await supabase
-    .from("properties")
-    .select(
-      "id, name, portfolio_id, monthly_rent_owed, payment_schedule, contract_start_date, portfolios(id, name, color), owner_landlord:owner_landlords(id, name)"
-    )
-    .order("name");
+  const [
+    { data: properties, error: propErr },
+    { data: units, error: unitErr },
+    { data: contracts, error: conErr },
+    { data: allContracts, error: allConErr },
+    { data: costs, error: costErr },
+    { data: targets, error: targErr },
+  ] = await Promise.all([
+    // Properties + portfolios + owner landlord rent details
+    supabase
+      .from("properties")
+      .select(
+        "id, name, portfolio_id, monthly_rent_owed, payment_schedule, contract_start_date, portfolios(id, name, color), owner_landlord:owner_landlords(id, name)"
+      )
+      .order("name"),
+    // Units with pm_tenant names
+    supabase
+      .from("units")
+      .select(
+        "id, property_id, unit_type, room_number, room_type, status, available_date, max_price_pcm, pm_tenant_id, pm_tenants(full_name)"
+      ),
+    // Active contracts (for income + dashboard move-outs). vacate_date /
+    // notice_given_date are only used by the dashboard but cost nothing extra
+    // to select here, letting both callers share this one query.
+    supabase
+      .from("property_contracts")
+      .select("unit_id, rent_pcm, status, vacate_date, notice_given_date")
+      .in("status", ["active", "notice_given", "signed"]),
+    // All contracts ever (for earliest tenant start_date per unit) — used to
+    // compute pre-let vacant days from property's owner-landlord contract start.
+    supabase.from("property_contracts").select("unit_id, start_date"),
+    // Costs
+    supabase.from("property_costs").select("*"),
+    // Targets
+    supabase.from("property_targets").select("property_id, target_profit_pcm"),
+  ]);
+
   if (propErr) throw propErr;
-  if (!properties?.length) return [];
-
-  // Units with pm_tenant names
-  const { data: units, error: unitErr } = await supabase
-    .from("units")
-    .select(
-      "id, property_id, unit_type, room_number, room_type, status, available_date, max_price_pcm, pm_tenant_id, pm_tenants(full_name)"
-    );
   if (unitErr) throw unitErr;
-
-  // Active contracts (for income)
-  const { data: contracts, error: conErr } = await supabase
-    .from("property_contracts")
-    .select("unit_id, rent_pcm, status")
-    .in("status", ["active", "notice_given", "signed"]);
   if (conErr) throw conErr;
-
-  // All contracts ever (for earliest tenant start_date per unit) — used to
-  // compute pre-let vacant days from property's owner-landlord contract start.
-  const { data: allContracts, error: allConErr } = await supabase
-    .from("property_contracts")
-    .select("unit_id, start_date");
   if (allConErr) throw allConErr;
-
-  // Costs
-  const { data: costs, error: costErr } = await supabase
-    .from("property_costs")
-    .select("*");
   if (costErr) throw costErr;
-
-  // Targets
-  const { data: targets, error: targErr } = await supabase
-    .from("property_targets")
-    .select("property_id, target_profit_pcm");
   if (targErr) throw targErr;
+
+  return {
+    properties: properties ?? [],
+    units: units ?? [],
+    contracts: contracts ?? [],
+    allContracts: allContracts ?? [],
+    costs: costs ?? [],
+    targets: targets ?? [],
+  };
+}
+
+type ProfitabilityInputs = Awaited<ReturnType<typeof fetchProfitabilityInputs>>;
+
+/** Compute per-property P&L from pre-fetched inputs. Pure (no I/O). */
+function computeProfitabilities(inputs: ProfitabilityInputs): PropertyProfitability[] {
+  const { properties, units, contracts, allContracts, costs, targets } = inputs;
+  if (!properties.length) return [];
 
   // unit_id → rent_pcm (pence). Falls back to units.max_price_pcm × 100 below
   // when there's no active contract — handles rent-roll imports that haven't
   // backfilled property_contracts.
   const contractMap = new Map<string, number>();
-  for (const c of contracts ?? []) {
+  for (const c of contracts) {
     contractMap.set(c.unit_id, (c.rent_pcm ?? 0) * 100);
   }
   // unit_id → earliest start_date string (YYYY-MM-DD comparisons are safe)
   const earliestStartMap = new Map<string, string>();
-  for (const c of allContracts ?? []) {
+  for (const c of allContracts) {
     if (!c.start_date) continue;
     const existing = earliestStartMap.get(c.unit_id);
     if (!existing || c.start_date < existing) {
@@ -130,20 +155,28 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
     }
   }
   const costsMap = new Map<string, PropertyCost[]>();
-  for (const c of costs ?? []) {
+  for (const c of costs) {
     if (!costsMap.has(c.property_id)) costsMap.set(c.property_id, []);
     costsMap.get(c.property_id)!.push(c as PropertyCost);
   }
   const targetMap = new Map<string, number>();
-  for (const t of targets ?? []) {
+  for (const t of targets) {
     targetMap.set(t.property_id, t.target_profit_pcm * 100);
+  }
+  // property_id → its units, indexed once to avoid an O(properties × units)
+  // scan inside the map below.
+  const unitsByProperty = new Map<string, typeof units>();
+  for (const u of units) {
+    const list = unitsByProperty.get(u.property_id);
+    if (list) list.push(u);
+    else unitsByProperty.set(u.property_id, [u]);
   }
 
   const occupiedStatuses = new Set(["occupied", "renewal"]);
 
   return properties.map((prop) => {
     const portfolio = Array.isArray(prop.portfolios) ? prop.portfolios[0] : prop.portfolios;
-    const propUnits = (units ?? []).filter((u) => u.property_id === prop.id);
+    const propUnits = unitsByProperty.get(prop.id) ?? [];
     const propCosts = costsMap.get(prop.id) ?? [];
     const propContractStart = (prop.contract_start_date as string | null) ?? null;
 
@@ -253,6 +286,11 @@ export async function getAllPropertyProfitabilities(): Promise<PropertyProfitabi
       total_pre_let_loss,
     };
   });
+}
+
+/** Fetch all property profitabilities for the current tenant, current month. */
+export async function getAllPropertyProfitabilities(): Promise<PropertyProfitability[]> {
+  return computeProfitabilities(await fetchProfitabilityInputs());
 }
 
 /** Fetch profitability detail for a single property. */
@@ -588,26 +626,26 @@ export async function getPortfolioGraphData(months = 12): Promise<PortfolioMonth
   return result;
 }
 
-/** Dashboard aggregate data. */
-export async function getDashboardData(): Promise<DashboardData> {
-  const supabase = createSupabaseServerClient();
-
-  const [properties, alerts, unitsRaw, contracts, maintenanceSummary] = await Promise.all([
-    getAllPropertyProfitabilities(),
+/** Dashboard aggregate data. Pass `isAdmin` so rent-collection/arrears (which
+ *  is admin-scoped) is only fetched for viewers allowed to see it. */
+export async function getDashboardData(
+  opts: { isAdmin?: boolean } = {}
+): Promise<DashboardData> {
+  // Fetch the shared profitability inputs once (properties/units/contracts/…)
+  // in parallel with alerts + maintenance + rent-collection, then compute the
+  // P&L from those same rows. The dashboard no longer issues its own
+  // units/contracts queries.
+  const [inputs, alerts, maintenanceSummary, rentRows] = await Promise.all([
+    fetchProfitabilityInputs(),
     getProfitabilityAlerts(),
-    supabase
-      .from("units")
-      .select(
-        "id, property_id, unit_type, room_number, room_type, status, available_date, max_price_pcm, pm_tenant_id, pm_tenants(full_name)"
-      )
-      .then(({ data }) => data ?? []),
-    supabase
-      .from("property_contracts")
-      .select("unit_id, rent_pcm, status, vacate_date, notice_given_date")
-      .in("status", ["active", "signed", "notice_given"])
-      .then(({ data }) => data ?? []),
     getMaintenanceSummary(),
+    opts.isAdmin
+      ? getRentCollectionRows().catch(() => [] as RentCollectionRow[])
+      : Promise.resolve([] as RentCollectionRow[]),
   ]);
+
+  const properties = computeProfitabilities(inputs);
+  const contracts = inputs.contracts;
 
   type UnitRow = {
     id: string;
@@ -621,7 +659,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     pm_tenant_id: string | null;
     pm_tenants: { full_name: string } | { full_name: string }[] | null;
   };
-  const units = unitsRaw as UnitRow[];
+  const units = inputs.units as UnitRow[];
 
   // Status taxonomy:
   //   • occupied / renewal       → unit currently has a tenant
@@ -702,10 +740,11 @@ export async function getDashboardData(): Promise<DashboardData> {
     (c) => c.status === "notice_given" && c.vacate_date && c.vacate_date >= todayStr
   );
   const noticeUnitIds = new Set(noticeContracts.map((c) => c.unit_id));
+  const unitById = new Map(units.map((u) => [u.id, u] as const));
 
   const upcoming_move_outs = [
     ...noticeContracts.map((c) => {
-      const u = units.find((x) => x.id === c.unit_id);
+      const u = unitById.get(c.unit_id);
       return {
         unit_id: c.unit_id,
         unit_label: u ? labelOf(u) : "—",
@@ -741,6 +780,42 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const sorted = [...properties].sort((a, b) => b.net_profit - a.net_profit);
   const totalNetProfit = properties.reduce((s, p) => s + p.net_profit, 0);
+  const toSummary = (p: PropertyProfitability): DashboardPropertySummary => ({
+    property_id: p.property_id,
+    property_name: p.property_name,
+    portfolio_name: p.portfolio_name,
+    portfolio_color: p.portfolio_color,
+    net_profit: p.net_profit,
+  });
+
+  // ── Rent-collection health (admin only) ──────────────────
+  const arrearsRows = rentRows.filter((r) => r.arrears > 0);
+  const collection: CollectionSummary | null = opts.isAdmin
+    ? {
+        total_tenancies: rentRows.length,
+        tenants_behind: arrearsRows.length,
+        arrears_total: arrearsRows.reduce((s, r) => s + r.arrears, 0),
+        collected_pct:
+          rentRows.length > 0
+            ? Math.round(
+                (rentRows.filter((r) => r.currentMonthPaid).length / rentRows.length) * 100
+              )
+            : 100,
+      }
+    : null;
+
+  // ── Prioritised "needs attention" action queue ───────────
+  const actions = buildDashboardActions({
+    arrearsRows,
+    alerts,
+    upcomingMoveOuts: upcoming_move_outs,
+    vacancyUnits: vacancy_units,
+    criticalJobs: maintenanceSummary.critical_jobs,
+  });
+
+  // Money currently at risk: outstanding arrears + vacancy already lost.
+  const vacancyLossTotal = vacancy_units.reduce((s, v) => s + v.total_loss, 0);
+  const atRiskTotal = (collection?.arrears_total ?? 0) + vacancyLossTotal;
 
   return {
     total_units: totalUnits,
@@ -751,10 +826,172 @@ export async function getDashboardData(): Promise<DashboardData> {
     alerts,
     vacancy_units,
     upcoming_move_outs,
-    top_properties: sorted.slice(0, 3),
-    worst_properties: sorted.slice(-3).reverse(),
+    top_properties: sorted.slice(0, 3).map(toSummary),
+    worst_properties: sorted.slice(-3).reverse().map(toSummary),
     portfolio_net_profit_this_month: Math.round(totalNetProfit / 100),
     portfolio_net_profit_last_month: 0,
     maintenance_summary: maintenanceSummary,
+    actions,
+    collection,
+    at_risk_total: atRiskTotal,
   };
+}
+
+// ──────────────────────────────────────────────────────────
+// Action queue builder
+// ──────────────────────────────────────────────────────────
+
+// Lower = shown first. Legal/safety deadlines outrank money, which outranks
+// operational churn, which outranks review-only signals.
+const ACTION_CATEGORY_RANK: Record<DashboardAction["category"], number> = {
+  deposit: 0,
+  maintenance: 1,
+  arrears: 2,
+  move_out: 3,
+  vacancy: 4,
+  contract: 5,
+  cost: 6,
+};
+const ACTION_SEVERITY_RANK: Record<DashboardActionSeverity, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+};
+
+type ActionBuilderInput = {
+  arrearsRows: RentCollectionRow[];
+  alerts: ProfitabilityAlert[];
+  upcomingMoveOuts: DashboardData["upcoming_move_outs"];
+  vacancyUnits: DashboardData["vacancy_units"];
+  criticalJobs: number;
+};
+
+function buildDashboardActions(input: ActionBuilderInput): DashboardAction[] {
+  const { arrearsRows, alerts, upcomingMoveOuts, vacancyUnits, criticalJobs } = input;
+  const actions: DashboardAction[] = [];
+
+  // 1. Rent arrears — biggest / most overdue first.
+  for (const r of arrearsRows) {
+    const monthsBehind = r.rentPcm > 0 ? r.arrears / r.rentPcm : 0;
+    const room =
+      r.unit.unitType === "room" && r.unit.roomNumber ? ` · Room ${r.unit.roomNumber}` : "";
+    actions.push({
+      id: `arrears-${r.contractId}`,
+      severity: monthsBehind >= 2 ? "critical" : "high",
+      category: "arrears",
+      title: `£${Math.round(r.arrears).toLocaleString()} in arrears`,
+      subject: `${r.tenant.name} · ${r.property.name}${room}`,
+      context: r.lastPaidAt
+        ? `${monthsBehind.toFixed(1)} months behind`
+        : "No payment recorded yet",
+      href: "/rent-collection",
+      action_label: "Chase",
+      sort_value: r.arrears,
+    });
+  }
+
+  // 2. Alerts we can act on today: deposit deadlines (legal), landlord
+  //    contract expiries, cost spikes, below-target. Vacancy / move-out alerts
+  //    are intentionally skipped — the sections below cover them with richer £.
+  for (const a of alerts) {
+    const m = a.metadata as Record<string, unknown>;
+    const where = `${a.property_name ?? "—"}${a.unit_label ? ` · ${a.unit_label}` : ""}`;
+    if (a.alert_type === "deposit_deadline") {
+      const days = Number(m.days_until_deadline ?? 0);
+      actions.push({
+        id: `deposit-${a.id}`,
+        severity: days <= 3 ? "critical" : "high",
+        category: "deposit",
+        title: "Deposit protection deadline",
+        subject: where,
+        context: `${days} day${days === 1 ? "" : "s"} left${m.deposit_scheme ? ` · ${m.deposit_scheme}` : ""}`,
+        href: "/contracts",
+        action_label: "Protect",
+        sort_value: 1000 - days, // tighter deadline ranks higher
+      });
+    } else if (a.alert_type === "landlord_contract_expiry") {
+      const days = Number(m.days_until_expiry ?? 0);
+      actions.push({
+        id: `contract-${a.id}`,
+        severity: days <= 30 ? "high" : "medium",
+        category: "contract",
+        title: "Landlord contract expiring",
+        subject: `${m.owner_landlord_name ?? where}`,
+        context: `Expires in ${days} day${days === 1 ? "" : "s"}`,
+        href: a.property_id ? `/properties/${a.property_id}` : "/properties",
+        action_label: "Review",
+        sort_value: 1000 - days,
+      });
+    } else if (a.alert_type === "cost_spike" || a.alert_type === "profitability_below_target") {
+      actions.push({
+        id: `cost-${a.id}`,
+        severity: "medium",
+        category: "cost",
+        title: a.alert_type === "cost_spike" ? "Cost spike logged" : "Below profit target",
+        subject: where,
+        context:
+          a.alert_type === "cost_spike"
+            ? `${m.cost_label ?? m.cost_type ?? "Unexpected cost"}`
+            : `${m.months_below ?? 0} month(s) under target`,
+        href: a.property_id ? `/profitability/${a.property_id}` : "/profitability",
+        action_label: "View P&L",
+        sort_value: 0,
+      });
+    }
+  }
+
+  // 3. Critical maintenance — a single aggregate action linking to the queue.
+  if (criticalJobs > 0) {
+    actions.push({
+      id: "maintenance-critical",
+      severity: "critical",
+      category: "maintenance",
+      title: `${criticalJobs} critical maintenance ${criticalJobs === 1 ? "job" : "jobs"}`,
+      subject: "Awaiting assignment",
+      context: "High-priority repairs open",
+      href: "/maintenance",
+      action_label: "Review",
+      sort_value: criticalJobs,
+    });
+  }
+
+  // 4. Move-outs inside 21 days — arrange checkout & re-let.
+  for (const mo of upcomingMoveOuts) {
+    if (mo.days_remaining > 21) continue;
+    actions.push({
+      id: `moveout-${mo.unit_id}`,
+      severity: mo.days_remaining <= 7 ? "high" : "medium",
+      category: "move_out",
+      title: `Move-out in ${mo.days_remaining} day${mo.days_remaining === 1 ? "" : "s"}`,
+      subject: `${mo.tenant_name ?? "Tenant"} · ${mo.unit_label} · ${mo.property_name}`,
+      context: `Vacates ${new Date(mo.vacate_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — arrange re-let`,
+      href: "/contracts?filter=notice_given",
+      action_label: "Arrange",
+      sort_value: 100 - mo.days_remaining,
+    });
+  }
+
+  // 5. Vacancy burn — units empty 14+ days, biggest loss first.
+  for (const v of vacancyUnits) {
+    if (v.days_vacant < 14) continue;
+    actions.push({
+      id: `vacancy-${v.unit_id}`,
+      severity: v.days_vacant >= 30 ? "high" : "medium",
+      category: "vacancy",
+      title: `£${Math.round(v.total_loss).toLocaleString()} lost to vacancy`,
+      subject: `${v.unit_label} · ${v.property_name}`,
+      context: `${v.days_vacant} days vacant · £${v.daily_loss}/day`,
+      href: `/properties?unit=${v.unit_id}`,
+      action_label: "Re-let",
+      sort_value: v.total_loss,
+    });
+  }
+
+  return actions.sort((a, b) => {
+    const sev = ACTION_SEVERITY_RANK[a.severity] - ACTION_SEVERITY_RANK[b.severity];
+    if (sev !== 0) return sev;
+    const cat = ACTION_CATEGORY_RANK[a.category] - ACTION_CATEGORY_RANK[b.category];
+    if (cat !== 0) return cat;
+    return b.sort_value - a.sort_value;
+  });
 }

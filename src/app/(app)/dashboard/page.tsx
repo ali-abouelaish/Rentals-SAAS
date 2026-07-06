@@ -37,7 +37,7 @@ export default async function DashboardPage({
   try {
     if (view === "pm") {
       const [data, activity] = await Promise.all([
-        getDashboardData(),
+        getDashboardData({ isAdmin }),
         getDashboardActivityFeed().catch(() => []),
       ]);
       return (

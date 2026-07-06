@@ -9,11 +9,24 @@ import type { TenantBrandingSettings } from "@/features/admin/domain/types";
 const DEFAULT_PRIMARY = "#0B2F59";
 const DEFAULT_ACCENT = "#4FD1FF";
 
+// Only accept #rgb / #rrggbb / #rrggbbaa. These values are interpolated into a
+// <style> via dangerouslySetInnerHTML, so a non-hex value (e.g. one containing
+// "</style><script>") would break out of the tag = stored XSS. Anything that
+// isn't a strict hex colour falls back to the brand default.
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+function safeHex(value: string | null | undefined, fallback: string): string {
+  const v = (value ?? "").trim();
+  return HEX_COLOR_RE.test(v) ? v : fallback;
+}
+
 function toCssVars(b: TenantBrandingSettings | null): string {
   if (!b?.primary_color) return "";
 
-  const primary = b.primary_color.trim() || DEFAULT_PRIMARY;
-  const accent = b.accent_color?.trim() || DEFAULT_ACCENT;
+  // Sanitise up front so every downstream use — the raw `${primary}`
+  // interpolations below and the color-util derivations — is guaranteed safe.
+  const primary = safeHex(b.primary_color, DEFAULT_PRIMARY);
+  const accent = safeHex(b.accent_color, DEFAULT_ACCENT);
 
   const primaryFg = contrastFgHex(primary);
   const primaryHover = darkenHex(primary, 0.12);

@@ -90,6 +90,28 @@ export async function GET(
   const labelForFile = `${property.name}-${unitLabelForFile}`;
   const zipFilename = buildUnitZipFilename({ postcode: property.postcode, unitLabel: labelForFile });
 
+  // Only fetch images from our own Supabase storage origin. photo.url is
+  // attacker-influenceable (saveUnitPhoto stores whatever URL it is given), and
+  // this route fetches it server-side — an arbitrary URL here would be an SSRF
+  // vector into internal/metadata endpoints. Restrict to https on the Supabase
+  // project host; anything else is skipped.
+  const storageOrigin = (() => {
+    try {
+      return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin;
+    } catch {
+      return null;
+    }
+  })();
+  const isAllowedPhotoUrl = (raw: string): boolean => {
+    if (!storageOrigin) return false;
+    try {
+      const u = new URL(raw);
+      return u.protocol === "https:" && u.origin === storageOrigin;
+    } catch {
+      return false;
+    }
+  };
+
   const archive = archiver("zip", { zlib: { level: 6 } });
   archive.on("error", (err) => {
     // archiver will abort the stream; the client sees a truncated download.
@@ -100,6 +122,7 @@ export async function GET(
   // Append each image as a streamed entry.
   for (let i = 0; i < photos.length; i++) {
     const photo = photos[i];
+    if (!isAllowedPhotoUrl(photo.url)) continue;
     const res = await fetch(photo.url);
     if (!res.ok || !res.body) continue;
     const nodeStream = Readable.fromWeb(res.body as import("node:stream/web").ReadableStream);

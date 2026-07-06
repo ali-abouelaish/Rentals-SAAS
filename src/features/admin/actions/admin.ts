@@ -52,6 +52,7 @@ async function logAdminAction(
 export async function createTenantAction(input: {
   name: string;
   slug: string;
+  contactEmail: string;
   status?: "active" | "suspended";
 }): Promise<{ ok: boolean; tenantId?: string; error?: string }> {
   const actor = await requireSuperAdmin();
@@ -59,14 +60,19 @@ export async function createTenantAction(input: {
 
   const name = input.name.trim();
   const slug = normalizeSlug(input.slug);
+  const contact_email = input.contactEmail.trim().toLowerCase();
   const status = input.status ?? "active";
 
   if (!name) return { ok: false, error: "Tenant name is required." };
   if (!slug) return { ok: false, error: "Tenant slug is required." };
+  if (!contact_email) return { ok: false, error: "Contact email is required." };
+  if (!EMAIL_RE.test(contact_email)) {
+    return { ok: false, error: "Contact email is not a valid email address." };
+  }
 
   const { data, error } = await admin
     .from("tenants")
-    .insert({ name, slug, status })
+    .insert({ name, slug, contact_email, status })
     .select("id")
     .single();
   if (error) return { ok: false, error: error.message };
@@ -74,6 +80,7 @@ export async function createTenantAction(input: {
   await logAdminAction(actor.id, data.id, "admin_tenant_created", "tenant", data.id, {
     name,
     slug,
+    contact_email,
     status
   });
 
@@ -446,6 +453,132 @@ export async function resendInviteForUserAction(input: {
   );
 
   revalidatePath(`/admin/tenants/${input.tenantId}/users`);
+  return { ok: true };
+}
+
+const TENANT_USER_ROLES = ["super_admin", "admin", "agent", "marketing_only"];
+
+/**
+ * Super-admin action: invite a brand-new user directly into a specific tenant.
+ * Sends the Supabase invite email (redirecting to the tenant's own subdomain),
+ * creates the user_profiles row, and — for non-super-admin roles — the
+ * agent_profiles row so the user shows up in the tenant's Agents/Team views.
+ */
+export async function inviteTenantUserAction(input: {
+  tenantId: string;
+  email: string;
+  displayName?: string;
+  role: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const actor = await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+
+  const email = input.email.trim().toLowerCase();
+  const role = input.role.trim().toLowerCase();
+  const displayName = input.displayName?.trim() || email.split("@")[0] || "New user";
+
+  if (!email) return { ok: false, error: "Email is required." };
+  if (!EMAIL_RE.test(email)) return { ok: false, error: "Enter a valid email address." };
+  if (!TENANT_USER_ROLES.includes(role)) return { ok: false, error: "Select a valid role." };
+
+  const { data: tenant, error: tenantError } = await admin
+    .from("tenants")
+    .select("slug")
+    .eq("id", input.tenantId)
+    .maybeSingle();
+  if (tenantError) return { ok: false, error: tenantError.message };
+  if (!tenant) return { ok: false, error: "Tenant not found." };
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.NEXT_PUBLIC_VERCEL_URL ??
+    "http://localhost:3000";
+
+  let redirectTo = `${appUrl}/invite/accept`;
+  const redirectBaseDomain = getInviteRedirectBaseDomain();
+  if (redirectBaseDomain && tenant.slug) {
+    redirectTo = `https://${tenant.slug}.${redirectBaseDomain}/invite/accept`;
+  }
+
+  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo
+  });
+  if (inviteError || !invited?.user?.id) {
+    const message = inviteError?.message ?? "Unable to send invite.";
+    if (message.toLowerCase().includes("already been registered")) {
+      return {
+        ok: false,
+        error:
+          "This email is already registered. Ask them to sign in, or manage the existing account instead."
+      };
+    }
+    return { ok: false, error: message };
+  }
+
+  const userId = invited.user.id;
+
+  const { data: existingProfile } = await admin
+    .from("user_profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (existingProfile?.id) {
+    const { error: updateError } = await admin
+      .from("user_profiles")
+      .update({ tenant_id: input.tenantId, role, display_name: displayName })
+      .eq("id", userId);
+    if (updateError) return { ok: false, error: updateError.message };
+  } else {
+    const { error: insertError } = await admin.from("user_profiles").insert({
+      id: userId,
+      tenant_id: input.tenantId,
+      role,
+      display_name: displayName
+    });
+    if (insertError) return { ok: false, error: insertError.message };
+  }
+
+  // Tenant staff (admin/agent/marketing) need an agent_profiles row for role_flags,
+  // commission, and disable state. Super admins don't (they have no such row).
+  if (role !== "super_admin") {
+    const isAgent = role === "agent" || role === "admin";
+    const isMarketing = role === "agent" || role === "marketing_only" || role === "admin";
+    const roleFlags = { is_agent: isAgent, is_marketing: isMarketing };
+
+    const { data: existingAgent } = await admin
+      .from("agent_profiles")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingAgent?.user_id) {
+      const { error: agentError } = await admin
+        .from("agent_profiles")
+        .update({ tenant_id: input.tenantId, role_flags: roleFlags })
+        .eq("user_id", userId);
+      if (agentError) return { ok: false, error: agentError.message };
+    } else {
+      const { error: agentError } = await admin.from("agent_profiles").insert({
+        user_id: userId,
+        tenant_id: input.tenantId,
+        commission_percent: 0,
+        marketing_fee: 0,
+        role_flags: roleFlags
+      });
+      if (agentError) return { ok: false, error: agentError.message };
+    }
+  }
+
+  await logAdminAction(actor.id, input.tenantId, "admin_tenant_user_invited", "user", userId, {
+    email,
+    role,
+    display_name: displayName
+  });
+
+  revalidatePath(`/admin/tenants/${input.tenantId}/users`);
+  revalidatePath(`/admin/tenants/${input.tenantId}`);
   return { ok: true };
 }
 

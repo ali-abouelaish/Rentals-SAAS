@@ -255,7 +255,9 @@ function QuestionInput({
       type={inputType}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={inputCls(invalid)}
+      // appearance-none stops mobile Safari rendering date controls taller than
+      // the other fields (native date inputs otherwise ignore the fixed height).
+      className={`${inputCls(invalid)}${question_type === "date" ? " appearance-none" : ""}`}
       placeholder="Your answer…"
     />
   );

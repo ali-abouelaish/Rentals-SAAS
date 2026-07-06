@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCard } from "./KanbanCard";
-import { StatusChangeModal } from "./StatusChangeModal";
+import { StatusPickerDialog } from "./StatusPickerDialog";
 import { UNIT_STATUSES, type Unit, type UnitStatus } from "../domain/types";
 
 interface UnitsKanbanViewProps {
@@ -64,15 +64,7 @@ export function UnitsKanbanView({ units, onUnitClick, onUnitsChange }: UnitsKanb
     });
   };
 
-  const handleModalSuccess = () => {
-    if (!pendingMove) return;
-    // Optimistically update local state; server revalidation will sync
-    const updated = units.map((u) =>
-      u.id === pendingMove.unitId ? { ...u, status: pendingMove.toStatus } : u
-    );
-    onUnitsChange(updated);
-    setPendingMove(null);
-  };
+  const pendingUnit = pendingMove ? units.find((u) => u.id === pendingMove.unitId) ?? null : null;
 
   return (
     <>
@@ -96,13 +88,24 @@ export function UnitsKanbanView({ units, onUnitClick, onUnitsChange }: UnitsKanb
       </DndContext>
 
       {pendingMove && (
-        <StatusChangeModal
+        <StatusPickerDialog
           open
           onClose={() => setPendingMove(null)}
           unitId={pendingMove.unitId}
-          fromStatus={pendingMove.fromStatus}
-          toStatus={pendingMove.toStatus}
-          onSuccess={handleModalSuccess}
+          currentStatus={pendingMove.fromStatus}
+          currentAvailableDate={pendingUnit?.available_date ?? null}
+          initialTarget={pendingMove.toStatus}
+          onChanged={(change) => {
+            // Optimistically update local state; server revalidation will sync
+            onUnitsChange(
+              units.map((u) =>
+                u.id === change.id
+                  ? { ...u, status: change.status, available_date: change.available_date }
+                  : u
+              )
+            );
+            setPendingMove(null);
+          }}
         />
       )}
     </>

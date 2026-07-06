@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
@@ -10,12 +10,20 @@ import { listContractTemplatesForBookingAction } from "@/features/contracts/temp
 import type { BookingStatus } from "../domain/types";
 
 export type ConvertContractInput = {
-  templateId: string;
+  // Null = no PDF now ("generate later") — the terms below still apply.
+  templateId: string | null;
   start_date: string;
   expiry_date?: string | null;
   rent_pcm: number;
   deposit: number;
   manualValues: Record<string, string>;
+};
+
+export type ContractDetailsInput = {
+  start_date: string;
+  expiry_date?: string | null;
+  rent_pcm: number;
+  deposit: number;
 };
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
@@ -51,7 +59,11 @@ export async function rejectBooking(id: string, rejectionReason: string) {
   revalidatePath("/bookings");
 }
 
-export async function approveBooking(id: string, signedAndPaid = false) {
+export async function approveBooking(
+  id: string,
+  signedAndPaid = false,
+  details?: ContractDetailsInput
+) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
@@ -100,6 +112,28 @@ export async function approveBooking(id: string, signedAndPaid = false) {
   // 4. If unit_id is set: update unit status + link pm_tenant
   let contractId: string | null = null;
   if (booking.unit_id) {
+    if (details) {
+      if (!details.start_date) throw new Error("Contract start date is required");
+      if (!Number.isFinite(details.rent_pcm) || details.rent_pcm <= 0) {
+        throw new Error("Contract rent must be greater than 0");
+      }
+      if (!Number.isFinite(details.deposit) || details.deposit < 0) {
+        throw new Error("Contract deposit must be 0 or more");
+      }
+      if (details.expiry_date && details.expiry_date <= details.start_date) {
+        throw new Error("Contract expiry must be after the start date");
+      }
+    }
+
+    // Read the unit's pricing before overwriting its status so the contract can
+    // be seeded with real terms when the caller doesn't supply any.
+    const { data: unit } = await supabase
+      .from("units")
+      .select("min_price_pcm, max_price_pcm, deposit")
+      .eq("id", booking.unit_id)
+      .eq("tenant_id", profile.tenant_id)
+      .single();
+
     await supabase
       .from("units")
       .update({
@@ -120,12 +154,22 @@ export async function approveBooking(id: string, signedAndPaid = false) {
         tenant_id: profile.tenant_id,
         unit_id: booking.unit_id,
         pm_tenant_id: pmTenant.id,
-        start_date: format(new Date(), "yyyy-MM-dd"),
-        rent_pcm: 0, // Admin fills in the details
-        deposit: 0,
+        start_date: details?.start_date ?? format(new Date(), "yyyy-MM-dd"),
+        expiry_date: details?.expiry_date ?? null,
+        // Fall back to the terms already agreed (offer price, unit pricing) so a
+        // conversion without explicit details never opens a £0 contract.
+        rent_pcm:
+          details?.rent_pcm ??
+          booking.offer_price_pcm ??
+          unit?.min_price_pcm ??
+          unit?.max_price_pcm ??
+          0,
+        deposit: details?.deposit ?? unit?.deposit ?? 0,
         status: contractStatus,
+        // Statutory clock runs from the tenancy start, not from when the admin
+        // happened to click convert.
         deposit_protection_deadline: format(
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          addDays(details?.start_date ? new Date(details.start_date) : new Date(), 30),
           "yyyy-MM-dd"
         ),
       })
@@ -191,9 +235,20 @@ export async function convertBookingToTenancy(
   bookingId: string,
   opts: { signedAndPaid: boolean; contract?: ConvertContractInput }
 ): Promise<{ pmTenantId: string; contractId: string | null; generated: boolean }> {
-  const { pmTenantId, contractId } = await approveBooking(bookingId, opts.signedAndPaid);
+  const { pmTenantId, contractId } = await approveBooking(
+    bookingId,
+    opts.signedAndPaid,
+    opts.contract
+      ? {
+          start_date: opts.contract.start_date,
+          expiry_date: opts.contract.expiry_date ?? null,
+          rent_pcm: opts.contract.rent_pcm,
+          deposit: opts.contract.deposit,
+        }
+      : undefined
+  );
 
-  if (opts.contract && contractId) {
+  if (opts.contract?.templateId && contractId) {
     await generateContractFromTemplate({
       templateId: opts.contract.templateId,
       bookingId,

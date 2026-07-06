@@ -29,11 +29,11 @@ export function KanbanColumn({ status, units, onCardClick }: KanbanColumnProps) 
         </span>
       </div>
 
-      {/* Drop zone */}
+      {/* Drop zone — bounded to viewport, scrolls internally so the board height stays fixed */}
       <div
         ref={setNodeRef}
         className={cn(
-          "flex flex-col gap-2 min-h-[120px] rounded-xl p-2 transition-colors duration-150",
+          "flex flex-col gap-2 min-h-[120px] max-h-[calc(100vh-15rem)] overflow-y-auto overscroll-contain rounded-xl p-2 transition-colors duration-150",
           isOver
             ? "bg-brand/5 border-2 border-dashed border-brand/40"
             : "bg-surface-inset/60 border-2 border-dashed border-transparent"

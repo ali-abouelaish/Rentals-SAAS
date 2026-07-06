@@ -7,17 +7,29 @@ export const contractSchema = z.object({
   expiry_date: z.string().nullable().optional().or(z.literal("")),
   rent_pcm: z.coerce.number().int().positive("Rent is required"),
   deposit: z.coerce.number().int().positive("Deposit is required"),
-  collection_date: z.coerce.number().int().min(1).max(31).nullable().optional(),
+  // Preprocess: an empty input must stay optional — z.coerce.number("") is 0,
+  // which would fail min(1) invisibly.
+  collection_date: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : v),
+    z.coerce
+      .number()
+      .int("Whole day of the month")
+      .min(1, "Day must be between 1 and 31")
+      .max(31, "Day must be between 1 and 31")
+      .nullable()
+  ).optional(),
   pro_rata_amount: z.coerce.number().min(0).nullable().optional(),
   prepaid_first_full_month: z.boolean().default(false),
   deposit_scheme: z.enum(["dps", "mydeposits", "tds", "none"]).default("none"),
   deposit_scheme_ref: z.string().nullable().optional().or(z.literal("")),
   deposit_protected_date: z.string().nullable().optional().or(z.literal("")),
   deposit_protection_alert: z.boolean().default(true),
-  signing_method: z
-    .enum(["email", "whatsapp", "adobe_sign", "docusign", "paper", "other"])
-    .nullable()
-    .optional(),
+  // Preprocess: the "Select…" option submits "", which is not in the enum and
+  // would fail validation invisibly despite the field being optional.
+  signing_method: z.preprocess(
+    (v) => (v === "" ? null : v),
+    z.enum(["email", "whatsapp", "adobe_sign", "docusign", "paper", "other"]).nullable()
+  ).optional(),
   status: z
     .enum(["draft", "sent", "signed", "active", "notice_given", "terminated"])
     .default("active"),

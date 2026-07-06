@@ -53,6 +53,10 @@ function formatGBP(amount: number | null | undefined): string | null {
 const inputCls =
   "h-11 w-full rounded-2xl border border-border bg-surface-card px-4 text-sm text-foreground placeholder:text-foreground-muted shadow-xs transition focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
+// Mobile Safari renders native date controls taller than text inputs and ignores
+// the fixed height — appearance-none makes them honor h-11 like every other field.
+const dateInputCls = `${inputCls} appearance-none`;
+
 const textareaCls =
   "w-full rounded-2xl border border-border bg-surface-card px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted shadow-xs transition focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
@@ -128,7 +132,7 @@ function QuestionInput({
       );
     }
     case "date":
-      return <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={inputCls} />;
+      return <input type="date" value={value} onChange={(e) => onChange(e.target.value)} className={dateInputCls} />;
     case "number":
       return <input type="number" value={value} onChange={(e) => onChange(e.target.value)} className={inputCls} />;
     case "email":

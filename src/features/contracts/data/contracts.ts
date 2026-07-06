@@ -4,8 +4,12 @@ import type { PropertyContract, ContractFilters } from "../domain/types";
 const SELECT = `*,
   pm_tenant:pm_tenants(id, full_name, email, phone),
   unit:units(
-    id, room_number, unit_type,
-    property:properties(id, name, address_line_1, portfolio:portfolios(id, name, color))
+    id, room_number, unit_type, deposit,
+    property:properties(
+      id, name, address_line_1, address_line_2, area, postcode,
+      portfolio:portfolios(id, name, color),
+      owner_landlord:owner_landlords(id, name, email, phone)
+    )
   )`;
 
 export async function getContracts(

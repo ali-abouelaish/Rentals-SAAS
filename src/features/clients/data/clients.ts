@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { sanitizeFilterTerm } from "@/lib/utils/search";
 
 const PAGE_SIZE = 10;
 
@@ -18,7 +19,10 @@ export async function getClients({
     .order("created_at", { ascending: false });
 
   if (search) {
-    query = query.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`);
+    const term = sanitizeFilterTerm(search);
+    if (term) {
+      query = query.or(`full_name.ilike.%${term}%,phone.ilike.%${term}%`);
+    }
   }
   if (status && status !== "all") {
     query = query.eq("status", status);

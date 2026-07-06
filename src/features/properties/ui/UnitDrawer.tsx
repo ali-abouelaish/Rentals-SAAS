@@ -10,7 +10,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import { UnitStatusBadge } from "./UnitStatusBadge";
+import { UnitStatusControl } from "./UnitStatusControl";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { OverviewTab } from "./OverviewTab";
 import { TenantTab } from "./TenantTab";
@@ -80,7 +80,17 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants, form
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 {portfolio && <PortfolioBadge portfolio={portfolio} size="sm" />}
-                <UnitStatusBadge status={localUnit.status} size="sm" />
+                <UnitStatusControl
+                  unitId={localUnit.id}
+                  status={localUnit.status}
+                  availableDate={localUnit.available_date}
+                  size="sm"
+                  onChanged={(change) => {
+                    const merged = { ...localUnit, status: change.status, available_date: change.available_date };
+                    setLocalUnit(merged);
+                    onUnitUpdated(merged);
+                  }}
+                />
               </div>
               <div>
                 <p className="text-xs text-foreground-secondary truncate">

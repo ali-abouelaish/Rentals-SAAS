@@ -9,7 +9,9 @@ import { formatPriceRange, unitLabel as sharedUnitLabel } from "./format";
 
 const MONTH_DAY = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 
-const COLS = "grid grid-cols-[1.6fr_1.2fr_1fr_1fr_2fr] gap-3";
+// Compact on phones (Unit · Availability · Price); Commission + Contact
+// reveal on lg+ where there's room. Both stay available in the unit drawer.
+const COLS = "grid grid-cols-[1.6fr_1.2fr_1fr] gap-3 lg:grid-cols-[1.6fr_1.2fr_1fr_1fr_2fr]";
 
 function unitLabel(u: PublicShareUnit): string {
   return sharedUnitLabel(u);
@@ -114,10 +116,10 @@ function UnitRow({
       <div className="flex items-center tabular-nums text-foreground">
         {formatPriceRange(unit.min_price_pcm, unit.max_price_pcm)}
       </div>
-      <div className="flex items-center tabular-nums text-foreground">
+      <div className="hidden lg:flex items-center tabular-nums text-foreground">
         {commissionPct}%
       </div>
-      <div className="flex items-center min-w-0" onClick={(e) => e.stopPropagation()}>
+      <div className="hidden lg:flex items-center min-w-0" onClick={(e) => e.stopPropagation()}>
         {unit.contact ? contactLinks(unit.contact) : <span className="text-xs text-foreground-muted">—</span>}
       </div>
     </div>
@@ -163,8 +165,8 @@ function PropertyGroup({
         <div className="pl-5 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Unit</div>
         <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Availability</div>
         <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Price PCM</div>
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Commission</div>
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Contact</div>
+        <div className="hidden lg:block text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Commission</div>
+        <div className="hidden lg:block text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Contact</div>
       </div>
 
       <div className="divide-y divide-border">

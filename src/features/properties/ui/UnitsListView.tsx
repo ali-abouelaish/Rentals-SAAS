@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { SendReminderDialog } from "@/features/reminders/ui/SendReminderDialog";
 import type { ReminderStatusMap } from "@/features/reminders/data/status";
 import { cn } from "@/lib/utils/cn";
-import { UnitStatusBadge } from "./UnitStatusBadge";
+import { UnitStatusControl } from "./UnitStatusControl";
+import type { UnitStatusChange } from "./StatusPickerDialog";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -201,8 +202,12 @@ function formatPropertyType(type: string) {
   return "Whole Flat";
 }
 
-/* Column layout shared between header and rows */
-const COLS = "grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr_80px_140px]";
+/* Full desktop table columns (lg+). Below lg the row collapses to
+   unit + status + rent, with price / availability / tenant shown as a
+   compact meta line and the rest surfaced in the unit drawer. */
+const GRID_LG = "lg:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr_80px_140px]";
+const ROW_COLS = cn("grid items-center gap-2 sm:gap-3 grid-cols-[1fr_auto_auto]", GRID_LG);
+const HEADER_COLS = cn("hidden lg:grid gap-3", GRID_LG);
 
 function ReminderCell({
   pmTenantId,
@@ -253,6 +258,7 @@ function ReminderCell({
 function UnitRow({
   unit,
   onUnitClick,
+  onStatusChanged,
   onPaymentRecorded,
   onPaymentUndone,
   striped,
@@ -260,6 +266,7 @@ function UnitRow({
 }: {
   unit: Unit;
   onUnitClick: (id: string) => void;
+  onStatusChanged: (change: UnitStatusChange) => void;
   onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
   onPaymentUndone: (unitId: string, periodYear: number, periodMonth: number) => void;
   striped: boolean;
@@ -275,6 +282,18 @@ function UnitRow({
   const paidThisMonth = (unit.recent_rent_payments ?? []).some(
     (p) => p.period_year === currentYear && p.period_month === currentMonth
   );
+
+  // Compact meta line shown under the unit label below `lg`, where the
+  // price / availability / tenant columns are dropped.
+  const tenantName = unit.pm_tenant?.full_name ?? unit.resident?.full_name ?? null;
+  const priceLabel = formatPrice(unit.min_price_pcm, unit.max_price_pcm);
+  const metaBits = [
+    priceLabel !== "—" ? priceLabel : null,
+    unit.available_date
+      ? `Avail ${new Date(unit.available_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+      : null,
+    tenantName ?? "Vacant",
+  ].filter(Boolean) as string[];
 
   const handleUndo = async () => {
     const contract = await getActiveContractForUnit(unit.id);
@@ -307,23 +326,32 @@ function UnitRow({
         onClick={() => onUnitClick(unit.id)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onUnitClick(unit.id); }}
         className={cn(
-          COLS,
-          "w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-inset cursor-pointer",
+          ROW_COLS,
+          "w-full px-3 py-2.5 lg:px-4 lg:py-3 text-left transition-colors hover:bg-surface-inset cursor-pointer",
           striped && "bg-surface-inset/40"
         )}
       >
-        {/* Unit label */}
-        <div className="flex items-center min-w-0 pl-5 border-l-2 border-border">
-          <span className="text-sm font-medium text-foreground">{formatUnitLabel(unit)}</span>
+        {/* Unit label (+ compact meta below lg) */}
+        <div className="flex flex-col justify-center min-w-0 lg:flex-row lg:items-center lg:justify-start lg:pl-5 lg:border-l-2 lg:border-border">
+          <span className="text-sm font-medium text-foreground truncate">{formatUnitLabel(unit)}</span>
+          <span className="lg:hidden mt-0.5 text-xs text-foreground-muted truncate">
+            {metaBits.join(" · ")}
+          </span>
         </div>
 
-        {/* Status */}
-        <div className="flex items-center">
-          <UnitStatusBadge status={unit.status} size="sm" />
+        {/* Status — tap to change */}
+        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+          <UnitStatusControl
+            unitId={unit.id}
+            status={unit.status}
+            availableDate={unit.available_date}
+            onChanged={onStatusChanged}
+            size="sm"
+          />
         </div>
 
-        {/* Available date */}
-        <div className="flex items-center">
+        {/* Available date (lg+) */}
+        <div className="hidden lg:flex items-center">
           {unit.available_date ? (
             <span className="text-xs text-foreground-secondary">
               {new Date(unit.available_date).toLocaleDateString("en-GB", {
@@ -336,15 +364,15 @@ function UnitRow({
           )}
         </div>
 
-        {/* Price */}
-        <div className="flex items-center">
+        {/* Price (lg+) */}
+        <div className="hidden lg:flex items-center">
           <span className="text-sm font-medium text-foreground tabular-nums">
             {formatPrice(unit.min_price_pcm, unit.max_price_pcm)}
           </span>
         </div>
 
-        {/* Tenant */}
-        <div className="flex items-center min-w-0">
+        {/* Tenant (lg+) */}
+        <div className="hidden lg:flex items-center min-w-0">
           {unit.pm_tenant || unit.resident ? (
             <div className="flex items-center gap-1.5 min-w-0">
               <div className="h-5 w-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
@@ -359,8 +387,8 @@ function UnitRow({
           )}
         </div>
 
-        {/* Days empty */}
-        <div className="flex items-center justify-center">
+        {/* Days empty (lg+) */}
+        <div className="hidden lg:flex items-center justify-center">
           {daysEmpty !== null ? (
             <span
               className={cn(
@@ -430,8 +458,8 @@ function UnitRow({
           )}
         </div>
 
-        {/* Rent reminder action — only when the unit is occupied */}
-        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+        {/* Rent reminder action (lg+) — only when the unit is occupied */}
+        <div className="hidden lg:flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
           {unit.pm_tenant_id || unit.pm_tenant?.id ? (
             <ReminderCell
               pmTenantId={(unit.pm_tenant?.id ?? unit.pm_tenant_id) as string}
@@ -458,6 +486,7 @@ function PropertyGroup({
   property,
   units,
   onUnitClick,
+  onStatusChanged,
   onUnitCreated,
   onPropertyDeleted,
   onPaymentRecorded,
@@ -467,6 +496,7 @@ function PropertyGroup({
   property: Property;
   units: Unit[];
   onUnitClick: (id: string) => void;
+  onStatusChanged: (change: UnitStatusChange) => void;
   onUnitCreated: (unit: Unit) => void;
   onPropertyDeleted: (id: string) => void;
   onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
@@ -525,9 +555,9 @@ function PropertyGroup({
         </div>
       </div>
 
-      {/* Column header (only when there are units) */}
+      {/* Column header — desktop table only */}
       {units.length > 0 && (
-        <div className={cn(COLS, "gap-3 px-4 py-2 border-b border-border/50 bg-surface-inset/30")}>
+        <div className={cn(HEADER_COLS, "px-4 py-2 border-b border-border/50 bg-surface-inset/30")}>
           <div className="pl-5 text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Unit</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Status</div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Available</div>
@@ -547,6 +577,7 @@ function PropertyGroup({
               key={unit.id}
               unit={unit}
               onUnitClick={onUnitClick}
+              onStatusChanged={onStatusChanged}
               onPaymentRecorded={onPaymentRecorded}
               onPaymentUndone={onPaymentUndone}
               striped={i % 2 === 1}
@@ -568,13 +599,14 @@ interface UnitsListViewProps {
   units: Unit[];
   reminderStatus?: ReminderStatusMap;
   onUnitClick: (unitId: string) => void;
+  onStatusChanged: (change: UnitStatusChange) => void;
   onUnitCreated: (unit: Unit) => void;
   onPropertyDeleted: (propertyId: string) => void;
   onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
   onPaymentUndone: (unitId: string, periodYear: number, periodMonth: number) => void;
 }
 
-export function UnitsListView({ properties, units, reminderStatus, onUnitClick, onUnitCreated, onPropertyDeleted, onPaymentRecorded, onPaymentUndone }: UnitsListViewProps) {
+export function UnitsListView({ properties, units, reminderStatus, onUnitClick, onStatusChanged, onUnitCreated, onPropertyDeleted, onPaymentRecorded, onPaymentUndone }: UnitsListViewProps) {
   if (properties.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-surface-card py-16 text-center">
@@ -595,6 +627,7 @@ export function UnitsListView({ properties, units, reminderStatus, onUnitClick, 
             property={property}
             units={propertyUnits}
             onUnitClick={onUnitClick}
+            onStatusChanged={onStatusChanged}
             onUnitCreated={onUnitCreated}
             onPropertyDeleted={onPropertyDeleted}
             onPaymentRecorded={onPaymentRecorded}
