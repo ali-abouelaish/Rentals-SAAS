@@ -80,9 +80,9 @@ export function TenantsPage({ initialTenants, reminderStatus }: TenantsPageProps
     const s = filters.search.toLowerCase();
     return tenants.filter(
       (t) =>
-        t.full_name.toLowerCase().includes(s) ||
-        t.email.toLowerCase().includes(s) ||
-        t.phone.includes(s)
+        (t.full_name ?? "").toLowerCase().includes(s) ||
+        (t.email ?? "").toLowerCase().includes(s) ||
+        (t.phone ?? "").includes(s)
     );
   }, [tenants, filters]);
 

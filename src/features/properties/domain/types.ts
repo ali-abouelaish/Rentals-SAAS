@@ -131,7 +131,7 @@ export type Unit = {
   updated_at: string;
   property?: Property & { portfolio?: Portfolio | null };
   resident?: PropertyResident | null;
-  pm_tenant?: { id: string; full_name: string; email: string; phone: string } | null;
+  pm_tenant?: { id: string; full_name: string | null; email: string | null; phone: string | null } | null;
   current_contract?: {
     id: string;
     start_date: string;

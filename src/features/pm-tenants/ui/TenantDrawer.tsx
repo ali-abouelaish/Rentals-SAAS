@@ -86,9 +86,9 @@ function OverviewContent({
   } = useForm<PmTenantFormValues>({
     resolver: zodResolver(pmTenantSchema),
     defaultValues: {
-      full_name: tenant.full_name,
-      email: tenant.email,
-      phone: tenant.phone,
+      full_name: tenant.full_name ?? "",
+      email: tenant.email ?? "",
+      phone: tenant.phone ?? "",
       whatsapp_number: tenant.whatsapp_number ?? "",
       date_of_birth: tenant.date_of_birth ?? "",
       nationality: tenant.nationality ?? "",

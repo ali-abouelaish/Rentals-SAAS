@@ -16,13 +16,14 @@ import { createContract, uploadContractDocument } from "@/features/contracts/act
 import { contractSchema, type ContractFormValues } from "@/features/contracts/domain/schemas";
 import { ProRataField } from "@/features/contracts/ui/ProRataField";
 import { CONTRACT_STATUS_CONFIG, DEPOSIT_SCHEME_LABELS, SIGNING_METHOD_LABELS } from "@/features/contracts/domain/types";
+import { CreateTenantForUnitDialog } from "./CreateTenantForUnitDialog";
 import type { Unit } from "../domain/types";
 
 interface PmTenantOption {
   id: string;
-  full_name: string;
-  email: string;
-  phone: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 function RentPaymentsCard({ unit }: { unit: Unit }) {
@@ -112,8 +113,8 @@ function CreateContractDialog({
 
   const tenantOptions = pmTenants.map((t) => ({
     value: t.id,
-    label: t.full_name,
-    sublabel: t.phone,
+    label: t.full_name ?? "Unnamed tenant",
+    sublabel: t.phone ?? "",
   }));
 
   const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<ContractFormValues>({
@@ -383,27 +384,41 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
   const [linking, setLinking] = useState(false);
   const [search, setSearch] = useState("");
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
+  const [createTenantOpen, setCreateTenantOpen] = useState(false);
+  // Local copy so a tenant created inline appears in the picker without a reload.
+  const [tenants, setTenants] = useState<PmTenantOption[]>(pmTenants);
 
   const current = unit.pm_tenant ?? null;
+
+  // Shared link logic: assign a tenant to this unit and promote vacant statuses.
+  const linkTenant = async (tenant: PmTenantOption) => {
+    const vacantStatuses = ["available", "on_hold", "booked"];
+    const nextStatus = vacantStatuses.includes(unit.status) ? "occupied" : unit.status;
+    await updateUnit(unit.id, {
+      pm_tenant_id: tenant.id,
+      status: nextStatus,
+    } as never);
+    onUnitUpdated({ ...unit, pm_tenant_id: tenant.id, pm_tenant: tenant, status: nextStatus });
+  };
 
   const handleLink = (tenant: PmTenantOption) => {
     startTransition(async () => {
       try {
-        // Promote vacant-ish statuses to "occupied" so list/Kanban reflects the assignment.
-        const vacantStatuses = ["available", "on_hold", "booked"];
-        const nextStatus = vacantStatuses.includes(unit.status) ? "occupied" : unit.status;
-        await updateUnit(unit.id, {
-          pm_tenant_id: tenant.id,
-          status: nextStatus,
-        } as never);
-        onUnitUpdated({ ...unit, pm_tenant_id: tenant.id, pm_tenant: tenant, status: nextStatus });
+        await linkTenant(tenant);
         setLinking(false);
         setSearch("");
-        toast.success(`${tenant.full_name} linked to this unit`);
+        toast.success(`${tenant.full_name ?? "Tenant"} linked to this unit`);
       } catch {
         toast.error("Failed to link tenant");
       }
     });
+  };
+
+  const handleTenantCreated = async (tenant: PmTenantOption) => {
+    setTenants((prev) => [...prev, tenant]);
+    await linkTenant(tenant);
+    setLinking(false);
+    setSearch("");
   };
 
   const handleUnlink = () => {
@@ -423,13 +438,13 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
     });
   };
 
-  const filtered = pmTenants.filter((t) => {
+  const filtered = tenants.filter((t) => {
     if (!search.trim()) return true;
     const s = search.toLowerCase();
     return (
-      t.full_name.toLowerCase().includes(s) ||
-      t.email.toLowerCase().includes(s) ||
-      t.phone.toLowerCase().includes(s)
+      (t.full_name ?? "").toLowerCase().includes(s) ||
+      (t.email ?? "").toLowerCase().includes(s) ||
+      (t.phone ?? "").toLowerCase().includes(s)
     );
   });
 
@@ -441,13 +456,13 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
           <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset border border-border">
             <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
               <span className="text-sm font-bold text-brand">
-                {current.full_name.charAt(0).toUpperCase()}
+                {(current.full_name ?? "?").charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">{current.full_name}</p>
-              <p className="text-xs text-foreground-secondary truncate">{current.email}</p>
-              <p className="text-xs text-foreground-muted">{current.phone}</p>
+              <p className="text-sm font-semibold text-foreground">{current.full_name ?? "Unnamed tenant"}</p>
+              {current.email && <p className="text-xs text-foreground-secondary truncate">{current.email}</p>}
+              {current.phone && <p className="text-xs text-foreground-muted">{current.phone}</p>}
             </div>
             <button
               type="button"
@@ -483,7 +498,7 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
           open={contractDialogOpen}
           onClose={() => setContractDialogOpen(false)}
           unit={unit}
-          pmTenants={pmTenants}
+          pmTenants={tenants}
           preselectedTenantId={current.id}
           onCreated={(contract) => onUnitUpdated({ ...unit, current_contract: contract })}
         />
@@ -510,14 +525,23 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
           )}
         </div>
 
-        {pmTenants.length === 0 ? (
+        {tenants.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-8 text-center">
             <User className="h-8 w-8 text-foreground-muted mx-auto mb-2" />
-            <p className="text-sm text-foreground-secondary">No tenants found.</p>
+            <p className="text-sm text-foreground-secondary">No tenants yet.</p>
             <p className="text-xs text-foreground-muted mt-1">
-              Add tenants from the <span className="font-medium">Tenants</span> module first,
-              or approve a booking to auto-create one.
+              Create a tenant for this unit now, or approve a booking to auto-create one.
             </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setCreateTenantOpen(true)}
+              className="mt-3"
+            >
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+              Create new tenant
+            </Button>
           </div>
         ) : (
           <>
@@ -547,12 +571,14 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
                   >
                     <div className="h-8 w-8 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
                       <span className="text-xs font-bold text-brand">
-                        {t.full_name.charAt(0).toUpperCase()}
+                        {(t.full_name ?? "?").charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{t.full_name}</p>
-                      <p className="text-[11px] text-foreground-muted truncate">{t.email} · {t.phone}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{t.full_name ?? "Unnamed tenant"}</p>
+                      <p className="text-[11px] text-foreground-muted truncate">
+                        {[t.email, t.phone].filter(Boolean).join(" · ") || "No contact details"}
+                      </p>
                     </div>
                     {t.id === current?.id ? (
                       <Check className="h-4 w-4 text-brand shrink-0" />
@@ -566,8 +592,24 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
           </>
         )}
 
+        {/* Create a brand-new tenant and link it to this unit in one step */}
+        {tenants.length > 0 && (
+          <div className="pt-2 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCreateTenantOpen(true)}
+              className="w-full"
+            >
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+              Create new tenant
+            </Button>
+          </div>
+        )}
+
         {/* Allow creating contract without linking first */}
-        {!linking && pmTenants.length > 0 && (
+        {!linking && tenants.length > 0 && (
           <div className="pt-2 border-t border-border">
             <Button
               type="button"
@@ -587,8 +629,15 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
         open={contractDialogOpen}
         onClose={() => setContractDialogOpen(false)}
         unit={unit}
-        pmTenants={pmTenants}
+        pmTenants={tenants}
         onCreated={(contract) => onUnitUpdated({ ...unit, current_contract: contract })}
+      />
+
+      <CreateTenantForUnitDialog
+        open={createTenantOpen}
+        onClose={() => setCreateTenantOpen(false)}
+        unit={unit}
+        onCreatedAndLinked={handleTenantCreated}
       />
     </>
   );

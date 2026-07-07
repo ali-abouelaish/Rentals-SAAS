@@ -330,9 +330,9 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
                 defaultTenant={
                   contract.pm_tenant
                     ? {
-                        fullName: contract.pm_tenant.full_name,
-                        email: contract.pm_tenant.email,
-                        phone: contract.pm_tenant.phone,
+                        fullName: contract.pm_tenant.full_name ?? "",
+                        email: contract.pm_tenant.email ?? "",
+                        phone: contract.pm_tenant.phone ?? "",
                       }
                     : null
                 }
@@ -351,9 +351,9 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
                 defaultTenant={
                   contract.pm_tenant
                     ? {
-                        fullName: contract.pm_tenant.full_name,
-                        email: contract.pm_tenant.email,
-                        phone: contract.pm_tenant.phone,
+                        fullName: contract.pm_tenant.full_name ?? "",
+                        email: contract.pm_tenant.email ?? "",
+                        phone: contract.pm_tenant.phone ?? "",
                       }
                     : null
                 }

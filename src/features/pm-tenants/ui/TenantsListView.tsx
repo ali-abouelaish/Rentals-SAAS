@@ -125,8 +125,8 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
             )}
           >
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="font-medium text-foreground truncate">{tenant.full_name}</span>
-              <span className="text-[11px] text-foreground-muted truncate">{tenant.email}</span>
+              <span className="font-medium text-foreground truncate">{tenant.full_name ?? "Unnamed tenant"}</span>
+              <span className="text-[11px] text-foreground-muted truncate">{tenant.email ?? "—"}</span>
             </div>
 
             <div className="text-foreground-secondary text-xs truncate flex items-center">
@@ -146,7 +146,7 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
             <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
               <ReminderButton
                 pmTenantId={tenant.id}
-                tenantName={tenant.full_name}
+                tenantName={tenant.full_name ?? "Unnamed tenant"}
                 kind={status.kind}
                 daysOverdue={status.daysOverdue}
               />

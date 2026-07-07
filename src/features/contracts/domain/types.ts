@@ -66,7 +66,7 @@ export type PropertyContract = {
   created_at: string;
   updated_at: string;
   // joined
-  pm_tenant?: { id?: string; full_name: string; email: string; phone: string } | null;
+  pm_tenant?: { id?: string; full_name: string | null; email: string | null; phone: string | null } | null;
   unit?: {
     id?: string;
     room_number: string | null;

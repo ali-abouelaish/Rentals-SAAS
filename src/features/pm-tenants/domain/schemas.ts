@@ -38,6 +38,26 @@ export const pmTenantSchema = z.object({
 });
 export type PmTenantFormValues = z.infer<typeof pmTenantSchema>;
 
+// Lenient schema for the inline "quick create" flow in the property unit
+// Tenant tab. Every field is optional/nullable so an agent can onboard a tenant
+// into a room before their details are known. Email keeps a format check only
+// when a value is actually present.
+export const pmTenantQuickCreateSchema = z.object({
+  full_name: ns,
+  email: z.preprocess(
+    (v) => (v === "" ? null : v),
+    z.string().email("Valid email required").nullable().optional()
+  ),
+  phone: ns,
+  date_of_birth: nd,
+  nationality: ns,
+  employment_status: z.preprocess(
+    (v) => (v === "" ? null : v),
+    z.enum(["professional", "student", "self_employed", "unemployed", "other"]).nullable().optional()
+  ),
+});
+export type PmTenantQuickCreateValues = z.infer<typeof pmTenantQuickCreateSchema>;
+
 export const guarantorSchema = z.object({
   pm_tenant_id: z.string().uuid(),
   full_name: z.string().min(1, "Full name is required"),

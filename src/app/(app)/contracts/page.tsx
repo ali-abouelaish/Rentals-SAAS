@@ -29,7 +29,7 @@ export default async function ContractsRoute() {
 
     const tenants = pmTenants.map((t) => ({
       id: t.id,
-      full_name: t.full_name,
+      full_name: t.full_name ?? "Unnamed tenant",
     }));
 
     return (

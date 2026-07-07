@@ -34,9 +34,9 @@ function formatUnitLabel(unit: Unit): string {
 
 interface PmTenantOption {
   id: string;
-  full_name: string;
-  email: string;
-  phone: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 interface UnitDrawerProps {

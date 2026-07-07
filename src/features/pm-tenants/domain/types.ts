@@ -15,9 +15,9 @@ export type RightToRentType =
 export type PmTenant = {
   id: string;
   tenant_id: string;
-  full_name: string;
-  email: string;
-  phone: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
   whatsapp_number: string | null;
   date_of_birth: string | null;
   nationality: string | null;

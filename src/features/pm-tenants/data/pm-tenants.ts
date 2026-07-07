@@ -78,9 +78,9 @@ export async function getPmTenants(
   const s = filters.search.toLowerCase();
   return result.filter(
     (t) =>
-      t.full_name.toLowerCase().includes(s) ||
-      t.email.toLowerCase().includes(s) ||
-      t.phone.includes(s)
+      (t.full_name ?? "").toLowerCase().includes(s) ||
+      (t.email ?? "").toLowerCase().includes(s) ||
+      (t.phone ?? "").includes(s)
   );
 }
 

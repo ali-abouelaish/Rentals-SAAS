@@ -38,9 +38,9 @@ import { Key as KeyIcon } from "lucide-react";
 
 interface PmTenantOption {
   id: string;
-  full_name: string;
-  email: string;
-  phone: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 /* ─── lightbox ───────────────────────────────────────────── */

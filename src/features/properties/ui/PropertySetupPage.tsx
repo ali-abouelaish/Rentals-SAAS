@@ -19,6 +19,8 @@ import { saveUnitPhoto, deleteUnitPhoto } from "../actions/photos";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { UnitStatusBadge } from "./UnitStatusBadge";
+import { DeleteRoomButton } from "./DeleteRoomButton";
+import { AddRoomDialog } from "./AddRoomDialog";
 import type { Property, Unit, UnitPhoto } from "../domain/types";
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -83,9 +85,11 @@ const ROOM_TYPES = [
 function RoomSetupCard({
   unit: initialUnit,
   onUpdated,
+  onDeleted,
 }: {
   unit: Unit;
   onUpdated: (updated: Unit) => void;
+  onDeleted: (unitId: string) => void;
 }) {
   const [unit, setUnit] = useState(initialUnit);
   const [isEditing, setIsEditing] = useState(false);
@@ -230,13 +234,16 @@ function RoomSetupCard({
         <div className="flex items-center gap-2">
           <UnitStatusBadge status={unit.status} />
           {!isEditing && (
-            <button
-              type="button"
-              onClick={handleEdit}
-              className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-surface-inset hover:bg-surface-card transition-colors text-foreground-muted hover:text-foreground"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-surface-inset hover:bg-surface-card transition-colors text-foreground-muted hover:text-foreground"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <DeleteRoomButton unitId={unit.id} roomLabel={roomLabel} onDeleted={onDeleted} />
+            </>
           )}
         </div>
       </div>
@@ -487,6 +494,14 @@ export function PropertySetupPage({
     setUnits((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
   };
 
+  const handleUnitDeleted = (unitId: string) => {
+    setUnits((prev) => prev.filter((u) => u.id !== unitId));
+  };
+
+  const handleUnitCreated = (unit: Unit) => {
+    setUnits((prev) => [...prev, unit]);
+  };
+
   const configuredCount = units.filter((u) => !!(u.room_number || u.max_price_pcm)).length;
 
   const typeLabel =
@@ -516,6 +531,7 @@ export function PropertySetupPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <AddRoomDialog property={property} onCreated={handleUnitCreated} />
           <Link
             href={`/properties/${property.id}/edit`}
             className="flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
@@ -545,7 +561,7 @@ export function PropertySetupPage({
               </div>
               <p className="text-sm font-semibold text-foreground mb-1">No rooms yet</p>
               <p className="text-xs text-foreground-secondary max-w-xs mx-auto">
-                Add rooms from the Properties page after finishing setup.
+                Use the “Add room” button above to create rooms for this property.
               </p>
             </div>
           ) : (
@@ -554,6 +570,7 @@ export function PropertySetupPage({
                 key={unit.id}
                 unit={unit}
                 onUpdated={handleUnitUpdated}
+                onDeleted={handleUnitDeleted}
               />
             ))
           )}

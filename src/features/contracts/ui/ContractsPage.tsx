@@ -94,7 +94,7 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
       const s = filters.search.toLowerCase();
       result = result.filter(
         (c) =>
-          c.pm_tenant?.full_name.toLowerCase().includes(s) ||
+          c.pm_tenant?.full_name?.toLowerCase().includes(s) ||
           c.unit?.property.name.toLowerCase().includes(s)
       );
     }

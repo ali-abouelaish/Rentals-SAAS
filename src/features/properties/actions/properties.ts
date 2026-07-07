@@ -66,6 +66,30 @@ export async function updateProperty(id: string, values: Partial<PropertyFormVal
     .single();
   if (error) throw new Error(error.message);
 
+  // Keep room records in sync when an HMO's room count is raised. We only ever
+  // create the shortfall — never auto-delete, since removing a room cascades to
+  // its tenancy history. Reducing the count is handled by deleting specific
+  // rooms from the "Manage rooms" page.
+  if (data.property_type === "hmo" && typeof payload.total_rooms === "number") {
+    const { count } = await supabase
+      .from("units")
+      .select("id", { count: "exact", head: true })
+      .eq("property_id", id)
+      .eq("tenant_id", profile.tenant_id);
+    const existing = count ?? 0;
+    const shortfall = payload.total_rooms - existing;
+    if (shortfall > 0) {
+      const rooms = Array.from({ length: shortfall }, () => ({
+        tenant_id: profile.tenant_id,
+        property_id: id,
+        unit_type: "room" as const,
+        status: "available" as const,
+        furnishings: (data.furnished ? "furnished" : "unfurnished") as "furnished" | "unfurnished",
+      }));
+      await supabase.from("units").insert(rooms);
+    }
+  }
+
   revalidatePath("/properties");
   return data;
 }

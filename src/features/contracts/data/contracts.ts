@@ -35,7 +35,7 @@ export async function getContracts(
     const s = filters.search.toLowerCase();
     result = result.filter(
       (c) =>
-        c.pm_tenant?.full_name.toLowerCase().includes(s) ||
+        c.pm_tenant?.full_name?.toLowerCase().includes(s) ||
         c.unit?.property.name.toLowerCase().includes(s) ||
         c.unit?.property.address_line_1.toLowerCase().includes(s)
     );

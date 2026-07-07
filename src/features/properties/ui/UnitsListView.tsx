@@ -463,7 +463,7 @@ function UnitRow({
           {unit.pm_tenant_id || unit.pm_tenant?.id ? (
             <ReminderCell
               pmTenantId={(unit.pm_tenant?.id ?? unit.pm_tenant_id) as string}
-              tenantName={unit.pm_tenant?.full_name}
+              tenantName={unit.pm_tenant?.full_name ?? "Unnamed tenant"}
               status={reminderStatus[(unit.pm_tenant?.id ?? unit.pm_tenant_id) as string]}
             />
           ) : (

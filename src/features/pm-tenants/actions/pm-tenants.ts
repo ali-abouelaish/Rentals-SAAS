@@ -4,12 +4,36 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { pmTenantSchema, type PmTenantFormValues } from "../domain/schemas";
+import {
+  pmTenantSchema,
+  pmTenantQuickCreateSchema,
+  type PmTenantFormValues,
+  type PmTenantQuickCreateValues,
+} from "../domain/schemas";
 
 export async function createPmTenant(values: PmTenantFormValues) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
   const payload = pmTenantSchema.parse(values);
+
+  const { data, error } = await supabase
+    .from("pm_tenants")
+    .insert({ ...payload, tenant_id: profile.tenant_id })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/tenants");
+  return data;
+}
+
+// Quick create used by the inline "Create tenant" flow in the property unit
+// Tenant tab. Uses the lenient schema (all fields optional) so a tenant can be
+// created and linked to a unit before their full details are known.
+export async function createPmTenantQuick(values: PmTenantQuickCreateValues) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+  const payload = pmTenantQuickCreateSchema.parse(values);
 
   const { data, error } = await supabase
     .from("pm_tenants")
