@@ -30,6 +30,7 @@ export type FeatureKey =
   | "public_api_access"
   | "mydeposits"
   | "tds"
+  | "dps"
   | "forms"
   | "admin";
 
@@ -65,6 +66,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "public_api_access",
   "mydeposits",
   "tds",
+  "dps",
   "forms",
   "admin",
 ];
@@ -162,6 +164,10 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   tds: {
     label: "TDS Deposit Protection",
     description: "Protect tenancy deposits via the Tenancy Deposit Scheme (TDS Custodial) — register deposits, poll for the DAN, download DPC certificates, and raise repayment requests."
+  },
+  dps: {
+    label: "DPS Deposit Protection",
+    description: "Protect tenancy deposits via the Deposit Protection Service (DPS) — register tenancies, mark deposits for bank transfer with auto-allocation, and record protection."
   },
   help_center: {
     label: "Help Center",

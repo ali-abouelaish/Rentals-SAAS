@@ -1,6 +1,6 @@
 # DPS (Deposit Protection Service) Integration Plan
 
-**Status:** Discovery/planning only — no implementation yet.
+**Status:** IMPLEMENTED 2026-07-07 (all phases of §6; `tsc --noEmit` + `npm run build` clean). UAT probe (`scripts/dps-uat-probe.mjs`) validated the API contract with real test keys — see §8 for resolved questions. **Remaining manual steps:** apply the three `20260707*_dps_*` migrations to Supabase, set `DPS_TOKEN_SECRET` in production env, enter agency credentials under /admin/deposit-schemes, then run the §7 sandbox test plan through the UI.
 **Source docs:** `api docs/DPS/` (Computershare design notes: *Create Tenancy V3.2*, *Mark for Bank Transfer v1.1*, *API FAQs v1.0*).
 **Prior art:** `src/lib/mydeposits/` + `src/features/mydeposits/` (platform OAuth, Total Property API) and `src/lib/tds/` + `src/features/tds/` (per-agency static creds, Custodial API).
 
@@ -23,15 +23,15 @@ Documented paths (both POST, JSON body):
 
 - `/v1.0/tenancy/create` — create a tenancy (deposit registration)
 - `/v1.0/tenancy/MarkForBankTransfer` — flip a created tenancy from *Awaiting deposit payment* to *Awaiting bank transfer*
-- `/v1.0/connect/token` — OAuth token endpoint (host not explicitly stated; assumed same host — **open question Q3**)
+- `/v1.0/connect/token` — OAuth token endpoint (**verified on UAT**: same host as the tenancy endpoints)
 
 ### 1.2 Authentication
 
-OAuth 2.0 **client-credentials** flow:
+OAuth 2.0 **client-credentials** flow. **Verified against UAT 2026-07-07 — the design note's Basic-header instruction is wrong in practice:**
 
-1. `POST /v1.0/connect/token` with `Authorization: Basic base64(clientId:clientSecret)`, body `grant_type=client_credentials` (`application/x-www-form-urlencoded`).
-2. Response is a bearer token valid for **20 minutes**; reuse it for API calls until expiry.
-3. API calls send `Authorization: Bearer <token>`, `Content-Type: application/json`.
+1. `POST https://api-uat.depositprotection.com/v1.0/connect/token` with `grant_type`, `client_id`, and `client_secret` all in the `application/x-www-form-urlencoded` **body** (`client_secret_post`), **no Authorization header**. Sending the documented `Authorization: Basic …` header makes the gateway's JWT middleware reject the request with 401 `IDX12741: JWT must have three segments` before it reaches the token endpoint. (The Postman FAQ doc — "No Auth" + creds in body — describes the working behaviour.)
+2. Success is **HTTP 201** (not 200) with `{ access_token, token_type: "Bearer", expires_in: 1200 }` — the 20-minute expiry matches the docs; the token is a ~1.2 KB JWT.
+3. API calls send `Authorization: Bearer <token>`, `Content-Type: application/json`. These also return **201** on success.
 
 Credentials are **per agency**: each agency asks its DPS account manager for keys and receives one Client ID plus test and live client secrets by email. There is no software-provider/platform tier (same commercial model as TDS, different transport than TDS's path-embedded keys).
 
@@ -63,7 +63,15 @@ Cross-field validation DPS enforces (we should mirror in Zod):
 - GB mobiles: start `07`, exactly 11 digits; country code defaults to GB when omitted; other countries 9–15 digits (Tables 4/5).
 - Strings limited to alphanumerics + a documented Latin-1 special-character whitelist (Table 3) — reject/strip anything else (e.g. em-dashes, curly quotes from user input).
 
-**Success response:** the doc's example is literally `"deposit ID": "29933400" }` — malformed JSON with a space in the key (**open question Q1**). The deposit ID is 8 digits (per the MarkForBankTransfer doc's `DepositId` spec).
+**Success response (verified on UAT, HTTP 201):**
+
+```json
+{ "requestId": "7ae473bd-…", "response": { "depositId": "20475526" } }
+```
+
+Same `{requestId, response}` envelope as MarkForBankTransfer; `depositId` is an 8-digit string. (The doc's malformed `"deposit ID"` example is wrong.)
+
+**Date format (verified):** ISO `YYYY-MM-DD` is accepted — the design note's `DD/MM/YYYY` table entry is wrong (or both work; we send ISO). Additional undocumented rule surfaced by UAT validation: `DatePaid` **cannot be in the future** (nor before 01/01/1980) — combined with the documented before-start-date rule, valid range is `1980-01-01 ≤ DatePaid ≤ today` and `< TenancyStartDate`.
 
 **Error response (HTTP 400):**
 
@@ -281,33 +289,40 @@ Caveat first: **UAT is mock-only** — it validates and returns canned responses
 18. `dps_deposits` RLS: user from tenant B cannot read tenant A's rows; non-admin cannot mutate.
 19. Duplicate protect on the same contract → upserts the existing row (unique `contract_id`), no second DPS submission once `status='created'` (guard in the action — DPS has no idempotency key, Q6).
 
-## 8. Open questions for Debra Anderton (DPS) — blockers flagged
+## 8. Open questions — status after the 2026-07-07 UAT probe
 
-1. **[Blocker] Create success response shape.** The doc shows `"deposit ID": "29933400" }` — malformed JSON with a space in the key. What is the exact response body/key? Is the deposit ID always 8 numeric digits?
-2. **[Blocker] Date format.** Table 2 mandates `DD/MM/YYYY` for `TenancyStartDate`/`DatePaid`, but both JSON examples use ISO `YYYY-MM-DD`. Which is accepted (or both)?
-3. **[Blocker] Token endpoint URL.** §3.3 says `/v1.0/connect/token`, the example says `</oauth/token>`. Is the token endpoint `https://api-uat.depositprotection.com/v1.0/connect/token` (and the equivalent on prod)? Please confirm full URLs for both environments.
-4. Is there **any** way to read tenancy/deposit status via API (e.g. to detect *Protected* after the bank transfer clears), or retrieve the DPC/repayment ID? If not, we will treat protection confirmation as a manual step in our UI.
+### Resolved empirically (no DPS follow-up needed)
+
+1. ~~Create success response shape~~ — **`{ "requestId": "…", "response": { "depositId": "20475526" } }`**, HTTP 201. 8-digit string `depositId`.
+2. ~~Date format~~ — **ISO `YYYY-MM-DD` accepted.** We send ISO everywhere.
+3. ~~Token endpoint URL~~ — **`https://api-uat.depositprotection.com/v1.0/connect/token`** (prod assumed same path on `api.depositprotection.com`). **Auth is `client_secret_post` (creds in body, no Authorization header)** — the documented Basic header is rejected with 401 `IDX12741`. Success is HTTP 201, `expires_in: 1200`.
+7. ~~UAT testing depth~~ — **the mock `depositId` from create works against MarkForBankTransfer in UAT** (returned `paymentReference: "DP38773-92128"`), so the full two-call sequence is testable end to end.
+10. (Partially) `DatePaid` — UAT enforces an **undocumented not-in-the-future rule** ("cannot be in the future or before 01/01/1980") on top of the documented before-start rule. Remaining niggle for DPS: what should agents send when the deposit was genuinely paid on/after the tenancy start date?
+
+### Still open for Debra Anderton (none are build blockers)
+
+4. Is there **any** way to read tenancy/deposit status via API (e.g. to detect *Protected* after the bank transfer clears), or retrieve the DPC/repayment ID? If not, we treat protection confirmation as a manual step in our UI (current design).
 5. Rate limits or concurrency limits on the token and tenancy endpoints? Any limit on token issuance frequency?
-6. **Idempotency**: if the same tenancy is submitted twice (e.g. network retry), does DPS dedupe on `TenancyReference`, or are two tenancies created? Any recommended retry semantics?
-7. **UAT testing depth**: since test mode returns mocks and stores nothing, can the mock deposit ID from create be used against MarkForBankTransfer in UAT? Is there any way to do a true end-to-end test before go-live?
-8. `AgentLandlordId` — confirm this is the agency's own fixed DPS account number (one value per account), not a per-landlord ID.
+6. **Idempotency**: if the same tenancy is submitted twice (e.g. network retry), does DPS dedupe on `TenancyReference`, or are two tenancies created? Any recommended retry semantics? (Mitigated locally by the unique-`contract_id` guard.)
+8. `AgentLandlordId` — confirm this is the agency's own fixed DPS account number (one value per account), not a per-landlord ID. (Probe used the supplied agent ID 4251118 successfully, which supports the per-account reading.)
 9. Confirm scheme scope is England & Wales custodial only (postcode validation implies it) — agencies with Scottish/NI stock need a different scheme, which affects our UI messaging.
-10. `DatePaid` "must be before the tenancy start date" — strictly before, or is same-day accepted? In practice deposits are often paid on/after the start date; what should agents send then?
 11. Which scheme does the API register — **custodial only**, or can insured tenancies be created?
 12. MarkForBankTransfer batching: should the same `AllocationReference` be used across multiple deposits in one batch, and which reference (allocation or the returned `paymentReference`) must appear on the actual bank transfer?
-13. JSON property-name casing is inconsistent across the doc's examples (`Title` vs `title`, `MobileNumberCountryCode` vs `mobilenumber`, even `" Tenants"` with a leading space). Is binding case-insensitive?
+13. JSON property-name casing is inconsistent across the doc's examples — probe sent the documented mixed casing and it bound fine; assume case-insensitive binding but flag if anything odd appears.
 14. RelevantPerson mobile is specced 9–15 digits while tenant mobile is 11/11 for GB — confirm the rules differ intentionally.
-15. Does the 20-minute token get invalidated when a new one is issued (i.e. can two of our processes hold valid tokens concurrently)?
+15. Does the 20-minute token get invalidated when a new one is issued (i.e. can two of our processes hold valid tokens concurrently)? (Two probe runs minutes apart each got fresh tokens without error, so issuance isn't strictly serialized.)
 
-## 9. Assumptions made (due to doc gaps)
+## 9. Assumptions (updated after the UAT probe)
 
-- Token endpoint lives on the same hosts as the tenancy endpoints (Q3).
-- Create response is JSON containing a single deposit-ID field; we'll parse defensively (accept `depositId` / `DepositId` / `"deposit ID"`) until Q1 is answered.
-- We send ISO dates first (matches the examples); flip to `DD/MM/YYYY` if UAT rejects (Q2).
+Confirmed by probe (no longer assumptions): token endpoint host/path, `client_secret_post` auth, ISO dates, `response.depositId` shape, 201 success status, mock create→mark sequence in UAT.
+
+Remaining assumptions:
+
+- Production mirrors UAT exactly (`api.depositprotection.com`, same paths, same `client_secret_post` behaviour) — can only be confirmed at go-live with live keys.
 - One DPS account (client ID + `AgentLandlordId`) per tenant — hence `tenant_id` PK on `dps_connections`, same as both existing schemes.
 - In-memory token cache is sufficient (single Node process on VPS/PM2 — no serverless fan-out).
 - Protection confirmation is manual (Q4) — designed in from the start rather than bolted on.
-- Docs are dated 2018–2023; endpoints/validation may have drifted. Early UAT probing (step 2 of the sequence) is the mitigation.
+- UAT's mock validation reflects production validation rules (DPS's docs claim rules are identical in test and live).
 
 ## 10. Effort estimate
 

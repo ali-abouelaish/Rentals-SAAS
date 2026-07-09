@@ -12,6 +12,8 @@ const ERROR_LABELS: Record<string, string> = {
   missing_code: "The authorization response was incomplete. Please try again.",
   invalid_state: "Your connect session expired. Please try again.",
   connect_failed: "Could not complete the connection. Please try again.",
+  headless_not_supported:
+    "This account is set to headless (email/SMS) auth, which has no in-app connect flow yet. Connect via the mydeposits headless login script.",
 };
 
 export function MydepositsConnectionCard({ connection }: { connection: MydepositsConnection | null }) {

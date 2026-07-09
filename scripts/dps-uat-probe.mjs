@@ -27,7 +27,16 @@ if (!clientId || !clientSecret) {
   process.exit(1);
 }
 
-const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+// Empirical finding (2026-07-07): the design notes document Basic-header auth,
+// but the UAT gateway's JWT middleware rejects any non-Bearer Authorization
+// header (IDX12741). What actually works is client_secret_post — id + secret in
+// the form body, no Authorization header — exactly what the Postman FAQ doc
+// describes ("No Auth" + x-www-form-urlencoded body). Token comes back HTTP 201.
+const tokenForm = new URLSearchParams({
+  grant_type: "client_credentials",
+  client_id: clientId,
+  client_secret: clientSecret,
+});
 
 function redactToken(t) {
   if (typeof t !== "string") return t;
@@ -41,11 +50,10 @@ async function tryTokenEndpoint(path) {
     res = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${basic}`,
         "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
         Accept: "application/json",
       },
-      body: "grant_type=client_credentials",
+      body: tokenForm.toString(),
     });
   } catch (err) {
     console.log(`  ${path} -> network error: ${err.message}`);
@@ -56,6 +64,7 @@ async function tryTokenEndpoint(path) {
   try { body = JSON.parse(text); } catch { /* not JSON */ }
   const reqId = res.headers.get("x-request-id") || res.headers.get("request-id") || "";
   console.log(`  ${path} -> HTTP ${res.status}${reqId ? ` (requestId ${reqId})` : ""}`);
+  // UAT returns 201 (not 200) on token success.
   if (res.ok && body?.access_token) {
     console.log(
       `    access_token=${redactToken(body.access_token)} token_type=${body.token_type} expires_in=${body.expires_in}`
@@ -67,12 +76,13 @@ async function tryTokenEndpoint(path) {
 }
 
 function createPayload(dateStyle) {
-  // Dates: tenancy starts next month, deposit paid a week before start
-  // (doc says DatePaid must be before TenancyStartDate).
+  // Dates: UAT enforces DatePaid not-in-future ("cannot be in the future or
+  // before 01/01/1980") AND before TenancyStartDate → paid yesterday, start in
+  // 30 days.
   const start = new Date();
   start.setDate(start.getDate() + 30);
-  const paid = new Date(start);
-  paid.setDate(paid.getDate() - 7);
+  const paid = new Date();
+  paid.setDate(paid.getDate() - 1);
   const fmt = (d) =>
     dateStyle === "iso"
       ? d.toISOString().slice(0, 10)

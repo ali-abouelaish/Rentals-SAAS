@@ -77,12 +77,14 @@ async function requestCode(email, authMethod) {
   );
 }
 
-async function login(email, token, authMethod) {
-  hr("3) ui/login (exchange the login token for an authenticated session)");
+async function login(email, secret, authMethod) {
+  hr("3) ui/login (exchange the login secret for an authenticated session)");
+  // SMS(2) submits { code }; Email(1) submits { token: <magic-link GUID> }.
+  const credential = Number(authMethod) === 2 ? { code: secret } : { token: secret };
   const res = await fetch(`${AUTH_BASE}/api/v1/ui/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ email, authMethod, token, returnUrl: REDIRECT_URI }),
+    body: JSON.stringify({ authMethod, email, ...credential, returnUrl: REDIRECT_URI }),
     redirect: "manual",
   });
   const setCookies = res.headers.getSetCookie?.() ?? [];
@@ -94,7 +96,7 @@ async function login(email, token, authMethod) {
     return;
   }
 
-  hr("4) PROBE: authenticated /connect/authorize with the session cookie + PKCE");
+  hr("4) PROBE: authenticated authorize interaction (POST authorize -> consent -> code)");
   const verifier = codeVerifier();
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -105,32 +107,49 @@ async function login(email, token, authMethod) {
     code_challenge: codeChallenge(verifier),
     code_challenge_method: "S256",
   });
-  const authz = await fetch(`${AUTH_BASE}/connect/authorize?${params.toString()}`, {
-    headers: { Cookie: cookieHeader, Accept: "text/html" },
+  // authorize is POSTed (GET dead-ends on an empty 200 upstream); follow the
+  // interaction chain, granting consent (PUT /api/v1/ui/consent) when asked.
+  let res2 = await fetch(`${AUTH_BASE}/connect/authorize`, {
+    method: "POST",
+    headers: { Cookie: cookieHeader, "Content-Type": "application/x-www-form-urlencoded", Accept: "text/html" },
+    body: params.toString(),
     redirect: "manual",
   });
-  const location = authz.headers.get("location");
-  console.log(`GET /connect/authorize -> HTTP ${authz.status}`);
-  console.log(`Location: ${location ?? "(none)"}`);
-  console.log(
-    "Interpretation:\n" +
-      "  302 -> " + (REDIRECT_URI ?? "<redirect_uri>") + "?code=...  => redirect_uri IS registered; flow works.\n" +
-      "  302 -> .../error or /login          => session/redirect_uri rejected (read the error).\n" +
-      "  200 empty                            => gateway still blanks authorize even WITH a session."
-  );
-
   let code = null;
-  if (location) {
-    try {
-      code = new URL(location, AUTH_BASE).searchParams.get("code");
-    } catch {
-      /* non-URL Location */
+  let consentGrants = 0;
+  for (let hop = 0; hop < 6 && !code; hop++) {
+    const location = res2.headers.get("location");
+    console.log(`  hop ${hop}: HTTP ${res2.status} -> ${location ?? "(no location)"}`);
+    if (!location) break;
+    const target = new URL(location, AUTH_BASE);
+    code = target.searchParams.get("code");
+    if (code) break;
+    if (target.pathname.startsWith("/consent")) {
+      if (consentGrants >= 1) {
+        console.log("\n❌ CONSENT LOOP — consent granted but not honoured by authorize. Upstream client-config\n" +
+          "   bug (RequireConsent=true but empty scope list). Raise with mydeposits — see message below.");
+        break;
+      }
+      const returnUrl = target.searchParams.get("returnUrl");
+      const grant = await fetch(`${AUTH_BASE}/api/v1/ui/consent`, {
+        method: "PUT",
+        headers: { Cookie: cookieHeader, "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ deny: false, rememberConsent: true, returnUrl }),
+      });
+      const gj = await grant.json().catch(() => ({}));
+      console.log(`         consent PUT -> HTTP ${grant.status}, validReturnUrl=${gj.validReturnUrl ?? "(none)"}`);
+      if (!gj.validReturnUrl) break;
+      consentGrants++;
+      res2 = await fetch(new URL(gj.validReturnUrl, AUTH_BASE), { headers: { Cookie: cookieHeader, Accept: "text/html" }, redirect: "manual" });
+      continue;
     }
+    res2 = await fetch(target, { headers: { Cookie: cookieHeader, Accept: "text/html" }, redirect: "manual" });
   }
   if (!code) {
     console.log("\nNo authorization code obtained — token exchange cannot proceed via this path.");
     return;
   }
+  console.log(`\n✅ Got authorization code: ${code.slice(0, 14)}...`);
 
   hr("5) /connect/token (authorization_code grant)");
   const tok = await fetch(`${AUTH_BASE}/connect/token`, {

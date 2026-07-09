@@ -40,6 +40,7 @@ import { settingsBookingFormsArticle } from "./settings-booking-forms";
 import { settingsBankDetailsArticle } from "./settings-bank-details";
 import { teamArticle } from "./team";
 import { depositsTdsArticle } from "./deposits-tds";
+import { depositsDpsArticle } from "./deposits-dps";
 // Generic Forms module
 import { formsArticle } from "./forms";
 import { formsBuilderArticle } from "./forms-builder";
@@ -94,6 +95,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   settingsBankDetailsArticle,
   teamArticle,
   depositsTdsArticle,
+  depositsDpsArticle,
   // Generic Forms module
   formsArticle,
   formsBuilderArticle,

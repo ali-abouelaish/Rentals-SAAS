@@ -5,7 +5,7 @@
 import type { MdContext } from "@/lib/mydeposits/apiClient";
 import { MdApiError } from "@/lib/mydeposits/apiClient";
 import { getDeposit, getPayment } from "@/lib/mydeposits/realityStone";
-import { mapRemoteDepositStatus } from "@/lib/mydeposits/statusMap";
+import { mapRemoteDepositStatus, shouldAdvanceStatus } from "@/lib/mydeposits/statusMap";
 import type { MdProtection } from "../domain/types";
 
 export type PollResult = "advanced" | "unchanged" | "skipped" | "error";
@@ -48,7 +48,7 @@ export async function pollOneProtection(ctx: MdContext, row: MdProtection): Prom
     };
 
     let advanced = false;
-    if (mapped && mapped !== row.status) {
+    if (mapped && shouldAdvanceStatus(row.status, mapped)) {
       update.status = mapped;
       advanced = true;
 

@@ -5,17 +5,18 @@
 // blank /connect/authorize page (see project_mydeposits_sandbox_auth memory).
 // The flow:
 //
-//   1. getLoginOptions(email)                 GET  /api/v1/ui/login-options
-//   2. requestLoginCode({email, authMethod})  POST /api/v1/ui/request-login-code  (emails/SMSes a token)
-//   3. headlessLogin({email, authMethod, token}) POST /api/v1/ui/login            (sets the idsrv session cookie)
-//   4. codeFromSession(cookies) -> exchangeCode(...)  authenticated authorize + token
+//   1. getLoginOptions(email)                    GET  /api/v1/ui/login-options
+//   2. requestLoginCode({email, authMethod})     POST /api/v1/ui/request-login-code
+//   3. headlessLogin({email, authMethod, secret}) POST /api/v1/ui/login   (sets the idsrv session cookie)
+//        SMS(2): body { code }   Email(1): body { token: <magic-link GUID> }
+//   4. codeFromSession(cookies) -> exchangeCode(...)  POST authorize [-> consent] -> code -> token
 //
-// Steps 1-3 are CONFIRMED live against sandbox (structured JSON, not the gateway
-// blank). Step 4's exact contract is the open upstream question: we take the
-// most-likely path — replay the idsrv cookie against /connect/authorize+PKCE to
-// obtain a code, then reuse ./oauth.ts exchangeCode. Verify with
-// `scripts/mydeposits-headless-login.mjs` before relying on it; the final
-// /connect/token grant may differ (mydeposits.txt:1855 hints PKCE).
+// Steps 1-3 are CONFIRMED live against sandbox. Step 4 was reverse-engineered
+// from the login SPA bundle and confirmed up to the consent step: authorize must
+// be POSTed (GET dead-ends on empty 200), it 302s to /consent, consent is granted
+// with PUT /api/v1/ui/consent. The chain is currently BLOCKED upstream by a
+// client-config bug (consent required but empty scope list; grant not honoured →
+// /consent loop). See codeFromSession + project_mydeposits_sandbox_auth.
 //
 // Gated behind MYDEPOSITS_AUTH_MODE=headless — nothing calls this until the
 // connect route/UI opt in.
@@ -75,12 +76,25 @@ export type MdSession = {
  */
 export async function headlessLogin(
   env: MdEnvironment,
-  opts: { email: string; authMethod: MdAuthMethod; token: string; returnUrl?: string }
+  opts: { email: string; authMethod: MdAuthMethod; secret: string; returnUrl?: string }
 ): Promise<MdSession> {
+  // Body shape differs by method (reverse-engineered from the login SPA bundle,
+  // confirmed live): SMS submits { code } (the OTP, sandbox 1111); Email submits
+  // { token } (the magic-link GUID). The endpoint rejects an OTP sent as `token`
+  // ("could not be converted to System.Nullable[System.Guid]").
+  const credential =
+    opts.authMethod === MD_AUTH_METHOD.sms
+      ? { code: opts.secret }
+      : { token: opts.secret };
   const res = await fetch(`${mdUrls(env).authBase}${UI}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(opts),
+    body: JSON.stringify({
+      authMethod: opts.authMethod,
+      email: opts.email,
+      ...credential,
+      returnUrl: opts.returnUrl,
+    }),
     redirect: "manual",
   });
   const setCookies = res.headers.getSetCookie?.() ?? [];
@@ -91,17 +105,30 @@ export async function headlessLogin(
 }
 
 /**
- * Step 4a — replay the authenticated session against /connect/authorize (PKCE)
- * and pull the `code` out of the 302 to redirect_uri. Throws if authorize does
- * not 302 with a code (blank 200 / error), which is itself the diagnostic that
- * the browser-redirect assumption fails even with a valid session.
+ * Step 4 — drive the authenticated authorize interaction to a code. Reverse-
+ * engineered + confirmed live against sandbox:
+ *   - authorize must be POSTed (a GET dead-ends on an empty 200 upstream); it
+ *     302s into the interaction chain.
+ *   - the chain may pass through /consent, which is granted out-of-band with
+ *     PUT /api/v1/ui/consent { deny:false, returnUrl } → { validReturnUrl }.
+ *   - we follow the chain (max hops) until a Location carries ?code=.
+ *
+ * ⚠ As of this writing the sandbox client is misconfigured: it REQUIRES consent
+ * but the consent screen returns an empty scope list, and granting it is not
+ * honoured by /connect/authorize/callback — the chain loops back to /consent
+ * forever. That is a mydeposits-side client-config problem, surfaced here as the
+ * "consent loop" error. No request shape breaks it; it needs RequireConsent=false
+ * (or a fixed consent config) on their client. See project_mydeposits_sandbox_auth.
  */
+const MAX_AUTHZ_HOPS = 6;
+
 async function codeFromSession(
   env: MdEnvironment,
   cookies: string,
   redirectUri: string
 ): Promise<{ code: string; codeVerifier: string }> {
   const { clientId } = mdOAuthConfig();
+  const authBase = mdUrls(env).authBase;
   const codeVerifier = generateCodeVerifier();
   const params = new URLSearchParams({
     client_id: clientId,
@@ -112,27 +139,71 @@ async function codeFromSession(
     code_challenge: challengeFromVerifier(codeVerifier),
     code_challenge_method: "S256",
   });
-  const res = await fetch(`${mdUrls(env).authBase}/connect/authorize?${params.toString()}`, {
-    headers: { Cookie: cookies, Accept: "text/html" },
+
+  let res = await fetch(`${authBase}/connect/authorize`, {
+    method: "POST",
+    headers: {
+      Cookie: cookies,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "text/html",
+    },
+    body: params.toString(),
     redirect: "manual",
   });
-  const location = res.headers.get("location");
-  const code = location ? new URL(location, mdUrls(env).authBase).searchParams.get("code") : null;
-  if (!code) {
-    throw new Error(
-      `authenticated /connect/authorize did not return a code (HTTP ${res.status}, location=${location ?? "none"})`
-    );
+
+  let consentGrants = 0;
+  for (let hop = 0; hop < MAX_AUTHZ_HOPS; hop++) {
+    const location = res.headers.get("location");
+    if (!location) {
+      throw new Error(`authorize hop ${hop} did not redirect (HTTP ${res.status}).`);
+    }
+    const target = new URL(location, authBase);
+
+    const code = target.searchParams.get("code");
+    if (code) return { code, codeVerifier };
+
+    if (target.pathname.startsWith("/consent")) {
+      // Being sent back to /consent after already granting = the known upstream
+      // loop (consent required but grant not honoured). Fail fast with a clear cause.
+      if (consentGrants >= 1) {
+        throw new Error("consent loop — grant not honoured by authorize (mydeposits client-config issue).");
+      }
+      const returnUrl = target.searchParams.get("returnUrl");
+      const grant = await fetch(`${authBase}${UI}/consent`, {
+        method: "PUT",
+        headers: { Cookie: cookies, "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ deny: false, rememberConsent: true, returnUrl }),
+      });
+      const grantJson = (await grant.json().catch(() => ({}))) as { validReturnUrl?: string };
+      if (!grantJson.validReturnUrl) {
+        throw new Error(
+          `consent grant failed (HTTP ${grant.status}) — likely the client requires consent but the ` +
+            `scope list is empty (mydeposits client-config issue). See project_mydeposits_sandbox_auth.`
+        );
+      }
+      consentGrants++;
+      res = await fetch(new URL(grantJson.validReturnUrl, authBase), {
+        headers: { Cookie: cookies, Accept: "text/html" },
+        redirect: "manual",
+      });
+      continue;
+    }
+
+    // Any other in-flow hop (e.g. /connect/authorize/callback) — follow it.
+    res = await fetch(target, { headers: { Cookie: cookies, Accept: "text/html" }, redirect: "manual" });
   }
-  return { code, codeVerifier };
+
+  throw new Error(`authorize did not yield a code within ${MAX_AUTHZ_HOPS} hops (consent loop / upstream).`);
 }
 
 /**
- * Full headless connect: login token -> session -> code -> tokens.
+ * Full headless connect: login secret -> session -> code -> tokens.
+ * `secret` is the SMS OTP (authMethod 2) or the email magic-link GUID (method 1).
  * The final leg reuses ./oauth.ts exchangeCode (authorization_code grant).
  */
 export async function connectHeadless(
   env: MdEnvironment,
-  opts: { email: string; authMethod: MdAuthMethod; token: string }
+  opts: { email: string; authMethod: MdAuthMethod; secret: string }
 ): Promise<MdTokenSet> {
   const { redirectUri } = mdOAuthConfig();
   const { cookies } = await headlessLogin(env, { ...opts, returnUrl: redirectUri });

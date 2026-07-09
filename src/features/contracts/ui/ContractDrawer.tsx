@@ -16,6 +16,7 @@ import { GiveNoticeModal } from "./GiveNoticeModal";
 import { ProRataField } from "./ProRataField";
 import { SecureDepositWizard } from "@/features/mydeposits/ui/SecureDepositWizard";
 import { TdsProtectWizard } from "@/features/tds/ui/TdsProtectWizard";
+import { DpsProtectWizard } from "@/features/dps/ui/DpsProtectWizard";
 import { updateContract } from "../actions/contracts";
 import { regenerateContractPdf } from "../templates/actions/generate";
 import { contractSchema, type ContractFormValues } from "../domain/schemas";
@@ -372,6 +373,36 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
                       }
                     : null
                 }
+                startDate={contract.start_date}
+                endDate={contract.expiry_date}
+                resume={!!contract.deposit_scheme_ref && !contract.deposit_protected_date}
+              />
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/deposits">View status</Link>
+              </Button>
+            </div>
+          )}
+          {contract.deposit_scheme === "dps" && (
+            <div className="col-span-2 flex flex-wrap items-center gap-2 pt-1">
+              <DpsProtectWizard
+                contractId={contract.id}
+                depositPounds={contract.deposit || contract.unit?.deposit || 0}
+                rentPcm={contract.rent_pcm ?? null}
+                defaultTenant={
+                  contract.pm_tenant
+                    ? {
+                        fullName: contract.pm_tenant.full_name ?? "",
+                        email: contract.pm_tenant.email ?? "",
+                        phone: contract.pm_tenant.phone ?? "",
+                      }
+                    : null
+                }
+                defaultProperty={{
+                  street: contract.unit?.property?.address_line_1 ?? null,
+                  saon: contract.unit?.property?.address_line_2 ?? null,
+                  town: contract.unit?.property?.area ?? null,
+                  postcode: contract.unit?.property?.postcode ?? null,
+                }}
                 startDate={contract.start_date}
                 endDate={contract.expiry_date}
                 resume={!!contract.deposit_scheme_ref && !contract.deposit_protected_date}

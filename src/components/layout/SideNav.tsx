@@ -113,7 +113,7 @@ const PM_NAV_GROUPS: NavGroup[] = [
       { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
       { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
       { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
-      { href: "/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlementAny: ["mydeposits", "tds"] },
+      { href: "/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlementAny: ["mydeposits", "tds", "dps"] },
     ],
   },
   {

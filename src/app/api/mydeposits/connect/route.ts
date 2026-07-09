@@ -5,7 +5,7 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { generateCodeVerifier, challengeFromVerifier, randomState } from "@/lib/mydeposits/pkce";
 import { buildAuthorizeUrl } from "@/lib/mydeposits/oauth";
-import { mdOAuthConfig, resolveMdEnvironment } from "@/lib/mydeposits/config";
+import { mdOAuthConfig, resolveMdAuthMode, resolveMdEnvironment } from "@/lib/mydeposits/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +15,16 @@ const TEN_MIN_MS = 10 * 60 * 1000;
 
 export async function GET() {
   const profile = await requireRole([...ADMIN_ROLES]);
+
+  // The headless (email/SMS) auth mode has no interactive connect UI — it is
+  // driven manually via scripts/mydeposits-headless-login.mjs (see
+  // src/lib/mydeposits/headlessAuth.ts). Honour the flag explicitly rather than
+  // silently launching the browser redirect the operator opted out of.
+  if (resolveMdAuthMode() === "headless") {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    return NextResponse.redirect(`${appUrl}/settings/deposits?error=headless_not_supported`);
+  }
+
   const env = resolveMdEnvironment();
   const { redirectUri } = mdOAuthConfig();
 

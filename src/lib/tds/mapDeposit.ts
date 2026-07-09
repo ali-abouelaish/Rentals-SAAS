@@ -25,10 +25,11 @@ const CLASS_JOINT = "Joint Tenant";
 const CLASS_RELATED = "Related Party";
 const CLASS_LANDLORD = "Primary Landlord";
 
-// Doc inconsistency: the field table specifies DD-MM-YYYY, while the JSON
-// examples (and the repayment endpoint) use DD/MM/YYYY. We default to "/", which
-// the majority of examples use — flip this to "-" if the sandbox rejects
-// CreateDeposit on the date fields (the single most likely early failure).
+// Doc inconsistency: the field-table "Format" column says DD-MM-YYYY, while the
+// examples (and the repayment endpoint) use DD/MM/YYYY. VERIFIED against the
+// sandbox 2026-07-08 (scripts/tds-uat-probe.mjs): "-" fails CreateDepositStatus
+// with "<date> is not a valid date" on every date field; "/" reaches status
+// "created" and returns a DAN. So "/" is correct — do not change to "-".
 export const TDS_DATE_SEPARATOR: "/" | "-" = "/";
 
 /** yyyy-mm-dd (from an <input type="date">) → DD<sep>MM<sep>YYYY for TDS. */

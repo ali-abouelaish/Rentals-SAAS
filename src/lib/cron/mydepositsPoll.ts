@@ -45,13 +45,19 @@ export async function runMydepositsPoll(): Promise<MydepositsPollSummary> {
   const protectionRows = (protections ?? []) as MdProtection[];
   const releaseRows = (releases ?? []) as MdReleaseRequest[];
 
-  // One auth context per tenant.
-  const ctxCache = new Map<string, MdContext | null>();
-  async function ctxFor(tenantId: string): Promise<MdContext | null> {
-    if (ctxCache.has(tenantId)) return ctxCache.get(tenantId) ?? null;
-    const ctx = await getMdContext(tenantId).catch(() => null);
-    ctxCache.set(tenantId, ctx);
-    return ctx;
+  // One auth context per tenant. Cache the in-flight PROMISE (not the resolved
+  // value): the batch starts every row synchronously, so caching only after
+  // getMdContext resolves let N rows for one tenant each fire their own token
+  // refresh concurrently — and refresh-token rotation makes concurrent reuse
+  // invalidate the connection. Sharing the promise collapses them to one call.
+  const ctxCache = new Map<string, Promise<MdContext | null>>();
+  function ctxFor(tenantId: string): Promise<MdContext | null> {
+    let pending = ctxCache.get(tenantId);
+    if (!pending) {
+      pending = getMdContext(tenantId).catch(() => null);
+      ctxCache.set(tenantId, pending);
+    }
+    return pending;
   }
 
   let advanced = 0;

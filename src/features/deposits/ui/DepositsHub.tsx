@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { DepositsPage } from "@/features/mydeposits/ui/DepositsPage";
 import { TdsDepositsPanel } from "@/features/tds/ui/TdsDepositsPanel";
+import { DpsDepositsPanel } from "@/features/dps/ui/DpsDepositsPanel";
 import type {
   MdProtection,
   MdReleaseRequest,
@@ -11,6 +12,8 @@ import type {
 } from "@/features/mydeposits/domain/types";
 import type { TdsDeposit } from "@/features/tds/domain/deposit-types";
 import type { TdsConnectionSummary } from "@/features/tds/data/deposits";
+import type { DpsDeposit } from "@/features/dps/domain/deposit-types";
+import type { DpsConnectionSummary } from "@/features/dps/data/deposits";
 
 export type ProviderError = { message: string; missingTable: boolean };
 
@@ -25,6 +28,10 @@ export type MdProviderData =
 
 export type TdsProviderData =
   | { ok: true; deposits: TdsDeposit[]; connection: TdsConnectionSummary }
+  | { ok: false; error: ProviderError };
+
+export type DpsProviderData =
+  | { ok: true; deposits: DpsDeposit[]; connection: DpsConnectionSummary }
   | { ok: false; error: ProviderError };
 
 function ErrorState({ error }: { error: ProviderError }) {
@@ -65,6 +72,27 @@ function TdsSection({ data }: { data: TdsProviderData }) {
   );
 }
 
+function DpsSection({ data }: { data: DpsProviderData }) {
+  if (!data.ok) return <ErrorState error={data.error} />;
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10">
+          <ShieldCheck className="h-5 w-5 text-brand" />
+        </div>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">DPS Deposit Protection</h1>
+          <p className="text-xs text-foreground-secondary">
+            Register tenancies with the Deposit Protection Service, then pay by bank transfer or
+            via the DPS portal.
+          </p>
+        </div>
+      </div>
+      <DpsDepositsPanel deposits={data.deposits} connection={data.connection} />
+    </div>
+  );
+}
+
 function MdSection({ data }: { data: MdProviderData }) {
   if (!data.ok) return <ErrorState error={data.error} />;
   return (
@@ -83,20 +111,26 @@ function MdSection({ data }: { data: MdProviderData }) {
 export function DepositsHub({
   md,
   tds,
+  dps,
 }: {
   md: MdProviderData | null;
   tds: TdsProviderData | null;
+  dps: DpsProviderData | null;
 }) {
   const providers = [
     md ? ({ key: "mydeposits", label: "MyDeposits" } as const) : null,
     tds ? ({ key: "tds", label: "TDS" } as const) : null,
-  ].filter(Boolean) as { key: "mydeposits" | "tds"; label: string }[];
+    dps ? ({ key: "dps", label: "DPS" } as const) : null,
+  ].filter(Boolean) as { key: "mydeposits" | "tds" | "dps"; label: string }[];
 
-  const [active, setActive] = useState<"mydeposits" | "tds">(providers[0]?.key ?? "mydeposits");
+  const [active, setActive] = useState<"mydeposits" | "tds" | "dps">(
+    providers[0]?.key ?? "mydeposits"
+  );
 
   if (providers.length <= 1) {
     if (md) return <MdSection data={md} />;
     if (tds) return <TdsSection data={tds} />;
+    if (dps) return <DpsSection data={dps} />;
     return null;
   }
 
@@ -120,6 +154,7 @@ export function DepositsHub({
       </div>
       {active === "mydeposits" && md ? <MdSection data={md} /> : null}
       {active === "tds" && tds ? <TdsSection data={tds} /> : null}
+      {active === "dps" && dps ? <DpsSection data={dps} /> : null}
     </div>
   );
 }
