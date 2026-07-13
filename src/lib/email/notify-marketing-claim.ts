@@ -2,8 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { loadAgency } from "./agency-context";
 import { sendAgencyEmail } from "./agency-send";
 import { MissingContactEmailError } from "./contact";
-
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://harborops.co.uk").replace(/\/$/, "");
+import { getTenantAppUrl } from "./app-url";
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
@@ -125,7 +124,7 @@ export async function notifyMarketingClaim(claimId: string): Promise<void> {
       return;
     }
 
-    const url = `${APP_URL}/rentals/${rental.id}`;
+    const url = await getTenantAppUrl(claim.tenant_id, `/rentals/${rental.id}`);
     const html = renderHtml({
       claimantName: claimant?.display_name ?? "An agent",
       rentalCode: rental.code ?? "—",

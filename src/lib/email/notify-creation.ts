@@ -2,8 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { loadAgency } from "./agency-context";
 import { sendAgencyEmail } from "./agency-send";
 import { loadAgencyContactEmail, MissingContactEmailError } from "./contact";
-
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://harborops.co.uk").replace(/\/$/, "");
+import { getTenantAppUrl } from "./app-url";
 
 const GBP = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 const DATE_FMT = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -130,7 +129,7 @@ export async function notifyAgencyOfNewRental(rentalId: string): Promise<void> {
       ["Consultation fee", fmtMoney(rental.consultation_fee_amount)],
       ["Payment method", String(rental.payment_method ?? "—")],
     ];
-    const url = `${APP_URL}/rentals/${rental.id}`;
+    const url = await getTenantAppUrl(rental.tenant_id, `/rentals/${rental.id}`);
     await safelySend({
       tenantId: rental.tenant_id,
       subject: `New rental created — ${rental.code ?? "rental"}`,
@@ -170,7 +169,7 @@ export async function notifyAgencyOfNewBonus(bonusId: string): Promise<void> {
       ["Amount", fmtMoney(bonus.amount_owed)],
       ["Bonus date", fmtDate(bonus.bonus_date)],
     ];
-    const url = `${APP_URL}/bonuses/${bonus.id}`;
+    const url = await getTenantAppUrl(bonus.tenant_id, `/bonuses/${bonus.id}`);
     await safelySend({
       tenantId: bonus.tenant_id,
       subject: `New bonus created — ${bonus.code ?? "bonus"}`,
@@ -210,7 +209,7 @@ export async function notifyAgencyOfNewInvoice(invoiceId: string): Promise<void>
       ["Total", fmtMoney(invoice.total)],
       ["Balance due", fmtMoney(invoice.balance_due)],
     ];
-    const url = `${APP_URL}/invoices/${invoice.id}`;
+    const url = await getTenantAppUrl(invoice.tenant_id, `/invoices/${invoice.id}`);
     await safelySend({
       tenantId: invoice.tenant_id,
       subject: `New invoice created — ${invoice.invoice_number ?? "invoice"}`,
@@ -263,7 +262,7 @@ export async function notifyAgencyOfNewBooking(bookingId: string): Promise<void>
     }
     rows.push(["Submitted", fmtDate(booking.submitted_at)]);
 
-    const url = `${APP_URL}/bookings`;
+    const url = await getTenantAppUrl(booking.tenant_id, `/bookings`);
     await safelySend({
       tenantId: booking.tenant_id,
       subject: `New booking received — ${booking.booking_reference ?? "application"}`,

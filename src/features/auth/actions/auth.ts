@@ -13,6 +13,12 @@ export async function signInWithEmail(
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
+  // Optional post-login destination (e.g. a landlord deep link). Only accept a
+  // same-site absolute path — reject protocol-relative (`//host`) and
+  // backslash tricks (`/\host`) to avoid open redirects.
+  const nextRaw = String(formData.get("next") ?? "");
+  const nextPath = /^\/[^/\\]/.test(nextRaw) ? nextRaw : null;
+
   const supabase = createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   const headersList = headers();
@@ -68,19 +74,20 @@ export async function signInWithEmail(
         const baseDomain = portalDomainEnv.replace(/^https?:\/\//, "").replace(/\/$/, "");
         const targetHost = `${slug}.${baseDomain}`;
 
-        // If we're already on the correct tenant subdomain, just send them to dashboard.
+        // If we're already on the correct tenant subdomain, honor the deep
+        // link (or fall back to the dashboard).
         if (currentTenantFromHost === slug) {
-          redirect("/dashboard");
+          redirect(nextPath ?? "/dashboard");
         }
 
         const targetUrl = new URL(`https://${targetHost}`);
-        targetUrl.pathname = "/dashboard";
+        targetUrl.pathname = nextPath ?? "/dashboard";
         redirect(targetUrl.toString());
       }
     }
   }
 
-  redirect("/dashboard");
+  redirect(nextPath ?? "/dashboard");
 }
 
 export async function signUpWithEmail(formData: FormData) {

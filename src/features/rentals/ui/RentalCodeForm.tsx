@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2 } from "lucide-react";
+import { Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_TOTAL_SIZE_MB = 15;
@@ -33,6 +33,7 @@ export function RentalCodeForm({
   const [marketingAgentIds, setMarketingAgentIds] = useState<string[]>([""]);
   const [fee, setFee] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [createdCode, setCreatedCode] = useState<string | null>(null);
   const todayIso = new Date().toISOString().slice(0, 10);
 
   const hasMarketingAgent = marketingAgentIds.some((id) => id !== "");
@@ -140,7 +141,11 @@ export function RentalCodeForm({
       }
 
       if (result.ok) {
-        toast.success("Rental code created successfully");
+        const code = result.rentalCode?.code as string | undefined;
+        toast.success(
+          code ? `Rental ${code} created successfully` : "Rental code created successfully"
+        );
+        setCreatedCode(code ?? "");
         const form = document.getElementById("rental-code-form") as HTMLFormElement;
         form?.reset();
         setSourcingFiles([]);
@@ -179,6 +184,25 @@ export function RentalCodeForm({
       action={handleSubmit}
       className="space-y-4"
     >
+      {createdCode !== null && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 rounded-xl border border-success/30 bg-success/10 px-4 py-3"
+        >
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-success" strokeWidth={2} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {createdCode
+                ? `Rental ${createdCode} created successfully`
+                : "Rental created successfully"}
+            </p>
+            <p className="text-xs text-foreground-muted">
+              It now appears in the rental codes list below. You can create another one.
+            </p>
+          </div>
+        </div>
+      )}
+
       {nextCode && (
         <>
           <input type="hidden" name="code" value={nextCode} />
@@ -224,7 +248,10 @@ export function RentalCodeForm({
           step="0.01"
           min="0"
           value={fee}
-          onChange={(e) => setFee(e.target.value)}
+          onChange={(e) => {
+            setFee(e.target.value);
+            if (createdCode !== null) setCreatedCode(null);
+          }}
           required
         />
         <Select

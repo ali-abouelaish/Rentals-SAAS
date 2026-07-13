@@ -23,6 +23,10 @@ function LoginForm() {
   const [showPw, setShowPw] = useState(false);
   const searchParams = useSearchParams();
   const disabledNotice = searchParams?.get("disabled") === "1";
+  // Deep-link destination preserved through the auth bounce (e.g. a landlord
+  // link). Only forward a same-site absolute path.
+  const nextRaw = searchParams?.get("next") ?? "";
+  const nextPath = /^\/[^/\\]/.test(nextRaw) ? nextRaw : "";
 
   return (
     <AuthShell
@@ -36,6 +40,7 @@ function LoginForm() {
       }
     >
       <form action={formAction}>
+        {nextPath ? <input type="hidden" name="next" value={nextPath} /> : null}
         <div className="field">
           <label className="lab" htmlFor="login-email">Work email</label>
           <input

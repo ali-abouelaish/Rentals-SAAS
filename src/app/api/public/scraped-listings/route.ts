@@ -61,7 +61,11 @@ export async function GET(request: NextRequest) {
     return qq as T;
   };
 
-  const rowsQuery = applyFilters(supabase.from("scraped_listings").select("*", { count: "exact" }))
+  const rowsQuery = applyFilters(
+    supabase
+      .from("scraped_listings")
+      .select("*, landlord:landlords(name)", { count: "exact" })
+  )
     .order(orderColumn, { ascending })
     .range(offset, offset + limit - 1);
 
@@ -89,8 +93,16 @@ export async function GET(request: NextRequest) {
       .filter((id): id is string => Boolean(id))
   );
 
+  // Flatten the embedded landlord relation into a top-level `landlord_name` so
+  // the row shape stays flat for consumers.
+  const rows = ((data ?? []) as any[]).map((row) => {
+    const { landlord, ...rest } = row;
+    const rel = Array.isArray(landlord) ? landlord[0] : landlord;
+    return { ...rest, landlord_name: rel?.name ?? null };
+  });
+
   return NextResponse.json({
-    data: data ?? [],
+    data: rows,
     pagination: {
       limit,
       offset,

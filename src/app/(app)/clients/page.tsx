@@ -62,6 +62,22 @@ export default async function ClientsPage({
     return `/clients${qs ? `?${qs}` : ""}`;
   };
 
+  // Windowed page list: first, last, current ±1, with ellipsis gaps — keeps
+  // the pagination row from overflowing on small screens with many pages.
+  const pageItems: (number | "ellipsis")[] = (() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const items: (number | "ellipsis")[] = [1];
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+    if (start > 2) items.push("ellipsis");
+    for (let p = start; p <= end; p++) items.push(p);
+    if (end < totalPages - 1) items.push("ellipsis");
+    items.push(totalPages);
+    return items;
+  })();
+
   return (
     <div className="space-y-6">
       <RealtimeRefresher table="clients" />
@@ -188,7 +204,7 @@ export default async function ClientsPage({
 
       {/* ── Pagination ──────────────────────── */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
           {/* Previous */}
           {page > 1 ? (
             <Link
@@ -203,19 +219,28 @@ export default async function ClientsPage({
             </span>
           )}
 
-          {/* Page numbers */}
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <Link
-              key={p}
-              href={buildPageUrl(p)}
-              className={`h-9 w-9 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-base ${p === page
-                  ? "bg-brand text-brand-fg shadow-sm"
-                  : "bg-surface-card shadow-bento text-foreground-secondary hover:bg-surface-inset"
-                }`}
-            >
-              {p}
-            </Link>
-          ))}
+          {/* Page numbers (windowed to avoid overflow on small screens) */}
+          {pageItems.map((item, i) =>
+            item === "ellipsis" ? (
+              <span
+                key={`ellipsis-${i}`}
+                className="h-9 w-9 flex items-center justify-center text-sm text-foreground-muted"
+              >
+                …
+              </span>
+            ) : (
+              <Link
+                key={item}
+                href={buildPageUrl(item)}
+                className={`h-9 w-9 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-base ${item === page
+                    ? "bg-brand text-brand-fg shadow-sm"
+                    : "bg-surface-card shadow-bento text-foreground-secondary hover:bg-surface-inset"
+                  }`}
+              >
+                {item}
+              </Link>
+            )
+          )}
 
           {/* Next */}
           {page < totalPages ? (

@@ -18,6 +18,7 @@ const PUBLIC_PATHS = [
   "/api/support",
   "/support",
   "/auth/error",
+  "/go",
   "/s",
   "/api/shares",
   "/apply",
@@ -159,6 +160,10 @@ export async function middleware(request: NextRequest) {
   if (!user && !isPublic && !isApiRoute && !isApexLanding) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
+    // Preserve the intended destination so login can return the user here
+    // (deep links like /landlords/<id> should survive the auth bounce).
+    redirectUrl.search = "";
+    redirectUrl.searchParams.set("next", pathname + request.nextUrl.search);
     return withAuthCookies(response, NextResponse.redirect(redirectUrl));
   }
 

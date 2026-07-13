@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { templates, type CommunicationRequestEmailContext } from "./render";
 import { sendAgencyEmail } from "./agency-send";
 import { type Agency } from "./branding";
+import { getTenantAppUrl } from "./app-url";
 
 const REQUEST_TYPE_LABELS: Record<string, string> = {
   email_change: "Email change",
@@ -72,8 +73,7 @@ export async function notifyAgencyOfRequest(params: NotifyAgencyParams): Promise
     return;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://harborops.co.uk";
-  const requestUrl = `${appUrl.replace(/\/$/, "")}/inbox/${params.requestId}`;
+  const requestUrl = await getTenantAppUrl(params.agency.id, `/inbox/${params.requestId}`);
 
   const requestTypeLabel = REQUEST_TYPE_LABELS[params.requestType] ?? params.requestType;
   const ctx: CommunicationRequestEmailContext = {

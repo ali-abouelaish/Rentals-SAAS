@@ -28,9 +28,15 @@ export function AgentQrCard({ url }: { url: string }) {
   })();
 
   return (
-    <div className="flex items-center gap-5 overflow-hidden">
+    <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
       <div className="shrink-0 p-2 bg-white rounded-xl shadow-sm">
-        <QRCodeCanvas value={url} size={160} bgColor="#ffffff" fgColor="#1C2A39" />
+        <QRCodeCanvas
+          value={url}
+          size={160}
+          bgColor="#ffffff"
+          fgColor="#1C2A39"
+          className="!h-28 !w-28 sm:!h-40 sm:!w-40"
+        />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 mb-1.5">
