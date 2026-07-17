@@ -3,6 +3,7 @@ import { enqueueEmail } from "@/lib/email/outbox";
 import {
   generateTicketConfirmationEmail,
   generateTicketStatusChangeEmail,
+  generateTicketCommentEmail,
   generateLandlordP0AlertEmail,
   generatePropertyManagerTicketEmail,
 } from "@/lib/email/templates/maintenance";
@@ -262,6 +263,46 @@ export async function sendPropertyManagerTicketNotification(args: {
   await enqueueEmail({
     tenantId: bundle.ticket.tenantId,
     to: manager.email,
+    subject,
+    html,
+    text,
+  });
+}
+
+/**
+ * Queue an email to the tenant when staff comment on their ticket.
+ * No-op if the pm_tenant has no email on record.
+ */
+export async function sendTicketCommentNotification(args: {
+  ticketId: string;
+  authorName: string;
+  commentBody: string;
+}): Promise<void> {
+  const bundle = await loadTicketBundle(args.ticketId);
+  if (!bundle) {
+    console.warn("[notifications.ticketComment] ticket not found", args.ticketId);
+    return;
+  }
+  if (!bundle.pmTenant.email) {
+    console.warn(
+      "[notifications.ticketComment] pm_tenant has no email",
+      args.ticketId
+    );
+    return;
+  }
+
+  const { subject, html, text } = generateTicketCommentEmail({
+    reference: bundle.ticket.reference,
+    tenantFirstName: firstNameOf(bundle.pmTenant.fullName),
+    authorName: args.authorName,
+    agencyName: bundle.company.name,
+    commentBody: args.commentBody,
+    descriptionPreview: bundle.ticket.description,
+  });
+
+  await enqueueEmail({
+    tenantId: bundle.ticket.tenantId,
+    to: bundle.pmTenant.email,
     subject,
     html,
     text,

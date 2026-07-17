@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils/cn";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { createMaintenanceJob } from "../actions";
 import { JOB_CATEGORY_LABELS, JOB_PRIORITY_LABELS } from "../domain/types";
-import type { JobCategory, JobPriority } from "../domain/types";
+import type { JobCategory, JobPriority, MaintenanceSupplier } from "../domain/types";
 
 // ──────────────────────────────────────────────────────────
 // Schema
@@ -23,7 +23,7 @@ const schema = z.object({
   category: z.enum(["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "other"]),
   priority: z.enum(["low", "medium", "high", "critical"]),
   reported_by: z.string().optional(),
-  assigned_to: z.string().optional(),
+  supplier_id: z.string().optional(),
   scheduled_date: z.string().optional(),
 });
 
@@ -35,11 +35,12 @@ type FormValues = z.infer<typeof schema>;
 
 interface RaiseJobModalProps {
   properties: { id: string; name: string }[];
+  suppliers: MaintenanceSupplier[];
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function RaiseJobModal({ properties, onClose, onSuccess }: RaiseJobModalProps) {
+export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: RaiseJobModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -57,10 +58,14 @@ export function RaiseJobModal({ properties, onClose, onSuccess }: RaiseJobModalP
   });
 
   const selectedPropertyId = watch("property_id") ?? "";
+  const selectedSupplierId = watch("supplier_id") ?? "";
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true);
     try {
+      const supplier = values.supplier_id
+        ? suppliers.find((s) => s.id === values.supplier_id) ?? null
+        : null;
       const result = await createMaintenanceJob({
         property_id: values.property_id,
         title: values.title,
@@ -68,7 +73,8 @@ export function RaiseJobModal({ properties, onClose, onSuccess }: RaiseJobModalP
         category: values.category as JobCategory,
         priority: values.priority as JobPriority,
         reported_by: values.reported_by || null,
-        assigned_to: values.assigned_to || null,
+        assigned_to: supplier?.name ?? null,
+        supplier_id: supplier?.id ?? null,
         scheduled_date: values.scheduled_date || null,
       });
       if (result?.error) {
@@ -172,10 +178,13 @@ export function RaiseJobModal({ properties, onClose, onSuccess }: RaiseJobModalP
             />
           </div>
 
-          {/* Reported by + Assigned to */}
+          {/* Reported by + Assigned supplier */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Reported by</label>
+              <label className="block text-sm font-medium text-foreground mb-0.5">Reported by</label>
+              <p className="text-[11px] text-foreground-muted mb-1.5">
+                Optional. Tenant name or &lsquo;Staff&rsquo;.
+              </p>
               <input
                 {...register("reported_by")}
                 placeholder="Tenant name or 'Staff'"
@@ -183,12 +192,26 @@ export function RaiseJobModal({ properties, onClose, onSuccess }: RaiseJobModalP
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Assigned to</label>
-              <input
-                {...register("assigned_to")}
-                placeholder="Contractor or engineer"
-                className="w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50"
+              <label className="block text-sm font-medium text-foreground mb-0.5">Assign supplier</label>
+              <p className="text-[11px] text-foreground-muted mb-1.5">
+                Optional. Pick from your preferred suppliers.
+              </p>
+              <SearchableSelect
+                value={selectedSupplierId}
+                onChange={(val) => setValue("supplier_id", val, { shouldValidate: true })}
+                options={[
+                  { value: "", label: "Unassigned" },
+                  ...suppliers.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                    sublabel: JOB_CATEGORY_LABELS[s.trade],
+                  })),
+                ]}
+                placeholder="Unassigned"
               />
+              {errors.supplier_id && (
+                <p className="text-xs text-red-600 mt-1">{errors.supplier_id.message}</p>
+              )}
             </div>
           </div>
 

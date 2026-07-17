@@ -32,6 +32,7 @@ export type FeatureKey =
   | "tds"
   | "dps"
   | "forms"
+  | "tenant_portal"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -68,6 +69,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "tds",
   "dps",
   "forms",
+  "tenant_portal",
   "admin",
 ];
 
@@ -176,6 +178,11 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   forms: {
     label: "Forms",
     description: "Create and send fully customisable forms and view all responses.",
+  },
+  tenant_portal: {
+    label: "Tenant Portal",
+    description:
+      "Renter-facing portal at /portal — passwordless magic-link sign-in with tenancy summary, rent status and standing-order payment reference, maintenance tickets, deposit protection, and agency contact details.",
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

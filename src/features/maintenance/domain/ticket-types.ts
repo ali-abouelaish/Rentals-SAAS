@@ -45,7 +45,15 @@ export type MaintenanceTicketMessage = {
   created_at: string;
 };
 
+export type MaintenanceTicketComment = {
+  id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+};
+
 export type MaintenanceTicketDetail = MaintenanceTicketListItem & {
   attachments: MaintenanceTicketAttachment[];
   messages: MaintenanceTicketMessage[];
+  comments: MaintenanceTicketComment[];
 };

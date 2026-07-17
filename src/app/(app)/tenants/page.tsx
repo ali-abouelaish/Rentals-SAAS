@@ -4,6 +4,7 @@ import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
 import { getRentReminderStatusMap } from "@/features/reminders/data/status";
+import { getEntitlements } from "@/lib/entitlements/getEntitlements";
 import { TenantsPage } from "@/features/pm-tenants/ui/TenantsPage";
 
 export default async function TenantsRoute() {
@@ -12,8 +13,17 @@ export default async function TenantsRoute() {
 
   try {
     const tenants = await getPmTenants();
-    const reminderStatus = await getRentReminderStatusMap(tenants.map((t) => t.id));
-    return <TenantsPage initialTenants={tenants} reminderStatus={reminderStatus} />;
+    const [reminderStatus, entitlements] = await Promise.all([
+      getRentReminderStatusMap(tenants.map((t) => t.id)),
+      getEntitlements(),
+    ]);
+    return (
+      <TenantsPage
+        initialTenants={tenants}
+        reminderStatus={reminderStatus}
+        portalEnabled={entitlements.has("tenant_portal")}
+      />
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     const isMissingTable = message.includes("schema cache") || message.includes("does not exist");

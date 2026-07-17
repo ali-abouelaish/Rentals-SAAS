@@ -51,6 +51,7 @@ export const DATA_KEY_OPTIONS: DataKeyOption[] = [
   { source: "computed", key: "computed.today",                       label: "Today's date" },
   { source: "computed", key: "computed.deposit_protection_deadline", label: "Deposit protection deadline (start + 30d)" },
   { source: "computed", key: "computed.contract_id",                 label: "Contract ID" },
+  { source: "computed", key: "computed.standing_order_ref",          label: "Standing order reference", hint: "Reference the tenant puts on their rent standing order" },
 ];
 
 export const DATA_KEY_SET = new Set(DATA_KEY_OPTIONS.map((o) => o.key));

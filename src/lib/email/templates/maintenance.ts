@@ -171,6 +171,53 @@ ${summary}
 }
 
 // ───────────────────────────────────────────────────────────────
+// Tenant notification: staff commented on their ticket
+// ───────────────────────────────────────────────────────────────
+
+export type TicketCommentParams = {
+  reference: string;
+  tenantFirstName: string;
+  authorName: string;
+  agencyName: string;
+  commentBody: string;
+  descriptionPreview: string;
+};
+
+export function generateTicketCommentEmail(
+  p: TicketCommentParams
+): { subject: string; html: string; text: string } {
+  const subject = `Update on ${p.reference} from ${p.agencyName}`;
+  const summary = truncate(p.descriptionPreview);
+  const comment = truncate(p.commentBody, 2000);
+
+  const text = `Hi ${p.tenantFirstName},
+
+${p.authorName} at ${p.agencyName} left an update on your maintenance request ${p.reference}:
+
+"${comment}"
+
+Original request:
+${summary}
+
+You can see all updates any time in your tenant portal.
+
+— Maintenance Team`;
+
+  const html = wrapHtml(
+    subject,
+    `<p>Hi ${p.tenantFirstName},</p>
+<p><strong>${p.authorName}</strong> at ${p.agencyName} left an update on your maintenance request <strong>${p.reference}</strong>:</p>
+<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #2563eb;background:#eff6ff;color:#1e3a5f;">${comment}</blockquote>
+<p style="color:#333;"><strong>Original request</strong></p>
+<blockquote style="margin:0;padding:12px 16px;border-left:3px solid #e5e7eb;background:#f9fafb;color:#333;">${summary}</blockquote>
+<p>You can see all updates any time in your tenant portal.</p>
+<p style="color:#666;font-size:14px;margin-top:32px;">— Maintenance Team</p>`
+  );
+
+  return { subject, html, text };
+}
+
+// ───────────────────────────────────────────────────────────────
 // Landlord P0 alert
 // ───────────────────────────────────────────────────────────────
 

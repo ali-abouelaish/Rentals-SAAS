@@ -88,6 +88,7 @@ Required in `.env.local`:
 | `MYDEPOSITS_TOKEN_SECRET` | 32-byte hex key encrypting mydeposits tokens (`openssl rand -hex 32`) |
 | `TDS_TOKEN_SECRET` | 32-byte hex key encrypting per-agency TDS api keys (`openssl rand -hex 32`) |
 | `DPS_TOKEN_SECRET` | 32-byte hex key encrypting per-agency DPS client secrets (`openssl rand -hex 32`) |
+| `PORTAL_TOKEN_SECRET` | HMAC secret for renter portal magic-link + session tokens (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (shared; also used by `mydeposits-poll`) |
 
 For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`, and optionally `DEV_TENANT_NAME`.

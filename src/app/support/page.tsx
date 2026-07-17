@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Fraunces } from "next/font/google";
 import { resolveSupportTenantFromServer } from "@/features/support/data/resolveTenant";
-import { getSupportBootstrap } from "@/features/support/data/queries";
+import { getSupportBootstrap, getSupportPrefill } from "@/features/support/data/queries";
 import { SupportExperience } from "@/features/support/ui/SupportExperience";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ const fraunces = Fraunces({
 });
 
 interface PageProps {
-  searchParams: { companySlug?: string };
+  searchParams: { companySlug?: string; ctx?: string };
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -29,7 +29,14 @@ export default async function SupportPage({ searchParams }: PageProps) {
   const tenant = await resolveSupportTenantFromServer(searchParams.companySlug);
   if (!tenant) notFound();
 
-  const { properties } = await getSupportBootstrap(tenant.id);
+  // Renters arriving from the tenant portal carry a signed ctx token that
+  // pre-resolves their property/unit/identity; everyone else self-selects.
+  const prefill = searchParams.ctx
+    ? await getSupportPrefill(tenant.id, searchParams.ctx)
+    : null;
+  const { properties } = prefill
+    ? { properties: [] }
+    : await getSupportBootstrap(tenant.id);
 
   return (
     <div
@@ -123,6 +130,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
           company={{ id: tenant.id, name: tenant.name, slug: tenant.slug }}
           properties={properties}
           companySlugParam={searchParams.companySlug ?? null}
+          prefill={prefill}
         />
       </main>
 

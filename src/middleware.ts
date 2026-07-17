@@ -24,6 +24,8 @@ const PUBLIC_PATHS = [
   "/apply",
   "/f",
   "/preferences",
+  "/portal",
+  "/api/portal",
   "/tenant-not-found"
 ];
 
@@ -172,8 +174,13 @@ export async function middleware(request: NextRequest) {
     response.headers.set("x-tenant", tenantSlug);
   }
 
-  // Property share links must never be indexed by crawlers.
-  if (pathname.startsWith("/s/") || pathname === "/s") {
+  // Property share links and the renter portal must never be indexed by crawlers.
+  if (
+    pathname.startsWith("/s/") ||
+    pathname === "/s" ||
+    pathname.startsWith("/portal/") ||
+    pathname === "/portal"
+  ) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 

@@ -6,6 +6,7 @@ export type SearchResultKind =
   | "landlord"
   | "client"
   | "key"
+  | "supplier"
   | "action";
 
 export type SearchResult = {
@@ -40,6 +41,7 @@ export const KIND_LABELS: Record<Exclude<SearchResultKind, "action">, string> = 
   landlord: "Landlords",
   client: "Clients",
   key: "Keys",
+  supplier: "Suppliers",
 };
 
 // Order in which sections render in the dropdown / sheet.
@@ -51,6 +53,7 @@ export const KIND_ORDER: SearchResultKind[] = [
   "client",
   "landlord",
   "key",
+  "supplier",
   "action",
 ];
 
@@ -74,6 +77,8 @@ export function kindToHref(
       return `/clients/${id}`;
     case "key":
       return parentId ? `/properties/${parentId}` : `/keys`;
+    case "supplier":
+      return `/maintenance?supplier=${id}`;
     case "action":
       return "#";
   }

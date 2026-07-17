@@ -17,6 +17,7 @@ import cron from "node-cron";
 import { runRentReminders } from "./rentReminders";
 import { runMydepositsPoll } from "./mydepositsPoll";
 import { runTdsPoll } from "./tdsPoll";
+import { runArchiveCompletedTodos } from "./archiveTodos";
 
 const TIMEZONE = "Europe/London";
 
@@ -60,6 +61,7 @@ export function startCronScheduler(): void {
   cron.schedule("0 9 * * *", guarded("rent-reminders", runRentReminders), opts);
   cron.schedule("*/15 * * * *", guarded("mydeposits-poll", runMydepositsPoll), opts);
   cron.schedule("*/15 * * * *", guarded("tds-poll", runTdsPoll), opts);
+  cron.schedule("0 3 * * *", guarded("archive-todos", runArchiveCompletedTodos), opts);
 
-  console.log(`[cron] scheduler started (timezone ${TIMEZONE}): rent-reminders, mydeposits-poll, tds-poll`);
+  console.log(`[cron] scheduler started (timezone ${TIMEZONE}): rent-reminders, mydeposits-poll, tds-poll, archive-todos`);
 }

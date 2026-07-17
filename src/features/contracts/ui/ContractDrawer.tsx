@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useTransition } from "react";
-import { Pencil, Check, AlertTriangle, RefreshCw } from "lucide-react";
+import { Pencil, Check, AlertTriangle, RefreshCw, Copy } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -35,6 +35,38 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
     <div className="flex flex-col gap-0.5">
       <span className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">{label}</span>
       <span className="text-sm text-foreground">{value || "—"}</span>
+    </div>
+  );
+}
+
+// Read-only display of the tenancy's standing-order reference, with a copy button.
+// The reference is auto-generated (not a form field), so it has no validation UI.
+function StandingOrderRefRow({ value }: { value: string | null }) {
+  const [copied, setCopied] = useState(false);
+  if (!value) return null;
+  return (
+    <div className="col-span-2 flex flex-col gap-0.5">
+      <span
+        className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted"
+        title="Give this to the tenant to use as their standing-order reference so rent payments reconcile automatically against this tenancy on bank statements."
+      >
+        Standing order reference
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-mono text-foreground">{value}</span>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard?.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+          title="Copy reference"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-foreground-muted hover:text-foreground hover:bg-surface-inset"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+      </div>
     </div>
   );
 }
@@ -141,6 +173,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
               }
             />
             <InfoRow label="Signing method" value={contract.signing_method ? SIGNING_METHOD_LABELS[contract.signing_method] : null} />
+            <StandingOrderRefRow value={contract.standing_order_ref} />
           </div>
         </section>
         {contract.notes && (

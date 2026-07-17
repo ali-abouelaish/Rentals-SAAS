@@ -19,6 +19,10 @@ Contracts tracks every tenancy agreement — its term, rent, deposit and deposit
 5. **Close out a contract.** When a tenancy ends, run **closeout** to record the final state (and free up the unit).
 6. **Record rent.** Record rent payments and view estimated arrears for the contract's unit — these also surface in [Rent Collection](/rent-collection).
 
+## Standing order reference
+
+Every tenancy is assigned a unique **standing order reference** (e.g. \`MAPL-SMITH-7K9Q\`) shown on the contract's Overview tab, with a copy button. Give it to the tenant to use as the reference on their rent standing order: when it appears on a [Bank Statement](/rent-collection/statements) the payment reconciles straight to this tenancy instead of relying on a name-and-amount guess. It's also available as a merge field ("Standing order reference") on your tenancy-agreement template, so the signed agreement can tell the tenant exactly what to enter.
+
 ## Tips
 
 - Converting an application in [Bookings](/bookings) creates the contract for you — as a **draft** (room booked) or **active** (room occupied), depending on whether the tenant has signed and paid.

@@ -30,6 +30,8 @@ import type {
   DashboardActionSeverity,
   DashboardActionCategory,
 } from "@/features/profitability/domain/types";
+import { DashboardTodos } from "./DashboardTodos";
+import type { PmTodo } from "../domain/todos";
 
 // ──────────────────────────────────────────────────────────
 // Formatters
@@ -316,9 +318,12 @@ interface PMDashboardPageProps {
   data: DashboardData;
   userName: string;
   activity: ActivityFeedItem[];
+  todos: PmTodo[];
+  todoHistory: PmTodo[];
+  todoProperties: { id: string; name: string }[];
 }
 
-export function PMDashboardPage({ data, userName, activity }: PMDashboardPageProps) {
+export function PMDashboardPage({ data, userName, activity, todos, todoHistory, todoProperties }: PMDashboardPageProps) {
   const now = new Date();
   const today = now.toLocaleDateString("en-GB", {
     weekday: "long",
@@ -360,6 +365,13 @@ export function PMDashboardPage({ data, userName, activity }: PMDashboardPagePro
 
       {/* ── Needs attention today (action queue) ── */}
       <ActionQueue actions={data.actions} />
+
+      {/* ── To-do list ── */}
+      <DashboardTodos
+        initialTodos={todos}
+        initialHistory={todoHistory}
+        properties={todoProperties}
+      />
 
       {/* ── Compact KPI strip ── */}
       <KpiStrip data={data} />

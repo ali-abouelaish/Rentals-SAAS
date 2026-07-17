@@ -30,6 +30,7 @@ export type MaintenanceJob = {
   status: JobStatus;
   reported_by: string | null;
   assigned_to: string | null;
+  supplier_id: string | null;
   scheduled_date: string | null;
   resolved_date: string | null;
   total_cost: number; // pence
@@ -40,6 +41,20 @@ export type MaintenanceJob = {
   unit_label?: string | null;
   costs?: MaintenanceCost[];
   photos?: MaintenancePhoto[];
+  comments?: MaintenanceJobComment[];
+};
+
+export type MaintenanceSupplier = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  trade: JobCategory;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type MaintenanceCost = {
@@ -62,6 +77,16 @@ export type MaintenancePhoto = {
   url: string;
   caption: string | null;
   uploaded_at: string;
+};
+
+export type MaintenanceJobComment = {
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  author_user_id: string | null;
+  author_name: string;
+  body: string;
+  created_at: string;
 };
 
 export type MaintenanceSummary = {

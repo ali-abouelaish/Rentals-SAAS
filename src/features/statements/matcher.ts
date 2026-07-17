@@ -13,12 +13,14 @@ interface CandidateContract {
   landlord_name: string | null;
   portfolio_id: string | null;
   portfolio_name: string | null;
+  standing_order_ref: string | null;
 }
 
 interface CreditRow {
   id: string;
   description: string | null;
   amount_pence: number;
+  reference: string | null;
 }
 
 interface MatchRow {
@@ -41,6 +43,12 @@ function tokenizeName(name: string): string[] {
 function descriptionContainsAnyToken(description: string, tokens: string[]): boolean {
   const lower = description.toLowerCase();
   return tokens.some((t) => lower.includes(t));
+}
+
+// Uppercase + strip everything but letters/digits, so a standing-order reference
+// still matches however the bank formatted it (spaces, hyphens, casing removed).
+function normalizeRef(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 function scoreCandidate(credit: CreditRow, contract: CandidateContract): number {
@@ -69,7 +77,7 @@ async function fetchCandidateContracts(
     .from("property_contracts")
     .select(
       `
-        id, rent_pcm, pm_tenant_id, unit_id, start_date, status,
+        id, rent_pcm, pm_tenant_id, unit_id, start_date, status, standing_order_ref,
         pm_tenant:pm_tenants(full_name),
         unit:units!inner(
           property:properties!inner(
@@ -92,6 +100,7 @@ async function fetchCandidateContracts(
     pm_tenant_id: string;
     unit_id: string;
     start_date: string;
+    standing_order_ref: string | null;
     pm_tenant: { full_name: string } | null;
     unit: {
       property: {
@@ -124,6 +133,7 @@ async function fetchCandidateContracts(
       landlord_name: row.unit?.property?.manager_landlord?.full_name ?? null,
       portfolio_id: row.unit?.property?.portfolio_id ?? null,
       portfolio_name: row.unit?.property?.portfolio?.name ?? null,
+      standing_order_ref: row.standing_order_ref ?? null,
     }));
 }
 
@@ -136,7 +146,7 @@ export async function matchCredits(
 ): Promise<{ matched: number; flagged: number; unmatched: number }> {
   const { data: credits, error: cErr } = await supabase
     .from("bank_transactions")
-    .select("id, description, amount_pence")
+    .select("id, description, amount_pence, reference")
     .eq("upload_id", uploadId)
     .eq("transaction_type", "credit");
 
@@ -155,6 +165,49 @@ export async function matchCredits(
   let unmatched = 0;
 
   for (const credit of creditRows) {
+    // ── Exact standing-order reference pass (highest priority) ──
+    // Most banks bury the payer reference in the description, so search both
+    // the parsed reference and the description. A reference is an authoritative
+    // link to a tenancy, so it takes precedence over the fuzzy name+amount score.
+    const haystack = normalizeRef(`${credit.reference ?? ""} ${credit.description ?? ""}`);
+    const refHits = contracts.filter((c) => {
+      const ref = normalizeRef(c.standing_order_ref ?? "");
+      // Guard against degenerate short refs matching arbitrary digit runs.
+      return ref.length >= 6 && haystack.includes(ref);
+    });
+
+    if (refHits.length > 0) {
+      // >1 hit is ambiguous; a single hit is trusted only when the amount is in
+      // tolerance — a right-reference/wrong-amount credit is flagged for review.
+      const hit = refHits.length === 1 ? refHits[0] : null;
+      const expectedPence = hit ? Math.round(hit.rent_pcm * 100) : null;
+      const amountOk =
+        hit != null && Math.abs(credit.amount_pence - (expectedPence as number)) <= 500;
+
+      if (hit && amountOk) {
+        updates.push({
+          id: credit.id,
+          match_status: "matched",
+          matched_contract_id: hit.id,
+          matched_tenant_name: hit.tenant_name,
+          matched_property_address: hit.address || null,
+          matched_expected_pence: expectedPence,
+        });
+        matched++;
+      } else {
+        updates.push({
+          id: credit.id,
+          match_status: "flagged",
+          matched_contract_id: null,
+          matched_tenant_name: null,
+          matched_property_address: null,
+          matched_expected_pence: null,
+        });
+        flagged++;
+      }
+      continue;
+    }
+
     const scored = contracts
       .map((c) => ({ contract: c, score: scoreCandidate(credit, c) }))
       .filter((s) => s.score > 0)

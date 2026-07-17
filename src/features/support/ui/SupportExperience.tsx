@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import type {
   SupportActiveTicket,
   SupportPmTenant,
+  SupportPrefill,
   SupportProperty,
 } from "../domain/types";
 import { ChatWindow } from "./ChatWindow";
@@ -24,6 +25,9 @@ interface Props {
   company: { id: string; name: string; slug: string };
   properties: SupportProperty[];
   companySlugParam: string | null;
+  /** Set for renters arriving from the tenant portal — identity is already
+   *  verified, so the selection steps are skipped. */
+  prefill?: SupportPrefill | null;
 }
 
 const SERIF: React.CSSProperties = {
@@ -80,13 +84,15 @@ const stepPrompts: Record<Exclude<Step, "chatting" | "ready">, { eyebrow: string
   },
 };
 
-export function SupportExperience({ company, properties, companySlugParam }: Props) {
-  const [step, setStep] = useState<Step>("select_property");
-  const [propertyId, setPropertyId] = useState<string>("");
-  const [unitId, setUnitId] = useState<string>("");
-  const [pmTenantId, setPmTenantId] = useState<string>("");
+export function SupportExperience({ company, properties, companySlugParam, prefill }: Props) {
+  const [step, setStep] = useState<Step>(prefill ? "ready" : "select_property");
+  const [propertyId, setPropertyId] = useState<string>(prefill?.property.id ?? "");
+  const [unitId, setUnitId] = useState<string>(prefill?.unitId ?? "");
+  const [pmTenantId, setPmTenantId] = useState<string>(prefill?.tenant.id ?? "");
 
-  const [unitTenants, setUnitTenants] = useState<SupportPmTenant[]>([]);
+  const [unitTenants, setUnitTenants] = useState<SupportPmTenant[]>(
+    prefill ? [prefill.tenant] : []
+  );
   const [tenantsLoading, setTenantsLoading] = useState(false);
 
   const [activeTickets, setActiveTickets] = useState<SupportActiveTicket[]>([]);
@@ -98,9 +104,14 @@ export function SupportExperience({ company, properties, companySlugParam }: Pro
 
   const [error, setError] = useState<string | null>(null);
 
+  const allProperties = useMemo(
+    () => (prefill ? [prefill.property, ...properties] : properties),
+    [prefill, properties]
+  );
+
   const selectedProperty = useMemo(
-    () => properties.find((p) => p.id === propertyId) ?? null,
-    [properties, propertyId]
+    () => allProperties.find((p) => p.id === propertyId) ?? null,
+    [allProperties, propertyId]
   );
   const selectedUnit = useMemo(
     () => selectedProperty?.units.find((u) => u.id === unitId) ?? null,
@@ -175,7 +186,14 @@ export function SupportExperience({ company, properties, companySlugParam }: Pro
     }
   }
 
-  if (properties.length === 0) {
+  // Load the prefilled renter's open tickets on mount (normally triggered by
+  // the name-confirmation click they skipped).
+  useEffect(() => {
+    if (prefill) void loadActiveTickets(prefill.tenant.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (allProperties.length === 0) {
     return (
       <div className="rounded-3xl border border-border bg-surface-card p-10 text-center shadow-sm">
         <h1
@@ -212,7 +230,24 @@ export function SupportExperience({ company, properties, companySlugParam }: Pro
 
   return (
     <div className="space-y-8">
-      {step !== "chatting" && (
+      {/* Renters arriving from the tenant portal get a way back to it. */}
+      {prefill && (
+        <div>
+          <a
+            href={`/portal${
+              companySlugParam
+                ? `?companySlug=${encodeURIComponent(companySlugParam)}`
+                : ""
+            }`}
+            className="group inline-flex items-center gap-1.5 text-xs font-medium text-foreground-secondary transition hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 transition group-hover:-translate-x-0.5" />
+            Back to your portal
+          </a>
+        </div>
+      )}
+
+      {step !== "chatting" && !prefill && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {[0, 1, 2].map((i) => (
@@ -262,7 +297,7 @@ export function SupportExperience({ company, properties, companySlugParam }: Pro
           >
             <StepHeader {...stepPrompts.select_property} icon={<MapPin className="h-3.5 w-3.5" />} />
             <CardList>
-              {properties.map((p, idx) => (
+              {allProperties.map((p, idx) => (
                 <SelectionCard
                   key={p.id}
                   index={idx}
@@ -431,26 +466,55 @@ export function SupportExperience({ company, properties, companySlugParam }: Pro
                   {activeTickets.map((t) => (
                     <li
                       key={t.reference}
-                      className="flex items-start justify-between gap-3 rounded-2xl bg-surface-inset/50 p-3.5"
+                      className="rounded-2xl bg-surface-inset/50 p-3.5"
                     >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] text-foreground-muted">
-                            {t.reference}
-                          </span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ring-1 ring-inset ${priorityBadge(t.priority)}`}
-                          >
-                            {t.priority}
-                          </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[11px] text-foreground-muted">
+                              {t.reference}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ring-1 ring-inset ${priorityBadge(t.priority)}`}
+                            >
+                              {t.priority}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-sm text-foreground">
+                            {t.descriptionPreview}
+                          </p>
                         </div>
-                        <p className="mt-1 line-clamp-2 text-sm text-foreground">
-                          {t.descriptionPreview}
-                        </p>
+                        <span className="shrink-0 text-xs capitalize text-foreground-secondary">
+                          {t.status.replace(/_/g, " ")}
+                        </span>
                       </div>
-                      <span className="shrink-0 text-xs capitalize text-foreground-secondary">
-                        {t.status.replace(/_/g, " ")}
-                      </span>
+
+                      {t.updates.length > 0 && (
+                        <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+                          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+                            Updates from {company.name}
+                          </p>
+                          {t.updates.map((u, i) => (
+                            <div
+                              key={i}
+                              className="rounded-xl border border-border bg-surface-card px-3 py-2.5"
+                            >
+                              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                                {u.body}
+                              </p>
+                              <p className="mt-1 text-[11px] text-foreground-muted">
+                                {u.authorName} ·{" "}
+                                {new Date(u.createdAt).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -4,11 +4,12 @@ import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getAllMaintenanceJobs } from "@/features/maintenance/data/queries";
 import { getAllMaintenanceTickets } from "@/features/maintenance/data/tickets";
+import { getAllSuppliers } from "@/features/maintenance/data/suppliers";
 import { MaintenancePage } from "@/features/maintenance/ui/MaintenancePage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface Props {
-  searchParams: { job?: string; ticket?: string };
+  searchParams: { job?: string; ticket?: string; supplier?: string };
 }
 
 export default async function MaintenanceRoute({ searchParams }: Props) {
@@ -16,9 +17,10 @@ export default async function MaintenanceRoute({ searchParams }: Props) {
   await requireModuleAccess("property_management");
 
   try {
-    const [jobs, tickets, propertiesResult] = await Promise.all([
+    const [jobs, tickets, suppliers, propertiesResult] = await Promise.all([
       getAllMaintenanceJobs(),
       getAllMaintenanceTickets(),
+      getAllSuppliers(),
       (async () => {
         try {
           const supabase = createSupabaseServerClient();
@@ -34,9 +36,11 @@ export default async function MaintenanceRoute({ searchParams }: Props) {
       <MaintenancePage
         jobs={jobs}
         tickets={tickets}
+        suppliers={suppliers}
         properties={propertiesResult}
         initialJobId={searchParams.job}
         initialTicketId={searchParams.ticket}
+        initialSupplierId={searchParams.supplier}
       />
     );
   } catch (err) {

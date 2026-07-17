@@ -3,8 +3,10 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { sendTicketStatusChange } from "@/features/support/data/notifications";
 
 // ──────────────────────────────────────────────────────────
 // Zod Schemas
@@ -23,6 +25,7 @@ const JobBaseSchema = z.object({
   priority: z.enum(PRIORITIES),
   reported_by: z.string().nullable().optional(),
   assigned_to: z.string().nullable().optional(),
+  supplier_id: z.string().uuid().nullable().optional(),
   scheduled_date: z.string().nullable().optional(),
 });
 
@@ -46,6 +49,73 @@ const JobCostSchema = z.object({
 // ──────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────
+
+/** How a job status is reflected on a ticket promoted into it. A job moved
+ *  back to "open" still means the ticket has been seen → acknowledged. */
+const JOB_TO_TICKET_STATUS: Record<string, string> = {
+  open: "acknowledged",
+  in_progress: "in_progress",
+  pending_parts: "pending_parts",
+  pending_quote: "pending_quote",
+  resolved: "resolved",
+  closed: "closed",
+};
+
+/**
+ * Mirror a job status change onto any ticket linked to it (via
+ * maintenance_tickets.job_id) and email the tenant. Skips tickets staff
+ * cancelled deliberately. Uses the admin client — ticket writes go through
+ * it everywhere (see the seen/status API routes) — scoped by tenant_id.
+ * Failures are logged, never propagated: the job update already succeeded.
+ */
+async function syncLinkedTicketStatus(
+  tenantId: string,
+  jobId: string,
+  newJobStatus: string
+): Promise<void> {
+  const ticketStatus = JOB_TO_TICKET_STATUS[newJobStatus];
+  if (!ticketStatus) return;
+
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data: tickets, error } = await admin
+      .from("maintenance_tickets")
+      .select("id, status")
+      .eq("tenant_id", tenantId)
+      .eq("job_id", jobId);
+    if (error) throw error;
+
+    for (const ticket of tickets ?? []) {
+      const oldStatus = ticket.status as string;
+      if (oldStatus === ticketStatus || oldStatus === "cancelled") continue;
+
+      const updates: Record<string, unknown> = { status: ticketStatus };
+      if (ticketStatus === "resolved" || ticketStatus === "closed") {
+        updates.resolved_at = new Date().toISOString();
+      }
+      const { error: updateErr } = await admin
+        .from("maintenance_tickets")
+        .update(updates)
+        .eq("id", ticket.id);
+      if (updateErr) {
+        console.error("[maintenance.ticket-sync]", updateErr);
+        continue;
+      }
+
+      try {
+        await sendTicketStatusChange({
+          ticketId: ticket.id as string,
+          oldStatus,
+          newStatus: ticketStatus,
+        });
+      } catch (emailErr) {
+        console.error("[maintenance.ticket-sync-email]", emailErr);
+      }
+    }
+  } catch (err) {
+    console.error("[maintenance.ticket-sync]", err);
+  }
+}
 
 async function recomputeJobTotal(supabase: ReturnType<typeof createSupabaseServerClient>, jobId: string) {
   const { data } = await supabase
@@ -81,6 +151,7 @@ export async function createMaintenanceJob(raw: z.infer<typeof NewJobSchema>) {
     status: "open",
     reported_by: d.reported_by ?? null,
     assigned_to: d.assigned_to ?? null,
+    supplier_id: d.supplier_id ?? null,
     scheduled_date: d.scheduled_date ?? null,
     total_cost: 0,
   });
@@ -96,7 +167,6 @@ export async function updateMaintenanceJob(
   raw: z.infer<typeof UpdateJobSchema>
 ) {
   const profile = await requireRole([...ADMIN_ROLES]);
-  void profile; // tenant scoping enforced by RLS
   const parsed = UpdateJobSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? "Invalid data" };
   const d = parsed.data;
@@ -109,6 +179,7 @@ export async function updateMaintenanceJob(
     priority: d.priority,
     reported_by: d.reported_by ?? null,
     assigned_to: d.assigned_to ?? null,
+    supplier_id: d.supplier_id ?? null,
     scheduled_date: d.scheduled_date ?? null,
     updated_at: new Date().toISOString(),
   };
@@ -124,13 +195,17 @@ export async function updateMaintenanceJob(
   const { error } = await supabase.from("maintenance_jobs").update(updates).eq("id", id);
   if (error) return { error: error.message };
 
+  if (d.status !== undefined) {
+    await syncLinkedTicketStatus(profile.tenant_id, id, d.status);
+  }
+
   revalidatePath("/maintenance");
   revalidatePath("/dashboard");
   return { success: true };
 }
 
 export async function updateJobStatus(jobId: string, newStatus: string) {
-  await requireRole([...ADMIN_ROLES]);
+  const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
   const updates: Record<string, unknown> = {
@@ -143,6 +218,8 @@ export async function updateJobStatus(jobId: string, newStatus: string) {
 
   const { error } = await supabase.from("maintenance_jobs").update(updates).eq("id", jobId);
   if (error) return { error: error.message };
+
+  await syncLinkedTicketStatus(profile.tenant_id, jobId, newStatus);
 
   revalidatePath("/maintenance");
   revalidatePath("/dashboard");
@@ -312,13 +389,40 @@ export async function promoteTicketToJob(ticketId: string) {
   const ticketUpdates: Record<string, unknown> = { job_id: job.id };
   if (ticket.status === "open") ticketUpdates.status = "acknowledged";
 
-  const { error: linkErr } = await supabase
+  // Link via the admin client (ticket writes go through it everywhere — see
+  // the seen/status API routes) and only if the ticket is still unlinked.
+  // `.select("id")` verifies a row was actually updated: a zero-row update
+  // (concurrent convert, or a silent RLS mismatch) must not "succeed", or
+  // the ticket stays convertible and every convert spawns another job.
+  const admin = createSupabaseAdminClient();
+  const { data: linked, error: linkErr } = await admin
     .from("maintenance_tickets")
     .update(ticketUpdates)
-    .eq("id", ticketId);
-  if (linkErr) {
+    .eq("id", ticketId)
+    .eq("tenant_id", profile.tenant_id)
+    .is("job_id", null)
+    .select("id");
+  if (linkErr || !linked || linked.length === 0) {
     await supabase.from("maintenance_jobs").delete().eq("id", job.id);
-    return { error: linkErr.message };
+    return {
+      error:
+        linkErr?.message ??
+        "This ticket has already been converted to a job. Refresh to see the linked job.",
+    };
+  }
+
+  // Tell the tenant their request has been acknowledged (no-op for other
+  // transitions); a delivery failure must not block the conversion.
+  if (ticket.status === "open") {
+    try {
+      await sendTicketStatusChange({
+        ticketId,
+        oldStatus: "open",
+        newStatus: "acknowledged",
+      });
+    } catch (emailErr) {
+      console.error("[maintenance.promote-email]", emailErr);
+    }
   }
 
   revalidatePath("/maintenance");

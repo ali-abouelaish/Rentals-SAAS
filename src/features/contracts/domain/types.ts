@@ -41,6 +41,7 @@ export type PropertyContract = {
   prepaid_first_full_month: boolean;
   deposit_scheme: DepositScheme;
   deposit_scheme_ref: string | null;
+  standing_order_ref: string | null;
   deposit_protected_date: string | null;
   deposit_protection_deadline: string | null;
   deposit_protection_alert: boolean;

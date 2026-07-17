@@ -33,8 +33,12 @@ import {
   JOB_STATUS_COLORS,
   JOB_CATEGORY_LABELS,
 } from "../domain/types";
-import type { MaintenanceJob, JobStatus, MaintenanceCost } from "../domain/types";
+import type { MaintenanceJob, JobStatus, MaintenanceCost, MaintenanceSupplier } from "../domain/types";
 import { updateJobStatus, addJobCost, deleteJobCost, deleteJobPhoto, uploadJobPhoto } from "../actions";
+import { assignSupplierToJob } from "../actions/suppliers";
+import { addJobComment, deleteJobComment } from "../actions/comments";
+import { CommentsPanel } from "./CommentsPanel";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // ──────────────────────────────────────────────────────────
@@ -235,16 +239,18 @@ function StatusSelector({ current, jobId, onChanged }: StatusSelectorProps) {
 
 interface JobDrawerProps {
   job: MaintenanceJob | null;
+  suppliers: MaintenanceSupplier[];
   open: boolean;
   onClose: () => void;
   onJobUpdated: (updated: Partial<MaintenanceJob> & { id: string }) => void;
 }
 
-export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) {
+export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDrawerProps) {
   const [showAddCost, setShowAddCost] = useState(false);
   const [deletingCostId, setDeletingCostId] = useState<string | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [assigningSupplier, setAssigningSupplier] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   if (!job) return null;
@@ -284,6 +290,47 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
     }
   }
 
+  async function handleAddComment(body: string): Promise<string | null> {
+    const result = await addJobComment(job!.id, body);
+    if (result?.error || !result?.comment) {
+      return result?.error ?? "Couldn't post note";
+    }
+    toast.success("Note added");
+    onJobUpdated({ id: job!.id, comments: [...(job!.comments ?? []), result.comment] });
+    return null;
+  }
+
+  async function handleDeleteComment(commentId: string): Promise<string | null> {
+    const result = await deleteJobComment(commentId);
+    if (result?.error) return result.error;
+    toast.success("Note deleted");
+    onJobUpdated({
+      id: job!.id,
+      comments: (job!.comments ?? []).filter((c) => c.id !== commentId),
+    });
+    return null;
+  }
+
+  async function handleAssignSupplier(supplierId: string) {
+    const newId = supplierId || null;
+    if (newId === (job!.supplier_id ?? null)) return;
+    setAssigningSupplier(true);
+    try {
+      const result = await assignSupplierToJob(job!.id, newId);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success(newId ? "Supplier assigned" : "Supplier unassigned");
+        onJobUpdated({
+          id: job!.id,
+          supplier_id: newId,
+          assigned_to: result.assigned_to ?? null,
+        });
+      }
+    } finally {
+      setAssigningSupplier(false);
+    }
+  }
+
   async function handlePhotoUpload(file: File) {
     setUploadingPhoto(true);
     try {
@@ -306,6 +353,7 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
 
   const costs = job.costs ?? [];
   const photos = job.photos ?? [];
+  const comments = job.comments ?? [];
   const totalCost = costs.reduce((s, c) => s + c.amount, 0);
 
   return (
@@ -363,6 +411,14 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
                     </span>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="notes">
+                  Notes
+                  {comments.length > 0 && (
+                    <span className="ml-1.5 rounded-full bg-brand/10 text-brand text-[10px] px-1.5 py-0.5 font-semibold">
+                      {comments.length}
+                    </span>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
               </TabsList>
             </div>
@@ -397,6 +453,30 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
                     <p className="text-sm text-foreground">{value}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Supplier assignment */}
+              <div>
+                <p className="text-xs font-semibold text-foreground-muted uppercase tracking-wider mb-2">
+                  Assigned Supplier
+                </p>
+                <SearchableSelect
+                  value={job.supplier_id ?? ""}
+                  onChange={handleAssignSupplier}
+                  disabled={assigningSupplier}
+                  options={[
+                    { value: "", label: "Unassigned" },
+                    ...suppliers.map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                      sublabel: JOB_CATEGORY_LABELS[s.trade],
+                    })),
+                  ]}
+                  placeholder="Unassigned"
+                />
+                <p className="text-[11px] text-foreground-muted mt-1.5">
+                  Pick from your preferred suppliers directory. Manage the directory in the Suppliers tab.
+                </p>
               </div>
 
               {/* Dates */}
@@ -556,6 +636,17 @@ export function JobDrawer({ job, open, onClose, onJobUpdated }: JobDrawerProps) 
                   <p className="text-xs text-foreground-muted mt-1">Click &ldquo;Upload Photo&rdquo; to add before/after or progress photos.</p>
                 </div>
               )}
+            </TabsContent>
+
+            {/* ── Notes ── */}
+            <TabsContent value="notes" className="p-6">
+              <CommentsPanel
+                comments={comments}
+                hint="Internal only — tenants never see job notes. Max 2000 characters."
+                emptyText="No notes yet. Keep call outcomes, quotes, and decisions here."
+                onAdd={handleAddComment}
+                onDelete={handleDeleteComment}
+              />
             </TabsContent>
 
             {/* ── Activity ── */}

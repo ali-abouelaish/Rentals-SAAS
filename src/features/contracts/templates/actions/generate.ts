@@ -156,6 +156,15 @@ export async function generateContractFromTemplate(
 
   if (!contractId) throw new Error("Could not resolve a contract to attach the PDF to");
 
+  // The insert trigger assigns a per-tenancy standing_order_ref; read it back so
+  // the template can stamp it (the tenant's rent standing-order reference).
+  const { data: contractRow } = await supabase
+    .from("property_contracts")
+    .select("standing_order_ref")
+    .eq("id", contractId)
+    .eq("tenant_id", profile.tenant_id)
+    .single();
+
   // ── Download source PDF ──────────────────────────────────────────
   const { data: sourceBlob, error: dlError } = await admin.storage
     .from(TEMPLATE_SOURCE_BUCKET)
@@ -210,6 +219,7 @@ export async function generateContractFromTemplate(
     responses: responseMap,
     manualValues: parsed.manualValues,
     contractId,
+    standingOrderRef: contractRow?.standing_order_ref ?? null,
     startDate: parsed.contractDefaults.start_date,
   };
 

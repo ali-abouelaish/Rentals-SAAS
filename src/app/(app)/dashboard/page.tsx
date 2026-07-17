@@ -6,6 +6,7 @@ import { getDashboardData } from "@/features/profitability/data/queries";
 import { getRentalDashboardData } from "@/features/rentals-dashboard/data/queries";
 import { PMDashboardPage } from "@/features/pm-dashboard/ui/PMDashboardPage";
 import { getDashboardActivityFeed } from "@/features/pm-dashboard/data/activity-feed";
+import { getDashboardTodos, getTodoHistory, getTodoPropertyOptions } from "@/features/pm-dashboard/data/todos";
 import { RentalDashboardPage } from "@/features/rentals-dashboard/ui/RentalDashboardPage";
 import { getPublishedModuleConfigForApp } from "@/features/admin/data/admin";
 
@@ -36,9 +37,12 @@ export default async function DashboardPage({
 
   try {
     if (view === "pm") {
-      const [data, activity] = await Promise.all([
+      const [data, activity, todos, todoHistory, todoProperties] = await Promise.all([
         getDashboardData({ isAdmin }),
         getDashboardActivityFeed().catch(() => []),
+        getDashboardTodos().catch(() => []),
+        getTodoHistory().catch(() => []),
+        getTodoPropertyOptions().catch(() => []),
       ]);
       return (
         <div className="space-y-6">
@@ -47,6 +51,9 @@ export default async function DashboardPage({
             data={data}
             userName={profile.display_name || "User"}
             activity={activity}
+            todos={todos}
+            todoHistory={todoHistory}
+            todoProperties={todoProperties}
           />
         </div>
       );

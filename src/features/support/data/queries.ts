@@ -1,6 +1,8 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { verifyPortalToken } from "@/lib/portal/token";
 import type {
   SupportActiveTicket,
+  SupportPrefill,
   SupportProperty,
   SupportPmTenant,
   SupportUnit,
@@ -116,6 +118,68 @@ export async function getSupportPmTenantsForUnit(
   ];
 }
 
+/**
+ * Verify a portal-issued `ctx` token and load the renter's current
+ * property/unit/identity so /support can skip the self-selection steps.
+ */
+export async function getSupportPrefill(
+  tenantId: string,
+  ctx: string
+): Promise<SupportPrefill | null> {
+  const claims = verifyPortalToken(ctx, "support");
+  if (!claims || claims.tenantId !== tenantId) return null;
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: unit } = await admin
+    .from("units")
+    .select(
+      `id, unit_type, room_number, room_type,
+       property:properties(id, name, address_line_1, address_line_2, postcode, area)`
+    )
+    .eq("tenant_id", tenantId)
+    .eq("pm_tenant_id", claims.pmTenantId)
+    .limit(1)
+    .maybeSingle();
+  if (!unit) return null;
+  const propertyRel = Array.isArray(unit.property) ? unit.property[0] : unit.property;
+  if (!propertyRel) return null;
+
+  const { data: pm } = await admin
+    .from("pm_tenants")
+    .select("id, full_name")
+    .eq("id", claims.pmTenantId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (!pm) return null;
+
+  const unitLabel = buildUnitLabel({
+    unit_type: unit.unit_type as string,
+    room_number: (unit.room_number as string | null) ?? null,
+    room_type: (unit.room_type as string | null) ?? null,
+  });
+
+  return {
+    property: {
+      id: propertyRel.id as string,
+      name: propertyRel.name as string,
+      address: buildAddress({
+        address_line_1: propertyRel.address_line_1 as string,
+        address_line_2: (propertyRel.address_line_2 as string | null) ?? null,
+        postcode: (propertyRel.postcode as string | null) ?? null,
+        area: (propertyRel.area as string | null) ?? null,
+      }),
+      units: [{ id: unit.id as string, label: unitLabel, hasActiveTenancy: true }],
+    },
+    unitId: unit.id as string,
+    tenant: {
+      id: pm.id as string,
+      fullName: pm.full_name as string,
+      firstName: firstNameOf(pm.full_name as string),
+    },
+  };
+}
+
 export async function getSupportActiveTickets(
   tenantId: string,
   pmTenantId: string
@@ -124,7 +188,7 @@ export async function getSupportActiveTickets(
 
   const { data, error } = await admin
     .from("maintenance_tickets")
-    .select("reference, description, priority, status, created_at")
+    .select("id, reference, description, priority, status, created_at")
     .eq("tenant_id", tenantId)
     .eq("pm_tenant_id", pmTenantId)
     .not("status", "in", "(resolved,closed,cancelled)")
@@ -132,7 +196,31 @@ export async function getSupportActiveTickets(
 
   if (error) throw error;
 
-  return (data ?? []).map((t) => ({
+  const tickets = data ?? [];
+
+  // Staff comments on these tickets, surfaced to the renter as updates.
+  const updatesByTicket = new Map<string, SupportActiveTicket["updates"]>();
+  if (tickets.length > 0) {
+    const { data: comments, error: commentsErr } = await admin
+      .from("maintenance_ticket_comments")
+      .select("ticket_id, author_name, body, created_at")
+      .eq("tenant_id", tenantId)
+      .in("ticket_id", tickets.map((t) => t.id as string))
+      .order("created_at", { ascending: true });
+    if (commentsErr) throw commentsErr;
+
+    for (const c of comments ?? []) {
+      const list = updatesByTicket.get(c.ticket_id as string) ?? [];
+      list.push({
+        body: c.body as string,
+        authorName: c.author_name as string,
+        createdAt: c.created_at as string,
+      });
+      updatesByTicket.set(c.ticket_id as string, list);
+    }
+  }
+
+  return tickets.map((t) => ({
     reference: t.reference as string,
     descriptionPreview:
       (t.description as string).length > 120
@@ -141,5 +229,6 @@ export async function getSupportActiveTickets(
     priority: t.priority as SupportActiveTicket["priority"],
     status: t.status as SupportActiveTicket["status"],
     createdAt: t.created_at as string,
+    updates: updatesByTicket.get(t.id as string) ?? [],
   }));
 }

@@ -15,6 +15,7 @@ import {
   MessageSquareText,
   Sparkles,
   ExternalLink,
+  HardHat,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
@@ -26,7 +27,7 @@ import {
   JOB_CATEGORY_LABELS,
   KANBAN_COLUMNS,
 } from "../domain/types";
-import type { MaintenanceJob, JobStatus } from "../domain/types";
+import type { MaintenanceJob, JobStatus, MaintenanceSupplier } from "../domain/types";
 import type { MaintenanceTicketListItem } from "../domain/ticket-types";
 import { updateJobStatus } from "../actions";
 import { KanbanBoard } from "./KanbanBoard";
@@ -34,6 +35,8 @@ import { JobDrawer } from "./JobDrawer";
 import { RaiseJobModal } from "./RaiseJobModal";
 import { TicketsList } from "./TicketsList";
 import { TicketDrawer } from "./TicketDrawer";
+import { SuppliersDirectory } from "./SuppliersDirectory";
+import { SupplierModal } from "./SupplierModal";
 
 // ──────────────────────────────────────────────────────────
 // Helpers
@@ -164,21 +167,26 @@ const STATUS_FILTERS: Array<{ label: string; value: JobStatus | "all" }> = [
 interface MaintenancePageProps {
   jobs: MaintenanceJob[];
   tickets: MaintenanceTicketListItem[];
+  suppliers: MaintenanceSupplier[];
   properties: { id: string; name: string }[];
   initialJobId?: string;
   initialTicketId?: string;
+  initialSupplierId?: string;
 }
 
 export function MaintenancePage({
   jobs: initialJobs,
   tickets: initialTickets,
+  suppliers: initialSuppliers,
   properties,
   initialJobId,
   initialTicketId,
+  initialSupplierId,
 }: MaintenancePageProps) {
   const router = useRouter();
   const [jobs, setJobs] = useState<MaintenanceJob[]>(initialJobs);
   const [tickets, setTickets] = useState<MaintenanceTicketListItem[]>(initialTickets);
+  const [suppliers, setSuppliers] = useState<MaintenanceSupplier[]>(initialSuppliers);
 
   // router.refresh() re-renders the server component with fresh data, but
   // useState(initialJobs) ignores prop changes — sync so newly raised jobs
@@ -189,8 +197,11 @@ export function MaintenancePage({
   useEffect(() => {
     setTickets(initialTickets);
   }, [initialTickets]);
-  const [activeTab, setActiveTab] = useState<"jobs" | "tickets">(
-    initialTicketId ? "tickets" : "jobs"
+  useEffect(() => {
+    setSuppliers(initialSuppliers);
+  }, [initialSuppliers]);
+  const [activeTab, setActiveTab] = useState<"jobs" | "tickets" | "suppliers">(
+    initialTicketId ? "tickets" : initialSupplierId ? "suppliers" : "jobs"
   );
   const [view, setView] = useState<"list" | "kanban">("list");
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
@@ -200,8 +211,10 @@ export function MaintenancePage({
   const [raiseOpen, setRaiseOpen] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<MaintenanceSupplier | null>(null);
 
-  // Auto-open job or ticket from URL query param
+  // Auto-open job, ticket, or supplier from URL query param
   useEffect(() => {
     if (initialJobId) {
       const job = jobs.find((j) => j.id === initialJobId);
@@ -215,6 +228,13 @@ export function MaintenancePage({
       if (t) {
         setSelectedTicketId(initialTicketId);
         setTicketDrawerOpen(true);
+      }
+    }
+    if (initialSupplierId) {
+      const s = suppliers.find((x) => x.id === initialSupplierId);
+      if (s) {
+        setEditingSupplier(s);
+        setSupplierModalOpen(true);
       }
     }
     // Only run on mount
@@ -302,7 +322,9 @@ export function MaintenancePage({
           <p className="text-sm text-foreground-secondary mt-0.5">
             {activeTab === "jobs"
               ? `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"} total`
-              : `${tickets.length} ${tickets.length === 1 ? "ticket" : "tickets"} from tenants`}
+              : activeTab === "tickets"
+              ? `${tickets.length} ${tickets.length === 1 ? "ticket" : "tickets"} from tenants`
+              : `${suppliers.length} preferred ${suppliers.length === 1 ? "supplier" : "suppliers"}`}
           </p>
         </div>
         {activeTab === "jobs" && (
@@ -325,6 +347,16 @@ export function MaintenancePage({
             Open AI Triage
             <ExternalLink size={13} className="opacity-70" />
           </a>
+        )}
+        {activeTab === "suppliers" && (
+          <button
+            onClick={() => { setEditingSupplier(null); setSupplierModalOpen(true); }}
+            title="Add a contractor to your preferred supplier directory"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity self-start sm:self-auto"
+          >
+            <Plus size={16} />
+            Add Supplier
+          </button>
         )}
       </div>
 
@@ -386,6 +418,29 @@ export function MaintenancePage({
               {tickets.length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab("suppliers")}
+          title="Your preferred contractors — assign them to jobs"
+          className={cn(
+            "inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+            activeTab === "suppliers"
+              ? "bg-brand text-brand-fg shadow-sm"
+              : "text-foreground-secondary hover:text-foreground"
+          )}
+        >
+          <HardHat size={14} />
+          Suppliers
+          <span
+            className={cn(
+              "ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[20px] h-5 text-[10px] font-semibold",
+              activeTab === "suppliers"
+                ? "bg-brand-fg/20 text-brand-fg"
+                : "bg-surface-inset text-foreground-secondary"
+            )}
+          >
+            {suppliers.length}
+          </span>
         </button>
       </div>
 
@@ -531,9 +586,27 @@ export function MaintenancePage({
         <TicketsList tickets={tickets} onOpen={openTicket} />
       )}
 
+      {/* ── Suppliers View ── */}
+      {activeTab === "suppliers" && (
+        <SuppliersDirectory
+          suppliers={suppliers}
+          jobs={jobs}
+          onAdd={() => { setEditingSupplier(null); setSupplierModalOpen(true); }}
+          onEdit={(s) => { setEditingSupplier(s); setSupplierModalOpen(true); }}
+          onDeleted={(id) => {
+            setSuppliers((prev) => prev.filter((s) => s.id !== id));
+            setJobs((prev) =>
+              prev.map((j) => (j.supplier_id === id ? { ...j, supplier_id: null } : j))
+            );
+            router.refresh();
+          }}
+        />
+      )}
+
       {/* ── Job Drawer ── */}
       <JobDrawer
         job={selectedJob}
+        suppliers={suppliers}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onJobUpdated={handleJobUpdated}
@@ -551,8 +624,18 @@ export function MaintenancePage({
       {raiseOpen && (
         <RaiseJobModal
           properties={properties}
+          suppliers={suppliers}
           onClose={() => setRaiseOpen(false)}
           onSuccess={() => { setRaiseOpen(false); router.refresh(); }}
+        />
+      )}
+
+      {/* ── Supplier Modal ── */}
+      {supplierModalOpen && (
+        <SupplierModal
+          supplier={editingSupplier}
+          onClose={() => setSupplierModalOpen(false)}
+          onSuccess={() => { setSupplierModalOpen(false); router.refresh(); }}
         />
       )}
     </div>

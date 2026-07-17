@@ -42,9 +42,10 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 interface TenantsPageProps {
   initialTenants: PmTenant[];
   reminderStatus?: ReminderStatusMap;
+  portalEnabled?: boolean;
 }
 
-export function TenantsPage({ initialTenants, reminderStatus }: TenantsPageProps) {
+export function TenantsPage({ initialTenants, reminderStatus, portalEnabled }: TenantsPageProps) {
   const [tenants, setTenants] = useState<PmTenant[]>(initialTenants);
   const [filters, setFilters] = useState<PmTenantFilters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -139,6 +140,7 @@ export function TenantsPage({ initialTenants, reminderStatus }: TenantsPageProps
       <TenantDrawer
         tenant={selectedTenant}
         open={drawerOpen}
+        portalEnabled={portalEnabled}
         onClose={() => setDrawerOpen(false)}
         onTenantUpdated={(updated) => {
           setTenants((prev) =>

@@ -17,6 +17,21 @@ export type SupportPmTenant = {
   fullName: string;
 };
 
+/** Pre-resolved identity for renters arriving from the tenant portal —
+ *  skips the property/unit/name self-selection steps. */
+export type SupportPrefill = {
+  property: SupportProperty;
+  unitId: string;
+  tenant: SupportPmTenant;
+};
+
+/** A staff comment on a ticket, surfaced to the renter as an update. */
+export type SupportTicketUpdate = {
+  body: string;
+  authorName: string;
+  createdAt: string;
+};
+
 export type SupportActiveTicket = {
   reference: string;
   descriptionPreview: string;
@@ -31,4 +46,5 @@ export type SupportActiveTicket = {
     | "closed"
     | "cancelled";
   createdAt: string;
+  updates: SupportTicketUpdate[];
 };

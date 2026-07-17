@@ -1,7 +1,13 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { MaintenanceJob, MaintenanceCost, MaintenancePhoto, MaintenanceSummary } from "../domain/types";
+import type {
+  MaintenanceJob,
+  MaintenanceCost,
+  MaintenancePhoto,
+  MaintenanceJobComment,
+  MaintenanceSummary,
+} from "../domain/types";
 
 // ──────────────────────────────────────────────────────────
 // Helpers
@@ -25,6 +31,9 @@ function mapJobRow(j: Record<string, unknown>): MaintenanceJob {
   const unit = Array.isArray(j.units) ? j.units[0] : j.units;
   const costs = (Array.isArray(j.maintenance_costs) ? j.maintenance_costs : []) as MaintenanceCost[];
   const photos = (Array.isArray(j.maintenance_photos) ? j.maintenance_photos : []) as MaintenancePhoto[];
+  const comments = (
+    (Array.isArray(j.maintenance_job_comments) ? j.maintenance_job_comments : []) as MaintenanceJobComment[]
+  ).sort((a, b) => a.created_at.localeCompare(b.created_at));
   return {
     ...(j as unknown as MaintenanceJob),
     property_name: (prop as { name?: string } | null)?.name ?? "Unknown",
@@ -33,6 +42,7 @@ function mapJobRow(j: Record<string, unknown>): MaintenanceJob {
     ),
     costs,
     photos,
+    comments,
   };
 }
 
@@ -46,7 +56,7 @@ export async function getAllMaintenanceJobs(): Promise<MaintenanceJob[]> {
   const { data, error } = await supabase
     .from("maintenance_jobs")
     .select(
-      `*, properties(name), units(unit_type, room_number, room_type), maintenance_costs(*), maintenance_photos(*)`
+      `*, properties(name), units(unit_type, room_number, room_type), maintenance_costs(*), maintenance_photos(*), maintenance_job_comments(*)`
     )
     .order("updated_at", { ascending: false });
   if (error) throw error;
@@ -59,7 +69,7 @@ export async function getMaintenanceJob(jobId: string): Promise<MaintenanceJob |
   const { data, error } = await supabase
     .from("maintenance_jobs")
     .select(
-      `*, properties(name), units(unit_type, room_number, room_type), maintenance_costs(*), maintenance_photos(*)`
+      `*, properties(name), units(unit_type, room_number, room_type), maintenance_costs(*), maintenance_photos(*), maintenance_job_comments(*)`
     )
     .eq("id", jobId)
     .single();

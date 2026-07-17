@@ -8,6 +8,7 @@ import type {
   MaintenanceTicketListItem,
   MaintenanceTicketAttachment,
   MaintenanceTicketMessage,
+  MaintenanceTicketComment,
   MaintenanceTicketDetail,
 } from "../domain/ticket-types";
 
@@ -17,6 +18,7 @@ export type {
   MaintenanceTicketListItem,
   MaintenanceTicketAttachment,
   MaintenanceTicketMessage,
+  MaintenanceTicketComment,
   MaintenanceTicketDetail,
 };
 
@@ -151,7 +153,7 @@ export async function getMaintenanceTicket(
 
   const admin = createSupabaseAdminClient();
 
-  const [{ data: atts }, { data: msgs }] = await Promise.all([
+  const [{ data: atts }, { data: msgs }, { data: cmts }] = await Promise.all([
     admin
       .from("maintenance_attachments")
       .select("id, kind, storage_path")
@@ -166,6 +168,12 @@ export async function getMaintenanceTicket(
           .eq("conversation_id", row.conversation_id)
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: [] as Array<{ role: string; content: string; created_at: string }> }),
+    admin
+      .from("maintenance_ticket_comments")
+      .select("id, author_name, body, created_at")
+      .eq("ticket_id", ticketId)
+      .eq("tenant_id", row.tenant_id)
+      .order("created_at", { ascending: true }),
   ]);
 
   const attachments: MaintenanceTicketAttachment[] = [];
@@ -189,5 +197,14 @@ export async function getMaintenanceTicket(
       created_at: m.created_at,
     }));
 
-  return { ...base, attachment_count: attachments.length, attachments, messages };
+  const comments: MaintenanceTicketComment[] = ((cmts ?? []) as MaintenanceTicketComment[]).map(
+    (c) => ({
+      id: c.id,
+      author_name: c.author_name,
+      body: c.body,
+      created_at: c.created_at,
+    })
+  );
+
+  return { ...base, attachment_count: attachments.length, attachments, messages, comments };
 }

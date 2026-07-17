@@ -45,6 +45,7 @@ export type ResolverContext = {
   responses: Map<string, { answer_text: string | null; answer_file_url: string | null; question_type: string | null }>;
   manualValues: Record<string, string>;
   contractId: string;
+  standingOrderRef: string | null; // the tenancy's bank-reconciliation reference
   startDate: string; // yyyy-mm-dd (used for computed deposit_protection_deadline)
 };
 
@@ -141,6 +142,8 @@ export function resolveFieldValue(field: ContractTemplateField, ctx: ResolverCon
           return formatValue(addDays(ctx.startDate, 30), field.format || "date");
         case "computed.contract_id":
           return ctx.contractId;
+        case "computed.standing_order_ref":
+          return ctx.standingOrderRef ?? "";
         default:
           return "";
       }

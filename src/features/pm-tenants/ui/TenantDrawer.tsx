@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Pencil, Check, X, Plus, Trash2, ShieldCheck, FileText } from "lucide-react";
+import { Pencil, Check, X, Plus, Trash2, ShieldCheck, FileText, Send } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils/cn";
 import { RightToRentBadge } from "./RightToRentBadge";
 import { CreateContractForTenantDialog } from "./CreateContractForTenantDialog";
 import { updatePmTenant, deletePmTenant, uploadPmTenantDocument } from "../actions/pm-tenants";
+import { sendPortalInvite } from "@/features/portal/actions/staff";
 import { createGuarantor, deleteGuarantor } from "../actions/guarantors";
 import { uploadContractDocument } from "@/features/contracts/actions/contracts";
 import { pmTenantSchema, guarantorSchema, type PmTenantFormValues, type GuarantorFormValues } from "../domain/schemas";
@@ -854,6 +855,7 @@ function DocumentsContent({
 interface TenantDrawerProps {
   tenant: PmTenant | null;
   open: boolean;
+  portalEnabled?: boolean;
   onClose: () => void;
   onTenantUpdated: (t: PmTenant) => void;
   formResponses?: Array<{ question: { question_text: string }; answer_text: string | null; answer_file_url: string | null }>;
@@ -863,6 +865,7 @@ interface TenantDrawerProps {
 export function TenantDrawer({
   tenant,
   open,
+  portalEnabled = false,
   onClose,
   onTenantUpdated,
   formResponses = [],
@@ -871,6 +874,7 @@ export function TenantDrawer({
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [localTenant, setLocalTenant] = useState<PmTenant | null>(tenant);
+  const [sendingPortalLink, startPortalLinkTransition] = useTransition();
 
   useEffect(() => {
     setLocalTenant(tenant);
@@ -900,16 +904,41 @@ export function TenantDrawer({
               <h2 className="text-base font-semibold text-foreground truncate">{localTenant.full_name}</h2>
               <p className="text-xs text-foreground-secondary">{localTenant.email} · {localTenant.phone}</p>
             </div>
-            <Button
-              type="button"
-              variant={isEditing ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setIsEditing(!isEditing)}
-              className="h-8 shrink-0"
-            >
-              <Pencil className="h-3.5 w-3.5 mr-1" />
-              {isEditing ? "Editing" : "Edit"}
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              {portalEnabled && localTenant.email ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-8"
+                  loading={sendingPortalLink}
+                  title="Emails this tenant a sign-in link for their tenant portal (valid for 20 minutes)"
+                  onClick={() => {
+                    startPortalLinkTransition(async () => {
+                      const result = await sendPortalInvite(localTenant.id);
+                      if (result.ok) {
+                        toast.success("Portal sign-in link sent");
+                      } else {
+                        toast.error(result.error ?? "Failed to send portal link");
+                      }
+                    });
+                  }}
+                >
+                  <Send className="h-3.5 w-3.5 mr-1" />
+                  Portal link
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant={isEditing ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="h-8"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                {isEditing ? "Editing" : "Edit"}
+              </Button>
+            </div>
           </div>
         </SheetHeader>
 

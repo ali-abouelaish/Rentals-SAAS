@@ -27,6 +27,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { promoteTicketToJob } from "../actions";
+import { addTicketComment, deleteTicketComment } from "../actions/comments";
+import { CommentsPanel } from "./CommentsPanel";
 import type {
   MaintenanceTicketDetail,
   MaintenanceTicketListItem,
@@ -162,6 +164,33 @@ export function TicketDrawer({
     } finally {
       setStatusSaving(false);
     }
+  }
+
+  async function handleAddComment(body: string): Promise<string | null> {
+    if (!ticket) return "Ticket not loaded";
+    const result = await addTicketComment(ticket.id, body);
+    if (result?.error || !result?.comment) {
+      return result?.error ?? "Couldn't post comment";
+    }
+    const comment = result.comment;
+    setTicket((prev) =>
+      prev ? { ...prev, comments: [...prev.comments, comment] } : prev
+    );
+    toast.success("Comment posted");
+    return null;
+  }
+
+  async function handleDeleteComment(commentId: string): Promise<string | null> {
+    if (!ticket) return "Ticket not loaded";
+    const result = await deleteTicketComment(commentId);
+    if (result?.error) return result.error;
+    setTicket((prev) =>
+      prev
+        ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) }
+        : prev
+    );
+    toast.success("Comment deleted");
+    return null;
   }
 
   async function handlePromote() {
@@ -384,6 +413,26 @@ export function TicketDrawer({
                     secondary={ticket.unit_label}
                   />
                 </div>
+              </Section>
+
+              {/* Comments — shared with the tenant */}
+              <Section
+                title="Comments"
+                trailing={
+                  ticket.comments.length > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-foreground-muted">
+                      <MessageSquareText size={11} /> {ticket.comments.length}
+                    </span>
+                  ) : undefined
+                }
+              >
+                <CommentsPanel
+                  comments={ticket.comments}
+                  hint="Visible to the tenant in their support portal. Max 2000 characters."
+                  emptyText="No comments yet. Post an update to keep the tenant informed."
+                  onAdd={handleAddComment}
+                  onDelete={handleDeleteComment}
+                />
               </Section>
 
               {/* Attachments */}
