@@ -79,6 +79,22 @@ landlord_names = (_data.get("names") or [""] * len(profiles))[: len(profiles)]
 LANDLORD_NAME_BY_ID = {lid: name for lid, name in zip(landlord_ids, landlord_names) if lid}
 print(f"Loaded {len(profiles)} landlord profiles from DB for tenant {tenant_id}")
 
+# Optional on-demand filter: scope this run to a single landlord (set by the
+# in-app "Run scraper" button instead of the daily all-landlords cron run).
+landlord_id_filter = (os.environ.get("LANDLORD_ID") or "").strip()
+if landlord_id_filter:
+    _keep = [i for i, lid in enumerate(landlord_ids) if lid == landlord_id_filter]
+    if not _keep:
+        raise SystemExit(
+            f"Landlord {landlord_id_filter} not found among profiles with a SpareRoom URL set."
+        )
+    profiles = [profiles[i] for i in _keep]
+    paying_flags = [paying_flags[i] for i in _keep]
+    property_flags = [property_flags[i] for i in _keep]
+    landlord_ids = [landlord_ids[i] for i in _keep]
+    landlord_names = [landlord_names[i] for i in _keep]
+    print(f"Filtered to landlord {landlord_id_filter} ({landlord_names[0]}) — 1 profile")
+
 # -----------------------------
 # 2) Scraper setup
 # -----------------------------

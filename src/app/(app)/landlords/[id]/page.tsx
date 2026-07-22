@@ -10,6 +10,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { InvoiceStatusBadge } from "@/features/invoices/ui/InvoiceStatusBadge";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
 import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
+import { RunScraperButton } from "@/features/landlords/ui/RunScraperButton";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { TrackEntityVisit } from "@/features/search/ui/TrackEntityVisit";
 import { Trash2, ArrowLeft } from "lucide-react";
@@ -52,16 +53,21 @@ export default async function LandlordDetailPage({
       <div className="flex items-start justify-between">
         <PageHeader title={landlord.name} subtitle="Landlord detail" />
         {isAdmin && (
-          <ConfirmDeleteForm
-            action={deleteLandlord}
-            message={`Delete landlord "${landlord.name}"? This cannot be undone.`}
-          >
-            <input type="hidden" name="landlord_id" value={params.id} />
-            <Button type="submit" variant="destructive" size="sm" className="gap-2">
-              <Trash2 className="h-4 w-4" />
-              Delete Landlord
-            </Button>
-          </ConfirmDeleteForm>
+          <div className="flex items-center gap-2">
+            {landlord.spareroom_profile_url && (
+              <RunScraperButton landlordId={landlord.id} />
+            )}
+            <ConfirmDeleteForm
+              action={deleteLandlord}
+              message={`Delete landlord "${landlord.name}"? This cannot be undone.`}
+            >
+              <input type="hidden" name="landlord_id" value={params.id} />
+              <Button type="submit" variant="destructive" size="sm" className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Delete Landlord
+              </Button>
+            </ConfirmDeleteForm>
+          </div>
         )}
       </div>
       <Card>

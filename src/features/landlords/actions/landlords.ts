@@ -1,10 +1,20 @@
 "use server";
 
+import { execFile } from "node:child_process";
+import path from "node:path";
+import { promisify } from "node:util";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+
+const execFileAsync = promisify(execFile);
+
+// Same lock file the daily cron scrape uses (see crontab), so an on-demand
+// run and the scheduled all-landlords run can never execute concurrently.
+const SCRAPER_LOCK_FILE = "/tmp/harborops_scraper.lock";
+const SCRAPER_TIMEOUT_MS = 120_000;
 
 function parseLandlordFormData(formData: FormData) {
   const paysCommission = String(formData.get("pays_commission") ?? "yes") === "yes";
@@ -99,4 +109,55 @@ export async function updateLandlord(formData: FormData) {
 
   revalidatePath(`/landlords/${landlordId}`);
   revalidatePath("/landlords");
+}
+
+export async function runLandlordScraper(landlordId: string) {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+
+  const { data: landlord, error } = await supabase
+    .from("landlords")
+    .select("id, name, spareroom_profile_url")
+    .eq("id", landlordId)
+    .single();
+  if (error) throw new Error(error.message);
+  if (!landlord.spareroom_profile_url) {
+    throw new Error("This landlord has no SpareRoom profile URL set.");
+  }
+
+  const pythonBin = path.join(process.cwd(), "venv", "bin", "python");
+  const scriptPath = path.join(process.cwd(), "scripts", "OGSCRPAPER.py");
+
+  try {
+    const { stdout } = await execFileAsync(
+      "flock",
+      ["-n", SCRAPER_LOCK_FILE, pythonBin, scriptPath],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env, TENANT_ID: profile.tenant_id, LANDLORD_ID: landlordId },
+        timeout: SCRAPER_TIMEOUT_MS,
+        maxBuffer: 10 * 1024 * 1024,
+      }
+    );
+
+    const match = stdout.match(/Successfully posted (\d+) listings/);
+    const count = match ? Number(match[1]) : 0;
+
+    revalidatePath(`/landlords/${landlordId}`);
+    return {
+      count,
+      message: `Scraped ${count} listing${count === 1 ? "" : "s"} for ${landlord.name}.`,
+    };
+  } catch (err: unknown) {
+    const e = err as { stdout?: string; stderr?: string };
+    const stdout = (e?.stdout ?? "").trim();
+    const stderr = (e?.stderr ?? "").trim();
+    if (!stdout && !stderr) {
+      throw new Error(
+        "The scraper is already running (likely the scheduled daily run) — try again in a few minutes."
+      );
+    }
+    const lastLine = (stderr || stdout).split("\n").filter(Boolean).pop();
+    throw new Error(lastLine || "Scraper run failed.");
+  }
 }
