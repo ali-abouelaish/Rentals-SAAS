@@ -7,7 +7,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getDueReminders, type DueReminder } from "@/lib/email/reminder-rules";
 import { loadAgency } from "@/lib/email/agency-context";
-import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { sendEmail } from "@/lib/email/send";
 import { templates, buildContext, renderPlainText } from "@/lib/email/render";
 import type { Agency } from "@/lib/email/branding";
 
@@ -169,14 +169,18 @@ async function processOne(
     const html = isOverdue ? templates.rentOverdue(ctx) : templates.rentDue(ctx);
     const text = renderPlainText(isOverdue ? "overdue" : "due", ctx);
 
-    const { providerId } = await sendAgencyEmail({
-      agency,
-      to: r.pmTenantEmail,
-      subject,
-      html,
-      text,
-      pmTenantId: r.pmTenantId,
-    });
+    const { providerId } = await sendEmail(
+      r.tenantId,
+      {
+        to: r.pmTenantEmail,
+        subject,
+        html,
+        text,
+        pmTenantId: r.pmTenantId,
+        templateKey: r.reminderType,
+      },
+      { agency },
+    );
 
     const { error } = await admin
       .from("rent_reminder_log")

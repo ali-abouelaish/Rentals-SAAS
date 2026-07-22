@@ -43,12 +43,15 @@ export async function getLandlords({
 
 export async function getLandlordById(id: string) {
   const supabase = createSupabaseServerClient();
+  // maybeSingle, not single: a landlord in another tenant is filtered out by RLS
+  // and must read as "not found", not as a query error.
   const { data: landlord, error } = await supabase
     .from("landlords")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!landlord) return null;
 
   const { data: rentals } = await supabase
     .from("rental_codes")

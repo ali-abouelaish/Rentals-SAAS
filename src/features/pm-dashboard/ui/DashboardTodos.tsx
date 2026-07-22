@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type Dispatch, type SetStateAction } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -22,13 +22,13 @@ import { TodoInputSchema, type TodoInput, type PmTodo, type TodoVisibility } fro
 import { createTodo, toggleTodo, deleteTodo, clearCompletedTodos } from "../actions/todos";
 
 interface DashboardTodosProps {
-  initialTodos: PmTodo[];
+  todos: PmTodo[];
+  setTodos: Dispatch<SetStateAction<PmTodo[]>>;
   initialHistory: PmTodo[];
   properties: { id: string; name: string }[];
 }
 
-export function DashboardTodos({ initialTodos, initialHistory, properties }: DashboardTodosProps) {
-  const [todos, setTodos] = useState<PmTodo[]>(initialTodos);
+export function DashboardTodos({ todos, setTodos, initialHistory, properties }: DashboardTodosProps) {
   const [history, setHistory] = useState<PmTodo[]>(initialHistory);
   const [showForm, setShowForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);

@@ -5,7 +5,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { loadAgency } from "@/lib/email/agency-context";
-import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { sendEmail } from "@/lib/email/send";
 import { templates, buildContext, renderPlainText } from "@/lib/email/render";
 
 export type ReminderKind = "rent_due" | "rent_overdue";
@@ -264,26 +264,30 @@ export async function sendRentReminderNow(
       });
   const subject = subjectFor(kind, reportedOverdue);
 
-  try {
-    const { providerId } = await sendAgencyEmail({
-      agency,
-      to: pm.email,
-      subject,
-      html,
-      text,
-      pmTenantId: pm.id,
-    });
+  const reminderType =
+    kind === "rent_overdue"
+      ? reportedOverdue >= 14
+        ? "overdue_14d"
+        : reportedOverdue >= 7
+          ? "overdue_7d"
+          : "overdue_3d"
+      : reportedOverdue === 0
+        ? "due_today"
+        : "upcoming_3d";
 
-    const reminderType =
-      kind === "rent_overdue"
-        ? reportedOverdue >= 14
-          ? "overdue_14d"
-          : reportedOverdue >= 7
-            ? "overdue_7d"
-            : "overdue_3d"
-        : reportedOverdue === 0
-          ? "due_today"
-          : "upcoming_3d";
+  try {
+    const { providerId } = await sendEmail(
+      profile.tenant_id,
+      {
+        to: pm.email,
+        subject,
+        html,
+        text,
+        pmTenantId: pm.id,
+        templateKey: reminderType,
+      },
+      { agency },
+    );
 
     await admin.from("rent_reminder_log").upsert(
       {

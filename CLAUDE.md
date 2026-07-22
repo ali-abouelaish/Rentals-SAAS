@@ -55,7 +55,7 @@ Supabase Auth with SSR cookie management. Role-based access via `src/lib/auth/re
 
 Migrations in `supabase/migrations/` (timestamped SQL files). Schema defined in `supabase/schema.sql`, RLS policies in `supabase/rls.sql`.
 
-Core tables: `tenants`, `user_profiles`, `agent_profiles`, `clients`, `landlords`, `rental_codes`, `bonuses`, `invoices`, `email_outbox`, `tenant_feature_entitlements`.
+Core tables: `tenants`, `user_profiles`, `agent_profiles`, `clients`, `landlords`, `rental_codes`, `bonuses`, `invoices`, `email_outbox`, `email_providers`, `email_log`, `tenant_feature_entitlements`.
 
 ### Email
 
@@ -88,6 +88,7 @@ Required in `.env.local`:
 | `MYDEPOSITS_TOKEN_SECRET` | 32-byte hex key encrypting mydeposits tokens (`openssl rand -hex 32`) |
 | `TDS_TOKEN_SECRET` | 32-byte hex key encrypting per-agency TDS api keys (`openssl rand -hex 32`) |
 | `DPS_TOKEN_SECRET` | 32-byte hex key encrypting per-agency DPS client secrets (`openssl rand -hex 32`) |
+| `EMAIL_PROVIDER_TOKEN_SECRET` | 32-byte hex key encrypting per-agency email provider credentials (Graph/Gmail/SMTP) (`openssl rand -hex 32`) |
 | `PORTAL_TOKEN_SECRET` | HMAC secret for renter portal magic-link + session tokens (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (shared; also used by `mydeposits-poll`) |
 

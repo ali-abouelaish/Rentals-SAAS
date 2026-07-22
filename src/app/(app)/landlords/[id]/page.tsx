@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export default async function LandlordDetailPage({
       .eq("landlord_id", params.id)
       .order("created_at", { ascending: false })
   ]);
+  if (!landlordResult) notFound();
   const { landlord, rentalsCount, listings, scrapedListings } = landlordResult;
 
   return (

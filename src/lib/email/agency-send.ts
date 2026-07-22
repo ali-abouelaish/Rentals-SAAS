@@ -1,7 +1,7 @@
-import { getResendClient } from "./resend-client";
 import type { Agency } from "./branding";
-import { loadAgencyContactEmail } from "./contact";
+import { logEmail } from "./log";
 import { logEmailSendError } from "./error-log";
+import { ResendTransport } from "./transport/resend";
 
 export type SendAgencyEmailParams = {
   agency: Agency;
@@ -13,16 +13,21 @@ export type SendAgencyEmailParams = {
    *  Omit for non-tenant-facing mail (e.g. agency self-notifications); the
    *  unsubscribe header is suppressed when missing. */
   pmTenantId?: string;
+  /** Recorded in email_log.template_key for auditing. */
+  templateKey?: string;
 };
 
 export type SendAgencyEmailResult = { providerId: string };
 
 /**
- * Send a branded email on behalf of an agency.
+ * Send a branded email on behalf of an agency via the central Resend mailer.
  *
- * From is pinned to the central Harbor Ops mailer; per-agency display name
- * and custom-domain sending are paused pending a redo of branding.
- * Reply-to is the agency's contact_email — refuses to send if unset.
+ * This is the system-default path used for portal invites, Harbor Ops
+ * notifications, the outbox drain, etc. — it always sends through Resend and
+ * ignores any per-agency custom provider (rent reminders use sendEmail() for
+ * that). From is pinned to the central Harbor Ops mailer; reply-to is the
+ * agency's contact_email — refuses to send if unset. Every attempt is recorded
+ * in email_log.
  */
 export async function sendAgencyEmail({
   agency,
@@ -31,42 +36,32 @@ export async function sendAgencyEmail({
   html,
   text,
   pmTenantId,
+  templateKey,
 }: SendAgencyEmailParams): Promise<SendAgencyEmailResult> {
-  const fallbackDomain = process.env.EMAIL_FROM_DOMAIN;
-  if (!fallbackDomain) {
-    throw new Error("EMAIL_FROM_DOMAIN is not set");
-  }
-
-  const from = `Harbor Ops <noreply@${fallbackDomain}>`;
-  const replyTo = await loadAgencyContactEmail(agency.id);
-
-  const headers: Record<string, string> = {};
-  if (pmTenantId) {
-    const unsubscribeMailto = `mailto:unsubscribe@${fallbackDomain}?subject=${encodeURIComponent(pmTenantId)}`;
-    headers["List-Unsubscribe"] = `<${unsubscribeMailto}>`;
-    headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
-  }
-
-  const resend = getResendClient();
+  const transport = new ResendTransport(agency);
   try {
-    const { data, error } = await resend.emails.send({
-      from,
+    const { messageId } = await transport.send({ to, subject, html, text, pmTenantId, templateKey });
+    await logEmail({
+      tenantId: agency.id,
+      providerType: "resend_default",
       to,
       subject,
-      html,
-      text,
-      reply_to: replyTo,
-      headers,
+      templateKey,
+      messageId,
+      status: "sent",
     });
-    // The Resend HTTP API returns rejections (unverified domain, bad from,
-    // rate limits, etc.) as an `error` object rather than throwing. Surface it
-    // so the outbox drain retries and logEmailSendError records it.
-    if (error) {
-      throw new Error(`${error.name}: ${error.message}`);
-    }
-    return { providerId: data?.id ?? "" };
+    return { providerId: messageId };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    await logEmail({
+      tenantId: agency.id,
+      providerType: "resend_default",
+      to,
+      subject,
+      templateKey,
+      status: "failed",
+      error: message,
+    });
     await logEmailSendError({
       tenantId: agency.id,
       message,

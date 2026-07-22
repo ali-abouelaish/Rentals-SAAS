@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -31,6 +32,7 @@ import type {
   DashboardActionCategory,
 } from "@/features/profitability/domain/types";
 import { DashboardTodos } from "./DashboardTodos";
+import { TodoProgressCard, MaintenanceProgressCard } from "./DashboardProgress";
 import type { PmTodo } from "../domain/todos";
 
 // ──────────────────────────────────────────────────────────
@@ -301,6 +303,260 @@ function KpiStrip({ data }: { data: DashboardData }) {
 }
 
 // ──────────────────────────────────────────────────────────
+// Vacancy Overview
+// ──────────────────────────────────────────────────────────
+
+function VacancyOverview({ units }: { units: DashboardData["vacancy_units"] }) {
+  return (
+    <div className="rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-lg bg-amber-50">
+            <Home className="h-4 w-4 text-amber-600" strokeWidth={2} />
+          </div>
+          <h2 className="text-base font-semibold text-foreground">Vacancy Overview</h2>
+        </div>
+        <Link href="/properties?status=available" className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
+          View all <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      {units.length > 0 ? (
+        <div className="space-y-2">
+          {units.map((unit) => (
+            <div key={unit.unit_id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <span className="text-sm font-medium text-foreground truncate">{unit.unit_label}</span>
+                  <PortfolioBadge name={unit.portfolio_name} color={unit.portfolio_color} />
+                </div>
+                <p className="text-xs text-foreground-secondary truncate">{unit.property_name}</p>
+              </div>
+              <div className="text-right shrink-0">
+                {unit.days_vacant > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-amber-600">{unit.days_vacant}d vacant</p>
+                    <p className="text-[11px] text-foreground-muted">£{unit.total_loss.toFixed(0)} lost</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold text-yellow-600">{unit.days_until_vacant}d remaining</p>
+                    <p className="text-[11px] text-foreground-muted">Move-out</p>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2" strokeWidth={1.5} />
+          <p className="text-sm text-foreground-secondary">No vacancies right now</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// Upcoming Move-Outs
+// ──────────────────────────────────────────────────────────
+
+function UpcomingMoveOuts({ moveOuts }: { moveOuts: DashboardData["upcoming_move_outs"] }) {
+  return (
+    <div className="rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-lg bg-violet-50">
+            <Calendar className="h-4 w-4 text-violet-600" strokeWidth={2} />
+          </div>
+          <h2 className="text-base font-semibold text-foreground">Upcoming Move-Outs</h2>
+          <span className="text-xs text-foreground-muted">next 30 days</span>
+        </div>
+        <Link href="/contracts?filter=notice_given" className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
+          View all <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      {moveOuts.length > 0 ? (
+        <div className="space-y-2">
+          {moveOuts.map((mu) => (
+            <Link
+              key={mu.unit_id}
+              href={`/contracts`}
+              className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset hover:bg-amber-50 transition-colors group"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {mu.tenant_name ?? "Unknown"}
+                </p>
+                <p className="text-xs text-foreground-secondary truncate">
+                  {mu.unit_label} · {mu.property_name}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xs font-semibold text-amber-600">{mu.days_remaining}d</p>
+                <p className="text-[11px] text-foreground-muted">
+                  {new Date(mu.vacate_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <Clock className="h-8 w-8 text-foreground-muted mb-2" strokeWidth={1.5} />
+          <p className="text-sm text-foreground-secondary">No move-outs in the next 30 days</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// Profitability Snapshot
+// ──────────────────────────────────────────────────────────
+
+function ProfitabilitySnapshot({ data }: { data: DashboardData }) {
+  const netTrend = data.portfolio_net_profit_this_month > data.portfolio_net_profit_last_month
+    ? "up"
+    : data.portfolio_net_profit_this_month < data.portfolio_net_profit_last_month
+    ? "down"
+    : "flat";
+
+  return (
+    <div className="rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-lg bg-brand-subtle">
+            <TrendingUp className="h-4 w-4 text-brand" strokeWidth={2} />
+          </div>
+          <h2 className="text-base font-semibold text-foreground">Profitability Snapshot</h2>
+        </div>
+        <Link
+          href="/profitability"
+          className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
+        >
+          Full view <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      {/* Portfolio total + trend */}
+      <div className="flex items-center gap-4 p-4 rounded-xl bg-surface-inset mb-4">
+        <div>
+          <p className="text-xs text-foreground-muted">Portfolio net profit this month</p>
+          <p className={cn(
+            "text-2xl font-bold tabular-nums",
+            data.portfolio_net_profit_this_month >= 0 ? "text-emerald-600" : "text-red-600"
+          )}>
+            {data.portfolio_net_profit_this_month < 0 ? "-" : ""}
+            £{Math.abs(data.portfolio_net_profit_this_month).toLocaleString()}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 ml-auto">
+          {netTrend === "up" && <TrendingUp className="h-5 w-5 text-emerald-500" />}
+          {netTrend === "down" && <TrendingDown className="h-5 w-5 text-red-500" />}
+          {netTrend === "flat" && <Minus className="h-5 w-5 text-foreground-muted" />}
+          <span className="text-sm text-foreground-secondary">
+            vs £{Math.abs(data.portfolio_net_profit_last_month).toLocaleString()} last month
+          </span>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        {/* Best Performing */}
+        <div>
+          <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Top Performers</p>
+          <div className="space-y-1.5">
+            {data.top_properties.map((p) => (
+              <Link
+                key={p.property_id}
+                href={`/profitability/${p.property_id}`}
+                className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-sm font-medium text-foreground truncate">{p.property_name}</span>
+                  <PortfolioBadge name={p.portfolio_name} color={p.portfolio_color} />
+                </div>
+                <span className="text-sm font-semibold text-emerald-700 tabular-nums ml-2 shrink-0">
+                  +{fmt(p.net_profit)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Worst Performing */}
+        <div>
+          <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-2">Needs Attention</p>
+          <div className="space-y-1.5">
+            {data.worst_properties.map((p) => (
+              <Link
+                key={p.property_id}
+                href={`/profitability/${p.property_id}`}
+                className="flex items-center justify-between p-3 rounded-xl bg-red-50 hover:bg-red-100 transition-colors"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <TrendingDown className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                  <span className="text-sm font-medium text-foreground truncate">{p.property_name}</span>
+                  <PortfolioBadge name={p.portfolio_name} color={p.portfolio_color} />
+                </div>
+                <span className="text-sm font-semibold text-red-700 tabular-nums ml-2 shrink-0">
+                  -{fmtPounds(Math.abs(p.net_profit) / 100)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// Recent Activity Feed
+// ──────────────────────────────────────────────────────────
+
+function RecentActivity({ activity }: { activity: ActivityFeedItem[] }) {
+  return (
+    <div className="rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center gap-2.5 mb-5">
+        <div className="p-2 rounded-lg bg-brand-subtle">
+          <Activity className="h-4 w-4 text-brand" strokeWidth={2} />
+        </div>
+        <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
+      </div>
+
+      {activity.length > 0 ? (
+        <div className="space-y-1">
+          {activity.map((item) => {
+            const cfg = activityIconFor(item.action, item.entity_type);
+            return (
+              <div key={item.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-surface-inset transition-colors">
+                <div className={cn("mt-0.5 p-1.5 rounded-lg shrink-0", cfg.bgClass)}>
+                  <cfg.Icon size={13} className={cfg.iconClass} strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground leading-snug">
+                    <span className="font-medium">{item.actor_name}</span>{" "}
+                    <span className="text-foreground-secondary">{humaniseAction(item.action)}</span>
+                    {item.subject && <> <span className="font-medium">{item.subject}</span></>}
+                  </p>
+                  <p className="text-xs text-foreground-muted">{relativeTime(item.created_at)}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-sm text-foreground-muted py-4 text-center">No recent activity yet.</p>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
 // Main Component
 // ──────────────────────────────────────────────────────────
 
@@ -324,6 +580,9 @@ interface PMDashboardPageProps {
 }
 
 export function PMDashboardPage({ data, userName, activity, todos, todoHistory, todoProperties }: PMDashboardPageProps) {
+  // Shared todo state so the completion donut and the list stay in sync live.
+  const [liveTodos, setLiveTodos] = useState<PmTodo[]>(todos);
+
   const now = new Date();
   const today = now.toLocaleDateString("en-GB", {
     weekday: "long",
@@ -340,14 +599,8 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
   const riskSuffix =
     data.at_risk_total > 0 ? ` · £${Math.round(data.at_risk_total).toLocaleString()} at risk` : "";
 
-  const netTrend = data.portfolio_net_profit_this_month > data.portfolio_net_profit_last_month
-    ? "up"
-    : data.portfolio_net_profit_this_month < data.portfolio_net_profit_last_month
-    ? "down"
-    : "flat";
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--gap-bento)]">
 
       {/* ── Greeting ─────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
@@ -363,313 +616,32 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
         </p>
       </div>
 
-      {/* ── Needs attention today (action queue) ── */}
-      <ActionQueue actions={data.actions} />
-
-      {/* ── To-do list ── */}
-      <DashboardTodos
-        initialTodos={todos}
-        initialHistory={todoHistory}
-        properties={todoProperties}
-      />
-
-      {/* ── Compact KPI strip ── */}
+      {/* ── Headline KPIs up top ── */}
       <KpiStrip data={data} />
 
-      {/* ── Vacancy Overview + Upcoming Move-Outs (side by side) ── */}
-      <div className="grid lg:grid-cols-2 gap-[var(--gap-bento)]">
-
-        {/* Vacancy Overview */}
-        <div className="rounded-bento bg-surface-card shadow-bento p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-amber-50">
-                <Home className="h-4 w-4 text-amber-600" strokeWidth={2} />
-              </div>
-              <h2 className="text-base font-semibold text-foreground">Vacancy Overview</h2>
-            </div>
-            <Link href="/properties?status=available" className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
-              View all <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-
-          {data.vacancy_units.length > 0 ? (
-            <div className="space-y-2">
-              {data.vacancy_units.map((unit) => (
-                <div key={unit.unit_id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-sm font-medium text-foreground truncate">{unit.unit_label}</span>
-                      <PortfolioBadge name={unit.portfolio_name} color={unit.portfolio_color} />
-                    </div>
-                    <p className="text-xs text-foreground-secondary truncate">{unit.property_name}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    {unit.days_vacant > 0 ? (
-                      <>
-                        <p className="text-xs font-semibold text-amber-600">{unit.days_vacant}d vacant</p>
-                        <p className="text-[11px] text-foreground-muted">£{unit.total_loss.toFixed(0)} lost</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs font-semibold text-yellow-600">{unit.days_until_vacant}d remaining</p>
-                        <p className="text-[11px] text-foreground-muted">Move-out</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2" strokeWidth={1.5} />
-              <p className="text-sm text-foreground-secondary">No vacancies right now</p>
-            </div>
-          )}
+      {/* ── Dense two-column bento: each column packs its own panels (masonry),
+             so a tall card on one side never leaves dead space on the other ── */}
+      <div className="grid gap-[var(--gap-bento)] items-start xl:grid-cols-2">
+        {/* Column 1 — needs attention + to-do */}
+        <div className="space-y-[var(--gap-bento)]">
+          <ActionQueue actions={data.actions} />
+          <DashboardTodos
+            todos={liveTodos}
+            setTodos={setLiveTodos}
+            initialHistory={todoHistory}
+            properties={todoProperties}
+          />
+          <VacancyOverview units={data.vacancy_units} />
         </div>
 
-        {/* Upcoming Move-Outs */}
-        <div className="rounded-bento bg-surface-card shadow-bento p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-violet-50">
-                <Calendar className="h-4 w-4 text-violet-600" strokeWidth={2} />
-              </div>
-              <h2 className="text-base font-semibold text-foreground">Upcoming Move-Outs</h2>
-              <span className="text-xs text-foreground-muted">next 30 days</span>
-            </div>
-            <Link href="/contracts?filter=notice_given" className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
-              View all <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-
-          {data.upcoming_move_outs.length > 0 ? (
-            <div className="space-y-2">
-              {data.upcoming_move_outs.map((mu) => (
-                <Link
-                  key={mu.unit_id}
-                  href={`/contracts`}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-surface-inset hover:bg-amber-50 transition-colors group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {mu.tenant_name ?? "Unknown"}
-                    </p>
-                    <p className="text-xs text-foreground-secondary truncate">
-                      {mu.unit_label} · {mu.property_name}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-semibold text-amber-600">{mu.days_remaining}d</p>
-                    <p className="text-[11px] text-foreground-muted">
-                      {new Date(mu.vacate_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <Clock className="h-8 w-8 text-foreground-muted mb-2" strokeWidth={1.5} />
-              <p className="text-sm text-foreground-secondary">No move-outs in the next 30 days</p>
-            </div>
-          )}
+        {/* Column 2 — progress & operations */}
+        <div className="space-y-[var(--gap-bento)]">
+          <TodoProgressCard todos={liveTodos} />
+          <MaintenanceProgressCard maintenance={data.maintenance_summary} />
+          <UpcomingMoveOuts moveOuts={data.upcoming_move_outs} />
+          <ProfitabilitySnapshot data={data} />
+          <RecentActivity activity={activity} />
         </div>
-      </div>
-
-      {/* ── Maintenance Summary ── */}
-      <div className="rounded-bento bg-surface-card shadow-bento p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-orange-50">
-              <Wrench className="h-4 w-4 text-orange-600" strokeWidth={2} />
-            </div>
-            <h2 className="text-base font-semibold text-foreground">Maintenance</h2>
-            {data.maintenance_summary.critical_jobs > 0 && (
-              <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-                {data.maintenance_summary.critical_jobs} critical
-              </span>
-            )}
-          </div>
-          <Link
-            href="/maintenance"
-            className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
-          >
-            View all <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            {
-              label: "Open",
-              value: data.maintenance_summary.open_jobs,
-              color: "text-slate-700",
-              bg: "bg-slate-50",
-            },
-            {
-              label: "In Progress",
-              value: data.maintenance_summary.in_progress_jobs,
-              color: "text-blue-700",
-              bg: "bg-blue-50",
-            },
-            {
-              label: "Resolved this month",
-              value: data.maintenance_summary.resolved_this_month,
-              color: "text-emerald-700",
-              bg: "bg-emerald-50",
-            },
-            {
-              label: "Cost this month",
-              value:
-                data.maintenance_summary.total_cost_this_month > 0
-                  ? `£${Math.round(data.maintenance_summary.total_cost_this_month / 100).toLocaleString()}`
-                  : "£0",
-              color: "text-orange-700",
-              bg: "bg-orange-50",
-              isString: true,
-            },
-          ].map((stat) => (
-            <Link
-              key={stat.label}
-              href="/maintenance"
-              className={cn(
-                "flex flex-col p-4 rounded-xl transition-opacity hover:opacity-80",
-                stat.bg
-              )}
-            >
-              <span className={cn("text-2xl font-bold tabular-nums", stat.color)}>
-                {stat.value}
-              </span>
-              <span className={cn("text-xs font-medium mt-1", stat.color, "opacity-70")}>
-                {stat.label}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Profitability Snapshot ── */}
-      <div className="rounded-bento bg-surface-card shadow-bento p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-brand-subtle">
-              <TrendingUp className="h-4 w-4 text-brand" strokeWidth={2} />
-            </div>
-            <h2 className="text-base font-semibold text-foreground">Profitability Snapshot</h2>
-          </div>
-          <Link
-            href="/profitability"
-            className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
-          >
-            Full view <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        {/* Portfolio total + trend */}
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-surface-inset mb-4">
-          <div>
-            <p className="text-xs text-foreground-muted">Portfolio net profit this month</p>
-            <p className={cn(
-              "text-2xl font-bold tabular-nums",
-              data.portfolio_net_profit_this_month >= 0 ? "text-emerald-600" : "text-red-600"
-            )}>
-              {data.portfolio_net_profit_this_month < 0 ? "-" : ""}
-              £{Math.abs(data.portfolio_net_profit_this_month).toLocaleString()}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 ml-auto">
-            {netTrend === "up" && <TrendingUp className="h-5 w-5 text-emerald-500" />}
-            {netTrend === "down" && <TrendingDown className="h-5 w-5 text-red-500" />}
-            {netTrend === "flat" && <Minus className="h-5 w-5 text-foreground-muted" />}
-            <span className="text-sm text-foreground-secondary">
-              vs £{Math.abs(data.portfolio_net_profit_last_month).toLocaleString()} last month
-            </span>
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          {/* Best Performing */}
-          <div>
-            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Top Performers</p>
-            <div className="space-y-1.5">
-              {data.top_properties.map((p) => (
-                <Link
-                  key={p.property_id}
-                  href={`/profitability/${p.property_id}`}
-                  className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <TrendingUp className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                    <span className="text-sm font-medium text-foreground truncate">{p.property_name}</span>
-                    <PortfolioBadge name={p.portfolio_name} color={p.portfolio_color} />
-                  </div>
-                  <span className="text-sm font-semibold text-emerald-700 tabular-nums ml-2 shrink-0">
-                    +{fmt(p.net_profit)}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Worst Performing */}
-          <div>
-            <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-2">Needs Attention</p>
-            <div className="space-y-1.5">
-              {data.worst_properties.map((p) => (
-                <Link
-                  key={p.property_id}
-                  href={`/profitability/${p.property_id}`}
-                  className="flex items-center justify-between p-3 rounded-xl bg-red-50 hover:bg-red-100 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <TrendingDown className="h-3.5 w-3.5 text-red-600 shrink-0" />
-                    <span className="text-sm font-medium text-foreground truncate">{p.property_name}</span>
-                    <PortfolioBadge name={p.portfolio_name} color={p.portfolio_color} />
-                  </div>
-                  <span className="text-sm font-semibold text-red-700 tabular-nums ml-2 shrink-0">
-                    -{fmtPounds(Math.abs(p.net_profit) / 100)}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Recent Activity Feed ── */}
-      <div className="rounded-bento bg-surface-card shadow-bento p-6">
-        <div className="flex items-center gap-2.5 mb-5">
-          <div className="p-2 rounded-lg bg-brand-subtle">
-            <Activity className="h-4 w-4 text-brand" strokeWidth={2} />
-          </div>
-          <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
-        </div>
-
-        {activity.length > 0 ? (
-          <div className="space-y-1">
-            {activity.map((item) => {
-              const cfg = activityIconFor(item.action, item.entity_type);
-              return (
-                <div key={item.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-surface-inset transition-colors">
-                  <div className={cn("mt-0.5 p-1.5 rounded-lg shrink-0", cfg.bgClass)}>
-                    <cfg.Icon size={13} className={cfg.iconClass} strokeWidth={2} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground leading-snug">
-                      <span className="font-medium">{item.actor_name}</span>{" "}
-                      <span className="text-foreground-secondary">{humaniseAction(item.action)}</span>
-                      {item.subject && <> <span className="font-medium">{item.subject}</span></>}
-                    </p>
-                    <p className="text-xs text-foreground-muted">{relativeTime(item.created_at)}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-foreground-muted py-4 text-center">No recent activity yet.</p>
-        )}
       </div>
     </div>
   );
