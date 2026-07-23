@@ -18,6 +18,7 @@ import { runRentReminders } from "./rentReminders";
 import { runMydepositsPoll } from "./mydepositsPoll";
 import { runTdsPoll } from "./tdsPoll";
 import { runArchiveCompletedTodos } from "./archiveTodos";
+import { runReleaseMovedOutUnits } from "./releaseMovedOutUnits";
 
 const TIMEZONE = "Europe/London";
 
@@ -62,6 +63,7 @@ export function startCronScheduler(): void {
   cron.schedule("*/15 * * * *", guarded("mydeposits-poll", runMydepositsPoll), opts);
   cron.schedule("*/15 * * * *", guarded("tds-poll", runTdsPoll), opts);
   cron.schedule("0 3 * * *", guarded("archive-todos", runArchiveCompletedTodos), opts);
+  cron.schedule("5 0 * * *", guarded("release-units", runReleaseMovedOutUnits), opts);
 
-  console.log(`[cron] scheduler started (timezone ${TIMEZONE}): rent-reminders, mydeposits-poll, tds-poll, archive-todos`);
+  console.log(`[cron] scheduler started (timezone ${TIMEZONE}): rent-reminders, mydeposits-poll, tds-poll, archive-todos, release-units`);
 }

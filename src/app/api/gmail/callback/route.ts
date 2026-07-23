@@ -33,6 +33,9 @@ export async function GET(request: NextRequest) {
     const gmail = google.gmail({ version: "v1", auth: oauth2Client });
     const profileRes = await gmail.users.getProfile({ userId: "me" });
     const gmailAddress = profileRes.data.emailAddress ?? "";
+    // getProfile returns the mailbox's current historyId — a valid push cursor
+    // even if the watch registration below fails.
+    let historyId: string | null = profileRes.data.historyId ?? null;
 
     // Upsert connection
     const { error: upsertError } = await admin
@@ -65,12 +68,22 @@ export async function GET(request: NextRequest) {
       ]);
     }
 
-    // Register Gmail watch for push notifications
+    // Register Gmail watch for push notifications. Best-effort, secondary step:
+    // if the Pub/Sub topic isn't set up, the connection is still valid and the
+    // user can pull mail via "Sync now", so a watch failure must NOT discard the
+    // connection we just saved.
     const topicName = process.env.GOOGLE_PUBSUB_TOPIC;
     if (topicName) {
-      const gmailClient = await getGmailClientForTenant(tenantId);
-      const { historyId } = await watchInbox(gmailClient, topicName);
+      try {
+        const gmailClient = await getGmailClientForTenant(tenantId);
+        const watch = await watchInbox(gmailClient, topicName);
+        historyId = watch.historyId || historyId;
+      } catch (watchErr) {
+        console.error("Gmail watch registration failed (connection still saved):", watchErr);
+      }
+    }
 
+    if (historyId) {
       await admin
         .from("tenant_gmail_connections")
         .update({ history_id: historyId, updated_at: new Date().toISOString() })
@@ -80,6 +93,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/leads/settings?connected=1`);
   } catch (err) {
     console.error("Gmail OAuth callback error:", err);
-    return NextResponse.redirect(`${APP_URL}/leads/settings?error=gmail_auth_failed`);
+    const reason = err instanceof Error ? err.message : "unknown";
+    const url = new URL(`${APP_URL}/leads/settings`);
+    url.searchParams.set("error", "gmail_auth_failed");
+    url.searchParams.set("reason", reason.slice(0, 300));
+    return NextResponse.redirect(url.toString());
   }
 }

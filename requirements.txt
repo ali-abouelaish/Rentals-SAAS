@@ -1,0 +1,7 @@
+# Python deps for the SpareRoom landlord scraper (scripts/OGSCRPAPER.py).
+# Install into a venv:  python -m venv venv && venv/Scripts/python -m pip install -r requirements.txt   (Windows)
+#                       python3 -m venv venv && venv/bin/python -m pip install -r requirements.txt        (Linux/VPS)
+requests>=2.31,<3
+beautifulsoup4>=4.12,<5
+python-dotenv>=1.0,<2
+supabase>=2.4,<3

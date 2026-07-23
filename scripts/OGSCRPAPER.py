@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 import time
 import sys
 import os
@@ -93,6 +92,9 @@ if landlord_id_filter:
     property_flags = [property_flags[i] for i in _keep]
     landlord_ids = [landlord_ids[i] for i in _keep]
     landlord_names = [landlord_names[i] for i in _keep]
+    # Narrow the id->name map too, so the end-of-run "produced 0 listings"
+    # diagnostic reflects only this landlord, not the whole tenant.
+    LANDLORD_NAME_BY_ID = {lid: LANDLORD_NAME_BY_ID.get(lid, "") for lid in landlord_ids}
     print(f"Filtered to landlord {landlord_id_filter} ({landlord_names[0]}) — 1 profile")
 
 # -----------------------------
@@ -152,6 +154,12 @@ def classify_url(url):
             sr_path = unquote(sr or "").split("?", 1)[0].strip()
             if PROFILE_PATH_RE.match(sr_path):
                 return ("profile", f"{base_url}{sr_path}")
+            return ("listing", url)
+
+        # Pretty listing URL: /flatshare/<city>/<area>/<id> (ends in a numeric id).
+        # A single ad, not a profile — use the "More from advertiser" sidebar
+        # fallback rather than skipping the landlord entirely.
+        if re.match(r"^/flatshare/(?:[\w-]+/)*\d+/?$", parsed.path):
             return ("listing", url)
     except Exception:
         pass

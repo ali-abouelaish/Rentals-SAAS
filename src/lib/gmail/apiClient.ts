@@ -85,6 +85,46 @@ export async function fetchMessagesByHistoryId(
   return messageIds;
 }
 
+/**
+ * Return the mailbox's current historyId. Used as a valid cursor for the push
+ * webhook when a watch wasn't (or couldn't be) registered.
+ */
+export async function getMailboxHistoryId(client: gmail_v1.Gmail): Promise<string> {
+  const res = await client.users.getProfile({ userId: "me" });
+  return res.data.historyId ?? "";
+}
+
+/**
+ * Scan the mailbox with a Gmail search query (e.g. `from:(rightmove.co.uk OR
+ * zoopla.co.uk) newer_than:30d`) and return matching message ids. Unlike
+ * `fetchMessagesByHistoryId` (which only reports incremental changes since a
+ * historyId), this does an actual search, so it can pull existing mail — the
+ * basis of a reliable manual "Sync now" that doesn't depend on push delivery.
+ */
+export async function fetchInboxMessageIds(
+  client: gmail_v1.Gmail,
+  opts: { query?: string; max?: number } = {}
+): Promise<string[]> {
+  const max = opts.max ?? 200;
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const res = await client.users.messages.list({
+      userId: "me",
+      q: opts.query,
+      maxResults: Math.min(100, max - ids.length),
+      pageToken,
+    });
+    for (const m of res.data.messages ?? []) {
+      if (m.id) ids.push(m.id);
+    }
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken && ids.length < max);
+
+  return ids;
+}
+
 export async function fetchMessage(
   client: gmail_v1.Gmail,
   messageId: string

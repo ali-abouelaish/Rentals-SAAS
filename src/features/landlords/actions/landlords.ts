@@ -125,39 +125,71 @@ export async function runLandlordScraper(landlordId: string) {
     throw new Error("This landlord has no SpareRoom profile URL set.");
   }
 
-  const pythonBin = path.join(process.cwd(), "venv", "bin", "python");
+  // Resolve the venv Python for the current platform. flock is POSIX-only, so we
+  // only use it where available (the production VPS) and run Python directly
+  // elsewhere (e.g. local Windows dev), which is why the daily-cron lock is guarded.
+  const isWindows = process.platform === "win32";
+  const pythonBin = path.join(
+    process.cwd(),
+    "venv",
+    isWindows ? "Scripts" : "bin",
+    isWindows ? "python.exe" : "python"
+  );
   const scriptPath = path.join(process.cwd(), "scripts", "OGSCRPAPER.py");
+  const useFlock = !isWindows;
+  const runOpts = {
+    cwd: process.cwd(),
+    env: { ...process.env, TENANT_ID: profile.tenant_id, LANDLORD_ID: landlordId },
+    timeout: SCRAPER_TIMEOUT_MS,
+    maxBuffer: 10 * 1024 * 1024,
+  } as const;
 
+  let stdout: string;
   try {
-    const { stdout } = await execFileAsync(
-      "flock",
-      ["-n", SCRAPER_LOCK_FILE, pythonBin, scriptPath],
-      {
-        cwd: process.cwd(),
-        env: { ...process.env, TENANT_ID: profile.tenant_id, LANDLORD_ID: landlordId },
-        timeout: SCRAPER_TIMEOUT_MS,
-        maxBuffer: 10 * 1024 * 1024,
-      }
-    );
-
-    const match = stdout.match(/Successfully posted (\d+) listings/);
-    const count = match ? Number(match[1]) : 0;
-
-    revalidatePath(`/landlords/${landlordId}`);
-    return {
-      count,
-      message: `Scraped ${count} listing${count === 1 ? "" : "s"} for ${landlord.name}.`,
-    };
+    const res = useFlock
+      ? await execFileAsync("flock", ["-n", SCRAPER_LOCK_FILE, pythonBin, scriptPath], runOpts)
+      : await execFileAsync(pythonBin, [scriptPath], runOpts);
+    stdout = res.stdout ?? "";
   } catch (err: unknown) {
-    const e = err as { stdout?: string; stderr?: string };
-    const stdout = (e?.stdout ?? "").trim();
-    const stderr = (e?.stderr ?? "").trim();
-    if (!stdout && !stderr) {
+    const e = err as { code?: string; killed?: boolean; signal?: string; stdout?: string; stderr?: string };
+    // Runtime missing (no flock, no venv, no python) — NOT lock contention.
+    if (e.code === "ENOENT") {
+      throw new Error(
+        "Scraper runtime not available here. On-demand scraping needs Python and the project venv on the host running the app — it works on the production server, but not in local dev without a local Python venv."
+      );
+    }
+    // Killed by our timeout.
+    if (e.killed || e.signal === "SIGTERM") {
+      throw new Error(
+        `Scraper timed out after ${SCRAPER_TIMEOUT_MS / 1000}s for ${landlord.name} — the profile may have too many listings. The daily run will still pick it up.`
+      );
+    }
+    const outText = (e.stdout ?? "").trim();
+    const errText = (e.stderr ?? "").trim();
+    // flock -n exits 1 with no output only when the lock is already held.
+    if (useFlock && !outText && !errText) {
       throw new Error(
         "The scraper is already running (likely the scheduled daily run) — try again in a few minutes."
       );
     }
-    const lastLine = (stderr || stdout).split("\n").filter(Boolean).pop();
+    const lastLine = (errText || outText).split("\n").filter(Boolean).pop();
     throw new Error(lastLine || "Scraper run failed.");
   }
+
+  // The run completed (exit 0). Interpret what it actually did.
+  if (/unrecognised URL format/i.test(stdout)) {
+    throw new Error(
+      `${landlord.name}'s SpareRoom URL wasn't recognised. Use a profile link (e.g. https://www.spareroom.co.uk/u123456 or /pro/Name) or a listing link.`
+    );
+  }
+  revalidatePath(`/landlords/${landlordId}`);
+  const match = stdout.match(/Successfully posted (\d+) listings/);
+  if (!match) {
+    return { count: 0, message: `No active listings found for ${landlord.name}.` };
+  }
+  const count = Number(match[1]);
+  return {
+    count,
+    message: `Scraped ${count} listing${count === 1 ? "" : "s"} for ${landlord.name}.`,
+  };
 }
