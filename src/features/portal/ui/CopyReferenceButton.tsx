@@ -21,7 +21,7 @@ export function CopyReferenceButton({ value }: { value: string }) {
     <button
       type="button"
       onClick={() => void copy()}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-card px-2.5 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-inset hover:text-foreground"
+      className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-inset hover:text-foreground sm:min-h-0 sm:min-w-0 sm:px-2.5"
       title="Copy the payment reference to your clipboard"
     >
       {copied ? (

@@ -20,8 +20,14 @@ export type Lead = {
   is_hot: boolean;
   has_phone: boolean;
   raw_body: string | null;
+  clicked_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type LeadWithRelations = Lead & {
+  assigned_agent: { id: string; display_name: string | null } | null;
+  listing: { id: string; title: string | null; url: string | null } | null;
 };
 
 export type TenantGmailConnection = {

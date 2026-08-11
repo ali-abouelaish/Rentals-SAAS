@@ -20,7 +20,7 @@ const schema = z.object({
   property_id: z.string().min(1, "Property is required"),
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().optional(),
-  category: z.enum(["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "other"]),
+  category: z.enum(["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "gas_heating", "fire_safety", "inspection", "other"]),
   priority: z.enum(["low", "medium", "high", "critical"]),
   reported_by: z.string().optional(),
   supplier_id: z.string().optional(),
@@ -80,7 +80,7 @@ export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: Rai
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Job raised");
+        toast.success("Work order created");
         onSuccess();
       }
     } finally {
@@ -94,7 +94,12 @@ export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: Rai
       <div className="relative w-full max-w-lg bg-surface-card rounded-bento shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-base font-semibold text-foreground">Raise New Job</h2>
+          <div>
+            <h2 className="text-base font-semibold text-foreground">New Work Order</h2>
+            <p className="text-xs text-foreground-muted mt-0.5">
+              Standalone — no tenant ticket required.
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-inset transition-colors"
@@ -126,7 +131,7 @@ export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: Rai
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
-              Job Title <span className="text-red-500">*</span>
+              Work Order Title <span className="text-red-500">*</span>
             </label>
             <input
               {...register("title")}
@@ -239,7 +244,7 @@ export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: Rai
               disabled={submitting}
               className="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity disabled:opacity-60"
             >
-              {submitting ? "Raising…" : "Raise Job"}
+              {submitting ? "Creating…" : "Create Work Order"}
             </button>
           </div>
         </form>

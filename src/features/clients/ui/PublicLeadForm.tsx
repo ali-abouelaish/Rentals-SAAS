@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ThankYouDialog } from "@/components/shared/ThankYouDialog";
 import { createPublicLead } from "@/features/clients/actions/publicLead";
 
 type PublicLeadState = { ok?: boolean; error?: string };
@@ -31,6 +32,7 @@ export function PublicLeadForm({
   agentName: string;
 }) {
   const [state, formAction] = useFormState(createPublicLead, initialState);
+  const [showThanks, setShowThanks] = useState(false);
 
   useEffect(() => {
     if (state?.error) {
@@ -38,9 +40,22 @@ export function PublicLeadForm({
     }
   }, [state?.error]);
 
+  // Pop the confirmation on success. The inline panel below stays too, so
+  // dismissing the popup doesn't drop the lead back onto a live form.
+  useEffect(() => {
+    if (state?.ok) setShowThanks(true);
+  }, [state?.ok]);
+
   if (state?.ok) {
     return (
       <div className="w-full max-w-lg rounded-2xl border border-border-muted bg-surface-card p-10 shadow-card text-center">
+        <ThankYouDialog
+          open={showThanks}
+          onOpenChange={setShowThanks}
+          message="Your details have been submitted successfully."
+          footnote={`${agentName} will be in touch with you shortly.`}
+          actionLabel="Done"
+        />
         <div className="flex justify-center mb-6">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success-bg text-success">
             <CheckCircle2 className="h-12 w-12" strokeWidth={2} />

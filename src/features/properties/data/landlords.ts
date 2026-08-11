@@ -11,6 +11,25 @@ export async function getOwnerLandlords(): Promise<OwnerLandlord[]> {
   return data ?? [];
 }
 
+/**
+ * Identity + contact for one owner landlord.
+ *
+ * The property queries only join `id, name`, which is all the list needs; the
+ * detail page's landlord contract card also shows how to reach them.
+ */
+export async function getOwnerLandlordContact(
+  id: string
+): Promise<Pick<OwnerLandlord, "id" | "name" | "email" | "phone"> | null> {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("owner_landlords")
+    .select("id, name, email, phone")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
 export async function getPropertyManagers(): Promise<PropertyManager[]> {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase

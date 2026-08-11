@@ -64,7 +64,7 @@ export function SuppliersDirectory({
     const activeCount = activeJobCounts.get(supplier.id) ?? 0;
     const warning =
       activeCount > 0
-        ? ` They are assigned to ${activeCount} active ${activeCount === 1 ? "job" : "jobs"}, which will become unassigned.`
+        ? ` They are assigned to ${activeCount} active ${activeCount === 1 ? "work order" : "work orders"}, which will become unassigned.`
         : "";
     if (!confirm(`Remove "${supplier.name}" from your supplier directory?${warning}`)) return;
     setDeletingId(supplier.id);
@@ -136,8 +136,8 @@ export function SuppliersDirectory({
                 <th className="text-left pb-3 pt-4 pr-4 hidden md:table-cell">Trade</th>
                 <th className="text-left pb-3 pt-4 pr-4 hidden lg:table-cell">Contact</th>
                 <th className="text-left pb-3 pt-4 pr-4 hidden sm:table-cell">Phone / Email</th>
-                <th className="text-right pb-3 pt-4 pr-4" title="Jobs currently assigned to this supplier (excludes resolved and closed)">
-                  Active Jobs
+                <th className="text-right pb-3 pt-4 pr-4" title="Work orders currently assigned to this supplier (excludes resolved and closed)">
+                  Active Orders
                 </th>
                 <th className="pb-3 pt-4 pr-4 w-10" />
               </tr>
@@ -244,7 +244,8 @@ export function SuppliersDirectory({
 
       {suppliers.length > 0 && (
         <p className="text-xs text-foreground-muted">
-          Suppliers in this directory can be assigned to jobs when raising them or from the job drawer.
+          Suppliers in this directory can be assigned to a work order when you create it, or later
+          from the work order drawer.
         </p>
       )}
     </div>

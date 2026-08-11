@@ -2,16 +2,18 @@ import Link from "next/link";
 import { Settings } from "lucide-react";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { isAdminRole } from "@/lib/auth/roles";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getLeads, getLeadStats } from "@/features/leads/data/leads";
 import { getGmailConnection, getPlatformConfigs } from "@/features/leads/data/gmail";
-import { LeadCard } from "@/features/leads/ui/LeadCard";
+import { LeadsBrowser } from "@/features/leads/ui/LeadsBrowser";
 import { LeadFilters } from "@/features/leads/ui/LeadFilters";
 import { LeadSyncStatsCard } from "@/features/leads/ui/LeadSyncStatsCard";
+import { SyncPlatformsButton } from "@/features/leads/ui/SyncPlatformsButton";
 
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams?: { q?: string; status?: string; source?: string; page?: string };
+  searchParams?: { q?: string; status?: string; source?: string; ref?: string; page?: string };
 }) {
   const profile = await requireUserProfile();
   const currentPage = Math.max(1, parseInt(searchParams?.page ?? "1", 10) || 1);
@@ -21,6 +23,7 @@ export default async function LeadsPage({
       search: searchParams?.q,
       status: searchParams?.status,
       source: searchParams?.source,
+      ref: searchParams?.ref,
       page: currentPage,
     }),
     getLeadStats(),
@@ -30,11 +33,24 @@ export default async function LeadsPage({
 
   const sources = [...new Set(platformConfigs.map((c) => c.platform_name))];
 
+  // Agents list powers the assignment dropdown inside the lead drawer.
+  let agents: { id: string; display_name: string | null }[] = [];
+  if (isAdminRole(profile.role)) {
+    const supabase = createSupabaseServerClient();
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("id, display_name")
+      .eq("tenant_id", profile.tenant_id)
+      .order("display_name");
+    agents = data ?? [];
+  }
+
   const buildPageUrl = (p: number) => {
     const params = new URLSearchParams();
     if (searchParams?.q) params.set("q", searchParams.q);
     if (searchParams?.status) params.set("status", searchParams.status);
     if (searchParams?.source) params.set("source", searchParams.source);
+    if (searchParams?.ref) params.set("ref", searchParams.ref);
     params.set("page", String(p));
     return `/leads?${params.toString()}`;
   };
@@ -48,13 +64,16 @@ export default async function LeadsPage({
           <p className="text-sm text-foreground-muted mt-0.5">Inbound from property portals</p>
         </div>
         {isAdminRole(profile.role) && (
-          <Link
-            href="/leads/settings"
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </Link>
+          <div className="flex items-center gap-2">
+            {connection && <SyncPlatformsButton />}
+            <Link
+              href="/leads/settings"
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
+          </div>
         )}
       </div>
 
@@ -77,13 +96,7 @@ export default async function LeadsPage({
 
       {/* Lead list */}
       {leads.length > 0 ? (
-        <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
-          <div className="divide-y divide-border">
-            {leads.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-          </div>
-        </div>
+        <LeadsBrowser leads={leads} agents={agents} isAdmin={isAdminRole(profile.role)} />
       ) : (
         <div className="rounded-bento bg-surface-card shadow-bento py-16 text-center">
           <p className="text-sm text-foreground-muted">No leads found.</p>

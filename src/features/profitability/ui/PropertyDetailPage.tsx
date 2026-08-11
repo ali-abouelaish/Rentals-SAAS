@@ -538,7 +538,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
                         {cost.source === "maintenance" && cost.source_id && (
                           <a
                             href={`/maintenance?job=${cost.source_id}`}
-                            title="View maintenance job"
+                            title="View work order"
                             onClick={(e) => e.stopPropagation()}
                             className="text-orange-500 hover:text-orange-700 transition-colors shrink-0"
                           >

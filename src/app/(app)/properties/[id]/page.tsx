@@ -4,6 +4,7 @@ import { ADMIN_ROLES, isAdminRole } from "@/lib/auth/roles";
 import { getPropertyById } from "@/features/properties/data/properties";
 import { getUnitsByProperty } from "@/features/properties/data/units";
 import { getAllPropertyPhotos } from "@/features/properties/data/photos";
+import { getOwnerLandlordContact } from "@/features/properties/data/landlords";
 import { getPropertyTenantHistory } from "@/features/contracts/data/tenant-history";
 import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
 import { getActiveForms } from "@/features/forms/data/forms";
@@ -13,7 +14,10 @@ import {
   getInternalAgentsForTenant,
   getPropertyKeys,
 } from "@/features/keys/data/queries";
+import { getCertificatesForProperty } from "@/features/certificates/data/certificates";
+import { getAllSuppliers } from "@/features/maintenance/data/suppliers";
 import { getEntitlements } from "@/lib/entitlements/getEntitlements";
+import { AddReminderDialog } from "@/features/automations/ui/AddReminderDialog";
 
 export default async function PropertyDetailRoute({
   params,
@@ -23,6 +27,7 @@ export default async function PropertyDetailRoute({
   const profile = await requireRole([...ADMIN_ROLES]);
   const entitlements = await getEntitlements();
   const keysEnabled = entitlements.has("keys");
+  const certificatesEnabled = entitlements.has("certificates");
 
   const [
     property,
@@ -33,6 +38,8 @@ export default async function PropertyDetailRoute({
     agents,
     pmTenantsData,
     forms,
+    certificates,
+    suppliers,
   ] = await Promise.all([
     getPropertyById(params.id),
     getUnitsByProperty(params.id),
@@ -44,9 +51,19 @@ export default async function PropertyDetailRoute({
       : Promise.resolve([]),
     getPmTenants().catch(() => []),
     getActiveForms().catch(() => []),
+    certificatesEnabled
+      ? getCertificatesForProperty(params.id)
+      : Promise.resolve([]),
+    certificatesEnabled ? getAllSuppliers().catch(() => []) : Promise.resolve([]),
   ]);
 
   if (!property) notFound();
+
+  // Contact details for the landlord contract card — the property query only
+  // joins the owner's id and name.
+  const landlord = property.owner_landlord_id
+    ? await getOwnerLandlordContact(property.owner_landlord_id)
+    : null;
 
   const pmTenants = pmTenantsData.map((t) => ({
     id: t.id,
@@ -65,8 +82,20 @@ export default async function PropertyDetailRoute({
         subtitle={property.postcode ?? property.area ?? null}
         href={`/properties/${property.id}`}
       />
+      {entitlements.has("automations") && (
+        <div className="flex justify-end mb-2">
+          <AddReminderDialog
+            entity={{
+              type: "property",
+              id: property.id,
+              label: property.address_line_1 ?? property.name,
+            }}
+          />
+        </div>
+      )}
       <PropertyDetailPage
         property={property}
+        landlord={landlord}
         initialUnits={units}
         allPhotos={allPhotos}
         tenantHistory={tenantHistory}
@@ -76,6 +105,10 @@ export default async function PropertyDetailRoute({
         keysEnabled={keysEnabled}
         pmTenants={pmTenants}
         forms={forms}
+        certificatesEnabled={certificatesEnabled}
+        certificates={certificates}
+        suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
+        ownerRecordEnabled={entitlements.has("owner_statements")}
       />
     </>
   );

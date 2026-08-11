@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import { headers } from "next/headers";
+import type { Metadata, Viewport } from "next";
 import { Fraunces } from "next/font/google";
 import { BrandingStyles } from "@/components/layout/BrandingStyles";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { TenantBrandingSettings } from "@/features/admin/domain/types";
+import { getPortalBrandChrome } from "@/features/portal/data/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -15,47 +14,51 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-// Layouts can't read searchParams, so the dev ?companySlug= fallback is not
-// available here — on localhost the portal renders with default branding and
-// pages resolve the tenant themselves.
-async function getPortalBranding(): Promise<{
-  brandName: string;
-  logoUrl: string | null;
-  branding: TenantBrandingSettings | null;
-}> {
-  const slug = headers().get("x-tenant");
-  if (!slug) return { brandName: "Tenant portal", logoUrl: null, branding: null };
-
-  const admin = createSupabaseAdminClient();
-  const { data } = await admin
-    .from("tenants")
-    .select(
-      `name,
-       branding:tenant_branding_settings(
-         tenant_id, brand_name, logo_url, primary_color, secondary_color,
-         accent_color, theme_mode, font_family, updated_at
-       )`
-    )
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (!data) return { brandName: "Tenant portal", logoUrl: null, branding: null };
-  const branding = (
-    Array.isArray(data.branding) ? data.branding[0] : data.branding
-  ) as TenantBrandingSettings | null;
+export async function generateViewport(): Promise<Viewport> {
+  const { themeColor } = await getPortalBrandChrome();
   return {
-    brandName: branding?.brand_name?.trim() || (data.name as string),
-    logoUrl: branding?.logo_url?.trim() || null,
-    branding: branding ?? null,
+    width: "device-width",
+    initialScale: 1,
+    // Lets the sticky mobile action bar pad itself past the home indicator and
+    // the page paint edge-to-edge on notched devices — without this,
+    // env(safe-area-inset-*) resolves to 0.
+    viewportFit: "cover",
+    themeColor,
+  };
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { brandName, logoUrl } = await getPortalBrandChrome();
+  // iOS ignores manifest icons for "Add to Home Screen"; the apple-touch-icon
+  // is what it actually uses, so point both at the agency logo when there is one.
+  const icon = logoUrl ?? "/logo.png";
+
+  return {
+    title: "Tenant portal",
+    manifest: "/portal/manifest.webmanifest",
+    icons: { icon, apple: icon },
+    appleWebApp: {
+      capable: true,
+      title: brandName,
+      // "default" keeps the status bar opaque and light, matching the portal's
+      // light surface directly beneath it.
+      statusBarStyle: "default",
+    },
   };
 }
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
-  const { brandName, logoUrl, branding } = await getPortalBranding();
+  const { brandName, logoUrl, branding } = await getPortalBrandChrome();
 
   return (
     <div
       className={`${fraunces.variable} relative min-h-screen overflow-hidden bg-surface-ground text-foreground`}
+      // viewport-fit=cover paints under the notch; in landscape that would slide
+      // the cards beneath it, so keep the content inside the safe area.
+      style={{
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
+      }}
     >
       <BrandingStyles branding={branding} />
 
@@ -131,7 +134,9 @@ export default async function PortalLayout({ children }: { children: ReactNode }
 
       <main className="relative z-10">{children}</main>
 
-      <footer className="relative z-10 mx-auto max-w-3xl px-4 pb-10 pt-6 sm:px-6">
+      {/* Bottom padding reserves the strip the fixed mobile action bar covers,
+          so the last thing on the page is never trapped underneath it. */}
+      <footer className="relative z-10 mx-auto max-w-3xl px-4 pb-[calc(env(safe-area-inset-bottom)_+_5rem)] pt-6 sm:px-6 md:pb-10">
         <p className="text-center text-[11px] tracking-[0.05em] text-foreground-muted">
           Your tenant portal, provided by {brandName}
         </p>

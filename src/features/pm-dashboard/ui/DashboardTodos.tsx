@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { TodoInputSchema, type TodoInput, type PmTodo, type TodoVisibility } from "../domain/todos";
 import { createTodo, toggleTodo, deleteTodo, clearCompletedTodos } from "../actions/todos";
+import { SegmentedDonut, Legend, STATUS_COLORS, type Segment } from "./DashboardProgress";
 
 interface DashboardTodosProps {
   todos: PmTodo[];
@@ -51,6 +52,12 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
 
   const open = todos.filter((t) => !t.is_done);
   const done = todos.filter((t) => t.is_done);
+
+  // Completion donut (merged in from the former "To-do progress" card).
+  const progressSegments: Segment[] = [
+    { key: "done", label: "Completed", value: done.length, color: STATUS_COLORS.done },
+    { key: "open", label: "Open", value: open.length, color: STATUS_COLORS.open },
+  ];
 
   async function onSubmit(values: TodoInput) {
     const result = await createTodo(values);
@@ -122,7 +129,7 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
   }
 
   return (
-    <div className="rounded-bento bg-surface-card shadow-bento p-6">
+    <div className="rounded-bento bg-surface-card shadow-bento p-6 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
@@ -160,6 +167,15 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
           )}
         </div>
       </div>
+
+      {/* Completion donut — merged in from the old "To-do progress" card so
+          the list and its progress live in one container */}
+      {todos.length > 0 && (
+        <div className="flex items-center gap-5 mb-5 pb-5 border-b border-border">
+          <SegmentedDonut segments={progressSegments} size={104} stroke={15} centerLabel="Tasks" />
+          <Legend segments={progressSegments} total={todos.length} />
+        </div>
+      )}
 
       {/* Add form — collapsed behind the "Add task" button until opened */}
       {showForm && (
@@ -270,9 +286,12 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
       </form>
       )}
 
+      {/* Scrollable body — task list and completed history fill the card and
+          scroll internally so the card can stretch to its neighbour's height */}
+      <div className="flex-1 min-h-0 overflow-y-auto -mr-3 pr-3">
       {/* List */}
       {todos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
+        <div className="flex flex-col items-center justify-center h-full py-8 text-center">
           <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-inset mb-3">
             <ListTodo className="h-5 w-5 text-foreground-muted" strokeWidth={1.6} />
           </div>
@@ -351,6 +370,7 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

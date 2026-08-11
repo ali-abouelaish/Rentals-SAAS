@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { Search } from "lucide-react";
+import { Search, Tag } from "lucide-react";
 
 const STATUS_OPTIONS = ["all", "new", "contacted", "viewing", "offer", "closed"];
 
@@ -18,6 +18,7 @@ export function LeadFilters({ sources }: Props) {
   const currentSearch = searchParams.get("q") ?? "";
   const currentStatus = searchParams.get("status") ?? "all";
   const currentSource = searchParams.get("source") ?? "all";
+  const currentRef = searchParams.get("ref") ?? "";
 
   const updateParam = useCallback(
     (key: string, value: string) => {
@@ -42,6 +43,17 @@ export function LeadFilters({ sources }: Props) {
           placeholder="Search by name, email or phone..."
           defaultValue={currentSearch}
           onChange={(e) => updateParam("q", e.target.value)}
+          className="w-full rounded-lg border border-border bg-surface-inset pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+      </div>
+
+      <div className="relative">
+        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
+        <input
+          type="search"
+          placeholder="Filter by property ref..."
+          defaultValue={currentRef}
+          onChange={(e) => updateParam("ref", e.target.value)}
           className="w-full rounded-lg border border-border bg-surface-inset pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </div>

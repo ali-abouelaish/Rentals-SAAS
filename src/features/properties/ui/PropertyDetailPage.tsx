@@ -28,13 +28,16 @@ import { cn } from "@/lib/utils/cn";
 import { PortfolioBadge } from "./PortfolioBadge";
 import { UnitStatusBadge } from "./UnitStatusBadge";
 import { UnitDrawer } from "./UnitDrawer";
+import { LandlordContractCard, type PropertyLandlord } from "./LandlordContractCard";
 import { PropertyTenantHistory } from "@/features/contracts/ui/PropertyTenantHistory";
 import { PropertyKeysTab } from "@/features/keys/ui/PropertyKeysTab";
+import { CertificatesPanel } from "@/features/certificates/ui/CertificatesPanel";
 import type { PropertyHistory } from "@/features/contracts/domain/history";
 import type { PropertyKeysPayload } from "@/features/keys/domain/types";
+import type { Certificate } from "@/features/certificates/domain/types";
 import type { Property, Unit, UnitPhoto } from "../domain/types";
 import type { Form } from "@/features/forms/domain/types";
-import { Key as KeyIcon } from "lucide-react";
+import { Key as KeyIcon, ShieldCheck } from "lucide-react";
 
 interface PmTenantOption {
   id: string;
@@ -234,6 +237,7 @@ const COMMUNAL_ORDER: UnitPhoto["category"][] = ["exterior", "communal", "kitche
 
 export function PropertyDetailPage({
   property,
+  landlord,
   initialUnits,
   allPhotos,
   tenantHistory,
@@ -243,8 +247,13 @@ export function PropertyDetailPage({
   keysEnabled,
   pmTenants,
   forms = [],
+  certificatesEnabled = false,
+  certificates = [],
+  suppliers = [],
+  ownerRecordEnabled = false,
 }: {
   property: Property;
+  landlord: PropertyLandlord | null;
   initialUnits: Unit[];
   allPhotos: UnitPhoto[];
   tenantHistory: PropertyHistory;
@@ -254,10 +263,16 @@ export function PropertyDetailPage({
   keysEnabled: boolean;
   pmTenants: PmTenantOption[];
   forms?: Form[];
+  certificatesEnabled?: boolean;
+  certificates?: Certificate[];
+  suppliers?: Array<{ id: string; name: string }>;
+  ownerRecordEnabled?: boolean;
 }) {
   const router = useRouter();
   const [units, setUnits] = useState<Unit[]>(initialUnits);
-  const [activeTab, setActiveTab] = useState<"overview" | "tenants" | "keys">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "tenants" | "keys" | "certificates"
+  >("overview");
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -355,6 +370,9 @@ export function PropertyDetailPage({
           ...(keysEnabled
             ? [{ value: "keys" as const, label: "Keys", icon: KeyIcon }]
             : []),
+          ...(certificatesEnabled
+            ? [{ value: "certificates" as const, label: "Certificates", icon: ShieldCheck }]
+            : []),
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -378,6 +396,22 @@ export function PropertyDetailPage({
 
       {activeTab === "tenants" && (
         <PropertyTenantHistory history={tenantHistory} canCloseout={canCloseout} />
+      )}
+
+      {activeTab === "certificates" && certificatesEnabled && (
+        <CertificatesPanel
+          property={{ id: property.id, name: property.name }}
+          certificates={certificates}
+          units={units.map((u) => ({
+            id: u.id,
+            label: u.room_number
+              ? `Room ${u.room_number}`
+              : u.unit_type === "studio"
+              ? "Studio"
+              : "Whole flat",
+          }))}
+          suppliers={suppliers}
+        />
       )}
 
       {activeTab === "keys" && keysEnabled && keysPayload && (
@@ -473,6 +507,13 @@ export function PropertyDetailPage({
 
         {/* ── Right: property info ── */}
         <div className="lg:col-span-1 lg:sticky lg:top-6 space-y-4">
+
+          {/* Landlord & head-lease contract */}
+          <LandlordContractCard
+            property={property}
+            landlord={landlord}
+            ownerRecordEnabled={ownerRecordEnabled}
+          />
 
           {/* Key stats */}
           <div className="rounded-bento bg-surface-card shadow-bento p-5 space-y-4">

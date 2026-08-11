@@ -18,10 +18,12 @@ Properties is your portfolio's inventory. It lists every property and the indivi
 4. **Manage portfolios.** Use **Manage portfolios** to create or delete the portfolios you group properties under (each gets a colour).
 5. **Open a unit.** Click any unit to open its drawer, where you can edit its details, change its status, assign a tenant, and record or undo a rent payment for a period.
 6. **Open a property.** From a property you can run its **setup** (add rooms/units), **edit** its details, and register **keys** and check them out or in.
+7. **Check the landlord contract.** The **Landlord contract** card on a property's Overview shows who the owner landlord is, the contract start and expiry (with a warning once it's inside 60 days of expiring), the monthly rent you owe them, how often you pay it, and a link to open the signed contract document. All of it is edited on the property's **Edit** form.
 
 ## Tips
 
 - A unit must be set to *occupied* with a resident before it contributes to [Rent Collection](/rent-collection).
 - Converting an application in [Bookings](/bookings) can mark a room as booked or occupied automatically.
-- Active tenancies and notices are managed under [Contracts](/contracts).`,
+- Active tenancies and notices are managed under [Contracts](/contracts).
+- The contract on a property is the head lease with its **owner landlord** — what you pay out. It is separate from the landlord's own record under [Landlords](/owners), which holds their standing deal (management fee, payout schedule, renewal alerts) and their statements.`,
 };

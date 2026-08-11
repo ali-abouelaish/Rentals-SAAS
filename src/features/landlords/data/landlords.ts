@@ -64,16 +64,32 @@ export async function getLandlordById(id: string) {
     .eq("landlord_id", id)
     .order("last_seen_at", { ascending: false });
 
+  // Newest-confirmed first, so anything that has gone stale sinks to the bottom
+  // of the table. nullsFirst: false keeps rows predating freshness tracking (no
+  // last_seen_at) at the end rather than leading, which is where they belong.
   const { data: scrapedListings } = await supabase
     .from("scraped_listings")
     .select("*")
     .eq("landlord_id", id)
-    .order("updated_at", { ascending: false });
+    .order("last_seen_at", { ascending: false, nullsFirst: false });
+
+  // Recent spreadsheet-import history, for the spreadsheet panel. Absent for
+  // landlords who have never had a sheet attached.
+  const { data: sheetRuns } = await supabase
+    .from("landlord_sheet_runs")
+    .select("*")
+    .eq("landlord_id", id)
+    .order("started_at", { ascending: false })
+    .limit(5);
+
+  const all = scrapedListings ?? [];
 
   return {
     landlord,
     rentalsCount: rentals?.length ?? 0,
     listings: listingsScraped ?? [],
-    scrapedListings: scrapedListings ?? [],
+    scrapedListings: all,
+    sheetRuns: sheetRuns ?? [],
+    sheetListingCount: all.filter((row) => row.source === "spreadsheet").length,
   };
 }

@@ -16,6 +16,7 @@ type Landlord = {
   billing_address: string | null;
   email: string | null;
   spareroom_profile_url: string | null;
+  spreadsheet_url: string | null;
   pays_commission: boolean;
   commission_amount_gbp: number | null;
   commission_term_text: string | null;
@@ -33,8 +34,19 @@ export function EditLandlordForm({ landlord }: { landlord: Landlord }) {
     try {
       const fd = landlordValuesToFormData(values);
       fd.set("landlord_id", landlord.id);
-      await updateLandlord(fd);
-      toast.success("Changes saved");
+      const result = await updateLandlord(fd);
+
+      // Only reported when the spreadsheet link changed and an import ran.
+      const run = result?.sheetRun;
+      if (run?.ok) {
+        toast.success(
+          `Changes saved — imported ${run.rows_created} new and updated ${run.rows_updated} listings.`
+        );
+      } else if (run) {
+        toast.warning(`Changes saved, but the spreadsheet could not be read: ${run.error}`);
+      } else {
+        toast.success("Changes saved");
+      }
       setIsEditing(false);
       router.refresh();
     } catch (e) {
@@ -68,6 +80,7 @@ export function EditLandlordForm({ landlord }: { landlord: Landlord }) {
             billing_address: landlord.billing_address ?? "",
             email: landlord.email ?? "",
             spareroom_profile_url: landlord.spareroom_profile_url ?? "",
+            spreadsheet_url: landlord.spreadsheet_url ?? "",
             pays_commission: landlord.pays_commission ? "yes" : "no",
             commission_amount_gbp: landlord.commission_amount_gbp ?? 0,
             commission_term_text: landlord.commission_term_text ?? "",

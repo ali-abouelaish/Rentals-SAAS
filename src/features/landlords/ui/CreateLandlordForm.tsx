@@ -13,6 +13,7 @@ function toFormData(values: LandlordFormValues): FormData {
   fd.set("billing_address", values.billing_address ?? "");
   fd.set("email", values.email ?? "");
   fd.set("spareroom_profile_url", values.spareroom_profile_url ?? "");
+  fd.set("spreadsheet_url", values.spreadsheet_url ?? "");
   fd.set("pays_commission", values.pays_commission);
   fd.set("commission_amount_gbp", String(values.commission_amount_gbp ?? 0));
   fd.set("commission_term_text", values.commission_term_text ?? "");
@@ -53,6 +54,7 @@ export function CreateLandlordForm() {
         billing_address: "",
         email: "",
         spareroom_profile_url: "",
+        spreadsheet_url: "",
         pays_commission: "yes",
         commission_amount_gbp: 0,
         commission_term_text: "",

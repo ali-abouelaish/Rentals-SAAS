@@ -17,6 +17,7 @@ import { agentsArticle } from "./agents";
 import { billingProfilesArticle } from "./billing-profiles";
 import { billingInfoArticle } from "./billing-info";
 import { apiKeysArticle } from "./api-keys";
+import { emailSendingArticle } from "./email-sending";
 import { upgradeArticle } from "./upgrade";
 // Property Management module
 import { inboxArticle } from "./inbox";
@@ -41,6 +42,10 @@ import { settingsBankDetailsArticle } from "./settings-bank-details";
 import { teamArticle } from "./team";
 import { depositsTdsArticle } from "./deposits-tds";
 import { depositsDpsArticle } from "./deposits-dps";
+import { remindersArticle } from "./reminders";
+import { automationsArticle } from "./automations";
+import { certificatesArticle } from "./certificates";
+import { ownerStatementsArticle } from "./owner-statements";
 // Generic Forms module
 import { formsArticle } from "./forms";
 import { formsBuilderArticle } from "./forms-builder";
@@ -72,6 +77,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   billingProfilesArticle,
   billingInfoArticle,
   apiKeysArticle,
+  emailSendingArticle,
   upgradeArticle,
   // Property Management module
   inboxArticle,
@@ -96,6 +102,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
   teamArticle,
   depositsTdsArticle,
   depositsDpsArticle,
+  remindersArticle,
+  automationsArticle,
+  certificatesArticle,
+  ownerStatementsArticle,
   // Generic Forms module
   formsArticle,
   formsBuilderArticle,

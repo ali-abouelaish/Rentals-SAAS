@@ -12,15 +12,22 @@ export type OwnerLandlord = {
   name: string;
   phone: string | null;
   email: string | null;
+  address: string | null;
+  notes: string | null;
   contract_start_date: string | null;
   contract_expiry_date: string | null;
   monthly_rent_owed: number | null;
   payment_schedule: "monthly" | "quarterly" | "biannual" | "annual" | null;
   next_payment_due: string | null;
   contract_document_url: string | null;
+  // Management-fee config for owner statements.
+  management_fee_type: "none" | "percent" | "flat";
+  management_fee_percent: number | null;
+  management_fee_amount: number | null;
   alert_60_days: boolean;
   alert_30_days: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 export type PropertyManager = {

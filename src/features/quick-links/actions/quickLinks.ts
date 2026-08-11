@@ -76,6 +76,25 @@ export async function updateQuickLink(
   return {};
 }
 
+export async function reorderQuickLinks(
+  items: Array<{ id: string; position: number }>
+) {
+  const profile = await requireRole(["admin", "super_admin"]);
+  const supabase = createSupabaseServerClient();
+
+  await Promise.all(
+    items.map(({ id, position }) =>
+      supabase
+        .from("tenant_quick_links")
+        .update({ position, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("tenant_id", profile.tenant_id)
+    )
+  );
+
+  revalidatePath("/dashboard");
+}
+
 export async function deleteQuickLink(formData: FormData) {
   await requireRole(["admin", "super_admin"]);
 

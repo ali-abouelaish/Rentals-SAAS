@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildTenantAppUrl } from "@/lib/urls";
 import { loadAgency } from "@/lib/email/agency-context";
-import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { sendEmail } from "@/lib/email/send";
 import { generateFormLinkEmail } from "@/lib/email/templates/form-link";
 import { rateLimitCheck } from "../lib/rate-limit";
 import { getPublicShareByToken, getPublicShareUnits } from "../data/public";
@@ -260,7 +260,11 @@ export async function sendShareBookingForm(
       formUrl,
       agencyName: senderName,
     });
-    await sendAgencyEmail({ agency, to: applicantEmail, subject, html, text });
+    await sendEmail(
+      share.tenant_id,
+      { to: applicantEmail, subject, html, text, templateKey: "share_booking_form" },
+      { agency }
+    );
   } catch (err) {
     // Roll back so a failed email doesn't leave an orphan pending booking.
     await supabase.from("bookings").delete().eq("id", booking.id);

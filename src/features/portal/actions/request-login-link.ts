@@ -1,7 +1,7 @@
 import { LOGIN_TOKEN_TTL_MS, signPortalToken } from "@/lib/portal/token";
 import { tenantAppUrl } from "@/lib/email/app-url";
 import { loadAgency } from "@/lib/email/agency-context";
-import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { sendEmail } from "@/lib/email/send";
 import { generatePortalLoginEmail } from "@/lib/email/templates/portal-login";
 import { rateLimitCheck } from "@/features/property-shares/lib/rate-limit";
 import { findPmTenantForLogin } from "../data/queries";
@@ -74,16 +74,20 @@ export async function requestPortalLoginLink({
       invitedByAgency: false,
     });
 
-    await sendAgencyEmail({
-      agency,
-      to: pmTenant.email,
-      subject,
-      html,
-      text,
-      pmTenantId: pmTenant.id,
-    });
+    await sendEmail(
+      tenant.id,
+      {
+        to: pmTenant.email,
+        subject,
+        html,
+        text,
+        pmTenantId: pmTenant.id,
+        templateKey: "portal_login",
+      },
+      { agency }
+    );
   } catch {
-    // Swallow send failures (already logged by sendAgencyEmail) — the caller
+    // Swallow send failures (already logged by sendEmail) — the caller
     // response must not reveal whether an email exists or was sent.
   }
 

@@ -61,7 +61,7 @@ export function PortalLoginForm({ agencyName, companySlug, linkExpired }: Props)
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-md px-4 pb-[calc(env(safe-area-inset-bottom)_+_2.5rem)] pt-8 sm:px-6 sm:py-10">
       <div className="rounded-3xl border border-border bg-surface-card p-6 shadow-sm sm:p-8">
         {submitted ? (
           <div className="text-center">
@@ -114,13 +114,15 @@ export function PortalLoginForm({ agencyName, companySlug, linkExpired }: Props)
                 <p className="mt-0.5 text-xs text-foreground-muted">
                   Use the email address your letting agent has on file for you.
                 </p>
+                {/* 16px text on mobile: anything smaller makes iOS Safari zoom
+                    the page in on focus and never zoom back out. */}
                 <input
                   id="portal-email"
                   type="email"
                   autoComplete="email"
                   inputMode="email"
                   placeholder="you@example.com"
-                  className="mt-2 w-full rounded-xl border border-border bg-surface-ground px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-border-ring/40"
+                  className="mt-2 h-12 w-full rounded-xl border border-border bg-surface-ground px-3.5 text-base text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-border-ring/40 sm:h-auto sm:py-2.5 sm:text-sm"
                   {...register("email")}
                 />
                 {errors.email ? (
@@ -140,7 +142,7 @@ export function PortalLoginForm({ agencyName, companySlug, linkExpired }: Props)
                 type="submit"
                 variant="secondary"
                 size="lg"
-                className="w-full"
+                className="h-12 w-full text-base sm:h-10 sm:text-sm"
                 loading={isSubmitting}
               >
                 {isSubmitting ? "Sending link…" : "Email me a sign-in link"}

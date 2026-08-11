@@ -41,6 +41,22 @@ export type CommunicationRequestEmailContext = {
   requestUrl: string;
 };
 
+export type OwnerStatementEmailContext = {
+  agency: {
+    name: string;
+    logo_url: string | null;
+    primary_color: string;
+    accent_color: string;
+    footer_address: string;
+  };
+  owner: { name: string };
+  periodLabel: string;
+  /** Pre-formatted currency strings — the template does no maths. */
+  netAmount: string;
+  rentAmount: string;
+  closingAmount: string;
+};
+
 const TEMPLATES_DIR = path.join(process.cwd(), "emails");
 
 function compile<T>(filename: string): HandlebarsTemplateDelegate<T> {
@@ -51,6 +67,7 @@ function compile<T>(filename: string): HandlebarsTemplateDelegate<T> {
 let dueTpl: HandlebarsTemplateDelegate<RentEmailContext> | null = null;
 let overdueTpl: HandlebarsTemplateDelegate<RentEmailContext> | null = null;
 let commTpl: HandlebarsTemplateDelegate<CommunicationRequestEmailContext> | null = null;
+let ownerStatementTpl: HandlebarsTemplateDelegate<OwnerStatementEmailContext> | null = null;
 
 function loadDue() {
   if (!dueTpl) dueTpl = compile<RentEmailContext>("rent-due.hbs");
@@ -64,11 +81,16 @@ function loadCommunication() {
   if (!commTpl) commTpl = compile<CommunicationRequestEmailContext>("tenant-communication-request.hbs");
   return commTpl;
 }
+function loadOwnerStatement() {
+  if (!ownerStatementTpl) ownerStatementTpl = compile<OwnerStatementEmailContext>("owner-statement.hbs");
+  return ownerStatementTpl;
+}
 
 export const templates = {
   rentDue: (ctx: RentEmailContext) => loadDue()(ctx),
   rentOverdue: (ctx: RentEmailContext) => loadOverdue()(ctx),
   communicationRequest: (ctx: CommunicationRequestEmailContext) => loadCommunication()(ctx),
+  ownerStatement: (ctx: OwnerStatementEmailContext) => loadOwnerStatement()(ctx),
 };
 
 const GBP = new Intl.NumberFormat("en-GB", {

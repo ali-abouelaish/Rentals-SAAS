@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { sendEmail } from "@/lib/email/send";
 import { loadAgency } from "@/lib/email/agency-context";
 import { generateFormLinkEmail } from "@/lib/email/templates/form-link";
 import { buildTenantAppUrl } from "@/lib/urls";
@@ -88,9 +88,15 @@ export async function sendFormLinks(
         });
 
         try {
-          // Send immediately via Resend (rather than queuing in email_outbox)
-          // so the caller gets real delivery success/failure.
-          await sendAgencyEmail({ agency, to: email, subject, html, text });
+          // Send immediately (rather than queuing in email_outbox) so the
+          // caller gets real delivery success/failure. sendEmail uses the
+          // agency's connected mailbox when one is active, falling back to
+          // the central Resend mailer otherwise.
+          await sendEmail(
+            profile.tenant_id,
+            { to: email, subject, html, text, templateKey: "form_link" },
+            { agency }
+          );
         } catch (sendErr) {
           // Roll back the send record so a failed email isn't shown as "Sent".
           await supabase.from("booking_form_sends").delete().eq("id", sendRow.id);

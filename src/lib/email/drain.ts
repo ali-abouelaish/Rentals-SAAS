@@ -1,5 +1,5 @@
 import { claimNextBatch, markFailed, markFailedPermanent, markSent } from "./outbox";
-import { sendAgencyEmail } from "./agency-send";
+import { sendEmail } from "./send";
 import { loadAgency } from "./agency-context";
 import { MissingContactEmailError } from "./contact";
 import { logEmailSendError } from "./error-log";
@@ -13,6 +13,11 @@ export type DrainResult = { claimed: number; sent: number; failed: number };
  * claimNextBatch uses FOR UPDATE SKIP LOCKED so no row is claimed twice.
  * Per-row failures are logged / marked and swallowed so a single bad row can't
  * stall the queue.
+ *
+ * Delivery goes through sendEmail, so agencies with a connected mailbox
+ * (Gmail / Microsoft 365 / SMTP) send from their own address — with automatic
+ * fallback to the central Resend mailer — and unconnected agencies keep the
+ * central mailer, byte-for-byte as before.
  */
 export async function drainEmailOutbox(limit = 10): Promise<DrainResult> {
   const batch = await claimNextBatch(limit);
@@ -48,19 +53,23 @@ export async function drainEmailOutbox(limit = 10): Promise<DrainResult> {
     }
 
     try {
-      const { providerId } = await sendAgencyEmail({
-        agency,
-        to: row.to,
-        subject: row.subject,
-        html: row.html,
-        text: row.text ?? "",
-      });
+      const { providerId } = await sendEmail(
+        row.tenant_id,
+        {
+          to: row.to,
+          subject: row.subject,
+          html: row.html,
+          text: row.text ?? "",
+          templateKey: "outbox",
+        },
+        { agency }
+      );
       await markSent(row.id, providerId);
       sent++;
     } catch (err) {
       // Missing contact_email won't be fixed by retrying — fail permanently and
-      // log here (sendAgencyEmail throws this before its own logging). SMTP
-      // failures are already logged inside sendAgencyEmail; just queue the retry.
+      // log here (the Resend transport throws this before its own logging).
+      // Other failures are already logged inside sendEmail; just queue the retry.
       if (err instanceof MissingContactEmailError) {
         await markFailedPermanent(row.id, err.message);
         await logEmailSendError({

@@ -3,13 +3,11 @@ import { Flame, Phone, ExternalLink } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LeadStatusSelect } from "./LeadStatusSelect";
 import { LeadAssignSelect } from "./LeadAssignSelect";
-import type { Lead } from "../domain/types";
+import { tidyMessageText } from "@/lib/gmail/tidyText";
+import type { LeadWithRelations } from "../domain/types";
 
 interface Props {
-  lead: Lead & {
-    assigned_agent: { id: string; display_name: string | null } | null;
-    listing: { id: string; title: string | null; url: string | null } | null;
-  };
+  lead: LeadWithRelations;
   agents: { id: string; display_name: string | null }[];
   isAdmin: boolean;
 }
@@ -47,7 +45,12 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
             <label className="text-xs font-medium text-foreground-muted flex items-center gap-1">
               <Phone className="h-3 w-3" /> Phone
             </label>
-            <p className="text-sm text-foreground">{lead.telephone}</p>
+            <a
+              href={`tel:${lead.telephone_clean ?? lead.telephone.replace(/[^\d+]/g, "")}`}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              {lead.telephone}
+            </a>
           </div>
         )}
         {(lead.address || lead.full_address) && (
@@ -64,12 +67,12 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
         )}
         {lead.property_url && (
           <div className="space-y-1">
-            <label className="text-xs font-medium text-foreground-muted">Listing link</label>
+            <label className="block text-xs font-medium text-foreground-muted">Listing link</label>
             <a
               href={lead.property_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
+              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
             >
               View on {lead.source} <ExternalLink className="h-3 w-3" />
             </a>
@@ -96,11 +99,11 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
       </div>
 
       {/* Message */}
-      {lead.message_text && (
+      {tidyMessageText(lead.message_text) && (
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground-muted">Message</label>
           <p className="text-sm text-foreground whitespace-pre-wrap rounded-lg bg-surface-inset border border-border p-3">
-            {lead.message_text}
+            {tidyMessageText(lead.message_text)}
           </p>
         </div>
       )}
@@ -116,7 +119,7 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
                 href={lead.listing.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-accent hover:underline"
+                className="text-blue-600 hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>

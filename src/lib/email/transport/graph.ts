@@ -1,3 +1,4 @@
+import { getValidGraphAccessToken } from "@/lib/email-providers/graph/tokens";
 import type { Agency } from "../branding";
 import type {
   EmailMessage,
@@ -9,12 +10,11 @@ import type {
 
 /**
  * Microsoft Graph transport — sends from an agency's own Microsoft 365 mailbox
- * via POST /users/{mailbox}/sendMail (raw REST, no SDK).
+ * via the delegated POST /me/sendMail endpoint (raw REST, no SDK).
  *
- * SCAFFOLD: activated by a future admin UI + OAuth consent flow that populates
- * email_providers.credentials. Until then no tenant has a graph provider, so
- * this code path is never taken. Access-token refresh persistence is a TODO for
- * that follow-up (see refreshIfNeeded below).
+ * The access token is refreshed (and persisted) as needed by
+ * getValidGraphAccessToken; a dead refresh token surfaces as a GraphAuthError
+ * and flips the provider to status='error'.
  */
 export class GraphTransport implements Transport {
   readonly type = "graph" as const;
@@ -26,35 +26,41 @@ export class GraphTransport implements Transport {
 
   async send(message: EmailMessage): Promise<TransportResult> {
     const creds = this.config.credentials as OAuthCredentials | null;
-    const mailbox = message.from ?? this.config.fromAddress;
+    const mailbox = this.config.fromAddress;
     if (!creds || !mailbox) {
       throw new Error(`Graph provider for tenant ${this.agency.id} is misconfigured`);
     }
 
-    const accessToken = await this.refreshIfNeeded(creds);
+    const accessToken = await getValidGraphAccessToken(this.config.tenantId, creds);
     const replyTo = message.replyTo ?? this.config.replyTo ?? undefined;
+    // From must be the authenticated mailbox (delegated Mail.Send); a display
+    // name is allowed alongside it.
+    const fromAddress = message.from ?? mailbox;
 
     const payload = {
       message: {
         subject: message.subject,
         body: { contentType: "HTML", content: message.html },
+        from: {
+          emailAddress: {
+            address: fromAddress,
+            ...(this.config.fromName ? { name: this.config.fromName } : {}),
+          },
+        },
         toRecipients: [{ emailAddress: { address: message.to } }],
         ...(replyTo ? { replyTo: [{ emailAddress: { address: replyTo } }] } : {}),
       },
       saveToSentItems: true,
     };
 
-    const res = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailbox)}/sendMail`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+    const res = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify(payload),
+    });
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
@@ -64,14 +70,5 @@ export class GraphTransport implements Transport {
     // sendMail returns 202 Accepted with no body — Graph does not expose a
     // message id here, so there is no provider id to correlate.
     return { messageId: "" };
-  }
-
-  /**
-   * TODO(follow-up): when the access token is near expiry, exchange the refresh
-   * token at the Microsoft identity endpoint and persist the new token set back
-   * to email_providers.credentials. For now we use the stored access token as-is.
-   */
-  private async refreshIfNeeded(creds: OAuthCredentials): Promise<string> {
-    return creds.accessToken;
   }
 }

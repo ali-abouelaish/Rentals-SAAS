@@ -197,7 +197,7 @@ export function TicketDrawer({
     if (!ticket || ticket.job_id || promoting) return;
     if (
       !window.confirm(
-        "Convert this ticket into a maintenance job? You'll be able to track costs, photos, and assignment on the job."
+        "Convert this ticket into a work order? You'll be able to track costs, photos, and assignment on the work order."
       )
     ) {
       return;
@@ -214,7 +214,7 @@ export function TicketDrawer({
         prev ? { ...prev, job_id: result.jobId!, status: nextStatus } : prev
       );
       onTicketUpdated({ id: ticket.id, job_id: result.jobId, status: nextStatus });
-      toast.success("Job created from ticket");
+      toast.success("Work order created from ticket");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Promotion failed";
       toast.error(msg);
@@ -336,7 +336,7 @@ export function TicketDrawer({
                 </div>
               </div>
 
-              {/* Job link / Convert to Job */}
+              {/* Work order link / Convert to work order */}
               <div className="px-6 py-4 border-b border-border">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted mb-2">
                   Work order
@@ -347,7 +347,7 @@ export function TicketDrawer({
                     className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2 text-sm font-medium text-foreground hover:border-brand/40 hover:bg-surface-inset transition-colors"
                   >
                     <Wrench size={14} className="text-brand" />
-                    View linked job
+                    View linked work order
                     <ArrowRight size={13} className="text-foreground-muted" />
                   </a>
                 ) : (
@@ -360,10 +360,12 @@ export function TicketDrawer({
                       disabled={promoting}
                     >
                       <Wrench size={14} />
-                      {promoting ? "Converting…" : "Convert to Job"}
+                      {promoting ? "Converting…" : "Convert to Work Order"}
                     </Button>
                     <p className="text-xs text-foreground-muted">
-                      Creates a maintenance job so you can track costs, photos, and assignment.
+                      Creates a work order pre-filled from this ticket so you can track costs,
+                      photos, and assignment. Work orders can also be created on their own from the
+                      Work Orders tab.
                     </p>
                   </div>
                 )}

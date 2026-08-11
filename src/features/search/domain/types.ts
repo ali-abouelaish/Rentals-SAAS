@@ -3,10 +3,14 @@ export type SearchResultKind =
   | "unit"
   | "pm_tenant"
   | "contract"
+  // "landlord" is the rental-agency CRM record; "owner" is the
+  // property-management owner (owner_landlords). Separate tables.
   | "landlord"
+  | "owner"
   | "client"
   | "key"
   | "supplier"
+  | "certificate"
   | "action";
 
 export type SearchResult = {
@@ -38,10 +42,12 @@ export const KIND_LABELS: Record<Exclude<SearchResultKind, "action">, string> = 
   unit: "Units",
   pm_tenant: "Tenants",
   contract: "Contracts",
-  landlord: "Landlords",
+  landlord: "Landlords (agency)",
+  owner: "Landlords",
   client: "Clients",
   key: "Keys",
   supplier: "Suppliers",
+  certificate: "Certificates",
 };
 
 // Order in which sections render in the dropdown / sheet.
@@ -51,9 +57,11 @@ export const KIND_ORDER: SearchResultKind[] = [
   "pm_tenant",
   "contract",
   "client",
+  "owner",
   "landlord",
   "key",
   "supplier",
+  "certificate",
   "action",
 ];
 
@@ -73,12 +81,16 @@ export function kindToHref(
       return `/contracts?focus=${id}`;
     case "landlord":
       return `/landlords/${id}`;
+    case "owner":
+      return `/owners/${id}`;
     case "client":
       return `/clients/${id}`;
     case "key":
       return parentId ? `/properties/${parentId}` : `/keys`;
     case "supplier":
       return `/maintenance?supplier=${id}`;
+    case "certificate":
+      return parentId ? `/properties/${parentId}` : `/compliance`;
     case "action":
       return "#";
   }

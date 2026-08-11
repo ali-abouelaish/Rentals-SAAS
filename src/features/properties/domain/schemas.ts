@@ -193,10 +193,16 @@ export const ownerLandlordEditSchema = z.object({
   name: lenientStr,
   phone: lenientStr,
   email: lenientStr,
+  address: lenientStr,
+  notes: lenientStr,
   contract_start_date: lenientStr,
   contract_expiry_date: lenientStr,
+  next_payment_due: lenientStr,
   monthly_rent_owed: lenientNum,
   payment_schedule: lenientEnum(["monthly", "quarterly", "biannual", "annual"] as const),
+  management_fee_type: lenientEnum(["none", "percent", "flat"] as const),
+  management_fee_percent: lenientNum,
+  management_fee_amount: lenientNum,
   alert_60_days: lenientBool,
   alert_30_days: lenientBool,
   contract_document_url: lenientStr,
@@ -212,18 +218,43 @@ export const propertyManagerEditSchema = z.object({
 }).partial();
 export type PropertyManagerEditValues = z.infer<typeof propertyManagerEditSchema>;
 
-export const ownerLandlordSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  phone: z.string().nullable().optional().or(z.literal("")),
-  email: z.string().email("Invalid email").nullable().optional().or(z.literal("")),
-  contract_start_date: z.string().nullable().optional().or(z.literal("")),
-  contract_expiry_date: z.string().nullable().optional().or(z.literal("")),
-  monthly_rent_owed: z.coerce.number().positive().nullable().optional(),
-  payment_schedule: z.enum(["monthly", "quarterly", "biannual", "annual"]).nullable().optional(),
-  alert_60_days: z.boolean().default(false),
-  alert_30_days: z.boolean().default(false),
-  contract_document_url: z.string().nullable().optional().or(z.literal("")),
-});
+export const ownerLandlordSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    phone: z.string().nullable().optional().or(z.literal("")),
+    email: z.string().email("Invalid email").nullable().optional().or(z.literal("")),
+    // Optional so the inline create-from-property dialog, which does not
+    // register these inputs, still validates. Edited on /owners/[id].
+    address: z.string().max(500, "Max 500 characters").nullable().optional().or(z.literal("")),
+    notes: z.string().max(2000, "Max 2000 characters").nullable().optional().or(z.literal("")),
+    contract_start_date: z.string().nullable().optional().or(z.literal("")),
+    contract_expiry_date: z.string().nullable().optional().or(z.literal("")),
+    monthly_rent_owed: z.coerce.number().positive().nullable().optional(),
+    payment_schedule: z.enum(["monthly", "quarterly", "biannual", "annual"]).nullable().optional(),
+    // Management-fee config for owner statements (see owner-statements feature).
+    management_fee_type: z.enum(["none", "percent", "flat"]).default("none"),
+    management_fee_percent: z.coerce.number().min(0).max(100).nullable().optional(),
+    management_fee_amount: z.coerce.number().min(0).nullable().optional(),
+    alert_60_days: z.boolean().default(false),
+    alert_30_days: z.boolean().default(false),
+    contract_document_url: z.string().nullable().optional().or(z.literal("")),
+  })
+  .superRefine((val, ctx) => {
+    if (val.management_fee_type === "percent" && !(val.management_fee_percent && val.management_fee_percent > 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["management_fee_percent"],
+        message: "Enter a percentage between 0 and 100",
+      });
+    }
+    if (val.management_fee_type === "flat" && !(val.management_fee_amount && val.management_fee_amount > 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["management_fee_amount"],
+        message: "Enter a monthly fee amount",
+      });
+    }
+  });
 export type OwnerLandlordFormValues = z.infer<typeof ownerLandlordSchema>;
 
 export const propertyManagerSchema = z.object({

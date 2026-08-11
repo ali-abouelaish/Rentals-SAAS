@@ -10,8 +10,11 @@ import { deleteLandlord } from "@/features/landlords/actions/landlords";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { InvoiceStatusBadge } from "@/features/invoices/ui/InvoiceStatusBadge";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
+import { formatAge, isStale, STALE_AFTER_DAYS } from "@/lib/utils/freshness";
 import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
 import { RunScraperButton } from "@/features/landlords/ui/RunScraperButton";
+import { LandlordSheetCard } from "@/features/listing-feeds/ui/LandlordSheetCard";
+import { ListingDetailsDrawer } from "@/features/listing-feeds/ui/ListingDetailsDrawer";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { TrackEntityVisit } from "@/features/search/ui/TrackEntityVisit";
 import { Trash2, ArrowLeft } from "lucide-react";
@@ -36,7 +39,8 @@ export default async function LandlordDetailPage({
       .order("created_at", { ascending: false })
   ]);
   if (!landlordResult) notFound();
-  const { landlord, rentalsCount, listings, scrapedListings } = landlordResult;
+  const { landlord, rentalsCount, listings, scrapedListings, sheetRuns, sheetListingCount } =
+    landlordResult;
 
   return (
     <div className="space-y-6">
@@ -122,12 +126,40 @@ export default async function LandlordDetailPage({
             <p className="text-xs uppercase text-foreground-muted">Created</p>
             <p>{landlord.created_at ? formatDate(landlord.created_at) : "—"}</p>
           </div>
+          {/* Only meaningful for landlords with a source to scrape. A run that
+              cannot reach the profile deliberately leaves this untouched, so a
+              date drifting into the past is the signal that the listings below
+              are no longer being refreshed. */}
+          {landlord.spareroom_profile_url && (
+            <div>
+              <p className="text-xs uppercase text-foreground-muted">Last scraped</p>
+              <p
+                className={isStale(landlord.last_scraped_at) ? "font-medium text-destructive" : undefined}
+                title={
+                  landlord.last_scraped_at
+                    ? `Last successful read: ${formatDate(landlord.last_scraped_at)}`
+                    : "This landlord's SpareRoom profile has never been read successfully."
+                }
+              >
+                {formatAge(landlord.last_scraped_at)}
+                {landlord.last_scraped_at ? ` · ${formatDate(landlord.last_scraped_at)}` : ""}
+              </p>
+            </div>
+          )}
           <div className="md:col-span-3">
             <p className="text-xs uppercase text-foreground-muted">Profile notes</p>
             <p className="whitespace-pre-wrap">{landlord.profile_notes ?? "—"}</p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Renders only when a spreadsheet link is set; the link itself is edited
+          in the landlord form below, next to the SpareRoom profile URL. */}
+      <LandlordSheetCard
+        landlord={landlord}
+        runs={sheetRuns}
+        listingCount={sheetListingCount}
+      />
 
       <Card>
         <CardContent>
@@ -138,27 +170,65 @@ export default async function LandlordDetailPage({
       {(scrapedListings.length > 0 || listings.length > 0) && (
         <Card>
           <CardContent className="space-y-4">
-            <p className="text-sm font-medium text-navy">
-              Listings {scrapedListings.length > 0 ? `(${scrapedListings.length} from scraper)` : ""}
-            </p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-navy">
+                Listings {scrapedListings.length > 0 ? `(${scrapedListings.length} from scraper)` : ""}
+              </p>
+              {/* Stale rows are served by the public API exactly like fresh ones,
+                  so the count has to be visible here or nobody finds out until a
+                  partner complains about dead links. */}
+              {scrapedListings.filter((row) => isStale(row.last_seen_at)).length > 0 && (
+                <p className="text-xs text-destructive">
+                  {scrapedListings.filter((row) => isStale(row.last_seen_at)).length} of{" "}
+                  {scrapedListings.length} not confirmed in the last {STALE_AFTER_DAYS} days — these
+                  may no longer be live.
+                </p>
+              )}
+            </div>
             {scrapedListings.length > 0 ? (
               <DataTable
-                columns={["Title", "Location", "Price", "Status", "Rooms", "Available", "Link"]}
+                columns={["Title", "Location", "Price", "Source", "Scraped", "Rooms", "Available", "Link"]}
                 rows={scrapedListings.map((row) => [
                   <span key={`${row.id}-title`} className="max-w-[200px] truncate block" title={row.title ?? undefined}>
                     {row.title ?? "—"}
                   </span>,
                   <span key={`${row.id}-loc`} className="text-foreground-secondary">{row.location ?? "—"}</span>,
                   <span key={`${row.id}-price`}>{row.price != null ? formatGBP(Number(row.price)) : "—"}</span>,
-                  <span key={`${row.id}-status`}>{row.status ?? "—"}</span>,
+                  // Which pipeline put this row here. The two refresh
+                  // independently, so a stale row means different things
+                  // depending on the source and they must not read alike.
+                  <span key={`${row.id}-source`} className="text-foreground-secondary">
+                    {row.source === "spreadsheet" ? "Spreadsheet" : "SpareRoom"}
+                  </span>,
+                  // Replaces the old Status column, which was useless here:
+                  // the scraper hardcodes 'available' on every row, so a listing
+                  // dead for months still claimed to be available. Age is the
+                  // only honest liveness signal we have.
+                  <span
+                    key={`${row.id}-seen`}
+                    className={isStale(row.last_seen_at) ? "font-medium text-destructive" : undefined}
+                    title={
+                      row.last_seen_at
+                        ? `Last confirmed at source: ${formatDate(row.last_seen_at)}`
+                        : `Never confirmed since freshness tracking was added — treat as unverified.`
+                    }
+                  >
+                    {formatAge(row.last_seen_at)}
+                  </span>,
                   <span key={`${row.id}-rooms`}>{row.room_count ?? row.total_rooms ?? "—"}</span>,
                   <span key={`${row.id}-avail`}>{row.available_date ? formatDate(row.available_date) : "—"}</span>,
-                  row.url ? (
+                  // Only link out for absolute http(s) URLs. A relative href
+                  // here (e.g. stray text imported from a spreadsheet) would
+                  // resolve against /landlords/<id> and navigate to a bogus
+                  // landlord route. Listings with no advert — the normal case
+                  // for spreadsheet imports — open a drawer instead, so their
+                  // data and photos are reachable.
+                  /^https?:\/\//i.test(row.url ?? "") ? (
                     <a key={`${row.id}-link`} href={row.url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
                       View
                     </a>
                   ) : (
-                    <span key={`${row.id}-link`}>—</span>
+                    <ListingDetailsDrawer key={`${row.id}-link`} listing={row} />
                   ),
                 ])}
               />

@@ -9,6 +9,14 @@ import { getDashboardActivityFeed } from "@/features/pm-dashboard/data/activity-
 import { getDashboardTodos, getTodoHistory, getTodoPropertyOptions } from "@/features/pm-dashboard/data/todos";
 import { RentalDashboardPage } from "@/features/rentals-dashboard/ui/RentalDashboardPage";
 import { getPublishedModuleConfigForApp } from "@/features/admin/data/admin";
+import { getEntitlements } from "@/lib/entitlements/getEntitlements";
+import { getUpcomingReminders, type InboxMessage } from "@/features/automations/data/queries";
+import { getQuickLinks } from "@/features/quick-links/data/queries";
+import { QuickLinksSection } from "@/features/quick-links/ui/QuickLinksSection";
+
+// Render on every request and skip the fetch Data Cache — the dashboard's
+// vacancy days, arrears and reminders are time-sensitive and must be live.
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage({
   searchParams,
@@ -37,13 +45,19 @@ export default async function DashboardPage({
 
   try {
     if (view === "pm") {
-      const [data, activity, todos, todoHistory, todoProperties] = await Promise.all([
+      const [data, activity, todos, todoHistory, todoProperties, entitlements, quickLinks] = await Promise.all([
         getDashboardData({ isAdmin }),
         getDashboardActivityFeed().catch(() => []),
         getDashboardTodos().catch(() => []),
         getTodoHistory().catch(() => []),
         getTodoPropertyOptions().catch(() => []),
+        getEntitlements().catch(() => new Set<string>()),
+        getQuickLinks().catch(() => []),
       ]);
+      // Reminders rail only shows for tenants entitled to automations.
+      const reminders: InboxMessage[] | null = entitlements.has("automations")
+        ? await getUpcomingReminders(profile.tenant_id).catch(() => [])
+        : null;
       return (
         <div className="space-y-6">
           {showTabToggle && <DashboardTabs active="pm" />}
@@ -54,12 +68,21 @@ export default async function DashboardPage({
             todos={todos}
             todoHistory={todoHistory}
             todoProperties={todoProperties}
+            reminders={reminders}
+            topSlot={
+              (quickLinks.length > 0 || isAdmin) && (
+                <QuickLinksSection links={quickLinks} isAdmin={isAdmin} />
+              )
+            }
           />
         </div>
       );
     }
 
-    const data = await getRentalDashboardData(isAdmin ? undefined : profile.id);
+    const [data, quickLinks] = await Promise.all([
+      getRentalDashboardData(isAdmin ? undefined : profile.id),
+      getQuickLinks().catch(() => []),
+    ]);
     return (
       <div className="space-y-6">
         {showTabToggle && <DashboardTabs active="rental" />}
@@ -67,6 +90,11 @@ export default async function DashboardPage({
           data={data}
           userName={profile.display_name || "User"}
           isAdmin={isAdmin}
+          topSlot={
+            (quickLinks.length > 0 || isAdmin) && (
+              <QuickLinksSection links={quickLinks} isAdmin={isAdmin} />
+            )
+          }
         />
       </div>
     );

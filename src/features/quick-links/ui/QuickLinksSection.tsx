@@ -1,8 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { ExternalLink, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, GripVertical, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +34,7 @@ import {
   addQuickLink,
   updateQuickLink,
   deleteQuickLink,
+  reorderQuickLinks,
 } from "@/features/quick-links/actions/quickLinks";
 import type { QuickLink } from "@/features/quick-links/data/queries";
 
@@ -70,14 +89,25 @@ function AddLinkForm() {
   );
 }
 
-// ── Edit link row ─────────────────────────────────────────────────
-function EditLinkRow({ link }: { link: QuickLink }) {
+// ── Sortable link row ─────────────────────────────────────────────
+function SortableLinkRow({ link }: { link: QuickLink }) {
   const [editing, setEditing] = useState(false);
   const [state, action] = useFormState(updateQuickLink, {});
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: link.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : "auto",
+  };
 
   if (editing) {
     return (
       <form
+        ref={setNodeRef}
+        style={style}
         action={async (fd) => {
           const result = await action(fd);
           if (!(result as { error?: string } | undefined)?.error) setEditing(false);
@@ -122,7 +152,23 @@ function EditLinkRow({ link }: { link: QuickLink }) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-surface-inset transition-colors">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between gap-3 p-3 rounded-xl transition-colors ${
+        isDragging ? "bg-surface-inset shadow-lg" : "hover:bg-surface-inset"
+      }`}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none shrink-0 text-foreground-muted hover:text-foreground"
+        aria-label={`Drag to reorder ${link.title}`}
+        title="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground truncate">{link.title}</p>
         {link.description && (
@@ -158,6 +204,48 @@ function EditLinkRow({ link }: { link: QuickLink }) {
 
 // ── Manage dialog ─────────────────────────────────────────────────
 function ManageDialog({ links }: { links: QuickLink[] }) {
+  // Local copy so a drag reorders instantly; the server action persists in the
+  // background and revalidation feeds the saved order back through `links`.
+  const [items, setItems] = useState(links);
+
+  // Only resync when the server data actually changes (add/edit/delete/reorder)
+  // — `links` is a fresh array on every parent render, so we compare content.
+  const signature = links
+    .map((l) => `${l.id}:${l.title}:${l.url}:${l.description ?? ""}`)
+    .join("|");
+  useEffect(() => {
+    setItems(links);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((l) => l.id === active.id);
+    const newIndex = items.findIndex((l) => l.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const previous = items;
+    const reordered = arrayMove(items, oldIndex, newIndex).map((l, idx) => ({
+      ...l,
+      position: idx,
+    }));
+    setItems(reordered);
+
+    reorderQuickLinks(
+      reordered.map((l) => ({ id: l.id, position: l.position }))
+    ).catch(() => {
+      toast.error("Failed to save order");
+      setItems(previous);
+    });
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -171,12 +259,29 @@ function ManageDialog({ links }: { links: QuickLink[] }) {
           <DialogTitle>Manage Useful Resources</DialogTitle>
         </DialogHeader>
 
-        {links.length > 0 ? (
-          <div className="space-y-1">
-            {links.map((link) => (
-              <EditLinkRow key={link.id} link={link} />
-            ))}
-          </div>
+        {items.length > 0 ? (
+          <>
+            <p className="text-xs text-foreground-muted">
+              Drag the handle to reorder — the order here is the order shown on
+              the dashboard.
+            </p>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={items.map((l) => l.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-1">
+                  {items.map((link) => (
+                    <SortableLinkRow key={link.id} link={link} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </>
         ) : (
           <p className="text-sm text-foreground-muted py-2">
             No links yet. Add your first one below.

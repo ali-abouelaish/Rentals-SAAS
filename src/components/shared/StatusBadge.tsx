@@ -94,6 +94,22 @@ const statusConfig: Record<string, StatusConfig> = {
     className: "bg-surface-inset text-foreground-muted border-border",
     label: "Inactive",
   },
+  // Certificate compliance statuses
+  expired: {
+    className: "bg-error-bg text-error-fg border-error-border",
+    icon: XCircle,
+    label: "Expired",
+  },
+  expiring_soon: {
+    className: "bg-warning-bg text-warning-fg border-warning-border",
+    icon: AlertCircle,
+    label: "Expiring soon",
+  },
+  valid: {
+    className: "bg-success-bg text-success-fg border-success-border",
+    icon: CheckCircle2,
+    label: "Valid",
+  },
   // Lead statuses
   new: {
     className: "bg-info-bg text-info-fg border-info-border",

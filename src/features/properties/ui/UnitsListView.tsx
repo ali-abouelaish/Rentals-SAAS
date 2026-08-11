@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { differenceInDays, parseISO } from "date-fns";
-import { AlertTriangle, MapPin, Clock, User, Warehouse, Pencil, Key, PoundSterling, Check, Bell, X } from "lucide-react";
+import { AlertTriangle, MapPin, Clock, User, Warehouse, Pencil, Key, PoundSterling, Check, Bell, X, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import { SendReminderDialog } from "@/features/reminders/ui/SendReminderDialog";
@@ -18,7 +18,46 @@ import {
   recordRentPayment,
   undoRentPayment,
 } from "@/features/contracts/actions/rent-payments";
+import type { CertificateStatus } from "@/features/certificates/domain/types";
 import type { Property, Unit, UnitRentPayment } from "../domain/types";
+
+// Red/amber/green compliance shield shown next to the property name;
+// worst status across the property's certificates wins.
+const CERT_SHIELD: Record<
+  CertificateStatus,
+  { icon: typeof ShieldCheck; className: string; label: string }
+> = {
+  expired: {
+    icon: ShieldX,
+    className: "text-red-500 hover:text-red-600",
+    label: "A certificate has expired — open Compliance",
+  },
+  expiring_soon: {
+    icon: ShieldAlert,
+    className: "text-amber-500 hover:text-amber-600",
+    label: "A certificate expires within 30 days — open Compliance",
+  },
+  valid: {
+    icon: ShieldCheck,
+    className: "text-emerald-500 hover:text-emerald-600",
+    label: "All certificates valid — open Compliance",
+  },
+};
+
+function CertificateShield({ status }: { status?: CertificateStatus }) {
+  if (!status) return null;
+  const { icon: Icon, className, label } = CERT_SHIELD[status];
+  return (
+    <Link
+      href="/compliance"
+      title={label}
+      onClick={(e) => e.stopPropagation()}
+      className={cn("shrink-0 transition-colors", className)}
+    >
+      <Icon className="h-4 w-4" strokeWidth={2} />
+    </Link>
+  );
+}
 
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
@@ -492,6 +531,7 @@ function PropertyGroup({
   onPaymentRecorded,
   onPaymentUndone,
   reminderStatus,
+  certificateStatus,
 }: {
   property: Property;
   units: Unit[];
@@ -502,6 +542,7 @@ function PropertyGroup({
   onPaymentRecorded: (unitId: string, payment: UnitRentPayment) => void;
   onPaymentUndone: (unitId: string, periodYear: number, periodMonth: number) => void;
   reminderStatus: ReminderStatusMap;
+  certificateStatus?: CertificateStatus;
 }) {
   return (
     <div className="rounded-xl border border-border bg-surface-card overflow-hidden">
@@ -520,6 +561,7 @@ function PropertyGroup({
             >
               {property.name}
             </Link>
+            <CertificateShield status={certificateStatus} />
             <span className="rounded-full bg-surface-card border border-border px-2 py-0.5 text-[10px] font-semibold text-foreground-muted uppercase tracking-wide">
               {formatPropertyType(property.property_type)}
             </span>
@@ -598,6 +640,7 @@ interface UnitsListViewProps {
   properties: Property[];
   units: Unit[];
   reminderStatus?: ReminderStatusMap;
+  certificateStatus?: Record<string, CertificateStatus>;
   onUnitClick: (unitId: string) => void;
   onStatusChanged: (change: UnitStatusChange) => void;
   onUnitCreated: (unit: Unit) => void;
@@ -606,7 +649,7 @@ interface UnitsListViewProps {
   onPaymentUndone: (unitId: string, periodYear: number, periodMonth: number) => void;
 }
 
-export function UnitsListView({ properties, units, reminderStatus, onUnitClick, onStatusChanged, onUnitCreated, onPropertyDeleted, onPaymentRecorded, onPaymentUndone }: UnitsListViewProps) {
+export function UnitsListView({ properties, units, reminderStatus, certificateStatus, onUnitClick, onStatusChanged, onUnitCreated, onPropertyDeleted, onPaymentRecorded, onPaymentUndone }: UnitsListViewProps) {
   if (properties.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-surface-card py-16 text-center">
@@ -633,6 +676,7 @@ export function UnitsListView({ properties, units, reminderStatus, onUnitClick, 
             onPaymentRecorded={onPaymentRecorded}
             onPaymentUndone={onPaymentUndone}
             reminderStatus={reminderStatus ?? {}}
+            certificateStatus={certificateStatus?.[property.id]}
           />
         );
       })}

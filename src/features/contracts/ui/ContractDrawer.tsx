@@ -17,6 +17,7 @@ import { ProRataField } from "./ProRataField";
 import { SecureDepositWizard } from "@/features/mydeposits/ui/SecureDepositWizard";
 import { TdsProtectWizard } from "@/features/tds/ui/TdsProtectWizard";
 import { DpsProtectWizard } from "@/features/dps/ui/DpsProtectWizard";
+import { AddReminderDialog } from "@/features/automations/ui/AddReminderDialog";
 import { updateContract } from "../actions/contracts";
 import { regenerateContractPdf } from "../templates/actions/generate";
 import { contractSchema, type ContractFormValues } from "../domain/schemas";
@@ -613,16 +614,26 @@ export function ContractDrawer({ contract, open, onClose, onContractUpdated }: C
                 {new Date(localContract.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </p>
             </div>
-            <Button
-              type="button"
-              variant={isEditing ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setIsEditing(!isEditing)}
-              className="h-8 shrink-0"
-            >
-              <Pencil className="h-3.5 w-3.5 mr-1" />
-              {isEditing ? "Editing" : "Edit"}
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <AddReminderDialog
+                entity={{
+                  type: "tenancy",
+                  id: localContract.id,
+                  label: localContract.pm_tenant?.full_name ?? "Contract",
+                }}
+                triggerLabel="Reminder"
+              />
+              <Button
+                type="button"
+                variant={isEditing ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="h-8 shrink-0"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                {isEditing ? "Editing" : "Edit"}
+              </Button>
+            </div>
           </div>
         </SheetHeader>
 

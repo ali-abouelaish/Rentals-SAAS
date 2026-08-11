@@ -20,14 +20,17 @@ export type SendAgencyEmailParams = {
 export type SendAgencyEmailResult = { providerId: string };
 
 /**
- * Send a branded email on behalf of an agency via the central Resend mailer.
+ * Send a branded email via the central Resend mailer, ALWAYS — ignoring any
+ * per-agency custom provider.
  *
- * This is the system-default path used for portal invites, Harbor Ops
- * notifications, the outbox drain, etc. — it always sends through Resend and
- * ignores any per-agency custom provider (rent reminders use sendEmail() for
- * that). From is pinned to the central Harbor Ops mailer; reply-to is the
- * agency's contact_email — refuses to send if unset. Every attempt is recorded
- * in email_log.
+ * Reserved for system→agency mail that must not depend on the agency's own
+ * mailbox: Harbor Ops notifications (notify-agency/creation/marketing-claim)
+ * and, critically, the "your email provider failed" alert in
+ * email-providers/alert.ts. Everything tenant-facing (outbox drain, reminders,
+ * portal invites, form links) goes through sendEmail(), which resolves the
+ * agency's connected transport and falls back to Resend. From is pinned to the
+ * central Harbor Ops mailer; reply-to is the agency's contact_email — refuses
+ * to send if unset. Every attempt is recorded in email_log.
  */
 export async function sendAgencyEmail({
   agency,

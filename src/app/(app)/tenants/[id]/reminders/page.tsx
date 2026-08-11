@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { countPendingForPmTenant } from "@/features/inbox/data/queries";
+import { AddReminderDialog } from "@/features/automations/ui/AddReminderDialog";
 
 const REMINDER_LABELS: Record<string, string> = {
   upcoming_3d: "Upcoming (3 days)",
@@ -57,13 +58,18 @@ export default async function TenantRemindersPage({ params }: { params: Params }
           title="Rent reminders"
           subtitle={`Email history for ${tenant.full_name}`}
         />
-        {pendingRequests > 0 && (
-          <Link href="/inbox?status=pending" className="shrink-0">
-            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">
-              {pendingRequests} pending request{pendingRequests === 1 ? "" : "s"}
-            </Badge>
-          </Link>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {pendingRequests > 0 && (
+            <Link href="/inbox?status=pending">
+              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">
+                {pendingRequests} pending request{pendingRequests === 1 ? "" : "s"}
+              </Badge>
+            </Link>
+          )}
+          <AddReminderDialog
+            entity={{ type: "pm_tenant", id: tenant.id, label: tenant.full_name }}
+          />
+        </div>
       </div>
 
       {reminders.length === 0 ? (

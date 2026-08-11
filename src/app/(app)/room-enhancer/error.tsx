@@ -20,8 +20,8 @@ export default function RoomEnhancerError({
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 p-6 text-center">
-      <div className="rounded-full bg-status-error-bg p-4">
-        <AlertTriangle className="h-8 w-8 text-status-error-fg" />
+      <div className="rounded-full bg-error-bg p-4">
+        <AlertTriangle className="h-8 w-8 text-error-fg" />
       </div>
       <div className="space-y-2">
         <h1 className="text-xl font-semibold tracking-tight">

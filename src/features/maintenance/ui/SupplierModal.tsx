@@ -18,7 +18,7 @@ import type { JobCategory, MaintenanceSupplier } from "../domain/types";
 
 const schema = z.object({
   name: z.string().min(1, "Company name is required").max(200, "Max 200 characters"),
-  trade: z.enum(["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "other"]),
+  trade: z.enum(["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "gas_heating", "fire_safety", "inspection", "other"]),
   contact_name: z.string().max(200, "Max 200 characters").optional(),
   phone: z.string().max(50, "Max 50 characters").optional(),
   email: z.string().email("Enter a valid email address").max(255).optional().or(z.literal("")),

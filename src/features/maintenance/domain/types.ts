@@ -16,6 +16,9 @@ export type JobCategory =
   | "pest_control"
   | "cleaning"
   | "decoration"
+  | "gas_heating"
+  | "fire_safety"
+  | "inspection"
   | "other";
 
 export type MaintenanceJob = {
@@ -123,6 +126,9 @@ export const JOB_CATEGORY_LABELS: Record<JobCategory, string> = {
   pest_control: "Pest Control",
   cleaning: "Cleaning",
   decoration: "Decoration",
+  gas_heating: "Gas & Heating",
+  fire_safety: "Fire Safety",
+  inspection: "Inspection & Certification",
   other: "Other",
 };
 

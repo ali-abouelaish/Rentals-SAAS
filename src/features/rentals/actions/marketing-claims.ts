@@ -6,55 +6,64 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { isAdminRole } from "@/lib/auth/roles";
 import { notifyMarketingClaim } from "@/lib/email/notify-marketing-claim";
+import {
+  finalizeMarketingClaimSchema,
+  marketingClaimProofPrefix,
+  startMarketingClaimSchema,
+  type FinalizeMarketingClaimInput,
+  type StartMarketingClaimInput,
+} from "@/features/rentals/domain/marketing-claims";
 
-const ALLOWED_PROOF_MIME = new Set([
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-  "image/heif",
-  "application/pdf",
-]);
-const MAX_PROOF_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_PROOF_FILES = 8;
+export type StartClaimResult = {
+  ok: boolean;
+  claimId?: string;
+  /** Storage prefix the browser must upload every proof file under. */
+  uploadPrefix?: string;
+  error?: string;
+};
 
 export type ClaimResult = {
   ok: boolean;
-  partial?: boolean;
   claimId?: string;
   error?: string;
 };
 
 /**
- * Marketing claim — an agent (typically a marketing-only agent)
- * asserts they did the marketing on this rental, attaching proof
- * screenshots. Sends a notification to assisting agent, admins,
- * and any already-linked marketing agents.
+ * `redirect()` and `notFound()` signal control flow by throwing. A blanket
+ * catch would swallow them and turn a "your session expired" redirect into a
+ * meaningless error string, so they have to be re-thrown.
  */
-export async function claimRentalAsMarketing(formData: FormData): Promise<ClaimResult> {
+function isNextControlFlowError(err: unknown): boolean {
+  const digest = (err as { digest?: unknown } | null)?.digest;
+  return (
+    typeof digest === "string" &&
+    (digest === "NEXT_NOT_FOUND" || digest.startsWith("NEXT_REDIRECT"))
+  );
+}
+
+/**
+ * Step 1 of a marketing claim — an agent (typically a marketing-only agent)
+ * asserts they did the marketing on this rental. Runs every eligibility check
+ * and creates the pending claim, then hands back the storage prefix the
+ * browser uploads its proof screenshots to.
+ *
+ * The claim only becomes visible work once `finalizeMarketingClaim` registers
+ * at least one proof; if the uploads fail outright the client calls
+ * `discardMarketingClaim` so the agent can retry instead of being blocked by
+ * their own empty claim.
+ */
+export async function startMarketingClaim(
+  input: StartMarketingClaimInput
+): Promise<StartClaimResult> {
   try {
+    const parsed = startMarketingClaimSchema.safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid claim." };
+    }
+    const { rentalId, note } = parsed.data;
+
     const supabase = createSupabaseServerClient();
     const profile = await requireUserProfile();
-    const rentalId = String(formData.get("rental_id") ?? "");
-    const note = String(formData.get("note") ?? "").trim();
-    const proofFiles = (formData.getAll("proof") as File[]).filter((f) => f && f.size > 0);
-
-    if (!rentalId) return { ok: false, error: "Missing rental id." };
-    if (proofFiles.length < 1) {
-      return { ok: false, error: "Attach at least one screenshot or PDF as proof." };
-    }
-    if (proofFiles.length > MAX_PROOF_FILES) {
-      return { ok: false, error: `Attach at most ${MAX_PROOF_FILES} files.` };
-    }
-    for (const file of proofFiles) {
-      if (file.size > MAX_PROOF_BYTES) {
-        return { ok: false, error: `"${file.name}" is larger than 10 MB.` };
-      }
-      if (file.type && !ALLOWED_PROOF_MIME.has(file.type)) {
-        return { ok: false, error: `"${file.name}" has an unsupported file type.` };
-      }
-    }
 
     const role = (profile.role ?? "").toLowerCase();
     const isMarketingCapableRole =
@@ -104,52 +113,128 @@ export async function claimRentalAsMarketing(formData: FormData): Promise<ClaimR
       .single();
     if (claimError) return { ok: false, error: claimError.message };
 
-    let uploadFailed: string | null = null;
-    try {
-      for (const file of proofFiles) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const filePath = `${profile.tenant_id}/${rental.id}/marketing_claim/${claim.id}/${crypto.randomUUID()}-${safeName}`;
-        const { error: uploadError } = await supabase.storage
-          .from("rental_docs")
-          .upload(filePath, file, { contentType: file.type || undefined });
-        if (uploadError) throw new Error(`Storage upload failed for ${file.name}: ${uploadError.message}`);
+    return {
+      ok: true,
+      claimId: claim.id,
+      uploadPrefix: marketingClaimProofPrefix(profile.tenant_id, rental.id, claim.id),
+    };
+  } catch (err) {
+    if (isNextControlFlowError(err)) throw err;
+    console.error("[startMarketingClaim] unexpected error:", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong. Please try again." };
+  }
+}
 
-        const { error: proofInsertError } = await supabase
-          .from("rental_marketing_claim_proofs")
-          .insert({
-            tenant_id: profile.tenant_id,
-            claim_id: claim.id,
-            file_path: filePath,
-            file_name: file.name,
-          });
-        if (proofInsertError) throw new Error(proofInsertError.message);
-      }
-    } catch (err) {
-      uploadFailed = err instanceof Error ? err.message : "Proof upload failed";
-      console.error("[marketing-claim] proof upload failed", err);
+/**
+ * Step 2 — register the proof files the browser has already uploaded, then
+ * log and notify. Paths are checked against the claim's own storage prefix so
+ * a caller can't attach objects belonging to another claim or tenant.
+ */
+export async function finalizeMarketingClaim(
+  input: FinalizeMarketingClaimInput
+): Promise<ClaimResult> {
+  try {
+    const parsed = finalizeMarketingClaimSchema.safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid proof list." };
+    }
+    const { claimId, files } = parsed.data;
+
+    const supabase = createSupabaseServerClient();
+    const profile = await requireUserProfile();
+
+    const { data: claim, error: claimError } = await supabase
+      .from("rental_marketing_claims")
+      .select("id, tenant_id, rental_id, agent_id, status")
+      .eq("id", claimId)
+      .maybeSingle();
+    if (claimError) return { ok: false, error: claimError.message };
+    if (!claim) return { ok: false, error: "Claim not found." };
+    if (claim.agent_id !== profile.id) {
+      return { ok: false, error: "You can only attach proof to your own claim." };
+    }
+    if (claim.status !== "pending") {
+      return { ok: false, error: "Claim has already been reviewed." };
     }
 
+    const prefix = `${marketingClaimProofPrefix(claim.tenant_id, claim.rental_id, claim.id)}/`;
+    if (files.some((file) => !file.path.startsWith(prefix))) {
+      return { ok: false, error: "Proof was uploaded to an unexpected location." };
+    }
+
+    const { error: proofInsertError } = await supabase
+      .from("rental_marketing_claim_proofs")
+      .insert(
+        files.map((file) => ({
+          tenant_id: claim.tenant_id,
+          claim_id: claim.id,
+          file_path: file.path,
+          file_name: file.name,
+        }))
+      );
+    if (proofInsertError) return { ok: false, error: proofInsertError.message };
+
+    const { data: rental } = await supabase
+      .from("rental_codes")
+      .select("code")
+      .eq("id", claim.rental_id)
+      .maybeSingle();
+
     await supabase.from("activity_log").insert({
-      tenant_id: profile.tenant_id,
+      tenant_id: claim.tenant_id,
       actor_user_id: profile.id,
       action: "marketing_claim_created",
       entity_type: "rental",
-      entity_id: rental.id,
-      metadata: { claim_id: claim.id, rental_code: rental.code },
+      entity_id: claim.rental_id,
+      metadata: { claim_id: claim.id, rental_code: rental?.code ?? null },
     });
 
     await notifyMarketingClaim(claim.id);
 
-    revalidatePath(`/rentals/${rentalId}`);
+    revalidatePath(`/rentals/${claim.rental_id}`);
     revalidatePath("/rentals");
-
-    if (uploadFailed) {
-      return { ok: false, partial: true, claimId: claim.id, error: uploadFailed };
-    }
     return { ok: true, claimId: claim.id };
   } catch (err) {
-    console.error("[claimRentalAsMarketing] unexpected error:", err);
+    if (isNextControlFlowError(err)) throw err;
+    console.error("[finalizeMarketingClaim] unexpected error:", err);
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong. Please try again." };
+  }
+}
+
+/**
+ * Roll back a claim whose proof uploads all failed. Without this the agent is
+ * locked out by the (rental_id, agent_id) unique constraint on their own empty
+ * claim and can never retry.
+ */
+export async function discardMarketingClaim(claimId: string): Promise<ClaimResult> {
+  try {
+    if (!claimId) return { ok: false, error: "Missing claim id." };
+    const supabase = createSupabaseServerClient();
+    const profile = await requireUserProfile();
+
+    const { data: claim } = await supabase
+      .from("rental_marketing_claims")
+      .select("id, agent_id, status, rental_marketing_claim_proofs(id)")
+      .eq("id", claimId)
+      .maybeSingle();
+    if (!claim) return { ok: true };
+    if (claim.agent_id !== profile.id || claim.status !== "pending") {
+      return { ok: false, error: "This claim can no longer be withdrawn." };
+    }
+    if ((claim.rental_marketing_claim_proofs ?? []).length > 0) {
+      return { ok: false, error: "This claim already has proof attached." };
+    }
+
+    const { error } = await supabase
+      .from("rental_marketing_claims")
+      .delete()
+      .eq("id", claimId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    if (isNextControlFlowError(err)) throw err;
+    console.error("[discardMarketingClaim] unexpected error:", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
   }
 }
 
@@ -227,6 +312,7 @@ export async function reviewMarketingClaim(formData: FormData): Promise<{ ok: bo
     revalidatePath("/earnings", "layout");
     return { ok: true };
   } catch (err) {
+    if (isNextControlFlowError(err)) throw err;
     console.error("[reviewMarketingClaim] unexpected error:", err);
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
   }

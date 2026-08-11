@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { loadAgency } from "@/lib/email/agency-context";
-import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { sendEmail } from "@/lib/email/send";
 import {
   templates,
   buildContext,
@@ -144,18 +144,25 @@ export async function POST(request: Request) {
   try {
     // Inbox-notification templates are agency-internal, so omit the
     // unsubscribe header by skipping pmTenantId for that variant.
-    const { providerId } = await sendAgencyEmail({
-      agency,
-      to,
-      subject,
-      html,
-      text,
-      pmTenantId: template === "communication_request" ? undefined : profile.id,
-    });
-    console.log("[email] test send succeeded", { providerId, template, from: fromAddress, to });
+    // Goes through sendEmail so the test exercises the SAME path real mail
+    // takes — the agency's connected mailbox when one is active.
+    const { providerId, providerType } = await sendEmail(
+      profile.tenant_id,
+      {
+        to,
+        subject,
+        html,
+        text,
+        pmTenantId: template === "communication_request" ? undefined : profile.id,
+        templateKey: "test",
+      },
+      { agency }
+    );
+    console.log("[email] test send succeeded", { providerId, providerType, template, from: fromAddress, to });
     return NextResponse.json({
       ok: true,
       providerId,
+      providerType,
       sentTo: to,
       fromAddress,
       template,

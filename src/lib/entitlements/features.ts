@@ -33,6 +33,9 @@ export type FeatureKey =
   | "dps"
   | "forms"
   | "tenant_portal"
+  | "automations"
+  | "certificates"
+  | "owner_statements"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -70,6 +73,9 @@ export const ALL_FEATURES: FeatureKey[] = [
   "dps",
   "forms",
   "tenant_portal",
+  "automations",
+  "certificates",
+  "owner_statements",
   "admin",
 ];
 
@@ -129,7 +135,7 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   },
   maintenance: {
     label: "Maintenance",
-    description: "Maintenance job tracking, cost logging, and profitability integration."
+    description: "Maintenance work order tracking, cost logging, and profitability integration."
   },
   acquisition_insights: {
     label: "Acquisition Insights",
@@ -183,6 +189,21 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
     label: "Tenant Portal",
     description:
       "Renter-facing portal at /portal — passwordless magic-link sign-in with tenancy summary, rent status and standing-order payment reference, maintenance tickets, deposit protection, and agency contact details.",
+  },
+  automations: {
+    label: "Automations & Reminders",
+    description:
+      "Scheduled messages engine — ad-hoc and recurring reminders with an inbox, automation rules (rent due, arrears, expiry dates, works-order chasing), editable message templates, and per-agency quiet hours with a daily send cap.",
+  },
+  certificates: {
+    label: "Compliance Certificates",
+    description:
+      "Track statutory certificates (gas safety, EICR, EPC, fire alarm, HMO licences…) per property or room with document storage, a red/amber/green compliance dashboard, and expiry automations that chase the issuing contractor.",
+  },
+  owner_statements: {
+    label: "Landlords & Statements",
+    description:
+      "The Landlords section for property owners — contact details, management fee, contract dates and the properties they own — plus their monthly statements: the rent owed on each property less the management fee, rechargeable works and other deductions, with opening/closing balances, an agency-branded PDF, and scheduled monthly draft generation.",
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

@@ -3,45 +3,20 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
-import {
-  LayoutDashboard,
-  BadgePercent,
-  Sparkles,
-  Users,
-  ClipboardList,
-  ClipboardEdit,
-  Building2,
-  Home,
-  Settings,
-  LogOut,
-  FileText,
-  Gift,
-  Menu,
-  X,
-  CreditCard,
-  User,
-  Shield,
-  Inbox,
-  Warehouse,
-  CalendarCheck,
-  Users2,
-  FileSignature,
-  Banknote,
-  Landmark,
-  Wrench,
-  TrendingUp,
-  Search,
-  Share2,
-  Wallet,
-  ChevronDown,
-  ShieldCheck,
-  Key as KeyIcon,
-  ListChecks,
-} from "lucide-react";
-import { ADMIN_ROLES, SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
+import { Sparkles, Shield, ChevronDown, LogOut } from "lucide-react";
+import { SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
 import { useState, useEffect, Suspense } from "react";
 import type { PublishedModuleConfig } from "@/features/admin/domain/types";
+import {
+  RA_NAV_ITEMS,
+  PM_NAV_GROUPS,
+  PM_SETTINGS_ITEMS,
+  PM_ASSISTANT_ITEM,
+  isPmRoute,
+  brandInitials,
+  type NavItem,
+} from "./navConfig";
 
 interface SideNavProps {
   profile: {
@@ -51,155 +26,15 @@ interface SideNavProps {
   };
   branding?: { logoUrl: string | null; brandName: string | null } | null;
   moduleConfig: PublishedModuleConfig;
-  inboxPendingCount?: number;
   entitlements?: string[];
 }
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  allowedRoles?: readonly string[];
-  /** When set, the item only renders if the tenant has this feature entitlement. */
-  entitlement?: string;
-  /** When set, the item renders if the tenant has ANY of these entitlements. */
-  entitlementAny?: readonly string[];
-};
 
-type NavGroup = {
-  title: string;
-  items: NavItem[];
-};
-
-const RA_NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/me", label: "My Profile", icon: User },
-  { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/leads", label: "Leads", icon: Inbox },
-  { href: "/rentals", label: "Rentals", icon: ClipboardList },
-  { href: "/landlords", label: "Landlords", icon: Building2 },
-  { href: "/bonuses", label: "Bonuses", icon: Gift },
-  { href: "/invoices", label: "Invoices", icon: FileText },
-  { href: "/room-enhancer", label: "Room Enhancer", icon: Sparkles },
-  { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
-];
-
-// PM navigation is organised into labelled sections (see SideNav redesign).
-const PM_NAV_GROUPS: NavGroup[] = [
-  {
-    title: "Overview",
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/inbox", label: "Inbox", icon: Inbox, allowedRoles: ADMIN_ROLES },
-    ],
-  },
-  {
-    title: "Lettings",
-    items: [
-      { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
-      { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
-      { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
-      { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
-      { href: "/contracts/templates", label: "Contract Templates", icon: FileText, allowedRoles: ADMIN_ROLES },
-    ],
-  },
-  {
-    title: "Finance",
-    items: [
-      { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
-      { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
-      { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
-      { href: "/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlementAny: ["mydeposits", "tds", "dps"] },
-    ],
-  },
-  {
-    title: "Growth",
-    items: [
-      { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
-      { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
-    ],
-  },
-  {
-    title: "Forms",
-    items: [
-      { href: "/settings/booking-forms", label: "Booking Forms", icon: ClipboardEdit, allowedRoles: ADMIN_ROLES },
-      { href: "/forms", label: "Forms", icon: ListChecks, allowedRoles: ADMIN_ROLES, entitlement: "forms" },
-    ],
-  },
-  {
-    title: "Tools",
-    items: [
-      { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
-      { href: "/keys", label: "Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
-    ],
-  },
-];
-
-// Collapsible "Settings" section, rendered separately from the groups above.
-const PM_SETTINGS_ITEMS: NavItem[] = [
-  { href: "/settings/team", label: "Team", icon: Users2, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES },
-];
-
-// Relocated to a pinned pill at the foot of the PM sidebar.
-const PM_ASSISTANT_ITEM: NavItem = {
-  href: "/assistant",
-  label: "Ask AI Assistant",
-  icon: Sparkles,
-  allowedRoles: ADMIN_ROLES,
-};
-
-const PM_ROUTE_PREFIXES = [
-  "/inbox",
-  "/properties",
-  "/bookings",
-  "/tenants",
-  "/contracts",
-  "/profitability",
-  "/rent-collection",
-  "/finances",
-  "/maintenance",
-  "/assistant",
-  "/keys",
-  "/acquisition-insights",
-  "/marketing",
-  "/shares",
-  "/settings/booking-forms",
-  "/settings/bank-details",
-  "/settings/team",
-  "/deposits",
-  "/settings/deposits",
-  "/forms",
-];
-
-function isPmRoute(pathname: string) {
-  return PM_ROUTE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
-  );
-}
-
-/** Initials fallback for the brand mark when no logo is set (e.g. "AP Real Estate" → "AP"). */
-function brandInitials(name: string): string {
-  const letters = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("");
-  return letters.toUpperCase() || "PM";
-}
 
 /** Inner component — reads searchParams so must be inside Suspense. */
-function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, entitlements }: SideNavProps) {
+function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
   const onSettingsRoute = PM_SETTINGS_ITEMS.some(
@@ -278,7 +113,6 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
         href={linkHref}
         prefetch={false}
         onClick={() => {
-          setMobileOpen(false);
           setNavigatingTo(item.href);
         }}
         className={cn(
@@ -299,17 +133,6 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
           )}
         />
         <span className="flex-1 truncate">{item.label}</span>
-        {item.href === "/inbox" && inboxPendingCount > 0 && (
-          <span
-            className={cn(
-              "ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
-              active ? "bg-white/20 text-white" : "bg-accent text-accent-fg"
-            )}
-            aria-label={`${inboxPendingCount} pending requests`}
-          >
-            {inboxPendingCount > 99 ? "99+" : inboxPendingCount}
-          </span>
-        )}
       </Link>
     );
   };
@@ -421,7 +244,6 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
               href={PM_ASSISTANT_ITEM.href}
               prefetch={false}
               onClick={() => {
-                setMobileOpen(false);
                 setNavigatingTo(PM_ASSISTANT_ITEM.href);
               }}
               className={cn(
@@ -491,44 +313,7 @@ function SideNavInner({ profile, branding, moduleConfig, inboxPendingCount = 0, 
         </div>
       )}
 
-      {/* Mobile Hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-3 left-3 z-50 flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-fg shadow-bento md:hidden"
-        aria-label="Open menu"
-      >
-        <Menu size={20} />
-      </button>
-
-      {/* Mobile Overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile Drawer */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col md:hidden",
-          "rounded-r-bento backdrop-blur-xl",
-          "transition-transform duration-slow ease-default",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-        style={{ backgroundColor: "var(--sidebar-glass-bg)" }}
-      >
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="absolute top-5 right-4 text-sidebar-text hover:text-white transition-colors"
-          aria-label="Close menu"
-        >
-          <X size={18} />
-        </button>
-        {navContent}
-      </aside>
-
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar (mobile uses the bottom nav + "More" sheet instead) */}
       <aside
         className="hidden w-[260px] shrink-0 flex-col md:flex rounded-bento backdrop-blur-xl overflow-hidden"
         style={{ backgroundColor: "var(--sidebar-glass-bg)" }}

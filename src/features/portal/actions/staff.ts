@@ -7,7 +7,7 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { getEntitlements } from "@/lib/entitlements/getEntitlements";
 import { LOGIN_TOKEN_TTL_MS, signPortalToken } from "@/lib/portal/token";
 import { loadAgency } from "@/lib/email/agency-context";
-import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { sendEmail } from "@/lib/email/send";
 import { generatePortalLoginEmail } from "@/lib/email/templates/portal-login";
 import { buildTenantAppUrl } from "@/lib/urls";
 import { markPortalInvited } from "../data/queries";
@@ -92,14 +92,18 @@ export async function sendPortalInvite(
   });
 
   try {
-    await sendAgencyEmail({
-      agency,
-      to: pmTenant.email,
-      subject,
-      html,
-      text,
-      pmTenantId: pmTenant.id,
-    });
+    await sendEmail(
+      profile.tenant_id,
+      {
+        to: pmTenant.email,
+        subject,
+        html,
+        text,
+        pmTenantId: pmTenant.id,
+        templateKey: "portal_invite",
+      },
+      { agency }
+    );
   } catch (err) {
     return {
       ok: false,

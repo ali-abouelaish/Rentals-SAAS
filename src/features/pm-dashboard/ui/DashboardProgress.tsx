@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ListTodo, Wrench, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import type { PmTodo } from "../domain/todos";
 import type { MaintenanceSummary } from "@/features/profitability/domain/types";
 
 // ──────────────────────────────────────────────────────────
@@ -13,9 +12,17 @@ import type { MaintenanceSummary } from "@/features/profitability/domain/types";
 // rests on colour alone.
 // ──────────────────────────────────────────────────────────
 
-type Segment = { key: string; label: string; value: number; color: string };
+export type Segment = { key: string; label: string; value: number; color: string };
 
-function SegmentedDonut({
+// Shared status colours so the same concept reads the same across cards
+// (e.g. "Open" is the same orange on both the to-do and maintenance donuts).
+export const STATUS_COLORS = {
+  done: "#10b981", // emerald-500 — Completed / Resolved
+  in_progress: "#3b82f6", // blue-500
+  open: "#f97316", // orange-500
+} as const;
+
+export function SegmentedDonut({
   segments,
   size = 150,
   stroke = 22,
@@ -87,7 +94,7 @@ function SegmentedDonut({
   );
 }
 
-function Legend({ segments, total }: { segments: Segment[]; total: number }) {
+export function Legend({ segments, total }: { segments: Segment[]; total: number }) {
   return (
     <ul className="flex-1 min-w-0 space-y-2.5">
       {segments.map((seg) => {
@@ -169,33 +176,11 @@ function DonutCard({
   );
 }
 
-export function TodoProgressCard({ todos }: { todos: PmTodo[] }) {
-  const todosDone = todos.filter((t) => t.is_done).length;
-  const todosOpen = todos.length - todosDone;
-
-  const segments: Segment[] = [
-    { key: "done", label: "Completed", value: todosDone, color: "#10b981" }, // emerald-500
-    { key: "open", label: "Open", value: todosOpen, color: "#f59e0b" }, // amber-500
-  ];
-
-  return (
-    <DonutCard
-      icon={ListTodo}
-      iconWrap="bg-brand-subtle"
-      iconColor="text-brand"
-      title="To-do progress"
-      badge={todosOpen > 0 ? `${todosOpen} open` : undefined}
-      segments={segments}
-      centerLabel="Tasks"
-    />
-  );
-}
-
 export function MaintenanceProgressCard({ maintenance }: { maintenance: MaintenanceSummary }) {
   const segments: Segment[] = [
-    { key: "resolved", label: "Resolved this month", value: maintenance.resolved_this_month, color: "#10b981" }, // emerald-500
-    { key: "in_progress", label: "In progress", value: maintenance.in_progress_jobs, color: "#3b82f6" }, // blue-500
-    { key: "open", label: "Open", value: maintenance.open_jobs, color: "#f97316" }, // orange-500
+    { key: "resolved", label: "Resolved this month", value: maintenance.resolved_this_month, color: STATUS_COLORS.done },
+    { key: "in_progress", label: "In progress", value: maintenance.in_progress_jobs, color: STATUS_COLORS.in_progress },
+    { key: "open", label: "Open", value: maintenance.open_jobs, color: STATUS_COLORS.open },
   ];
 
   const costThisMonth =

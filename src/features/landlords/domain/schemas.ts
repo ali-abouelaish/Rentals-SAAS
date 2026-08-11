@@ -10,6 +10,13 @@ export const landlordSchema = z.object({
     .url("Enter a full URL, e.g. https://www.spareroom.co.uk/…")
     .optional()
     .or(z.literal("")),
+  // The alternative to a SpareRoom profile: a landlord who keeps availability
+  // in a spreadsheet. Both may be set; neither is required.
+  spreadsheet_url: z
+    .string()
+    .url("Enter a full URL, e.g. https://docs.google.com/spreadsheets/d/…")
+    .optional()
+    .or(z.literal("")),
   pays_commission: z.enum(["yes", "no"]),
   // Preprocess: an empty input must stay optional — z.coerce.number("") is 0
   // anyway, but NaN from stray text should fail with a message, not silently.

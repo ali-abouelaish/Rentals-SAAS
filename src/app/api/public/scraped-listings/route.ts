@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyPublicApiKey } from "@/lib/api-keys/verify";
+import { ageInDays, isStale } from "@/lib/utils/freshness";
 
 const REQUIRED_SCOPE = "scraped_listings:read";
 
 const SORTABLE_COLUMNS = new Set([
   "created_at",
   "updated_at",
+  "last_seen_at",
   "price",
   "available_date",
   "min_room_price_pcm",
@@ -58,6 +60,20 @@ export async function GET(request: NextRequest) {
     if (availableFrom && /^\d{4}-\d{2}-\d{2}$/.test(availableFrom)) {
       qq = qq.gte("available_date", availableFrom);
     }
+    // Freshness cutoff. Opt-in rather than defaulted, because tightening it here
+    // silently shrinks every existing partner's result set. `status` is no use
+    // for this — the scraper hardcodes it to 'available' on every row — so age is
+    // the only real liveness signal and consumers must be able to ask for it.
+    const source = sp.get("source");
+    if (source) qq = qq.eq("source", source);
+    const maxAgeDays = sp.get("max_age_days");
+    if (maxAgeDays && Number.isFinite(Number(maxAgeDays)) && Number(maxAgeDays) > 0) {
+      const cutoff = new Date(Date.now() - Number(maxAgeDays) * 24 * 60 * 60 * 1000);
+      // Rows predating freshness tracking have a null last_seen_at and are of
+      // unknown age; a max-age filter excludes them, since the caller has asked
+      // for listings they can vouch for.
+      qq = qq.gte("last_seen_at", cutoff.toISOString());
+    }
     return qq as T;
   };
 
@@ -94,11 +110,19 @@ export async function GET(request: NextRequest) {
   );
 
   // Flatten the embedded landlord relation into a top-level `landlord_name` so
-  // the row shape stays flat for consumers.
+  // the row shape stays flat for consumers, and derive the freshness fields.
+  // `age_days`/`stale` are computed rather than stored so they cannot drift out
+  // of date the way a persisted flag would, and they are additive — existing
+  // consumers that ignore them are unaffected.
   const rows = ((data ?? []) as any[]).map((row) => {
     const { landlord, ...rest } = row;
     const rel = Array.isArray(landlord) ? landlord[0] : landlord;
-    return { ...rest, landlord_name: rel?.name ?? null };
+    return {
+      ...rest,
+      landlord_name: rel?.name ?? null,
+      age_days: ageInDays(rest.last_seen_at),
+      stale: isStale(rest.last_seen_at),
+    };
   });
 
   return NextResponse.json({

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo, useTransition } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -140,10 +141,18 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
             {contracts.length} contract{contracts.length !== 1 ? "s" : ""} · all periodic/rolling
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          New contract
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/contracts/templates" title="Manage the contract templates used to generate agreements">
+              <FileText className="h-4 w-4 mr-1.5" />
+              Contract templates
+            </Link>
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            New contract
+          </Button>
+        </div>
       </div>
 
       <ContractFilterBar

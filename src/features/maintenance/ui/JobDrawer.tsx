@@ -40,6 +40,7 @@ import { addJobComment, deleteJobComment } from "../actions/comments";
 import { CommentsPanel } from "./CommentsPanel";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { AddReminderDialog } from "@/features/automations/ui/AddReminderDialog";
 
 // ──────────────────────────────────────────────────────────
 // Helpers
@@ -63,6 +64,7 @@ const costSchema = z.object({
   date_incurred: z.string().min(1, "Required"),
   supplier: z.string().optional(),
   invoice_ref: z.string().optional(),
+  recharge_to_owner: z.boolean(),
 });
 
 type CostFormValues = z.infer<typeof costSchema>;
@@ -82,7 +84,10 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
     formState: { errors },
   } = useForm<CostFormValues>({
     resolver: zodResolver(costSchema),
-    defaultValues: { date_incurred: new Date().toISOString().split("T")[0] },
+    defaultValues: {
+      date_incurred: new Date().toISOString().split("T")[0],
+      recharge_to_owner: true,
+    },
   });
 
   async function onSubmit(v: CostFormValues) {
@@ -96,6 +101,7 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
         date_incurred: v.date_incurred,
         supplier: v.supplier || null,
         invoice_ref: v.invoice_ref || null,
+        recharge_to_owner: v.recharge_to_owner,
       });
       if (result?.error) toast.error(result.error);
       else { toast.success("Cost added"); onSaved(); }
@@ -151,6 +157,22 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
             placeholder="INV-001"
             className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50"
           />
+        </div>
+        <div className="col-span-2">
+          <label className="flex items-start gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              {...register("recharge_to_owner")}
+              className="mt-0.5 rounded border-border"
+            />
+            <span>
+              Charge to the landlord
+              <span className="block text-xs text-foreground-muted">
+                On by default. Untick for tenant-fault damage or work your agency absorbs — it then
+                never appears on the landlord&apos;s statement.
+              </span>
+            </span>
+          </label>
         </div>
       </div>
       <div className="flex gap-2 justify-end">
@@ -381,11 +403,17 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
                 {job.unit_label && ` · ${job.unit_label}`}
               </SheetDescription>
             </div>
-            <StatusSelector
-              current={job.status}
-              jobId={job.id}
-              onChanged={(s) => onJobUpdated({ id: job.id, status: s })}
-            />
+            <div className="flex flex-col items-end gap-2">
+              <StatusSelector
+                current={job.status}
+                jobId={job.id}
+                onChanged={(s) => onJobUpdated({ id: job.id, status: s })}
+              />
+              <AddReminderDialog
+                entity={{ type: "works_order", id: job.id, label: job.title }}
+                triggerLabel="Reminder"
+              />
+            </div>
           </div>
         </SheetHeader>
 
@@ -642,7 +670,7 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
             <TabsContent value="notes" className="p-6">
               <CommentsPanel
                 comments={comments}
-                hint="Internal only — tenants never see job notes. Max 2000 characters."
+                hint="Internal only — tenants never see work order notes. Max 2000 characters."
                 emptyText="No notes yet. Keep call outcomes, quotes, and decisions here."
                 onAdd={handleAddComment}
                 onDelete={handleDeleteComment}
@@ -701,7 +729,7 @@ function buildActivityItems(job: MaintenanceJob): { label: string; time: string 
 
   if (job.resolved_date) {
     items.push({
-      label: "Job marked as resolved",
+      label: "Work order marked as resolved",
       time: new Date(job.resolved_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
       ts: new Date(job.resolved_date).getTime(),
     });

@@ -89,6 +89,12 @@ Required in `.env.local`:
 | `TDS_TOKEN_SECRET` | 32-byte hex key encrypting per-agency TDS api keys (`openssl rand -hex 32`) |
 | `DPS_TOKEN_SECRET` | 32-byte hex key encrypting per-agency DPS client secrets (`openssl rand -hex 32`) |
 | `EMAIL_PROVIDER_TOKEN_SECRET` | 32-byte hex key encrypting per-agency email provider credentials (Graph/Gmail/SMTP) (`openssl rand -hex 32`) |
+| `MICROSOFT_CLIENT_ID` | Azure AD app (client) id for the Microsoft 365 Graph email transport |
+| `MICROSOFT_CLIENT_SECRET` | Azure AD client secret for the Graph email transport |
+| `MICROSOFT_REDIRECT_URI` | Graph OAuth callback URL (`https://<host>/api/email/graph/callback`) |
+| `MICROSOFT_TENANT_ID` | Optional Azure AD tenant id for a single-tenant app (defaults to `common`) |
+| `GOOGLE_SEND_REDIRECT_URI` | Gmail send-transport OAuth callback (`https://<host>/api/email/gmail/callback`); reuses `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` with the `gmail.send` scope |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account key for landlord listing spreadsheets; needs the Sheets **and** Drive APIs enabled. Optional for Sheets (public sheets read credential-free); **required** for Drive room-photo import. Resolution order: this var → `GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON` → `GOOGLE_SERVICE_ACCOUNT_FILE` (path) → `./service_account.json` (gitignored, the usual setup). Base64-encode if using an env var |
 | `PORTAL_TOKEN_SECRET` | HMAC secret for renter portal magic-link + session tokens (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (shared; also used by `mydeposits-poll`) |
 

@@ -18,6 +18,15 @@ This is your agency workspace. The **left sidebar** is your main navigation; the
 4. **Get page help anywhere.** The **Help** button stays in the top bar on every page — open it whenever you're unsure what a screen does.
 5. **Manage your account.** Update your profile, avatar, and security from [My Profile](/me).
 
+## On your phone
+
+On a phone the sidebar is replaced by a **bottom bar** built for one-handed use:
+
+- It holds **Home**, two key sections (Maintenance and Rent for Property Management; Leads and Clients for Rental Agency), and **More** — which opens the full menu plus your profile and **Sign out**.
+- The centre **＋** button is quick-create: create a maintenance work order, record a rent payment, or send a reminder from anywhere. "New work order" opens the form immediately; the others take you to the right page to choose a tenancy or recipient first.
+- The **home screen** becomes a grid of big tiles with live counts (open work orders, rent collected, occupancy, active tenants, contracts ending) above a "Needs attention today" card — tap a tile to jump straight to that section.
+- Search is in the top bar, and the desktop sidebar returns automatically on larger screens.
+
 ## Tips
 
 - What you see depends on your **role** (admin vs agent) and your agency's enabled features — some items are admin-only.

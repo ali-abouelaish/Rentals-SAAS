@@ -20,6 +20,9 @@ export type RentReminderSummary = {
   failed: number;
   /** Reminders skipped because a concurrent run already claimed the slot. */
   deduped?: number;
+  /** Reminders skipped because the tenant runs a LIVE rent automation rule
+   *  (per-tenant cutover to the automations engine). */
+  migrated?: number;
   durationMs: number;
 };
 
@@ -63,12 +66,45 @@ export async function runRentReminders(now: Date = new Date()): Promise<RentRemi
     };
   }
 
-  const reminders = await getDueReminders(now);
-  if (reminders.length === 0) {
+  const allReminders = await getDueReminders(now);
+  if (allReminders.length === 0) {
     return { ok: true, processed: 0, sent: 0, failed: 0, durationMs: Date.now() - startedAt };
   }
 
   const admin = createSupabaseAdminClient();
+
+  // Per-tenant cutover: a tenant with a LIVE rent preset rule in the
+  // automations engine is handled there — drop just the migrated window(s).
+  // The engine's rent_reminder_log claim (cutover shim) also makes a
+  // double-send physically impossible on the boundary day.
+  const { data: liveRentRules, error: rulesErr } = await admin
+    .from("automation_rules")
+    .select("tenant_id, preset_key")
+    .eq("active", true)
+    .eq("dry_run", false)
+    .in("preset_key", ["rent_due_3d", "rent_due_today"]);
+  if (rulesErr) {
+    console.error("[email] failed to load rent automation rules; legacy path continues", rulesErr.message);
+  }
+  const migratedWindows = new Set(
+    ((liveRentRules ?? []) as { tenant_id: string; preset_key: string }[]).map(
+      (r) => `${r.tenant_id}:${r.preset_key === "rent_due_3d" ? "upcoming_3d" : "due_today"}`
+    )
+  );
+  const reminders = allReminders.filter(
+    (r) => !migratedWindows.has(`${r.tenantId}:${r.reminderType}`)
+  );
+  const migrated = allReminders.length - reminders.length;
+  if (reminders.length === 0) {
+    return {
+      ok: true,
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      migrated,
+      durationMs: Date.now() - startedAt,
+    };
+  }
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://harborops.co.uk";
 
   // Cache agencies across the batch — many reminders share the same agency.
@@ -103,6 +139,7 @@ export async function runRentReminders(now: Date = new Date()): Promise<RentRemi
     sent,
     failed,
     deduped,
+    migrated,
     durationMs: Date.now() - startedAt,
   };
 }

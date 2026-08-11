@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { tidyMessageText } from "../tidyText";
 
 export type ZooplaLeadData = {
   name: string;
@@ -34,6 +35,37 @@ function stripHtml(html: string): string {
   return $.root().text();
 }
 
+/**
+ * Pull the property ad link from the email's anchor hrefs. stripHtml discards
+ * attributes, so the "View more details" URL only survives if we read it from
+ * the HTML directly. Prefers the explicit CTA, then a Zoopla listing-details
+ * link, then any Zoopla link that isn't obvious chrome (login/unsubscribe/etc).
+ */
+function extractAdLink(html: string): string | null {
+  const $ = cheerio.load(html);
+  const links: { href: string; text: string }[] = [];
+  $("a[href]").each((_, el) => {
+    const href = $(el).attr("href")?.trim();
+    if (!href || !/^https?:\/\//i.test(href)) return;
+    links.push({ href, text: $(el).text().trim().toLowerCase() });
+  });
+
+  const cta = links.find(
+    (l) => l.text.includes("view more details") || l.text.includes("view details")
+  );
+  if (cta) return cta.href;
+
+  const listing = links.find((l) => /zoopla\.co\.uk\/.*details/i.test(l.href));
+  if (listing) return listing.href;
+
+  const generic = links.find(
+    (l) =>
+      /zoopla\.co\.uk/i.test(l.href) &&
+      !/(login|unsubscribe|privacy|terms|help|zooplapro|preferences|manage)/i.test(l.href)
+  );
+  return generic?.href ?? null;
+}
+
 const HOT_KEYWORDS = ["urgent", "asap", "immediately", "call me", "today", "tomorrow"];
 
 export function extractZooplaLead(rawBody: string): ZooplaLeadData | null {
@@ -57,7 +89,7 @@ export function extractZooplaLead(rawBody: string): ZooplaLeadData | null {
     /Message:\s*([\s\S]*?)(?=\n(?:Address:|Full address:|Your property ref:|---|$))/i
   );
   if (msgMatch) {
-    message_text = msgMatch[1].trim().replace(/\n{3,}/g, "\n\n") || null;
+    message_text = tidyMessageText(msgMatch[1]) || null;
   }
 
   // Step 6: Extract simple fields
@@ -73,9 +105,11 @@ export function extractZooplaLead(rawBody: string): ZooplaLeadData | null {
   const full_address = extract(/Full address:\s*(.+)/i);
   const property_ref = extract(/Your property ref:\s*(.+)/i);
 
-  // Step 7: Extract Zoopla property link
+  // Step 7: Extract the Zoopla property ad link. Read it from the HTML anchors
+  // first (the "View more details" href), falling back to any visible URL left
+  // in the stripped text.
   const urlMatch = text.match(/https?:\/\/www\.zoopla\.co\.uk\/[^\s>]+/);
-  const property_url = urlMatch ? urlMatch[0].trim() : null;
+  const property_url = extractAdLink(decoded) ?? (urlMatch ? urlMatch[0].trim() : null);
 
   // Step 8: Validate — must have at least name and email
   if (!email || !name) return null;

@@ -82,11 +82,35 @@ Only landlords with a non-null `spareroom_profile_url` are returned, ordered by 
 ## 2. Write scraped listings back
 
 The scraper writes results **directly to the Supabase `scraped_listings` table** using
-the service-role key (there is no ingest HTTP endpoint). Recommended pattern per run:
+the service-role key (there is no ingest HTTP endpoint). Pattern per run:
 
-1. Delete existing rows for the landlords in this run:
-   `delete from scraped_listings where tenant_id = <tenant_id> and landlord_id in (<ids in run>)`
-2. Insert fresh rows in batches (≈100 per insert).
+1. Delete existing rows for the landlords this run could **read end-to-end** — not
+   the landlords that happened to yield listings:
+   ```sql
+   delete from scraped_listings
+    where tenant_id = <tenant_id>
+      and source = 'spareroom'
+      and landlord_id in (<ids read cleanly this run>)
+   ```
+2. Insert fresh rows in batches (≈100 per insert), each stamped with
+   `source = 'spareroom'` and `last_seen_at = <run start>`.
+3. Stamp `landlords.last_scraped_at = <run start>` for the same set of ids.
+
+> **The delete set is the important part.** Keying it off the rows you are about to
+> insert means a landlord whose ads have all come down is never in the set, so their
+> old rows survive every run and go on being served indefinitely — listings months
+> dead still reading as `status: "available"`. The set must be "landlords whose
+> source I read successfully", which includes the ones that legitimately returned
+> nothing.
+>
+> Equally, it must **exclude** landlords you failed to reach — a fetch error, a
+> block, a part-way pagination failure. Those say nothing about what is live, and
+> deleting on them would wipe good data every time the source has a hiccup. Leaving
+> their rows alone means they age visibly (via `last_seen_at`) instead of vanishing.
+>
+> The `source = 'spareroom'` scope matters too: a landlord can have both a SpareRoom
+> profile and a listings spreadsheet feeding the same table, and an unscoped delete
+> takes out their imported rows as collateral.
 
 Required env for the write step:
 
@@ -127,9 +151,16 @@ room2_type text · room2_price_pcm numeric · room2_deposit numeric
 room3_type text · room3_price_pcm numeric · room3_deposit numeric
 room4_type text · room4_price_pcm numeric · room4_deposit numeric
 created_at         timestamptz (auto)    updated_at         timestamptz (auto)
+source             text  'spareroom'     last_seen_at       timestamptz
+external_ref       text                  raw_row            jsonb
 ```
 
 Notes:
+- `source` is `'spareroom'` (scraper) or `'spreadsheet'` (landlord sheet importer).
+  Both write to this table; always set it explicitly and always scope deletes by it.
+- `last_seen_at` is when the listing was last confirmed live at its source. It is the
+  only real liveness signal on the row — `status` is hardcoded `'available'` by the
+  scraper and means nothing. Null = predates freshness tracking, i.e. unknown age.
 - `references` is a reserved SQL word — quote it (`"references"`) in raw SQL.
 - Most fields are loosely typed `text` to tolerate SpareRoom's free-form values;
   only prices/counts/coords are numeric.
@@ -156,8 +187,10 @@ Requires the key to hold the `scraped_listings:read` scope. Tenant is derived fr
 |---|---|---|---|
 | `limit` | int | 50 | clamped 1–200 |
 | `offset` | int | 0 | pagination offset |
-| `sort` | `col.dir` | `created_at.desc` | col ∈ `created_at, updated_at, price, available_date, min_room_price_pcm, max_room_price_pcm`; dir `asc`/`desc` |
-| `status` | string | — | exact match |
+| `sort` | `col.dir` | `created_at.desc` | col ∈ `created_at, updated_at, last_seen_at, price, available_date, min_room_price_pcm, max_room_price_pcm`; dir `asc`/`desc` |
+| `max_age_days` | int | — | **only listings confirmed live within N days.** Excludes rows with a null `last_seen_at` (unknown age) |
+| `source` | string | — | `spareroom` or `spreadsheet` |
+| `status` | string | — | exact match — **not a liveness signal**, see below |
 | `landlord_id` | uuid | — | exact match |
 | `property_type` | string | — | exact match |
 | `paying` | string | — | exact match (`yes`/`no`) |
@@ -175,8 +208,32 @@ Requires the key to hold the `scraped_listings:read` scope. Tenant is derived fr
 }
 ```
 
-Each row is a full `scraped_listings` row plus a flattened **`landlord_name`**
-(text, or `null` if the listing has no linked landlord) resolved from `landlord_id`.
+Each row is a full `scraped_listings` row plus three derived fields:
+
+| Field | Meaning |
+|---|---|
+| `landlord_name` | text, or `null` if the listing has no linked landlord, resolved from `landlord_id` |
+| `age_days` | whole days since `last_seen_at`; `null` if never recorded |
+| `stale` | `true` if `age_days > 7` **or** `last_seen_at` is null |
+
+### Freshness — read this before trusting a listing
+
+`status` is **not** a liveness signal. The scraper hardcodes it to `'available'` on
+every row it writes, so a listing that came down months ago still reports
+`"status": "available"`. Use `last_seen_at` / `age_days` / `stale` instead, or filter
+server-side with `max_age_days`.
+
+`max_age_days` is **opt-in, not the default** — defaulting it on would silently shrink
+every existing consumer's result set. If you only want listings that can be vouched
+for, ask for them explicitly:
+
+```
+GET /api/public/scraped-listings?max_age_days=7
+```
+
+Both write pipelines refresh daily, so `max_age_days=7` means the source has been
+confirmed within the last six-ish reads. Anything older indicates a landlord whose
+source has stopped being readable — the listing may well be dead.
 
 **Errors:** `401` missing/invalid key · `403` key lacks `scraped_listings:read` scope · `500` DB error.
 

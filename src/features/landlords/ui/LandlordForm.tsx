@@ -81,6 +81,18 @@ export function LandlordForm({
         <input {...register("spareroom_profile_url")} className={inputCls} />
       </Field>
       <Field
+        label="Listings spreadsheet URL"
+        hint="For landlords who send a sheet instead of a SpareRoom profile. A Google Sheets link (shared as “Anyone with the link — Viewer”), or a direct .csv/.xlsx link. Imported on save, then re-read daily."
+        error={errors.spreadsheet_url?.message}
+      >
+        <input
+          {...register("spreadsheet_url")}
+          className={inputCls}
+          placeholder="https://docs.google.com/spreadsheets/d/…"
+          title="We read the sheet, work out what each column means, and import the rows as this landlord's listings. You can correct the column mapping afterwards from the landlord page."
+        />
+      </Field>
+      <Field
         label="Pays commission"
         hint="Whether this landlord pays your agency commission."
         error={errors.pays_commission?.message}

@@ -18,6 +18,7 @@ import type {
   PortalTicket,
 } from "../domain/types";
 import { CopyReferenceButton } from "./CopyReferenceButton";
+import { PortalMobileActionBar } from "./PortalMobileActionBar";
 
 const SERIF: React.CSSProperties = {
   fontFamily: "var(--font-fraunces), Georgia, serif",
@@ -173,12 +174,18 @@ function TenancyCard({ tenancy }: { tenancy: PortalTenancy }) {
 function RentCard({
   tenancy,
   rent,
+  anchorId,
 }: {
   tenancy: PortalTenancy;
   rent: PortalRentStatus;
+  /** Only the first rent card carries the #rent anchor — ids must stay unique. */
+  anchorId?: string;
 }) {
   return (
-    <section className="rounded-3xl border border-border bg-surface-card p-5 shadow-sm">
+    <section
+      id={anchorId}
+      className="scroll-mt-4 rounded-3xl border border-border bg-surface-card p-5 shadow-sm"
+    >
       <SectionTitle icon={<Banknote className="h-4 w-4" />}>Rent</SectionTitle>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -211,8 +218,8 @@ function RentCard({
           Your payment reference — set it as the reference on your bank standing
           order so your payments are matched to your tenancy automatically.
         </p>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="font-mono text-lg font-semibold tracking-[0.08em] text-foreground">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <span className="min-w-0 break-all font-mono text-lg font-semibold tracking-[0.08em] text-foreground">
             {tenancy.paymentReference}
           </span>
           <CopyReferenceButton value={tenancy.paymentReference} />
@@ -220,8 +227,8 @@ function RentCard({
       </div>
 
       {rent.payments.length > 0 ? (
-        <details className="group mt-4">
-          <summary className="cursor-pointer select-none text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
+        <details className="group mt-1">
+          <summary className="cursor-pointer select-none py-3 text-sm font-medium text-foreground-secondary transition-colors hover:text-foreground">
             Payment history ({rent.payments.length})
           </summary>
           <ul className="mt-3 space-y-1.5">
@@ -249,7 +256,14 @@ function RentCard({
   );
 }
 
-function DepositCard({ deposit }: { deposit: PortalDeposit }) {
+function DepositCard({
+  deposit,
+  anchorId,
+}: {
+  deposit: PortalDeposit;
+  /** Only the first deposit card carries the #deposit anchor. */
+  anchorId?: string;
+}) {
   const statePill =
     deposit.state === "protected" ? (
       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
@@ -266,7 +280,10 @@ function DepositCard({ deposit }: { deposit: PortalDeposit }) {
     );
 
   return (
-    <section className="rounded-3xl border border-border bg-surface-card p-5 shadow-sm">
+    <section
+      id={anchorId}
+      className="scroll-mt-4 rounded-3xl border border-border bg-surface-card p-5 shadow-sm"
+    >
       <SectionTitle icon={<ShieldCheck className="h-4 w-4" />}>
         Deposit
       </SectionTitle>
@@ -348,14 +365,17 @@ function MaintenanceCard({
   slugSuffix: string;
 }) {
   return (
-    <section className="rounded-3xl border border-border bg-surface-card p-5 shadow-sm">
+    <section
+      id="maintenance"
+      className="scroll-mt-4 rounded-3xl border border-border bg-surface-card p-5 shadow-sm"
+    >
       <div className="flex items-center justify-between gap-3">
         <SectionTitle icon={<Wrench className="h-4 w-4" />}>
           Maintenance
         </SectionTitle>
         <a
           href={`/portal/report${slugSuffix}`}
-          className="mb-3 inline-flex items-center justify-center rounded-lg bg-accent px-3 py-2 text-xs font-medium text-accent-fg shadow-sm transition-all hover:bg-accent-hover"
+          className="mb-3 inline-flex min-h-[44px] items-center justify-center rounded-lg bg-accent px-3 py-2 text-xs font-medium text-accent-fg shadow-sm transition-all hover:bg-accent-hover sm:min-h-0"
           title="Opens a chat with our maintenance assistant — it can often help you fix the issue right away, or raises a ticket for us if not"
         >
           Report a new issue
@@ -453,7 +473,10 @@ function ContactCard({
   agency: { name: string; email: string; phone: string | null };
 }) {
   return (
-    <section className="rounded-3xl border border-border bg-surface-card p-5 shadow-sm">
+    <section
+      id="contact"
+      className="scroll-mt-4 rounded-3xl border border-border bg-surface-card p-5 shadow-sm"
+    >
       <SectionTitle icon={<Mail className="h-4 w-4" />}>
         Your property manager
       </SectionTitle>
@@ -461,20 +484,20 @@ function ContactCard({
         {agency.name} manages your tenancy. For anything the portal
         doesn&apos;t cover, get in touch:
       </p>
-      <div className="mt-3 flex flex-col gap-2 text-sm">
+      <div className="mt-3 flex flex-col gap-1 text-sm">
         <a
           href={`mailto:${agency.email}`}
-          className="inline-flex items-center gap-2 font-medium text-foreground-link underline-offset-4 hover:underline"
+          className="inline-flex min-h-[44px] items-center gap-2 break-all font-medium text-foreground-link underline-offset-4 hover:underline sm:min-h-0 sm:py-1"
         >
-          <Mail className="h-4 w-4" />
+          <Mail className="h-4 w-4 shrink-0" />
           {agency.email}
         </a>
         {agency.phone ? (
           <a
             href={`tel:${agency.phone.replace(/\s+/g, "")}`}
-            className="inline-flex items-center gap-2 font-medium text-foreground-link underline-offset-4 hover:underline"
+            className="inline-flex min-h-[44px] items-center gap-2 font-medium text-foreground-link underline-offset-4 hover:underline sm:min-h-0 sm:py-1"
           >
-            <Phone className="h-4 w-4" />
+            <Phone className="h-4 w-4 shrink-0" />
             {agency.phone}
           </a>
         ) : null}
@@ -491,67 +514,118 @@ export function PortalDashboard({
   errorCode,
   slugSuffix,
 }: Props) {
+  // The first live tenancy owns the #rent / #deposit anchors and feeds the
+  // mobile action bar — with two tenancies on file, jumping to "rent" should
+  // land on the one the renter is actually paying.
+  const liveIndex = blocks.findIndex((b) => !b.tenancy.ended);
+  const primaryIndex = liveIndex === -1 ? 0 : liveIndex;
+  const primaryBlock = blocks[primaryIndex] ?? null;
+  // Null when every tenancy has ended — there is then no rent card to jump to.
+  const rentReference = primaryBlock?.rent
+    ? primaryBlock.tenancy.paymentReference
+    : null;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4 px-4 py-8 sm:px-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-foreground-muted">
-            Welcome back
-          </p>
-          <h1
-            className="mt-1 text-[1.7rem] leading-tight tracking-[-0.01em] text-foreground"
-            style={{ ...SERIF, fontWeight: 500 }}
-          >
-            Hi {pmTenant.firstName}
-          </h1>
+    <>
+      <div className="mx-auto max-w-3xl space-y-4 px-4 py-8 sm:px-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-foreground-muted">
+              Welcome back
+            </p>
+            <h1
+              className="mt-1 text-[1.7rem] leading-tight tracking-[-0.01em] text-foreground"
+              style={{ ...SERIF, fontWeight: 500 }}
+            >
+              Hi {pmTenant.firstName}
+            </h1>
+          </div>
+          <form method="post" action={`/portal/logout${slugSuffix}`}>
+            <button
+              type="submit"
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-inset hover:text-foreground sm:min-h-0"
+              title="Signs you out of the portal on this device"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
+          </form>
         </div>
-        <form method="post" action={`/portal/logout${slugSuffix}`}>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-2 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-inset hover:text-foreground"
-            title="Signs you out of the portal on this device"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </button>
-        </form>
+
+        {/* Quick jumps — the dashboard is a long scroll on a phone, and these
+            save the renter hunting for the section they came for. Desktop shows
+            enough of the page at once not to need them. */}
+        <nav
+          aria-label="Jump to section"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:hidden"
+        >
+          {rentReference ? <JumpChip href="#rent">Rent</JumpChip> : null}
+          {primaryBlock ? <JumpChip href="#deposit">Deposit</JumpChip> : null}
+          <JumpChip href="#maintenance">Maintenance</JumpChip>
+          <JumpChip href="#contact">Contact</JumpChip>
+        </nav>
+
+        {errorCode === "no_unit" ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            We couldn&apos;t find a current room or flat linked to you, so the
+            issue reporter isn&apos;t available — please contact {agency.name}{" "}
+            directly using the details below.
+          </div>
+        ) : null}
+
+        {blocks.length === 0 ? (
+          <section className="rounded-3xl border border-border bg-surface-card p-6 text-center shadow-sm">
+            <p
+              className="text-[1.2rem] text-foreground"
+              style={{ ...SERIF, fontWeight: 500 }}
+            >
+              No tenancy on record
+            </p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-foreground-secondary">
+              We couldn&apos;t find a tenancy linked to your account. If you
+              think this is a mistake, contact {agency.name} using the details
+              below.
+            </p>
+          </section>
+        ) : (
+          blocks.map((block, i) => (
+            <div key={block.tenancy.contractId} className="space-y-4">
+              <TenancyCard tenancy={block.tenancy} />
+              {block.rent ? (
+                <RentCard
+                  tenancy={block.tenancy}
+                  rent={block.rent}
+                  anchorId={i === primaryIndex ? "rent" : undefined}
+                />
+              ) : null}
+              <DepositCard
+                deposit={block.deposit}
+                anchorId={i === primaryIndex ? "deposit" : undefined}
+              />
+            </div>
+          ))
+        )}
+
+        <MaintenanceCard tickets={tickets} slugSuffix={slugSuffix} />
+        <ContactCard agency={agency} />
       </div>
 
-      {errorCode === "no_unit" ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          We couldn&apos;t find a current room or flat linked to you, so the
-          issue reporter isn&apos;t available — please contact {agency.name}{" "}
-          directly using the details below.
-        </div>
-      ) : null}
+      <PortalMobileActionBar
+        agency={agency}
+        slugSuffix={slugSuffix}
+        paymentReference={rentReference}
+      />
+    </>
+  );
+}
 
-      {blocks.length === 0 ? (
-        <section className="rounded-3xl border border-border bg-surface-card p-6 text-center shadow-sm">
-          <p
-            className="text-[1.2rem] text-foreground"
-            style={{ ...SERIF, fontWeight: 500 }}
-          >
-            No tenancy on record
-          </p>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-foreground-secondary">
-            We couldn&apos;t find a tenancy linked to your account. If you think
-            this is a mistake, contact {agency.name} using the details below.
-          </p>
-        </section>
-      ) : (
-        blocks.map((block) => (
-          <div key={block.tenancy.contractId} className="space-y-4">
-            <TenancyCard tenancy={block.tenancy} />
-            {block.rent ? (
-              <RentCard tenancy={block.tenancy} rent={block.rent} />
-            ) : null}
-            <DepositCard deposit={block.deposit} />
-          </div>
-        ))
-      )}
-
-      <MaintenanceCard tickets={tickets} slugSuffix={slugSuffix} />
-      <ContactCard agency={agency} />
-    </div>
+function JumpChip({ href, children }: { href: string; children: string }) {
+  return (
+    <a
+      href={href}
+      className="inline-flex min-h-[36px] shrink-0 items-center rounded-full border border-border bg-surface-card px-3.5 text-xs font-medium text-foreground-secondary transition-colors active:bg-surface-inset"
+    >
+      {children}
+    </a>
   );
 }

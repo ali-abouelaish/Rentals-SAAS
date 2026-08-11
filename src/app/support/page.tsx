@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Fraunces } from "next/font/google";
 import { resolveSupportTenantFromServer } from "@/features/support/data/resolveTenant";
@@ -18,6 +18,14 @@ const fraunces = Fraunces({
 interface PageProps {
   searchParams: { companySlug?: string; ctx?: string };
 }
+
+// Renters land here from the portal's "Report an issue" on a phone, so the
+// chat needs the real viewport height and the safe-area insets to resolve.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const tenant = await resolveSupportTenantFromServer(searchParams.companySlug);
@@ -75,7 +83,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
       />
 
       <header className="relative z-10">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-6 pt-9 pb-5">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 pt-6 pb-4 sm:px-6 sm:pt-9 sm:pb-5">
           <div className="flex items-center gap-3">
             <span
               aria-hidden
@@ -113,7 +121,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
             </span>
           </div>
         </div>
-        <div className="mx-auto max-w-2xl px-6">
+        <div className="mx-auto max-w-2xl px-4 sm:px-6">
           <div
             aria-hidden
             className="h-px w-full"
@@ -125,7 +133,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-2xl px-6 pt-8 pb-10">
+      <main className="relative mx-auto max-w-2xl px-4 pt-5 pb-6 sm:px-6 sm:pt-8 sm:pb-10">
         <SupportExperience
           company={{ id: tenant.id, name: tenant.name, slug: tenant.slug }}
           properties={properties}
@@ -134,7 +142,7 @@ export default async function SupportPage({ searchParams }: PageProps) {
         />
       </main>
 
-      <footer className="relative z-10 mx-auto max-w-2xl px-6 pb-10">
+      <footer className="relative z-10 mx-auto max-w-2xl px-4 pb-[calc(env(safe-area-inset-bottom)_+_1.5rem)] sm:px-6 sm:pb-10">
         <div className="flex items-center justify-center gap-3">
           <span
             aria-hidden

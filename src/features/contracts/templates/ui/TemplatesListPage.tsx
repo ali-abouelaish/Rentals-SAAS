@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deleteContractTemplate } from "../actions/templates";
@@ -38,6 +38,13 @@ export function TemplatesListPage({ templates, portfolios }: Props) {
     <div className="space-y-5">
       <div className="flex items-start justify-between">
         <div>
+          <Link
+            href="/contracts"
+            className="inline-flex items-center gap-1 text-sm font-medium text-foreground-muted hover:text-foreground transition-colors mb-2"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to contracts
+          </Link>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Contract Templates</h1>
           <p className="text-sm text-foreground-secondary mt-1">
             Upload contract PDFs, mark dynamic fields once, and re-stamp them with booking data on demand.

@@ -59,7 +59,7 @@ export function MiniAssistant() {
             transition={{ duration: 0.2, ease: "easeOut" }}
             role="dialog"
             aria-label="AI assistant"
-            className="fixed bottom-[104px] right-[31px] z-50 flex h-[min(560px,calc(100dvh-9rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-card shadow-[0_24px_70px_-30px_rgba(15,23,42,0.5)]"
+            className="fixed bottom-[152px] right-4 md:bottom-[104px] md:right-[31px] z-50 flex h-[min(560px,calc(100dvh-9rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-card shadow-[0_24px_70px_-30px_rgba(15,23,42,0.5)]"
           >
             {thread.status === "ready" && (
               <button
@@ -118,7 +118,7 @@ export function MiniAssistant() {
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close AI assistant" : "Open AI assistant"}
         aria-expanded={open}
-        className="fixed bottom-[31px] right-[31px] z-50 flex h-[61px] w-[61px] items-center justify-center rounded-full text-brand-fg shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-ground"
+        className="fixed bottom-20 right-4 md:bottom-[31px] md:right-[31px] z-50 flex h-[61px] w-[61px] items-center justify-center rounded-full text-brand-fg shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-ground"
         style={{ background: "var(--brand-primary)" }}
       >
         <AnimatePresence mode="wait" initial={false}>

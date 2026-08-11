@@ -1,7 +1,7 @@
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { isAdminRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getLeadById } from "@/features/leads/data/leads";
+import { getLeadById, markLeadClicked } from "@/features/leads/data/leads";
 import { LeadDetailsCard } from "@/features/leads/ui/LeadDetailsCard";
 import { DeleteLeadButton } from "@/features/leads/ui/DeleteLeadButton";
 import Link from "next/link";
@@ -10,6 +10,11 @@ import { ArrowLeft } from "lucide-react";
 export default async function LeadDetailPage({ params }: { params: { id: string } }) {
   const profile = await requireUserProfile();
   const lead = await getLeadById(params.id);
+
+  // Mark as read the first time it's opened (no-op if already clicked).
+  if (!lead.clicked_at) {
+    await markLeadClicked(lead.id);
+  }
 
   let agents: { id: string; display_name: string | null }[] = [];
   if (isAdminRole(profile.role)) {
@@ -27,10 +32,10 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
       <div className="flex items-center gap-3">
         <Link
           href="/leads"
-          className="inline-flex items-center gap-1.5 text-sm text-foreground-muted hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Leads
+          Back to leads
         </Link>
       </div>
 

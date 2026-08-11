@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { sanitizeFilterTerm } from "@/lib/utils/search";
-import type { Lead } from "../domain/types";
+import type { LeadWithRelations } from "../domain/types";
 
 const PAGE_SIZE = 15;
 
@@ -9,11 +9,13 @@ export async function getLeads({
   search,
   status,
   source,
+  ref,
   page = 1,
 }: {
   search?: string;
   status?: string;
   source?: string;
+  ref?: string;
   page?: number;
 }) {
   const supabase = createSupabaseServerClient();
@@ -22,7 +24,7 @@ export async function getLeads({
   let query = supabase
     .from("leads")
     .select(
-      "*, assigned_agent:user_profiles!assigned_to(display_name)",
+      "*, assigned_agent:user_profiles!assigned_to(id, display_name), listing:scraped_listings!listing_id(id, title, url)",
       { count: "exact" }
     )
     .order("created_at", { ascending: false });
@@ -39,6 +41,12 @@ export async function getLeads({
   if (source && source !== "all") {
     query = query.eq("source", source);
   }
+  if (ref) {
+    const refTerm = sanitizeFilterTerm(ref);
+    if (refTerm) {
+      query = query.ilike("property_ref", `%${refTerm}%`);
+    }
+  }
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -48,12 +56,28 @@ export async function getLeads({
   if (error) throw new Error(error.message);
 
   return {
-    leads: (data ?? []) as (Lead & { assigned_agent: { display_name: string | null } | null })[],
+    leads: (data ?? []) as LeadWithRelations[],
     total: count ?? 0,
     page,
     pageSize: PAGE_SIZE,
     totalPages: Math.ceil((count ?? 0) / PAGE_SIZE),
   };
+}
+
+/**
+ * Stamp clicked_at the first time a lead is opened, so the list can show which
+ * leads have been read. No-op once already set (only rows with a null
+ * clicked_at are touched).
+ */
+export async function markLeadClicked(id: string) {
+  const supabase = createSupabaseServerClient();
+  await requireUserProfile();
+
+  await supabase
+    .from("leads")
+    .update({ clicked_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("clicked_at", null);
 }
 
 export async function getLeadById(id: string) {
@@ -69,10 +93,7 @@ export async function getLeadById(id: string) {
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Lead & {
-    assigned_agent: { id: string; display_name: string | null } | null;
-    listing: { id: string; title: string | null; url: string | null } | null;
-  };
+  return data as LeadWithRelations;
 }
 
 export type LeadStats = {

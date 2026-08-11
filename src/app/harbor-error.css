@@ -1,0 +1,178 @@
+/* ============================================================
+   Harbor Ops — public error surfaces (404 / 500)
+
+   Scoped under .harbor-landing so it inherits every token defined
+   in harbor-landing.css. Kept in a separate file on purpose: the
+   landing stylesheet is generated from the design handoff, so
+   re-syncing it must never clobber these rules.
+   ============================================================ */
+
+.harbor-landing .err {
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* Fill the viewport below the 64px nav so the page never looks
+     stranded at the top of a tall empty screen. */
+  min-height: calc(100vh - 64px);
+  padding: var(--space-16) 0 var(--space-20);
+  overflow: hidden;
+}
+
+/* Same dotted field as the hero, faded out downward. */
+.harbor-landing .err::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 85%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 85%);
+}
+
+.harbor-landing .err-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+}
+
+/* Oversized status numeral behind the copy — decorative only, the
+   readable status also appears in .err-status. */
+.harbor-landing .err-glyph {
+  position: absolute;
+  top: -0.34em;
+  right: -0.06em;
+  z-index: 0;
+  font-family: var(--ho-font-serif);
+  font-size: clamp(140px, 26vw, 320px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--ink-900);
+  opacity: 0.045;
+  user-select: none;
+  pointer-events: none;
+}
+
+.harbor-landing .err-status {
+  font-family: var(--ho-font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.harbor-landing .err h1 {
+  font-size: clamp(34px, 5.4vw, var(--text-4xl));
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+  max-width: 20ch;
+  margin: var(--space-5) 0 var(--space-4);
+}
+
+.harbor-landing .err h1 em {
+  font-family: var(--ho-font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.harbor-landing .err .lede {
+  font-size: var(--text-md);
+  line-height: 1.55;
+  color: var(--ink-600);
+  max-width: 56ch;
+}
+
+.harbor-landing .err-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+/* Machine reference the user can quote to support. */
+.harbor-landing .err-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  padding: 6px 10px;
+  border: var(--border-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-family: var(--ho-font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-600);
+  word-break: break-all;
+}
+
+.harbor-landing .err-ref .k {
+  color: var(--ink-400);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ============ ONWARD LINKS ============ */
+.harbor-landing .err-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+  padding-top: var(--space-8);
+  border-top: var(--border-hairline);
+}
+
+.harbor-landing .err-link {
+  display: block;
+  padding: var(--space-4) var(--space-5);
+  border: var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.harbor-landing .err-link:hover {
+  border-color: var(--ink-300);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.harbor-landing .err-link .t {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink-900);
+}
+
+.harbor-landing .err-link .d {
+  margin-top: 3px;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--ink-500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .harbor-landing .err-link {
+    transition: none;
+  }
+  .harbor-landing .err-link:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .harbor-landing .err {
+    min-height: 0;
+    padding: var(--space-12) 0 var(--space-16);
+  }
+  .harbor-landing .err-glyph {
+    display: none;
+  }
+  .harbor-landing .err-links {
+    grid-template-columns: 1fr;
+  }
+  .harbor-landing .err-ctas .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

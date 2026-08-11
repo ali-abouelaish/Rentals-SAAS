@@ -39,6 +39,19 @@ export async function assignLead(leadId: string, assignedTo: string | null) {
   revalidatePath(`/leads/${leadId}`);
 }
 
+export async function markLeadClicked(leadId: string) {
+  const supabase = createSupabaseServerClient();
+  await requireUserProfile();
+
+  await supabase
+    .from("leads")
+    .update({ clicked_at: new Date().toISOString() })
+    .eq("id", leadId)
+    .is("clicked_at", null);
+
+  revalidatePath("/leads");
+}
+
 export async function deleteLead(leadId: string) {
   const supabase = createSupabaseServerClient();
   const profile = await requireRole([...ADMIN_ROLES]);

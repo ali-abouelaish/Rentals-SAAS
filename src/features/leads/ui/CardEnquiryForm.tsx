@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+import { ThankYouDialog } from "@/components/shared/ThankYouDialog";
 import { submitCardEnquiry } from "../actions/cardEnquiry";
 
 type State = { ok?: boolean; error?: string };
@@ -42,12 +43,20 @@ export function CardEnquiryForm({
   brandLogoUrl?: string | null;
 }) {
   const [state, formAction] = useFormState(submitCardEnquiry, {});
+  const [showThanks, setShowThanks] = useState(false);
 
   useEffect(() => {
     if (state?.error) {
       // inline error display — no toast needed on public page
     }
   }, [state?.error]);
+
+  // Pop the confirmation the moment the action succeeds. The inline panel
+  // below stays as well, so dismissing the popup doesn't drop the enquirer
+  // back onto a live form they might submit a second time.
+  useEffect(() => {
+    if (state?.ok) setShowThanks(true);
+  }, [state?.ok]);
 
   const inputStyle: React.CSSProperties = {
     background: "rgba(255,255,255,0.12)",
@@ -68,6 +77,13 @@ export function CardEnquiryForm({
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center justify-center text-center px-8 py-14 gap-5"
       >
+        <ThankYouDialog
+          open={showThanks}
+          onOpenChange={setShowThanks}
+          message="Your enquiry has been sent."
+          footnote={`${agentName} will be in touch with you shortly.`}
+          actionLabel="Done"
+        />
         <div
           className="flex h-20 w-20 items-center justify-center rounded-full"
           style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)" }}

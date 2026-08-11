@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import {
+  useForm,
+  type UseFormRegister,
+  type UseFormWatch,
+  type FieldErrors,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -52,6 +57,74 @@ function Field({
   );
 }
 
+/* ─── Management-fee fields (shared by create + edit) ─────── */
+
+function ManagementFeeFields({
+  register,
+  watch,
+  errors,
+}: {
+  register: UseFormRegister<OwnerLandlordFormValues>;
+  watch: UseFormWatch<OwnerLandlordFormValues>;
+  errors?: FieldErrors<OwnerLandlordFormValues>;
+}) {
+  const feeType = watch("management_fee_type");
+  return (
+    <>
+      <Field label="Management fee" error={errors?.management_fee_type?.message}>
+        <select
+          {...register("management_fee_type")}
+          className={selectCls}
+          title="How you charge this owner to manage their property. Used to deduct your fee on owner statements."
+        >
+          <option value="none">None — owner pays nothing / rent-to-rent</option>
+          <option value="percent">Percentage of rent due</option>
+          <option value="flat">Flat monthly amount</option>
+        </select>
+        <p className="text-xs text-foreground-muted">
+          Deducted from the rent owed on their properties, on owner statements. Depends on the deal —
+          leave as None if this owner pays nothing.
+        </p>
+      </Field>
+
+      {feeType === "percent" && (
+        <Field label="Fee percentage (%)" error={errors?.management_fee_percent?.message}>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            {...register("management_fee_percent")}
+            className={inputCls}
+            placeholder="e.g. 10"
+            title="Percentage of the rent due on their properties, e.g. 10 for 10%."
+          />
+          <p className="text-xs text-foreground-muted">
+            e.g. 10 for 10% of the rent due. Max 100.
+          </p>
+        </Field>
+      )}
+
+      {feeType === "flat" && (
+        <Field label="Flat monthly fee (£)" error={errors?.management_fee_amount?.message}>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            {...register("management_fee_amount")}
+            className={inputCls}
+            placeholder="e.g. 75"
+            title="Fixed £ per month regardless of the rent due."
+          />
+          <p className="text-xs text-foreground-muted">
+            Fixed £ per month, regardless of the rent due.
+          </p>
+        </Field>
+      )}
+    </>
+  );
+}
+
 /* ─── Owner Landlord Dialog ───────────────────────────────── */
 
 interface CreateOwnerLandlordDialogProps {
@@ -66,10 +139,11 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<OwnerLandlordFormValues>({
     resolver: zodResolver(ownerLandlordSchema),
-    defaultValues: { alert_60_days: false, alert_30_days: false },
+    defaultValues: { alert_60_days: false, alert_30_days: false, management_fee_type: "none" },
   });
 
   const onSubmit = (values: OwnerLandlordFormValues) => {
@@ -129,6 +203,8 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
               <input {...register("email")} type="email" className={inputCls} placeholder="owner@example.com" />
             </Field>
           </div>
+
+          <ManagementFeeFields register={register} watch={watch} errors={errors} />
 
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} disabled={isPending}>
@@ -272,12 +348,17 @@ export function EditOwnerLandlordDialog({ landlord, onUpdated }: EditOwnerLandlo
     register,
     handleSubmit,
     reset,
+    watch,
+    formState: { errors },
   } = useForm<OwnerLandlordFormValues>({
     resolver: zodResolver(ownerLandlordEditSchema as unknown as typeof ownerLandlordSchema),
     defaultValues: {
       name: landlord.name ?? "",
       phone: landlord.phone ?? "",
       email: landlord.email ?? "",
+      management_fee_type: landlord.management_fee_type ?? "none",
+      management_fee_percent: landlord.management_fee_percent ?? undefined,
+      management_fee_amount: landlord.management_fee_amount ?? undefined,
       alert_60_days: landlord.alert_60_days,
       alert_30_days: landlord.alert_30_days,
     },
@@ -289,6 +370,9 @@ export function EditOwnerLandlordDialog({ landlord, onUpdated }: EditOwnerLandlo
         name: landlord.name ?? "",
         phone: landlord.phone ?? "",
         email: landlord.email ?? "",
+        management_fee_type: landlord.management_fee_type ?? "none",
+        management_fee_percent: landlord.management_fee_percent ?? undefined,
+        management_fee_amount: landlord.management_fee_amount ?? undefined,
         alert_60_days: landlord.alert_60_days,
         alert_30_days: landlord.alert_30_days,
       });
@@ -351,6 +435,8 @@ export function EditOwnerLandlordDialog({ landlord, onUpdated }: EditOwnerLandlo
               <input {...register("email")} className={inputCls} placeholder="owner@example.com" />
             </Field>
           </div>
+
+          <ManagementFeeFields register={register} watch={watch} errors={errors} />
 
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} disabled={isPending}>

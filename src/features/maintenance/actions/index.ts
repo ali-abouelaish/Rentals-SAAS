@@ -7,12 +7,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { sendTicketStatusChange } from "@/features/support/data/notifications";
+import { emitAutomationEvent } from "@/features/automations/lib/events";
 
 // ──────────────────────────────────────────────────────────
 // Zod Schemas
 // ──────────────────────────────────────────────────────────
 
-const CATEGORIES = ["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "other"] as const;
+const CATEGORIES = ["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "gas_heating", "fire_safety", "inspection", "other"] as const;
 const PRIORITIES = ["low", "medium", "high", "critical"] as const;
 const STATUSES = ["open", "in_progress", "pending_parts", "pending_quote", "resolved", "closed"] as const;
 
@@ -44,6 +45,9 @@ const JobCostSchema = z.object({
   date_incurred: z.string(),
   supplier: z.string().nullable().optional(),
   invoice_ref: z.string().nullable().optional(),
+  // Whether this cost is charged to the property owner on their statement.
+  // Defaults true, matching the column default.
+  recharge_to_owner: z.boolean().default(true),
 });
 
 // ──────────────────────────────────────────────────────────
@@ -197,6 +201,11 @@ export async function updateMaintenanceJob(
 
   if (d.status !== undefined) {
     await syncLinkedTicketStatus(profile.tenant_id, id, d.status);
+    await emitAutomationEvent(profile.tenant_id, {
+      type: "works_order_status_changed",
+      jobId: id,
+      toStatus: d.status,
+    });
   }
 
   revalidatePath("/maintenance");
@@ -220,6 +229,11 @@ export async function updateJobStatus(jobId: string, newStatus: string) {
   if (error) return { error: error.message };
 
   await syncLinkedTicketStatus(profile.tenant_id, jobId, newStatus);
+  await emitAutomationEvent(profile.tenant_id, {
+    type: "works_order_status_changed",
+    jobId,
+    toStatus: newStatus,
+  });
 
   revalidatePath("/maintenance");
   revalidatePath("/dashboard");
@@ -291,6 +305,7 @@ export async function addJobCost(raw: z.infer<typeof JobCostSchema>) {
     date_incurred: d.date_incurred,
     supplier: d.supplier ?? null,
     invoice_ref: d.invoice_ref ?? null,
+    recharge_to_owner: d.recharge_to_owner,
   });
   if (maintCostErr) {
     // Rollback the property_costs insert

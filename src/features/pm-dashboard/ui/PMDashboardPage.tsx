@@ -32,8 +32,11 @@ import type {
   DashboardActionCategory,
 } from "@/features/profitability/domain/types";
 import { DashboardTodos } from "./DashboardTodos";
-import { TodoProgressCard, MaintenanceProgressCard } from "./DashboardProgress";
+import { MaintenanceProgressCard } from "./DashboardProgress";
+import { DashboardReminders } from "./DashboardReminders";
+import { MobileDashboardHome } from "./MobileDashboardHome";
 import type { PmTodo } from "../domain/todos";
+import type { InboxMessage } from "@/features/automations/data/queries";
 
 // ──────────────────────────────────────────────────────────
 // Formatters
@@ -577,9 +580,14 @@ interface PMDashboardPageProps {
   todos: PmTodo[];
   todoHistory: PmTodo[];
   todoProperties: { id: string; name: string }[];
+  // When null the tenant lacks the automations entitlement — the reminders
+  // rail is hidden and the progress cards keep their full width.
+  reminders: InboxMessage[] | null;
+  // Rendered directly under the greeting on both the mobile and desktop layouts.
+  topSlot?: React.ReactNode;
 }
 
-export function PMDashboardPage({ data, userName, activity, todos, todoHistory, todoProperties }: PMDashboardPageProps) {
+export function PMDashboardPage({ data, userName, activity, todos, todoHistory, todoProperties, reminders, topSlot }: PMDashboardPageProps) {
   // Shared todo state so the completion donut and the list stay in sync live.
   const [liveTodos, setLiveTodos] = useState<PmTodo[]>(todos);
 
@@ -600,7 +608,14 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
     data.at_risk_total > 0 ? ` · £${Math.round(data.at_risk_total).toLocaleString()} at risk` : "";
 
   return (
-    <div className="space-y-[var(--gap-bento)]">
+    <>
+      {/* Mobile home — big tappable tiles + attention glance (md:hidden) */}
+      <div className="md:hidden">
+        <MobileDashboardHome data={data} userName={userName} topSlot={topSlot} />
+      </div>
+
+      {/* Desktop bento dashboard (hidden below md) */}
+      <div className="hidden md:block space-y-[var(--gap-bento)]">
 
       {/* ── Greeting ─────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
@@ -616,6 +631,8 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
         </p>
       </div>
 
+      {topSlot}
+
       {/* ── Headline KPIs up top ── */}
       <KpiStrip data={data} />
 
@@ -624,26 +641,39 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
       <div className="grid gap-[var(--gap-bento)] items-start xl:grid-cols-2">
         {/* Column 1 — needs attention + to-do */}
         <div className="space-y-[var(--gap-bento)]">
-          <ActionQueue actions={data.actions} />
-          <DashboardTodos
-            todos={liveTodos}
-            setTodos={setLiveTodos}
-            initialHistory={todoHistory}
-            properties={todoProperties}
-          />
+          {/* Needs-attention and to-do sit side by side as two vertical
+              columns of equal height; stacks below md. */}
+          <div className="grid gap-[var(--gap-bento)] items-stretch md:grid-cols-2">
+            <ActionQueue actions={data.actions} />
+            <DashboardTodos
+              todos={liveTodos}
+              setTodos={setLiveTodos}
+              initialHistory={todoHistory}
+              properties={todoProperties}
+            />
+          </div>
           <VacancyOverview units={data.vacancy_units} />
         </div>
 
         {/* Column 2 — progress & operations */}
         <div className="space-y-[var(--gap-bento)]">
-          <TodoProgressCard todos={liveTodos} />
-          <MaintenanceProgressCard maintenance={data.maintenance_summary} />
+          {reminders === null ? (
+            <MaintenanceProgressCard maintenance={data.maintenance_summary} />
+          ) : (
+            // Maintenance donut pulls back to 60% so the reminders rail (40%)
+            // fits vertically alongside it; stacks below md.
+            <div className="grid gap-[var(--gap-bento)] items-stretch md:grid-cols-[3fr_2fr]">
+              <MaintenanceProgressCard maintenance={data.maintenance_summary} />
+              <DashboardReminders reminders={reminders} />
+            </div>
+          )}
           <UpcomingMoveOuts moveOuts={data.upcoming_move_outs} />
           <ProfitabilitySnapshot data={data} />
           <RecentActivity activity={activity} />
         </div>
       </div>
     </div>
+    </>
   );
 }
 

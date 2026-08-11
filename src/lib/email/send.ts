@@ -2,7 +2,9 @@ import { loadAgency } from "./agency-context";
 import { logEmail } from "./log";
 import { logEmailSendError } from "./error-log";
 import { getTransport } from "./transport/factory";
+import { ResendTransport } from "./transport/resend";
 import { getEmailProvider } from "@/lib/email-providers/data";
+import { failEmailProvider } from "@/lib/email-providers/alert";
 import type { Agency } from "./branding";
 import type { EmailMessage, EmailProviderType } from "./transport/types";
 
@@ -63,6 +65,51 @@ export async function sendEmail(
       tenantId,
       message: errorMessage,
       context: { path: "send", to: message.to, subject: message.subject, provider: transport.type },
+    });
+
+    // A custom provider (Graph/Gmail/SMTP) failed: flag the agency (mark the
+    // provider errored + alert once) and fall back to the default Resend mailer
+    // so the email still goes out. The default mailer has no fallback.
+    if (transport.type !== "resend_default") {
+      await failEmailProvider(tenantId, errorMessage);
+      return sendViaResendFallback(agency, tenantId, message);
+    }
+    throw err;
+  }
+}
+
+async function sendViaResendFallback(
+  agency: Agency,
+  tenantId: string,
+  message: EmailMessage,
+): Promise<SendEmailResult> {
+  try {
+    const { messageId } = await new ResendTransport(agency).send(message);
+    await logEmail({
+      tenantId,
+      providerType: "resend_default",
+      to: message.to,
+      subject: message.subject,
+      templateKey: message.templateKey ? `${message.templateKey}:fallback` : "fallback",
+      messageId,
+      status: "sent",
+    });
+    return { providerId: messageId, providerType: "resend_default" };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    await logEmail({
+      tenantId,
+      providerType: "resend_default",
+      to: message.to,
+      subject: message.subject,
+      templateKey: message.templateKey ? `${message.templateKey}:fallback` : "fallback",
+      status: "failed",
+      error: errorMessage,
+    });
+    await logEmailSendError({
+      tenantId,
+      message: errorMessage,
+      context: { path: "send:fallback", to: message.to, subject: message.subject },
     });
     throw err;
   }

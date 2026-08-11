@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { expectedRent, inclusiveMonthsBetween } from "@/features/contracts/domain/pro-rata";
 import { assertMonthOpen } from "@/features/finances/lib/assertMonthOpen";
+import { emitAutomationEvent } from "@/features/automations/lib/events";
 
 export type RentPayment = {
   id: string;
@@ -172,6 +173,14 @@ export async function recordRentPayment({
     .single();
 
   if (error) throw new Error(error.message);
+
+  await emitAutomationEvent(profile.tenant_id, {
+    type: "payment_received",
+    contractId,
+    periodYear,
+    periodMonth,
+  });
+
   revalidatePath("/properties");
   revalidatePath("/finances");
   return data as {

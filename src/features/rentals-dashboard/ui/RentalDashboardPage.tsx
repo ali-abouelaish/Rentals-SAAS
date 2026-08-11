@@ -46,9 +46,11 @@ interface Props {
   data: RentalDashboardData;
   userName: string;
   isAdmin: boolean;
+  // Rendered directly under the greeting header.
+  topSlot?: React.ReactNode;
 }
 
-export function RentalDashboardPage({ data, userName, isAdmin }: Props) {
+export function RentalDashboardPage({ data, userName, isAdmin, topSlot }: Props) {
   const { stats, statusBreakdown, recentRentals, topAgents } = data;
 
   const statCards = [
@@ -89,6 +91,8 @@ export function RentalDashboardPage({ data, userName, isAdmin }: Props) {
         <p className="text-sm text-foreground-secondary">Welcome back, {userName}</p>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">Rental Dashboard</h1>
       </div>
+
+      {topSlot}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

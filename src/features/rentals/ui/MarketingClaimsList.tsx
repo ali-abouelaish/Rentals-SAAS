@@ -64,13 +64,19 @@ function MarketingClaimRow({ claim, canReview }: { claim: MarketingClaimItem; ca
     if (decision === "rejected") formData.set("reject_reason", rejectReason.trim());
 
     startTransition(async () => {
-      const result = await reviewMarketingClaim(formData);
-      if (result.ok) {
-        toast.success(decision === "approved" ? "Claim approved." : "Claim rejected.");
-        setRejectMode(false);
-        setRejectReason("");
-      } else {
-        toast.error(result.error ?? "Failed to update claim.");
+      try {
+        const result = await reviewMarketingClaim(formData);
+        if (result.ok) {
+          toast.success(decision === "approved" ? "Claim approved." : "Claim rejected.");
+          setRejectMode(false);
+          setRejectReason("");
+        } else {
+          toast.error(result.error ?? "Failed to update claim.");
+        }
+      } catch (err) {
+        // Unhandled here, this surfaces as a blank "client-side exception" page.
+        console.error("[marketing-claim] review failed", err);
+        toast.error("Couldn't reach the server. Check your connection and try again.");
       }
     });
   };

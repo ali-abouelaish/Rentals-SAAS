@@ -183,7 +183,7 @@ function KanbanColumn({ status, jobs, onJobClick }: KanbanColumnProps) {
         ))}
         {jobs.length === 0 && (
           <div className="flex-1 flex items-center justify-center py-8 text-xs text-foreground-muted">
-            No jobs here
+            No work orders here
           </div>
         )}
       </div>

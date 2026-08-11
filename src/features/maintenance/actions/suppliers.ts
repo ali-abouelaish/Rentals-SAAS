@@ -10,7 +10,7 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 // Zod Schema
 // ──────────────────────────────────────────────────────────
 
-const TRADES = ["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "other"] as const;
+const TRADES = ["plumbing", "electrical", "structural", "appliance", "pest_control", "cleaning", "decoration", "gas_heating", "fire_safety", "inspection", "other"] as const;
 
 const SupplierSchema = z.object({
   name: z.string().min(1, "Company name is required").max(200, "Max 200 characters"),

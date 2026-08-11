@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, KeyRound } from "lucide-react";
 import { UnitFilterBar } from "./UnitFilterBar";
 import { UnitsListView } from "./UnitsListView";
 import { UnitsKanbanView } from "./UnitsKanbanView";
@@ -41,9 +41,10 @@ interface UnitsPageProps {
   pmTenants: PmTenantOption[];
   reminderStatus?: import("@/features/reminders/data/status").ReminderStatusMap;
   forms?: Form[];
+  certificateStatus?: Record<string, import("@/features/certificates/domain/types").CertificateStatus>;
 }
 
-export function UnitsPage({ portfolios: initialPortfolios, initialProperties, initialUnits, pmTenants, reminderStatus, forms = [] }: UnitsPageProps) {
+export function UnitsPage({ portfolios: initialPortfolios, initialProperties, initialUnits, pmTenants, reminderStatus, forms = [], certificateStatus }: UnitsPageProps) {
   const [view, setView] = useState<ViewMode>("list");
   const [filters, setFilters] = useState<UnitFilters>(DEFAULT_FILTERS);
   const [portfolios, setPortfolios] = useState<Portfolio[]>(initialPortfolios);
@@ -209,6 +210,14 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/keys"
+            title="Track key sets and who holds them across your properties"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-semibold text-foreground-secondary hover:bg-surface-inset hover:text-foreground hover:border-border-strong transition-colors"
+          >
+            <KeyRound className="h-4 w-4" />
+            Keys
+          </Link>
           <ManagePortfoliosDialog
             portfolios={portfolios}
             onCreated={(portfolio) => setPortfolios((prev) => [...prev, portfolio])}
@@ -240,6 +249,7 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
           properties={filteredProperties}
           units={filteredUnits}
           reminderStatus={reminderStatus ?? {}}
+          certificateStatus={certificateStatus ?? {}}
           onUnitClick={handleUnitClick}
           onStatusChanged={handleStatusChanged}
           onUnitCreated={handleUnitCreated}

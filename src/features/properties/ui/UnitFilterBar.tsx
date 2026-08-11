@@ -287,7 +287,8 @@ export function UnitFilterBar({
             </button>
           )}
           <span className="text-xs text-foreground-muted">{totalUnits} units</span>
-          <div className="flex items-center rounded-lg border border-border bg-surface-card overflow-hidden">
+          {/* Kanban/Spreadsheet are horizontal — keep phones on the responsive list view. */}
+          <div className="hidden md:flex items-center rounded-lg border border-border bg-surface-card overflow-hidden">
             <button
               type="button"
               onClick={() => onViewChange("list")}

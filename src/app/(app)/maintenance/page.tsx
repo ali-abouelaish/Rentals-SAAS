@@ -9,7 +9,7 @@ import { MaintenancePage } from "@/features/maintenance/ui/MaintenancePage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface Props {
-  searchParams: { job?: string; ticket?: string; supplier?: string };
+  searchParams: { job?: string; ticket?: string; supplier?: string; action?: string };
 }
 
 export default async function MaintenanceRoute({ searchParams }: Props) {
@@ -41,6 +41,7 @@ export default async function MaintenanceRoute({ searchParams }: Props) {
         initialJobId={searchParams.job}
         initialTicketId={searchParams.ticket}
         initialSupplierId={searchParams.supplier}
+        initialRaiseOpen={searchParams.action === "new"}
       />
     );
   } catch (err) {

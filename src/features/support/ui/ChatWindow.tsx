@@ -148,7 +148,10 @@ export function ChatWindow({
     !emergency && !submittedReference && turnCount >= RAISE_TICKET_MIN_TURN;
 
   return (
-    <div className="flex h-[640px] flex-col overflow-hidden rounded-3xl border border-border bg-surface-card shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)]">
+    // On a phone the chat is the whole screen: size it to the dynamic viewport
+    // (minus the page chrome) so the composer sits above the fold instead of
+    // 640px down a scrolling document. Fixed height from sm up.
+    <div className="flex h-[max(24rem,calc(100dvh_-_11rem))] flex-col overflow-hidden rounded-3xl border border-border bg-surface-card shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] sm:h-[640px]">
       {/* Context / header strip */}
       <div className="flex items-center gap-3 border-b border-border bg-surface-card/70 px-5 py-3 backdrop-blur">
         {contextBar ? (

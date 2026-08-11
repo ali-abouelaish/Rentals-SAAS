@@ -216,6 +216,13 @@ def fetch_with_retry(url, max_attempts=4, timeout=15):
 
 all_results = []   # ← this is now your main array
 
+# Landlords whose SpareRoom pages we actually loaded and read to the end.
+# Only these are safe to clear out in the write step. "0 listings" from a page we
+# read cleanly is a real answer (ads pulled, not accepting, no photos), so the old
+# rows should go. "0 listings" from a page we never loaded is a transient failure,
+# and deleting on that would wipe good data every time SpareRoom hiccups.
+reached_landlord_ids = set()
+
 # -----------------------------
 # 3) Scrape each profile (or listing fallback)
 # -----------------------------
@@ -255,6 +262,8 @@ for raw_url, paying_flag, property_flag, landlord_id in zip(
                     "profile_flag": property_flag,
                     "landlord_id": landlord_id if landlord_id else None,
                 })
+            if landlord_id:
+                reached_landlord_ids.add(landlord_id)
         except Exception as e:
             print(f"⚠️ Error scraping listing page {resolved}: {e}")
         continue  # next landlord — skip the profile pagination below
@@ -268,6 +277,7 @@ for raw_url, paying_flag, property_flag, landlord_id in zip(
         print(f"   📌 Will apply flag: {property_flag}")
     offset = 0
     prev_page_links = set()
+    pagination_ok = False  # True only if we walked every page without an error
 
     while True:
         page_url = (
@@ -282,6 +292,7 @@ for raw_url, paying_flag, property_flag, landlord_id in zip(
 
             listings = soup.find_all("a", class_="listing-card__link")
             if not listings:
+                pagination_ok = True
                 break
 
             current_page_links = set()
@@ -293,6 +304,7 @@ for raw_url, paying_flag, property_flag, landlord_id in zip(
                     current_page_links.add(full_url)
 
             if current_page_links == prev_page_links:
+                pagination_ok = True
                 break
 
             for link in current_page_links:
@@ -311,6 +323,12 @@ for raw_url, paying_flag, property_flag, landlord_id in zip(
         except Exception as e:
             print(f"⚠️ Error fetching {page_url}: {e}")
             break
+
+    # Only a clean walk of every page proves the profile is genuinely empty. An
+    # error part-way through leaves us holding partial data, so this landlord is
+    # not authoritative and must keep whatever rows it already has.
+    if pagination_ok and landlord_id:
+        reached_landlord_ids.add(landlord_id)
 
 # -----------------------------
 # 4) Deduplicate & prepare array
@@ -580,13 +598,23 @@ def detect_property_type_from_key_features(soup):
 
 
 def scrape_listing_advanced(url, paying, profile_flag=""):
+    """Scrape one listing detail page.
+
+    Returns (data, outcome) where outcome is one of:
+      "ok"      — data is a row dict
+      "skipped" — the page loaded and we deliberately dropped it (not accepting,
+                  no photos); a truthful "this is not lettable right now"
+      "error"   — we could not read the page at all; says nothing about the ad
+    The caller needs the skipped/error distinction because only "error" means we
+    cannot vouch for what the landlord currently has live.
+    """
     try:
         resp = fetch_with_retry(url)
         soup = BeautifulSoup(resp.text, "html.parser")
         html = resp.text
         if "The advertiser is not currently accepting applications" in html:
             print(f"🚫 Skipping {url} — advertiser not accepting applications.")
-            return None
+            return None, "skipped"
         # ✅ Whole property detection + dedicated price extraction
         is_whole_property = detect_whole_property(soup)
         whole_property_price = extract_whole_property_price(soup) if is_whole_property else None
@@ -698,7 +726,7 @@ def scrape_listing_advanced(url, paying, profile_flag=""):
             # 🚫 Skip listings with NO images
             if photo_count == 0:
                 print(f"🖼️ Skipping {url} — no images found.")
-                return None
+                return None, "skipped"
 
         # Price
         price = None
@@ -842,15 +870,19 @@ def scrape_listing_advanced(url, paying, profile_flag=""):
             **flat_rooms,  # room1_type, room1_price_pcm, room1_deposit ... only for rooms that exist
         }
 
-        return result
+        return result, "ok"
     except Exception as e:
         print(f"Failed to scrape {url}: {e}")
-        return None
+        return None, "error"
 
 
-def main(listings):
+def main(listings, reached_landlord_ids):
     results = []
     seen_urls = set()  # ✅ track URLs already processed in this run
+    # Landlords with at least one listing page we could not read. A read error
+    # says nothing about whether the ad is still live, so these landlords are
+    # dropped from the delete set below and keep the rows they already have.
+    landlords_with_errors = set()
 
     for item in listings:
         url = item.get("url")
@@ -870,15 +902,24 @@ def main(listings):
         print(f"Scraping {url}")
         if profile_flag:
             print(f"   📌 Applying profile flag: {profile_flag}")
-        data = scrape_listing_advanced(url, paying, profile_flag)
+        data, outcome = scrape_listing_advanced(url, paying, profile_flag)
+        if outcome == "error" and item.get("landlord_id"):
+            landlords_with_errors.add(item["landlord_id"])
         if data:
             data["landlord_id"] = item.get("landlord_id")
             results.append(data)
 
         time.sleep(1)
 
-    if not results:
-        print("❌ No listings scraped. Supabase not updated.")
+    # Landlords we can speak for: profile read to the end AND every listing page
+    # under it either scraped or deliberately skipped. Their rows get replaced
+    # wholesale — including down to zero, which is the case the old
+    # delete-only-what-we-inserted logic could never express, so a landlord whose
+    # ads all came down kept serving them indefinitely.
+    refreshed_landlord_ids = sorted(reached_landlord_ids - landlords_with_errors)
+
+    if not results and not refreshed_landlord_ids:
+        print("❌ No listings scraped and no profile read cleanly. Supabase not updated.")
         return
 
     # ========================================
@@ -959,8 +1000,17 @@ def main(listings):
     }
     INT_COLS = {"photo_count", "room_count"}
 
+    # One timestamp for the whole run, so every row written by this run shares a
+    # scrape time and "when was this landlord last read" is a single clean value
+    # rather than a spread across however long the run took.
+    from datetime import datetime, timezone
+    scraped_at = datetime.now(timezone.utc).isoformat()
+
     def _to_row(r):
-        row = {"tenant_id": tenant_id}
+        # source is set explicitly rather than left to the column default so the
+        # rows we write match the source-scoped delete above exactly, and
+        # last_seen_at records when this listing was last confirmed live.
+        row = {"tenant_id": tenant_id, "source": "spareroom", "last_seen_at": scraped_at}
         for col in TABLE_COLS:
             if col == "tenant_id":
                 continue
@@ -984,30 +1034,64 @@ def main(listings):
         return row
 
     rows = [_to_row(r) for r in results]
-    landlord_ids_in_run = list({r.get("landlord_id") for r in results if r.get("landlord_id")})
+    landlords_with_rows = {r.get("landlord_id") for r in results if r.get("landlord_id")}
     rows_without_landlord = sum(1 for r in results if not r.get("landlord_id"))
-    if landlord_ids_in_run:
-        supabase.table("scraped_listings").delete().eq("tenant_id", tenant_id).in_("landlord_id", landlord_ids_in_run).execute()
+
+    # Replace, don't merge: clear every landlord we can speak for, then insert what
+    # they have live now. Chunked because `in_` goes into the query string.
+    # Scoped to source='spareroom' so a landlord who also has a listings
+    # spreadsheet keeps their imported rows.
+    for i in range(0, len(refreshed_landlord_ids), 100):
+        chunk = refreshed_landlord_ids[i : i + 100]
+        supabase.table("scraped_listings").delete().eq("tenant_id", tenant_id).eq(
+            "source", "spareroom"
+        ).in_("landlord_id", chunk).execute()
     for i in range(0, len(rows), 100):
         supabase.table("scraped_listings").insert(rows[i : i + 100]).execute()
+
+    # Stamp the read time on the landlord itself, so "this landlord's listings are
+    # months old" is visible in the app without inferring it from row timestamps.
+    # Only landlords we actually read are stamped — a landlord we failed to reach
+    # keeps its previous value, which is what makes the staleness visible.
+    for i in range(0, len(refreshed_landlord_ids), 100):
+        chunk = refreshed_landlord_ids[i : i + 100]
+        supabase.table("landlords").update({"last_scraped_at": scraped_at}).eq(
+            "tenant_id", tenant_id
+        ).in_("id", chunk).execute()
+
     print(f"\n✅ Successfully posted {len(rows)} listings to Supabase scraped_listings!")
-    print(f"   👤 Landlords in this run: {len(landlord_ids_in_run)} of {len(LANDLORD_NAME_BY_ID)} loaded"
+    print(f"   👤 Landlords refreshed: {len(refreshed_landlord_ids)} of {len(LANDLORD_NAME_BY_ID)} loaded"
           + (f" (+ {rows_without_landlord} listings with no landlord_id)" if rows_without_landlord else ""))
 
-    # Show which loaded landlords produced 0 listings so the user can investigate
-    landlords_in_run_set = set(landlord_ids_in_run)
-    missing = [
+    # Refreshed but empty: read cleanly, nothing live. Their stale rows have just
+    # been cleared — this is the case that used to go unnoticed and leave months
+    # of dead listings being served.
+    cleared = [
+        (lid, LANDLORD_NAME_BY_ID.get(lid) or "(no name)")
+        for lid in refreshed_landlord_ids
+        if lid not in landlords_with_rows
+    ]
+    if cleared:
+        print(f"   🧹 {len(cleared)} landlords read cleanly with 0 live listings — their old rows were removed:")
+        for lid, name in cleared:
+            print(f"      - {name} ({lid})")
+
+    # Not reached: URL unrecognised, profile fetch failed, pagination broke, or a
+    # listing page errored. We cannot vouch for these, so their rows are left as
+    # they were — which means they are the ones that go stale. Chase these.
+    refreshed_set = set(refreshed_landlord_ids)
+    unreachable = [
         (lid, LANDLORD_NAME_BY_ID.get(lid) or "(no name)")
         for lid in LANDLORD_NAME_BY_ID
-        if lid not in landlords_in_run_set
+        if lid not in refreshed_set
     ]
-    if missing:
-        print(f"   ⚠️ {len(missing)} loaded landlords produced 0 listings:")
-        for lid, name in missing:
+    if unreachable:
+        print(f"   ⚠️ {len(unreachable)} landlords could not be read — existing rows left untouched and will age:")
+        for lid, name in unreachable:
             print(f"      - {name} ({lid})")
-        print("     Likely causes: profile URL unrecognised, profile empty/blocked, or every listing skipped (no images / not accepting).")
+        print("     Likely causes: profile URL unrecognised, profile blocked/erroring, or a listing page failed to load.")
 
 
 # Call main() to scrape each individual listing
 if __name__ == "__main__":
-    main(listings)
+    main(listings, reached_landlord_ids)

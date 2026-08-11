@@ -172,6 +172,8 @@ interface MaintenancePageProps {
   initialJobId?: string;
   initialTicketId?: string;
   initialSupplierId?: string;
+  /** Open the "Raise job" modal on mount (mobile ＋ quick action). */
+  initialRaiseOpen?: boolean;
 }
 
 export function MaintenancePage({
@@ -182,6 +184,7 @@ export function MaintenancePage({
   initialJobId,
   initialTicketId,
   initialSupplierId,
+  initialRaiseOpen,
 }: MaintenancePageProps) {
   const router = useRouter();
   const [jobs, setJobs] = useState<MaintenanceJob[]>(initialJobs);
@@ -236,6 +239,9 @@ export function MaintenancePage({
         setEditingSupplier(s);
         setSupplierModalOpen(true);
       }
+    }
+    if (initialRaiseOpen) {
+      setRaiseOpen(true);
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -321,32 +327,39 @@ export function MaintenancePage({
           <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">Maintenance</h1>
           <p className="text-sm text-foreground-secondary mt-0.5">
             {activeTab === "jobs"
-              ? `${jobs.length} ${jobs.length === 1 ? "job" : "jobs"} total`
+              ? `${jobs.length} ${jobs.length === 1 ? "work order" : "work orders"} total`
               : activeTab === "tickets"
               ? `${tickets.length} ${tickets.length === 1 ? "ticket" : "tickets"} from tenants`
               : `${suppliers.length} preferred ${suppliers.length === 1 ? "supplier" : "suppliers"}`}
           </p>
         </div>
-        {activeTab === "jobs" && (
-          <button
-            onClick={() => setRaiseOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity self-start sm:self-auto"
-          >
-            <Plus size={16} />
-            Raise New Job
-          </button>
-        )}
-        {activeTab === "tickets" && (
-          <a
-            href="/support"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity self-start sm:self-auto"
-          >
-            <Sparkles size={16} />
-            Open AI Triage
-            <ExternalLink size={13} className="opacity-70" />
-          </a>
+        {/* "New Work Order" stays available on the tickets tab too — a work
+            order never requires a tenant ticket, and hiding the button there
+            made it look like conversion was the only way to create one. */}
+        {activeTab !== "suppliers" && (
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {activeTab === "tickets" && (
+              <a
+                href="/support"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open the tenant-facing triage assistant in a new tab"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-surface-inset transition-colors"
+              >
+                <Sparkles size={16} />
+                Open AI Triage
+                <ExternalLink size={13} className="opacity-70" />
+              </a>
+            )}
+            <button
+              onClick={() => { setActiveTab("jobs"); setRaiseOpen(true); }}
+              title="Create a work order directly — no tenant ticket needed"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity"
+            >
+              <Plus size={16} />
+              New Work Order
+            </button>
+          </div>
         )}
         {activeTab === "suppliers" && (
           <button
@@ -372,7 +385,7 @@ export function MaintenancePage({
           )}
         >
           <Wrench size={14} />
-          Jobs
+          Work Orders
           <span
             className={cn(
               "ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[20px] h-5 text-[10px] font-semibold",
@@ -472,7 +485,7 @@ export function MaintenancePage({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search jobs…"
+            placeholder="Search work orders…"
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-surface-card text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50"
           />
         </div>
@@ -495,8 +508,8 @@ export function MaintenancePage({
           ))}
         </div>
 
-        {/* View toggle */}
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-surface-card p-1 ml-auto shrink-0">
+        {/* View toggle — Kanban is horizontal, so keep phones on the list view */}
+        <div className="hidden md:flex items-center gap-1 rounded-xl border border-border bg-surface-card p-1 ml-auto shrink-0">
           <button
             onClick={() => setView("list")}
             className={cn(
@@ -529,7 +542,7 @@ export function MaintenancePage({
               <thead>
                 <tr className="text-[11px] font-semibold text-foreground-muted uppercase tracking-wider border-b border-border">
                   <th className="pb-3 pt-4 pl-4 w-4" />
-                  <th className="text-left pb-3 pt-4 pr-4">Job</th>
+                  <th className="text-left pb-3 pt-4 pr-4">Work order</th>
                   <th className="text-left pb-3 pt-4 pr-4 hidden md:table-cell">Category</th>
                   <th className="text-left pb-3 pt-4 pr-4">Status</th>
                   <th className="text-left pb-3 pt-4 pr-4 hidden lg:table-cell">Priority</th>
@@ -554,15 +567,22 @@ export function MaintenancePage({
               <div className="py-16 text-center">
                 <Wrench size={32} className="mx-auto text-foreground-muted mb-3" strokeWidth={1.5} />
                 <p className="text-sm text-foreground-secondary">
-                  {search || statusFilter !== "all" ? "No jobs match your filters" : "No maintenance jobs yet"}
+                  {search || statusFilter !== "all"
+                    ? "No work orders match your filters"
+                    : "No work orders yet"}
                 </p>
                 {!search && statusFilter === "all" && (
-                  <button
-                    onClick={() => setRaiseOpen(true)}
-                    className="text-brand text-sm font-medium hover:underline mt-1"
-                  >
-                    Raise the first job
-                  </button>
+                  <>
+                    <p className="text-xs text-foreground-muted mt-1">
+                      You don&apos;t need a tenant ticket — create one directly.
+                    </p>
+                    <button
+                      onClick={() => setRaiseOpen(true)}
+                      className="text-brand text-sm font-medium hover:underline mt-1"
+                    >
+                      Create the first work order
+                    </button>
+                  </>
                 )}
               </div>
             )}

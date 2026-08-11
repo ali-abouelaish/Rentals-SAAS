@@ -19,6 +19,7 @@ import {
   type CloseoutValues,
 } from "../domain/schemas";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { emitAutomationEvent } from "@/features/automations/lib/events";
 
 // Statuses where the contract is "live" — i.e. the tenant has actually moved in
 // (or will any moment). We only auto-record the move-in payments for these;
@@ -222,6 +223,11 @@ export async function createContract(values: ContractFormValues) {
         prepaidFirstFullMonth: payload.prepaid_first_full_month,
       }),
     });
+    // Fires once per contract ever (dedupe key signed:<id>).
+    await emitAutomationEvent(profile.tenant_id, {
+      type: "tenancy_signed",
+      contractId: data.id,
+    });
   }
 
   revalidatePath("/contracts");
@@ -271,6 +277,15 @@ export async function updateContract(id: string, values: Partial<ContractFormVal
     .select("*")
     .single();
   if (error) throw new Error(error.message);
+
+  // Contract moved into a live status → tenancy_signed event (the dedupe key
+  // signed:<id> means later status flips never re-fire it).
+  if (values.status && LIVE_STATUSES.has(values.status)) {
+    await emitAutomationEvent(profile.tenant_id, {
+      type: "tenancy_signed",
+      contractId: id,
+    });
+  }
 
   // Backfill move-in payments based on the contract's current state. We never
   // overwrite or delete existing rent_payments rows here — only insert ones
