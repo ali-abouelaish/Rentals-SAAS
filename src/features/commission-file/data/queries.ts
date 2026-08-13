@@ -43,9 +43,9 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+/** Real processing cost of taking the money — card machine only.
+ *  VAT (÷1.2 for card and transfer) is applied separately. */
 function paymentFeeRate(method: string) {
-  if (method === "cash") return 0;
-  if (method === "transfer") return 0.2;
   if (method === "card") return 0.0175;
   return 0;
 }

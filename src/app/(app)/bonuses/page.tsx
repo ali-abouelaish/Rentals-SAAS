@@ -5,6 +5,7 @@ import { getBonuses } from "@/features/bonuses/data/bonuses";
 import { SubmitBonusDialog } from "@/features/bonuses/ui/SubmitBonusDialog";
 import { BonusesLandlordFilter } from "@/features/bonuses/ui/BonusesLandlordFilter";
 import { BonusesTableWithInvoice } from "@/features/bonuses/ui/BonusesTableWithInvoice";
+import { AgentFilterDropdown } from "@/components/shared/AgentFilterDropdown";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { FileText, Gift, Filter, ChevronLeft, ChevronRight } from "lucide-react";
@@ -12,7 +13,7 @@ import { FileText, Gift, Filter, ChevronLeft, ChevronRight } from "lucide-react"
 export default async function BonusesPage({
   searchParams
 }: {
-  searchParams?: { q?: string; status?: string; landlord?: string; page?: string };
+  searchParams?: { q?: string; status?: string; landlord?: string; agent?: string; page?: string };
 }) {
   const profile = await requireUserProfile();
   const isAdmin = profile.role.toLowerCase() === "admin";
@@ -20,6 +21,7 @@ export default async function BonusesPage({
   const search = searchParams?.q ?? "";
   const activeStatus = searchParams?.status ?? "all";
   const landlordFilter = searchParams?.landlord ?? "all";
+  const agentFilter = searchParams?.agent ?? "all";
   const currentPage = Math.max(1, parseInt(searchParams?.page ?? "1", 10) || 1);
 
   const [bonusesResult, { data: landlords }, { data: agents }] = await Promise.all([
@@ -27,6 +29,7 @@ export default async function BonusesPage({
       search,
       status: activeStatus,
       landlordId: landlordFilter,
+      agentId: agentFilter,
       page: currentPage,
     }),
     supabase.from("landlords").select("id, name").order("name", { ascending: true }),
@@ -38,6 +41,9 @@ export default async function BonusesPage({
   ]);
 
   const { bonuses, total, page, totalPages } = bonusesResult;
+  const agentOptions = (agents ?? [])
+    .map((agent) => ({ id: agent.id, name: agent.display_name ?? "Agent" }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const invoiceEligible = bonuses.filter((bonus) =>
     ["approved", "pending"].includes(bonus.status)
   );
@@ -52,6 +58,7 @@ export default async function BonusesPage({
     if (search) params.set("q", search);
     if (activeStatus !== "all") params.set("status", activeStatus);
     if (landlordFilter !== "all") params.set("landlord", landlordFilter);
+    if (agentFilter !== "all") params.set("agent", agentFilter);
     params.set("page", String(p));
     return `/bonuses?${params.toString()}`;
   };
@@ -61,6 +68,7 @@ export default async function BonusesPage({
     if (search) params.set("q", search);
     if (status && status !== "all") params.set("status", status);
     if (landlordFilter !== "all") params.set("landlord", landlordFilter);
+    if (agentFilter !== "all") params.set("agent", agentFilter);
     const qs = params.toString();
     return `/bonuses${qs ? `?${qs}` : ""}`;
   };
@@ -84,10 +92,7 @@ export default async function BonusesPage({
               id: l.id,
               name: l.name
             }))}
-            agents={(agents ?? []).map((agent) => ({
-              id: agent.id,
-              name: agent.display_name ?? "Agent"
-            }))}
+            agents={agentOptions}
             isAdmin={isAdmin}
             currentAgentId={profile.id}
           />
@@ -115,15 +120,28 @@ export default async function BonusesPage({
             initialQuery={search}
             preserveStatus={activeStatus !== "all" ? activeStatus : undefined}
             preserveLandlord={landlordFilter !== "all" ? landlordFilter : undefined}
+            preserveAgent={agentFilter !== "all" ? agentFilter : undefined}
           />
 
           <BonusesLandlordFilter
             currentLandlord={landlordFilter}
             currentSearch={search}
             currentStatus={activeStatus}
+            currentAgent={agentFilter}
             landlords={(landlords ?? []).map((l) => ({ id: l.id, name: l.name }))}
           />
         </div>
+
+        {/* Agent filter */}
+        {agentOptions.length > 0 && (
+          <div className="flex flex-col gap-1 mb-4">
+            <label className="text-xs font-medium text-foreground-secondary">Agent</label>
+            <AgentFilterDropdown agents={agentOptions} activeAgentId={agentFilter} />
+            <p className="text-[11px] text-foreground-muted">
+              Type to search, or pick All Agents to clear the filter.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {statusFilters.map((status) => (

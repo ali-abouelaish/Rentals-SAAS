@@ -20,9 +20,9 @@ function endOfDay(dateStr: string): string {
   return `${dateStr}T23:59:59.999Z`;
 }
 
+/** Real processing cost of taking the money. Only card machines charge one;
+ *  cash and bank transfers cost nothing to receive. VAT is separate — see vatRate. */
 function paymentFeeRate(method: string): number {
-  if (method === "cash") return 0;
-  if (method === "transfer") return 0.2;
   if (method === "card") return 0.0175;
   return 0;
 }

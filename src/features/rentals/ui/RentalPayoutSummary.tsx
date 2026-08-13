@@ -26,7 +26,7 @@ export function RentalPayoutSummary({
   marketingFeeOverrideReason,
   marketingAgentCount = 1
 }: Props) {
-  const paymentFee = paymentMethod === "cash" ? 0 : paymentMethod === "transfer" ? 0.2 : 0.0175;
+  const paymentFee = paymentMethod === "card" ? 0.0175 : 0;
   const hasVat = paymentMethod === "card" || paymentMethod === "transfer";
   const afterFee = useMemo(() => rentalAmount * (1 - paymentFee), [rentalAmount, paymentFee]);
   const base = useMemo(() => (hasVat ? afterFee / 1.2 : afterFee), [afterFee, hasVat]);

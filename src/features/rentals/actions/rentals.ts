@@ -503,12 +503,10 @@ export async function approveRentalCode(formData: FormData): Promise<{ ok: boole
 
     const commissionPercent =
       assistedAgent?.commission_percent ?? 0;
-    const paymentFee =
-      rental.payment_method === "cash"
-        ? 0
-        : rental.payment_method === "transfer"
-        ? 0.2
-        : 0.0175;
+    // Only card carries a real processing cost (1.75% machine fee). Transfers
+    // and cash cost nothing to receive — transfer's former 0.2 was VAT applied
+    // as a fee, which double-counted once the ÷1.2 VAT divisor was added below.
+    const paymentFee = rental.payment_method === "card" ? 0.0175 : 0;
     const vatDivisor =
       rental.payment_method === "card" || rental.payment_method === "transfer" ? 1.2 : 1;
 

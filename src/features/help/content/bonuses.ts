@@ -13,7 +13,7 @@ Bonuses tracks landlord commission submissions from creation through approval to
 ## Key tasks
 
 1. **Submit a bonus.** Use **Submit bonus** to record a new landlord commission (admins can submit on behalf of an agent).
-2. **Search and filter.** Search by code, client, or property, filter by landlord, and filter by status — Pending, Approved, Sent, Paid, Declined.
+2. **Search and filter.** Search by code, client, or property, filter by landlord, filter by agent (searchable dropdown — pick **All Agents** to clear it), and filter by status — Pending, Approved, Sent, Paid, Declined.
 3. **Invoice eligible bonuses.** The **Eligible for Invoicing** section lists approved/pending bonuses; select them and create an invoice, or use **Create Invoice** to go to [invoice from bonuses](/invoices/from-bonuses).
 4. **Open a bonus.** Click through to review and progress an individual submission.
 

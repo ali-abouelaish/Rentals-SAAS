@@ -18,7 +18,7 @@ import {
   Plus,
 } from "lucide-react";
 import { RealtimeRefresher } from "@/components/shared/RealtimeRefresher";
-import { AgentFilterDropdown } from "@/features/rentals/ui/AgentFilterDropdown";
+import { AgentFilterDropdown } from "@/components/shared/AgentFilterDropdown";
 import { RentalsDateRangeFilter } from "@/features/rentals/ui/RentalsDateRangeFilter";
 
 const statusLabels: Record<string, string> = {

@@ -25,7 +25,8 @@ type BonusRow = {
   landlord_id: string;
   agent_id: string;
   notes?: string | null;
-  landlords?: { name: string | null } | { name: string | null }[] | null;
+  created_at?: string | null;
+  landlords?:{ name: string | null } | { name: string | null }[] | null;
   agent?: { display_name: string | null } | { display_name: string | null }[] | null;
 };
 
@@ -159,7 +160,7 @@ export function BonusesTableWithInvoice({ bonuses, isAdmin }: { bonuses: BonusRo
                       {formatCurrency(bonus.amount_owed)}
                     </p>
                     <p className="text-xs text-foreground-muted">
-                      {formatDate(bonus.bonus_date)}
+                      {bonus.created_at ? `Added ${formatDate(bonus.created_at)}` : "—"}
                     </p>
                   </div>
 

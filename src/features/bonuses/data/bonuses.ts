@@ -6,21 +6,25 @@ export async function getBonuses({
   status,
   search,
   landlordId,
+  agentId,
   page = 1,
 }: {
   status?: string;
   search?: string;
   landlordId?: string;
+  agentId?: string;
   page?: number;
 } = {}) {
   const supabase = createSupabaseServerClient();
   let query = supabase
     .from("bonuses")
     .select(
-      "id, code, bonus_date, client_name, property_address, amount_owed, payout_mode, status, landlord_id, agent_id, notes, landlords:landlords!bonuses_landlord_id_fkey(name), agent:user_profiles!bonuses_agent_id_fkey(display_name)",
+      "id, code, bonus_date, client_name, property_address, amount_owed, payout_mode, status, landlord_id, agent_id, notes, created_at, landlords:landlords!bonuses_landlord_id_fkey(name), agent:user_profiles!bonuses_agent_id_fkey(display_name)",
       { count: "exact" }
     )
-    .order("created_at", { ascending: false });
+    // Newest first by creation time; id breaks ties so paging can't repeat or skip a row.
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (search) {
     query = query.or(
@@ -32,6 +36,9 @@ export async function getBonuses({
   }
   if (landlordId && landlordId !== "all") {
     query = query.eq("landlord_id", landlordId);
+  }
+  if (agentId && agentId !== "all") {
+    query = query.eq("agent_id", agentId);
   }
 
   const from = (page - 1) * PAGE_SIZE;

@@ -12,7 +12,7 @@ HEALTH_URL="http://127.0.0.1:3000/"
 HEALTH_RETRIES=10
 HEALTH_DELAY=3
 
-ASSUME_YES=0
+ASSUME_YES=1
 for arg in "$@"; do
   case "$arg" in
     -y|--yes) ASSUME_YES=1 ;;

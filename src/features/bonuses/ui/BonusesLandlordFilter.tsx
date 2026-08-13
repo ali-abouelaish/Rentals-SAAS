@@ -8,11 +8,13 @@ export function BonusesLandlordFilter({
   currentLandlord,
   currentSearch,
   currentStatus,
+  currentAgent,
   landlords,
 }: {
   currentLandlord: string;
   currentSearch: string;
   currentStatus: string;
+  currentAgent?: string;
   landlords: Landlord[];
 }) {
   const router = useRouter();
@@ -21,6 +23,7 @@ export function BonusesLandlordFilter({
     const params = new URLSearchParams();
     if (currentSearch) params.set("q", currentSearch);
     if (currentStatus && currentStatus !== "all") params.set("status", currentStatus);
+    if (currentAgent && currentAgent !== "all") params.set("agent", currentAgent);
     const v = e.target.value;
     if (v && v !== "all") params.set("landlord", v);
     params.set("page", "1");
