@@ -80,10 +80,46 @@ export async function getBonusesForAgent(
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("bonuses")
-    .select("id, bonus_date, client_name, property_address, amount_owed, payout_mode, status, created_at")
+    .select(
+      "id, bonus_date, client_name, property_address, amount_owed, payout_mode, status, created_at, landlord_id, landlords:landlords!bonuses_landlord_id_fkey(name)"
+    )
     .eq("agent_id", agentId)
     .or(`and(bonus_date.gte.${filters.from},bonus_date.lte.${filters.to}),and(status.neq.paid,status.neq.declined)`)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const bonuses = data ?? [];
+  if (bonuses.length === 0) return [];
+
+  // Linked invoice, via the junction table createInvoiceFromBonuses writes.
+  // RLS on invoice_bonus_links limits non-admins to invoices they created, so
+  // an agent may legitimately see no link where an admin would — the UI just
+  // omits the icon rather than showing a link that would 404 on click.
+  const { data: links, error: linkError } = await supabase
+    .from("invoice_bonus_links")
+    .select("bonus_id, invoices(id, invoice_number, status)")
+    .in(
+      "bonus_id",
+      bonuses.map((bonus) => bonus.id)
+    );
+  if (linkError) throw new Error(linkError.message);
+
+  const invoiceByBonus = new Map(
+    (links ?? [])
+      .map((link) => [link.bonus_id, pickOne(link.invoices)] as const)
+      .filter(([, invoice]) => invoice !== null)
+  );
+
+  return bonuses.map((bonus) => ({
+    ...bonus,
+    landlord_name: pickOne(bonus.landlords)?.name ?? null,
+    invoice: invoiceByBonus.get(bonus.id) ?? null,
+  }));
+}
+
+/** Supabase embeds resolve to an object or a single-element array depending on
+ *  how the relationship is inferred; normalise both to one value. */
+function pickOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] ?? null : value;
 }
