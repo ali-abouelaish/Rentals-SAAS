@@ -34,7 +34,7 @@ export function RentalApprovalPanel({
   const [overrideReason, setOverrideReason] = useState<string>("");
   const [showOverride, setShowOverride] = useState(false);
 
-  const paymentFee = paymentMethod === "cash" ? 0 : paymentMethod === "transfer" ? 0.2 : 0.0175;
+  const paymentFee = paymentMethod === "card" ? 0.0175 : 0;
   const vatDivisor = paymentMethod === "card" || paymentMethod === "transfer" ? 1.2 : 1;
   const base = useMemo(
     () => (rentalAmount * (1 - paymentFee)) / vatDivisor,

@@ -49,7 +49,7 @@ export function RentalEditPanel({
 
   const hasMarketing = marketingAgentIds.some(Boolean);
 
-  const paymentFee = currentPaymentMethod === "cash" ? 0 : currentPaymentMethod === "transfer" ? 0.2 : 0.0175;
+  const paymentFee = currentPaymentMethod === "card" ? 0.0175 : 0;
   const vatDivisor = currentPaymentMethod === "card" || currentPaymentMethod === "transfer" ? 1.2 : 1;
   const base = useMemo(
     () => Math.round((Number(currentFeeAmount) * (1 - paymentFee)) / vatDivisor * 100) / 100,
