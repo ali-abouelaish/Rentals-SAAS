@@ -2,7 +2,10 @@ import { Wrench } from "lucide-react";
 import { requireRole } from "@/lib/auth/requireRole";
 import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
-import { getAllMaintenanceJobs } from "@/features/maintenance/data/queries";
+import {
+  getAllMaintenanceJobs,
+  peekNextWorksOrderRef,
+} from "@/features/maintenance/data/queries";
 import { getAllMaintenanceTickets } from "@/features/maintenance/data/tickets";
 import { getAllSuppliers } from "@/features/maintenance/data/suppliers";
 import { MaintenancePage } from "@/features/maintenance/ui/MaintenancePage";
@@ -17,7 +20,7 @@ export default async function MaintenanceRoute({ searchParams }: Props) {
   await requireModuleAccess("property_management");
 
   try {
-    const [jobs, tickets, suppliers, propertiesResult] = await Promise.all([
+    const [jobs, tickets, suppliers, propertiesResult, nextReference] = await Promise.all([
       getAllMaintenanceJobs(),
       getAllMaintenanceTickets(),
       getAllSuppliers(),
@@ -30,6 +33,7 @@ export default async function MaintenanceRoute({ searchParams }: Props) {
           return [];
         }
       })(),
+      peekNextWorksOrderRef(),
     ]);
 
     return (
@@ -38,6 +42,7 @@ export default async function MaintenanceRoute({ searchParams }: Props) {
         tickets={tickets}
         suppliers={suppliers}
         properties={propertiesResult}
+        nextReference={nextReference}
         initialJobId={searchParams.job}
         initialTicketId={searchParams.ticket}
         initialSupplierId={searchParams.supplier}

@@ -16,6 +16,9 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Tests import with an explicit .ts extension, which is what Node's native
+    // type stripping requires to resolve them (npm test).
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",

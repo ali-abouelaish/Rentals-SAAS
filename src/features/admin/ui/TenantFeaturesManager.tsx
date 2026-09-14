@@ -11,14 +11,24 @@ import {
   setTenantFeatureEndDateAction
 } from "../actions/admin";
 import type { TenantFeatureEntitlement } from "../domain/types";
-import { FEATURE_META, type FeatureKey } from "@/lib/entitlements/features";
+import { FEATURE_META, PAID_FEATURES, type FeatureKey } from "@/lib/entitlements/features";
 
 export function TenantFeaturesManager({
   tenantId,
-  entitlements
+  entitlements,
+  subscribedFeatures = []
 }: {
   tenantId: string;
   entitlements: TenantFeatureEntitlement[];
+  /**
+   * Paid feature keys the agency's own integration subscriptions grant.
+   *
+   * Passed in because a paid feature with no entitlement row is not simply
+   * "off" — it is off *unless subscribed*, and a super admin looking at an
+   * Inactive badge for something the agency is happily using would reasonably
+   * conclude the gating is broken.
+   */
+  subscribedFeatures?: string[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -31,6 +41,7 @@ export function TenantFeaturesManager({
   );
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const subscribed = useMemo(() => new Set(subscribedFeatures), [subscribedFeatures]);
 
   const toggleFeature = (featureKey: string, enabled: boolean) => {
     startTransition(async () => {
@@ -71,7 +82,12 @@ export function TenantFeaturesManager({
         const key = row.feature_key as FeatureKey;
         const meta = FEATURE_META[key];
         const isExpired = Boolean(row.ends_on && row.ends_on < today);
-        const isActive = row.is_enabled && !isExpired;
+        const isPaid = PAID_FEATURES.has(key);
+        const isSubscribed = subscribed.has(row.feature_key);
+        // A paid feature is live if the agency subscribes to it OR a super
+        // admin has granted it by hand. The hand-granted row wins either way,
+        // which is what makes revocation for non-payment work.
+        const isActive = (row.is_enabled || (isPaid && isSubscribed)) && !isExpired;
 
         return (
           <div
@@ -86,9 +102,21 @@ export function TenantFeaturesManager({
                 <p className="text-xs text-foreground-secondary mt-0.5">
                   {meta?.description ?? "Feature access control."}
                 </p>
-                <div className="mt-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <StatusBadge status={isActive ? "active" : "inactive"} size="sm" />
+                  {isPaid && (
+                    <span className="inline-flex items-center rounded-full bg-surface-inset px-2 py-0.5 text-[11px] font-medium text-foreground-secondary">
+                      {isSubscribed ? "Subscribed" : "Not subscribed"}
+                    </span>
+                  )}
                 </div>
+                {isPaid && (
+                  <p className="text-[11px] text-foreground-muted mt-1.5">
+                    {isSubscribed
+                      ? "Granted by the agency's own subscription. Disabling here overrides that and revokes access while the subscription stays billable."
+                      : "Paid integration, off by default. Enabling here grants it without a subscription — a trial or a goodwill extension, not something billed."}
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

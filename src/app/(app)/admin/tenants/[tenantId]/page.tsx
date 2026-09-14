@@ -7,7 +7,15 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { getTenantDetails } from "@/features/admin/data/admin";
 import { EditTenantDialog } from "@/features/admin/ui/EditTenantDialog";
 import { TenantStatusActionButton } from "@/features/admin/ui/TenantStatusActionButton";
-import { ArrowLeft, Layers, Palette, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  CircleDollarSign,
+  Layers,
+  Palette,
+  ShieldCheck,
+  SlidersHorizontal,
+  Users
+} from "lucide-react";
 import { formatDate } from "@/lib/utils/formatters";
 
 export default async function AdminTenantDetailsPage({
@@ -146,6 +154,22 @@ export default async function AdminTenantDetailsPage({
             </p>
             <Button variant="outline" size="sm" className="mt-4" asChild>
               <Link href={`/admin/tenants/${tenant.id}/modules`}>Manage Modules</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-2 mb-2">
+              <CircleDollarSign className="h-4 w-4 text-brand" />
+              <p className="text-sm font-medium text-foreground">Billing</p>
+            </div>
+            <p className="text-sm text-foreground-secondary">
+              Invoice history, subscriptions, envelope top-ups and metered usage for this
+              agency.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4" asChild>
+              <Link href={`/admin/tenants/${tenant.id}/billing`}>View Billing</Link>
             </Button>
           </CardContent>
         </Card>

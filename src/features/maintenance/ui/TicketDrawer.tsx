@@ -214,7 +214,11 @@ export function TicketDrawer({
         prev ? { ...prev, job_id: result.jobId!, status: nextStatus } : prev
       );
       onTicketUpdated({ id: ticket.id, job_id: result.jobId, status: nextStatus });
-      toast.success("Work order created from ticket");
+      toast.success(
+        result.reference
+          ? `Work order ${result.reference} created from ticket`
+          : "Work order created from ticket"
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Promotion failed";
       toast.error(msg);

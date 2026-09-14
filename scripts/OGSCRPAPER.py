@@ -72,8 +72,26 @@ except Exception as e:
 profiles = _data.get("profiles", [])
 paying_flags = (_data.get("paying_flags") or [""] * len(profiles))[: len(profiles)]
 property_flags = (_data.get("profile_flags") or [""] * len(profiles))[: len(profiles)]
-landlord_ids = (_data.get("ids") or [""] * len(profiles))[: len(profiles)]
 landlord_names = (_data.get("names") or [""] * len(profiles))[: len(profiles)]
+
+# landlord_id is the identity every write and every sweep below is keyed on, so a
+# missing id list is a broken contract, not a value to default. Degrading it to
+# blanks used to make the whole run write rows with a NULL landlord_id — rows no
+# later run could match, update or clear, so they accumulated forever.
+_ids = _data.get("ids") or []
+if profiles and len(_ids) != len(profiles):
+    raise SystemExit(
+        f"Profiles API returned {len(profiles)} profiles but {len(_ids)} ids. "
+        "Refusing to run: without a landlord id per profile, rows cannot be "
+        "matched or cleared on later runs."
+    )
+landlord_ids = [str(i).strip() if i else "" for i in _ids[: len(profiles)]]
+_missing_ids = [p for p, lid in zip(profiles, landlord_ids) if not lid]
+if _missing_ids:
+    raise SystemExit(
+        f"Profiles API returned {len(_missing_ids)} profile(s) with no landlord id "
+        f"(e.g. {_missing_ids[0]}). Refusing to run for the same reason."
+    )
 # Landlord id -> display name lookup, used in the end-of-run diagnostic
 LANDLORD_NAME_BY_ID = {lid: name for lid, name in zip(landlord_ids, landlord_names) if lid}
 print(f"Loaded {len(profiles)} landlord profiles from DB for tenant {tenant_id}")
@@ -166,6 +184,49 @@ def classify_url(url):
     return ("unknown", url)
 
 
+# ---------------------------------------------------------------------------
+# Stable row identity
+# ---------------------------------------------------------------------------
+# Every SpareRoom row is written under an external_ref derived from the advert's
+# own id, so a re-read UPDATES the existing row instead of replacing it. That is
+# what lets leads.listing_id (references scraped_listings(id) on delete set null)
+# survive a scrape: the old delete-then-insert cycle handed every listing a new
+# uuid each night and silently severed the link.
+#
+# Namespaced with a "spareroom:" prefix because the uniqueness constraint behind
+# the upsert is (landlord_id, external_ref) across ALL sources — an unprefixed id
+# or bare URL could collide with a landlord's spreadsheet row and let one source
+# overwrite the other's listing.
+#
+# Kept deliberately in step with the SQL in
+# supabase/migrations/20260822000001_spareroom_listing_identity.sql, which
+# backfills this same value onto existing rows. If you change the derivation
+# here, that backfill no longer matches and every row is re-created once.
+def spareroom_external_ref(url):
+    """Stable identity for a SpareRoom advert, derived from its URL.
+
+    Both URL shapes carry the same advert id:
+      /flatshare/flatshare_detail.pl?flatshare_id=18333812&...  -> spareroom:18333812
+      /flatshare/london/camden/18333812                         -> spareroom:18333812
+
+    The query string is otherwise volatile (search_id, search_results, city_id all
+    change run to run), so keying on the id rather than the URL is what keeps a
+    listing the same row across runs. Falls back to the full URL when no id can be
+    found, which is still stable enough to upsert on and is visible in the DB as
+    the odd one out.
+    """
+    if not url:
+        return None
+    m = re.search(r"[?&]flatshare_id=(\d+)", url)
+    if m:
+        return f"spareroom:{m.group(1)}"
+    path = url.split("#", 1)[0].split("?", 1)[0]
+    m = re.search(r"/(\d+)/?$", path)
+    if m:
+        return f"spareroom:{m.group(1)}"
+    return f"spareroom:url:{url}"
+
+
 def extract_more_from_sidebar(soup):
     """Pull listing hrefs from the 'More from the same advertiser' sidebar on a
     flatshare detail page. Returns a list of hrefs (may be relative or absolute).
@@ -212,6 +273,67 @@ def fetch_with_retry(url, max_attempts=4, timeout=15):
     if last_exc:
         raise last_exc
     raise requests.HTTPError(f"Exhausted retries for {url}")
+
+
+# ---------------------------------------------------------------------------
+# Telling "no live ads" apart from "we were not really served the page"
+# ---------------------------------------------------------------------------
+# fetch_with_retry raises on 4xx/5xx, so those never reach here. What does reach
+# here is HTTP 200 carrying HTML we did not expect: a soft block, a captcha
+# interstitial, a moved profile, or SpareRoom renaming the listing-card markup.
+# All of them look identical to "this landlord has nothing live" — zero elements
+# with class listing-card__link — and treating them as such would clear every row
+# the landlord has. Since a clean read is what licenses the sweep further down,
+# a page we cannot positively identify must not count as clean.
+BLOCKED_PAGE_MARKERS = (
+    "captcha",
+    "unusual traffic",
+    "are you a robot",
+    "access denied",
+    "temporarily blocked",
+    "rate limit",
+    "cf-browser-verification",
+    "just a moment...",
+    "please enable javascript",
+)
+
+# Wording SpareRoom uses when a profile genuinely has nothing listed. Matching one
+# of these is positive proof of an empty profile rather than an absence of proof.
+EMPTY_PROFILE_MARKERS = (
+    "no adverts",
+    "no ads",
+    "0 results",
+    "no results",
+    "no rooms",
+    "no listings",
+    "doesn't have any",
+    "does not have any",
+    "currently has no",
+    "nothing to show",
+)
+
+
+def classify_empty_page(html, offset):
+    """Why does this page carry no listing cards? Returns one of:
+
+      "end"     — genuinely nothing (more) here; safe to treat as authoritative
+      "blocked" — an interstitial/soft block wearing a 200
+      "unknown" — 200 with HTML we do not recognise; assume nothing
+
+    offset > 0 counts as "end" because we already parsed listing cards from this
+    same profile on an earlier page: the site was serving us real HTML moments
+    ago, so running out of cards is the end of the walk, not a block.
+    """
+    low = (html or "").lower()
+    for marker in BLOCKED_PAGE_MARKERS:
+        if marker in low:
+            return "blocked"
+    if offset > 0:
+        return "end"
+    for marker in EMPTY_PROFILE_MARKERS:
+        if marker in low:
+            return "end"
+    return "unknown"
 
 
 all_results = []   # ← this is now your main array
@@ -292,7 +414,23 @@ for raw_url, paying_flag, property_flag, landlord_id in zip(
 
             listings = soup.find_all("a", class_="listing-card__link")
             if not listings:
-                pagination_ok = True
+                verdict = classify_empty_page(response.text, offset)
+                if verdict == "end":
+                    pagination_ok = True
+                elif verdict == "blocked":
+                    print("   🛑 Served a block/interstitial page, not listings — "
+                          "cannot vouch for this landlord, existing rows kept")
+                else:
+                    # Print what we were actually served. The empty-profile
+                    # wording below is the one thing here that cannot be verified
+                    # without hitting SpareRoom, so if a genuinely empty profile
+                    # keeps landing in this branch, the title is what tells you
+                    # which phrase to add to EMPTY_PROFILE_MARKERS.
+                    title = soup.find("title")
+                    title_text = title.get_text(strip=True)[:120] if title else "(no <title>)"
+                    print("   ❓ 200 with no listing cards and nothing identifying it as an "
+                          "empty profile — cannot vouch for this landlord, existing rows kept")
+                    print(f"      page title: {title_text}")
                 break
 
             current_page_links = set()
@@ -912,14 +1050,21 @@ def main(listings, reached_landlord_ids):
         time.sleep(1)
 
     # Landlords we can speak for: profile read to the end AND every listing page
-    # under it either scraped or deliberately skipped. Their rows get replaced
-    # wholesale — including down to zero, which is the case the old
+    # under it either scraped or deliberately skipped. Only these are written and
+    # only these are swept — including down to zero, which is the case the old
     # delete-only-what-we-inserted logic could never express, so a landlord whose
     # ads all came down kept serving them indefinitely.
     refreshed_landlord_ids = sorted(reached_landlord_ids - landlords_with_errors)
 
-    if not results and not refreshed_landlord_ids:
-        print("❌ No listings scraped and no profile read cleanly. Supabase not updated.")
+    # Nothing was read end-to-end, so there is nothing we can write and nothing we
+    # are entitled to sweep. Bail BEFORE the summary line: callers key off that
+    # line, and printing "posted 0" here would report "this landlord has nothing
+    # live" when the truth is "we could not check". Scraped rows for landlords we
+    # could not finish are deliberately dropped rather than written — see the
+    # write set below.
+    if not refreshed_landlord_ids:
+        print("❌ No profile read cleanly end-to-end. Supabase not updated — "
+              "existing listings left exactly as they were.")
         return
 
     # ========================================
@@ -1004,13 +1149,24 @@ def main(listings, reached_landlord_ids):
     # scrape time and "when was this landlord last read" is a single clean value
     # rather than a spread across however long the run took.
     from datetime import datetime, timezone
-    scraped_at = datetime.now(timezone.utc).isoformat()
+    # "Z" rather than "+00:00": this value is also used as a filter value in the
+    # sweep's `or=(...)` query string below, and a literal "+" there is liable to
+    # be decoded as a space.
+    scraped_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     def _to_row(r):
         # source is set explicitly rather than left to the column default so the
         # rows we write match the source-scoped delete above exactly, and
         # last_seen_at records when this listing was last confirmed live.
-        row = {"tenant_id": tenant_id, "source": "spareroom", "last_seen_at": scraped_at}
+        row = {
+            "tenant_id": tenant_id,
+            "source": "spareroom",
+            "last_seen_at": scraped_at,
+            # The upsert key. Without it every run would insert a new row and the
+            # sweep would delete the previous one — which is the old
+            # delete-then-insert cycle wearing a different name.
+            "external_ref": spareroom_external_ref(r.get("url")),
+        }
         for col in TABLE_COLS:
             if col == "tenant_id":
                 continue
@@ -1033,21 +1189,68 @@ def main(listings, reached_landlord_ids):
                 row[col] = str(val).strip() if val is not None else None
         return row
 
-    rows = [_to_row(r) for r in results]
-    landlords_with_rows = {r.get("landlord_id") for r in results if r.get("landlord_id")}
-    rows_without_landlord = sum(1 for r in results if not r.get("landlord_id"))
+    # ------------------------------------------------------------------
+    # Write set == sweep set
+    # ------------------------------------------------------------------
+    # Only landlords we can speak for are written. Writing a landlord we are NOT
+    # going to sweep is what let duplicates accumulate: their old rows survived
+    # the delete and a fresh copy landed on top, once per partially-failing run.
+    # Rows with no landlord_id are dropped for the same reason — nothing can ever
+    # match, refresh or clear them, so writing them only creates litter.
+    refreshed_set = set(refreshed_landlord_ids)
+    writable = [r for r in results if r.get("landlord_id") in refreshed_set]
+    held_back = len(results) - len(writable)
 
-    # Replace, don't merge: clear every landlord we can speak for, then insert what
-    # they have live now. Chunked because `in_` goes into the query string.
+    # Collapse to one row per (landlord, advert). Two URLs can carry the same
+    # advert id — the sidebar fallback and profile pagination produce different
+    # query strings for the same ad — and the earlier dedupe is by full URL, so it
+    # does not catch them. Postgres rejects an upsert that touches the same
+    # conflict key twice in one statement, so this is required, not defensive.
+    rows = []
+    seen_refs = set()
+    for r in writable:
+        row = _to_row(r)
+        key = (row.get("landlord_id"), row.get("external_ref"))
+        if key in seen_refs:
+            continue
+        seen_refs.add(key)
+        rows.append(row)
+
+    landlords_with_rows = {r.get("landlord_id") for r in rows if r.get("landlord_id")}
+
+    # Upsert, don't replace. Matching on (landlord_id, external_ref) updates the
+    # existing row in place, so its id survives — and with it every
+    # leads.listing_id pointing at it, which delete-then-insert severed nightly.
+    for i in range(0, len(rows), 100):
+        supabase.table("scraped_listings").upsert(
+            rows[i : i + 100], on_conflict="landlord_id,external_ref"
+        ).execute()
+
+    # ------------------------------------------------------------------
+    # Sweep: rows that were here yesterday and are not live today
+    # ------------------------------------------------------------------
+    # Everything still live was just stamped with this run's timestamp, so an
+    # older last_seen_at means "we read this landlord end-to-end and this listing
+    # was not among their live ads". Sweeping AFTER the write, rather than
+    # deleting before it, is what makes a crash mid-run harmless: it leaves
+    # yesterday's data in place instead of nothing.
+    #
     # Scoped to source='spareroom' so a landlord who also has a listings
-    # spreadsheet keeps their imported rows.
+    # spreadsheet keeps their imported rows. Null last_seen_at is included: those
+    # rows predate freshness tracking, so they cannot have been seen this run.
+    swept = 0
     for i in range(0, len(refreshed_landlord_ids), 100):
         chunk = refreshed_landlord_ids[i : i + 100]
-        supabase.table("scraped_listings").delete().eq("tenant_id", tenant_id).eq(
-            "source", "spareroom"
-        ).in_("landlord_id", chunk).execute()
-    for i in range(0, len(rows), 100):
-        supabase.table("scraped_listings").insert(rows[i : i + 100]).execute()
+        res = (
+            supabase.table("scraped_listings")
+            .delete()
+            .eq("tenant_id", tenant_id)
+            .eq("source", "spareroom")
+            .in_("landlord_id", chunk)
+            .or_(f"last_seen_at.lt.{scraped_at},last_seen_at.is.null")
+            .execute()
+        )
+        swept += len(getattr(res, "data", None) or [])
 
     # Stamp the read time on the landlord itself, so "this landlord's listings are
     # months old" is visible in the app without inferring it from row timestamps.
@@ -1059,9 +1262,86 @@ def main(listings, reached_landlord_ids):
             "tenant_id", tenant_id
         ).in_("id", chunk).execute()
 
+    # ------------------------------------------------------------------
+    # Orphan sweep: rows no landlord-scoped sweep can ever reach
+    # ------------------------------------------------------------------
+    # Two classes are invisible to the sweep above because they are not in the
+    # roster: rows whose landlord_id is NULL (their landlord row was deleted —
+    # the FK is `on delete set null`), and rows belonging to a landlord who has
+    # since had their spareroom_profile_url cleared. Neither can ever be refreshed
+    # again, so left alone they are served as live for good.
+    #
+    # Guarded twice, because this is the one delete not backed by having just read
+    # the source:
+    #   * only on a full-roster run — a single-landlord run (LANDLORD_ID set)
+    #     loads one profile and knows nothing about who else is on the roster
+    #   * only when at least half the roster read cleanly — a run where SpareRoom
+    #     was blocking us is not evidence about anything
+    orphans_swept = 0
+    derostered_swept = 0
+    roster_ids = {lid for lid in landlord_ids if lid}
+    healthy = bool(roster_ids) and len(refreshed_set) * 2 >= len(roster_ids)
+
+    if landlord_id_filter:
+        print("   ↷ Orphan sweep skipped — a single-landlord run has no view of the roster.")
+    elif not healthy:
+        print(f"   ↷ Orphan sweep skipped — only {len(refreshed_set)} of {len(roster_ids)} "
+              "landlords read cleanly, too little of the roster to act on.")
+    else:
+        res = (
+            supabase.table("scraped_listings")
+            .delete()
+            .eq("tenant_id", tenant_id)
+            .eq("source", "spareroom")
+            .is_("landlord_id", "null")
+            .execute()
+        )
+        orphans_swept = len(getattr(res, "data", None) or [])
+
+        # Landlords still holding rows but no longer on the roster. Paged because
+        # PostgREST has no DISTINCT and a default page size we should not assume.
+        present = set()
+        page = 0
+        while True:
+            res = (
+                supabase.table("scraped_listings")
+                .select("landlord_id")
+                .eq("tenant_id", tenant_id)
+                .eq("source", "spareroom")
+                .not_.is_("landlord_id", "null")
+                .range(page * 1000, page * 1000 + 999)
+                .execute()
+            )
+            batch = getattr(res, "data", None) or []
+            present.update(r["landlord_id"] for r in batch if r.get("landlord_id"))
+            if len(batch) < 1000:
+                break
+            page += 1
+
+        derostered = sorted(present - roster_ids)
+        for i in range(0, len(derostered), 100):
+            chunk = derostered[i : i + 100]
+            res = (
+                supabase.table("scraped_listings")
+                .delete()
+                .eq("tenant_id", tenant_id)
+                .eq("source", "spareroom")
+                .in_("landlord_id", chunk)
+                .execute()
+            )
+            derostered_swept += len(getattr(res, "data", None) or [])
+        if derostered:
+            print(f"   🧹 {len(derostered)} landlord(s) no longer have a SpareRoom profile "
+                  f"URL — {derostered_swept} of their rows removed.")
+
     print(f"\n✅ Successfully posted {len(rows)} listings to Supabase scraped_listings!")
-    print(f"   👤 Landlords refreshed: {len(refreshed_landlord_ids)} of {len(LANDLORD_NAME_BY_ID)} loaded"
-          + (f" (+ {rows_without_landlord} listings with no landlord_id)" if rows_without_landlord else ""))
+    print(f"   👤 Landlords refreshed: {len(refreshed_landlord_ids)} of {len(LANDLORD_NAME_BY_ID)} loaded")
+    print(f"   🧹 Swept {swept} listing(s) no longer live at source"
+          + (f", {orphans_swept} orphaned row(s) with no landlord" if orphans_swept else "")
+          + (f", {derostered_swept} row(s) from de-rostered landlords" if derostered_swept else ""))
+    if held_back:
+        print(f"   ⏸ {held_back} scraped listing(s) not written — their landlord could not be "
+              "read end-to-end, so writing them would mean writing rows nothing will ever clear.")
 
     # Refreshed but empty: read cleanly, nothing live. Their stale rows have just
     # been cleared — this is the case that used to go unnoticed and leave months
@@ -1079,7 +1359,6 @@ def main(listings, reached_landlord_ids):
     # Not reached: URL unrecognised, profile fetch failed, pagination broke, or a
     # listing page errored. We cannot vouch for these, so their rows are left as
     # they were — which means they are the ones that go stale. Chase these.
-    refreshed_set = set(refreshed_landlord_ids)
     unreachable = [
         (lid, LANDLORD_NAME_BY_ID.get(lid) or "(no name)")
         for lid in LANDLORD_NAME_BY_ID

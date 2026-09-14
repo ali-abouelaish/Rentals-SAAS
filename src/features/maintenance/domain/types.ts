@@ -24,6 +24,9 @@ export type JobCategory =
 export type MaintenanceJob = {
   id: string;
   tenant_id: string;
+  /** Sequential per-tenant works order reference, e.g. "WO-00042". Assigned
+   *  by a DB trigger on insert, so it is always present on a stored row. */
+  reference: string;
   property_id: string;
   unit_id: string | null;
   title: string;

@@ -20,20 +20,23 @@ export function pickId(obj: Record<string, unknown>, ...keys: string[]): string 
   return null;
 }
 
+// Verified response: { isLandlordInvited, propertyId, propertyName }
 export const zProperty = z
-  .object({ id: zOptId, propertyId: zOptId })
-  .passthrough();
-
-export const zLandlordInvite = z
-  .object({ canBeInvited: z.boolean().optional(), landlordId: zOptId })
+  .object({
+    id: zOptId,
+    propertyId: zOptId,
+    propertyName: z.string().optional().nullable(),
+    isLandlordInvited: z.boolean().optional(),
+  })
   .passthrough();
 
 export const zTenancy = z
   .object({ id: zOptId, tenancyId: zOptId })
   .passthrough();
 
+// Verified response: { calculatedAmount }
 export const zDepositAmount = z
-  .object({ amount: z.number().optional(), depositAmount: z.number().optional() })
+  .object({ calculatedAmount: z.number().optional() })
   .passthrough();
 
 export const zDeposit = z

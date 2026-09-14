@@ -99,6 +99,9 @@ function KanbanCard({ job, onJobClick }: KanbanCardProps) {
               {JOB_PRIORITY_LABELS[job.priority]}
             </span>
             <span className="text-[10px] text-foreground-muted">{JOB_CATEGORY_LABELS[job.category]}</span>
+            <span className="ml-auto text-[10px] font-mono tabular-nums text-foreground-muted">
+              {job.reference}
+            </span>
           </div>
           <p className="text-sm font-medium text-foreground leading-snug line-clamp-2">{job.title}</p>
         </div>

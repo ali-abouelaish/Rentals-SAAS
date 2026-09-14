@@ -121,6 +121,12 @@ else
 fi
 
 step "Building locally"
+# Always build from a clean .next. An incremental build over a stale cache can
+# fail to prerender pages that are perfectly valid from scratch (seen on /login
+# and the /settings/* pages), and the failure looks like a code bug rather than
+# a cache artifact. The rebuild costs a few minutes; a bogus aborted deploy at
+# this step costs more.
+rm -rf .next
 npm run build
 ok "Local build complete"
 

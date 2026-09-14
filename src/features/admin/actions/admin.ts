@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/auth/requireRole";
+import {
+  auditDiff,
+  logPlatformAudit,
+  type PlatformAuditCategory
+} from "@/lib/audit/platformAudit";
 
 function getInviteRedirectBaseDomain(): string | null {
   const envDomain = process.env.APP_PORTAL_DOMAIN;
@@ -30,22 +35,72 @@ function normalizeSlug(value: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+/**
+ * Categories for the admin action names below.
+ *
+ * Keyed by prefix so a new `admin_tenant_*` action is categorised without
+ * touching this map. Order matters: the first matching prefix wins, so the more
+ * specific entries come first.
+ */
+const AUDIT_CATEGORY_BY_PREFIX: [string, PlatformAuditCategory][] = [
+  ["admin_super_admin_", "security"],
+  ["admin_tenant_user_", "access"],
+  ["admin_tenant_profile_", "access"],
+  ["admin_tenant_feature_", "billing"],
+  ["admin_module_config_", "tenant"],
+  ["admin_tenant_branding_", "tenant"],
+  ["admin_tenant_", "tenant"]
+];
+
+function categoryForAction(action: string): PlatformAuditCategory {
+  for (const [prefix, category] of AUDIT_CATEGORY_BY_PREFIX) {
+    if (action.startsWith(prefix)) return category;
+  }
+  return "tenant";
+}
+
+/**
+ * Record a super-admin action.
+ *
+ * Writes to `platform_audit_log`, NOT `activity_log`. These are our operational
+ * records: an agency should not read in its own activity feed that we suspended
+ * it or changed its entitlements, and a platform-wide action has no agency to
+ * attribute to at all. See 20260913000002_platform_audit_log.sql.
+ *
+ * The positional signature is kept from the original helper so every existing
+ * call site reads the same; `options` carries the richer fields where a call
+ * site has something worth recording.
+ */
 async function logAdminAction(
   actorUserId: string,
-  tenantId: string,
+  tenantId: string | null,
   action: string,
   entityType: string,
   entityId: string | null,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  options?: {
+    summary?: string;
+    category?: PlatformAuditCategory;
+    before?: Record<string, unknown> | null;
+    after?: Record<string, unknown> | null;
+    severity?: "info" | "warning" | "error";
+  }
 ) {
-  const admin = createSupabaseAdminClient();
-  await admin.from("activity_log").insert({
-    tenant_id: tenantId,
-    actor_user_id: actorUserId,
+  await logPlatformAudit({
+    actor: { id: actorUserId },
+    category: options?.category ?? categoryForAction(action),
     action,
-    entity_type: entityType,
-    entity_id: entityId,
-    metadata: metadata ?? null
+    // Falls back to the action name made readable. Every call site should pass
+    // a real summary, but a derived one keeps a new action legible immediately
+    // rather than blank.
+    summary: options?.summary ?? action.replace(/^admin_/, "").replaceAll("_", " "),
+    tenantId,
+    entityType,
+    entityId,
+    before: options?.before ?? null,
+    after: options?.after ?? null,
+    metadata,
+    severity: options?.severity
   });
 }
 
@@ -134,11 +189,25 @@ export async function setTenantStatusAction(input: {
   const actor = await requireSuperAdmin();
   const admin = createSupabaseAdminClient();
 
+  // Read before writing so the audit row records what it changed FROM.
+  // Suspending an agency is the most consequential action on this screen and
+  // "status: suspended" alone does not say whether it was already suspended.
+  const { data: prior } = await admin
+    .from("tenants")
+    .select("name, status")
+    .eq("id", input.tenantId)
+    .maybeSingle();
+
   const { error } = await admin
     .from("tenants")
     .update({ status: input.status })
     .eq("id", input.tenantId);
   if (error) return { ok: false, error: error.message };
+
+  const diff = auditDiff(
+    prior ? { status: prior.status } : null,
+    { status: input.status }
+  );
 
   await logAdminAction(
     actor.id,
@@ -146,7 +215,17 @@ export async function setTenantStatusAction(input: {
     "admin_tenant_status_updated",
     "tenant",
     input.tenantId,
-    { status: input.status }
+    { status: input.status },
+    {
+      summary: `${prior?.name ?? "Agency"} ${
+        input.status === "suspended" ? "suspended" : "reactivated"
+      }`,
+      before: diff.before,
+      after: diff.after,
+      // A suspension cuts off a paying customer's access. It should stand out
+      // in a log that is mostly routine.
+      severity: input.status === "suspended" ? "warning" : "info"
+    }
   );
 
   revalidatePath("/admin");
@@ -189,6 +268,13 @@ export async function setTenantUserRoleAction(input: {
 
   if (!role) return { ok: false, error: "Role is required." };
 
+  const { data: prior } = await admin
+    .from("user_profiles")
+    .select("role, display_name")
+    .eq("id", input.userId)
+    .eq("tenant_id", input.tenantId)
+    .maybeSingle();
+
   const { error } = await admin
     .from("user_profiles")
     .update({ role })
@@ -196,9 +282,27 @@ export async function setTenantUserRoleAction(input: {
     .eq("tenant_id", input.tenantId);
   if (error) return { ok: false, error: error.message };
 
-  await logAdminAction(actor.id, input.tenantId, "admin_tenant_user_role_updated", "user", input.userId, {
-    role
-  });
+  const diff = auditDiff(prior ? { role: prior.role } : null, { role });
+
+  await logAdminAction(
+    actor.id,
+    input.tenantId,
+    "admin_tenant_user_role_updated",
+    "user",
+    input.userId,
+    { role, previous_role: prior?.role ?? null },
+    {
+      summary: `${prior?.display_name ?? "User"} role ${
+        prior?.role ? `${prior.role} → ${role}` : `set to ${role}`
+      }`,
+      before: diff.before,
+      after: diff.after,
+      // A privilege change is a security event, and an escalation to admin or
+      // super_admin is the one an incident review will come looking for.
+      category: role === "super_admin" || prior?.role === "super_admin" ? "security" : "access",
+      severity: role === "super_admin" ? "warning" : "info"
+    }
+  );
 
   revalidatePath(`/admin/tenants/${input.tenantId}/users`);
   return { ok: true };
@@ -274,7 +378,7 @@ export async function uploadTenantLogoAction(
   tenantId: string,
   formData: FormData
 ): Promise<{ ok: boolean; url?: string; error?: string }> {
-  await requireSuperAdmin();
+  const actor = await requireSuperAdmin();
   const admin = createSupabaseAdminClient();
   const file = formData.get("file") as File | null;
   if (!file?.size) return { ok: false, error: "No file provided" };
@@ -295,6 +399,19 @@ export async function uploadTenantLogoAction(
   if (uploadErr) return { ok: false, error: uploadErr.message };
 
   const { data: urlData } = admin.storage.from(TENANT_BRANDING_BUCKET).getPublicUrl(path);
+
+  // `upsert: true` overwrites the agency's existing logo at a fixed path, so the
+  // previous file is gone. Worth a record of who replaced it and when.
+  await logAdminAction(
+    actor.id,
+    tenantId,
+    "admin_tenant_branding_logo_uploaded",
+    "tenant_branding",
+    tenantId,
+    { path, content_type: file.type || null, bytes: file.size },
+    { summary: "Agency logo replaced" }
+  );
+
   revalidatePath(`/admin/tenants/${tenantId}/branding`);
   return { ok: true, url: urlData.publicUrl };
 }
@@ -655,10 +772,24 @@ export async function inviteSuperAdminAction(input: {
     if (insertError) return { ok: false, error: insertError.message };
   }
 
-  await logAdminAction(actor.id, actor.tenant_id, "admin_super_admin_invited", "user", invitedUserId, {
-    email,
-    display_name: displayName
-  });
+  // tenantId is null, not actor.tenant_id. Creating a super admin is a
+  // platform-wide act with no subject agency — attributing it to whichever
+  // agency the inviter happens to belong to made it look like an event in that
+  // agency's life, and (while this was in activity_log) let that agency read it.
+  await logAdminAction(
+    actor.id,
+    null,
+    "admin_super_admin_invited",
+    "user",
+    invitedUserId,
+    { email, display_name: displayName },
+    {
+      summary: `Super admin invited: ${email}`,
+      category: "security",
+      // The highest-privilege grant in the system. An incident review starts here.
+      severity: "warning"
+    }
+  );
 
   revalidatePath("/admin");
   revalidatePath("/admin/activity");
@@ -680,6 +811,16 @@ export async function setTenantFeatureEnabledAction(input: {
     updated_at: new Date().toISOString()
   };
 
+  // A missing row is not "disabled" — it means the default applies, which for a
+  // paid feature is off and for everything else is on. Recorded as null so the
+  // audit trail distinguishes "was explicitly off" from "had never been set".
+  const { data: prior } = await admin
+    .from("tenant_feature_entitlements")
+    .select("is_enabled")
+    .eq("tenant_id", input.tenantId)
+    .eq("feature_key", input.featureKey)
+    .maybeSingle();
+
   const { error } = await admin.from("tenant_feature_entitlements").upsert(payload, {
     onConflict: "tenant_id,feature_key"
   });
@@ -690,8 +831,15 @@ export async function setTenantFeatureEnabledAction(input: {
     input.tenantId,
     "admin_tenant_feature_toggled",
     "tenant_feature",
-    input.tenantId,
-    { feature_key: input.featureKey, is_enabled: input.enabled }
+    // The feature key, not the tenant id — the entitlement is the subject here,
+    // and keying on the tenant made every feature change look like the same row.
+    input.featureKey,
+    { feature_key: input.featureKey, is_enabled: input.enabled },
+    {
+      summary: `Feature ${input.featureKey} ${input.enabled ? "enabled" : "disabled"}`,
+      before: { is_enabled: prior ? prior.is_enabled : null },
+      after: { is_enabled: input.enabled }
+    }
   );
 
   revalidatePath(`/admin/tenants/${input.tenantId}/features`);
@@ -719,6 +867,22 @@ export async function saveModuleConfigDraftAction(input: {
     .from("agency_module_configs")
     .upsert(payload, { onConflict: "tenant_id" });
   if (error) return { ok: false, error: error.message };
+
+  // Draft saves were previously unaudited — only publish was recorded. A draft
+  // is not live, but it is the step where a decision gets made, and a publish
+  // with no preceding draft in the log has no explanation.
+  await logAdminAction(
+    actor.id,
+    input.tenantId,
+    "admin_module_config_draft_saved",
+    "agency_module_config",
+    input.tenantId,
+    {
+      rental_agency_enabled: input.rentalAgencyEnabled,
+      property_management_enabled: input.propertyManagementEnabled
+    },
+    { summary: "Module config draft saved (not yet live)" }
+  );
 
   revalidatePath(`/admin/tenants/${input.tenantId}/modules`);
   return { ok: true };
@@ -793,6 +957,24 @@ export async function revertModuleConfigAction(input: {
     })
     .eq("tenant_id", input.tenantId);
   if (error) return { ok: false, error: error.message };
+
+  // A revert discards unpublished work. Previously unaudited, which meant a
+  // draft could vanish with nothing recording that anyone did it.
+  await logAdminAction(
+    actor.id,
+    input.tenantId,
+    "admin_module_config_reverted",
+    "agency_module_config",
+    input.tenantId,
+    {
+      rental_agency_enabled: current.live_rental_agency_enabled,
+      property_management_enabled: current.live_property_management_enabled
+    },
+    {
+      summary: "Module config draft discarded, reverted to live",
+      severity: "warning"
+    }
+  );
 
   revalidatePath(`/admin/tenants/${input.tenantId}/modules`);
   return { ok: true };

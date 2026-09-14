@@ -112,24 +112,24 @@ function ActionQueue({ actions }: { actions: DashboardAction[] }) {
 
   return (
     <div className="rounded-bento bg-surface-card shadow-bento p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className={cn("p-2 rounded-lg", actions.length > 0 ? "bg-red-50" : "bg-emerald-50")}>
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className={cn("shrink-0 p-2 rounded-lg", actions.length > 0 ? "bg-red-50" : "bg-emerald-50")}>
             {actions.length > 0 ? (
               <AlertTriangle className="h-4 w-4 text-red-600" strokeWidth={2} />
             ) : (
               <ShieldCheck className="h-4 w-4 text-emerald-500" strokeWidth={2} />
             )}
           </div>
-          <h2 className="text-base font-semibold text-foreground">Needs attention today</h2>
+          <h2 className="truncate text-base font-semibold text-foreground">Needs attention today</h2>
           {actions.length > 0 && (
-            <span className="text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+            <span className="shrink-0 text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
               {actions.length}
             </span>
           )}
         </div>
         {critical > 0 && (
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-red-600">
+          <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-red-600">
             {critical} critical
           </span>
         )}
@@ -215,15 +215,15 @@ function KpiCard({ label, value, sub, href, icon: Icon, tone, bar }: KpiDef) {
   return (
     <Link
       href={href}
-      className="group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5 block"
+      className="cq group rounded-bento bg-surface-card p-5 shadow-bento transition-all duration-base hover:shadow-bento-hover hover:-translate-y-0.5 block"
     >
-      <div className="flex items-start justify-between">
-        <p className="text-xs font-medium text-foreground-muted uppercase tracking-wider">{label}</p>
-        <div className={cn("p-2 rounded-lg", t.iconBg)}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-xs font-medium text-foreground-muted uppercase tracking-wider">{label}</p>
+        <div className={cn("shrink-0 p-2 rounded-lg", t.iconBg)}>
           <Icon className={cn("h-4 w-4", t.icon)} strokeWidth={1.8} />
         </div>
       </div>
-      <p className="text-3xl font-bold text-foreground mt-2 tabular-nums">{value}</p>
+      <p className="cq-stat font-bold text-foreground mt-2 tabular-nums">{value}</p>
       {typeof bar === "number" && (
         <div className="mt-2 h-1.5 w-full rounded-full bg-surface-inset overflow-hidden">
           <div
@@ -256,12 +256,12 @@ function KpiStrip({ data }: { data: DashboardData }) {
   if (data.collection) {
     const pct = data.collection.collected_pct;
     kpis.push({
-      label: "Collected this month",
+      label: "Collected",
       value: `${pct}%`,
       sub:
         data.collection.tenants_behind > 0
-          ? `${data.collection.tenants_behind} tenant${data.collection.tenants_behind === 1 ? "" : "s"} behind`
-          : "everyone paid",
+          ? `this month · ${data.collection.tenants_behind} behind`
+          : "this month · everyone paid",
       href: "/rent-collection",
       icon: PoundSterling,
       tone: pct >= 90 ? "emerald" : pct >= 70 ? "amber" : "red",
@@ -297,7 +297,7 @@ function KpiStrip({ data }: { data: DashboardData }) {
   });
 
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-[var(--gap-bento)]">
+    <div className="cq-kpis grid gap-[var(--gap-bento)]">
       {kpis.map((k) => (
         <KpiCard key={k.label} {...k} />
       ))}
@@ -312,14 +312,14 @@ function KpiStrip({ data }: { data: DashboardData }) {
 function VacancyOverview({ units }: { units: DashboardData["vacancy_units"] }) {
   return (
     <div className="rounded-bento bg-surface-card shadow-bento p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-amber-50">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="shrink-0 p-2 rounded-lg bg-amber-50">
             <Home className="h-4 w-4 text-amber-600" strokeWidth={2} />
           </div>
-          <h2 className="text-base font-semibold text-foreground">Vacancy Overview</h2>
+          <h2 className="truncate text-base font-semibold text-foreground">Vacancy Overview</h2>
         </div>
-        <Link href="/properties?status=available" className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
+        <Link href="/properties?status=available" className="shrink-0 text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
           View all <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -367,16 +367,16 @@ function VacancyOverview({ units }: { units: DashboardData["vacancy_units"] }) {
 
 function UpcomingMoveOuts({ moveOuts }: { moveOuts: DashboardData["upcoming_move_outs"] }) {
   return (
-    <div className="rounded-bento bg-surface-card shadow-bento p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-violet-50">
+    <div className="cq rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="shrink-0 p-2 rounded-lg bg-violet-50">
             <Calendar className="h-4 w-4 text-violet-600" strokeWidth={2} />
           </div>
-          <h2 className="text-base font-semibold text-foreground">Upcoming Move-Outs</h2>
-          <span className="text-xs text-foreground-muted">next 30 days</span>
+          <h2 className="truncate text-base font-semibold text-foreground">Upcoming Move-Outs</h2>
+          <span className="cq-note shrink-0 text-xs text-foreground-muted">next 30 days</span>
         </div>
-        <Link href="/contracts?filter=notice_given" className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
+        <Link href="/contracts?filter=notice_given" className="shrink-0 text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1">
           View all <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -428,25 +428,25 @@ function ProfitabilitySnapshot({ data }: { data: DashboardData }) {
     : "flat";
 
   return (
-    <div className="rounded-bento bg-surface-card shadow-bento p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-brand-subtle">
+    <div className="cq rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="shrink-0 p-2 rounded-lg bg-brand-subtle">
             <TrendingUp className="h-4 w-4 text-brand" strokeWidth={2} />
           </div>
-          <h2 className="text-base font-semibold text-foreground">Profitability Snapshot</h2>
+          <h2 className="truncate text-base font-semibold text-foreground">Profitability Snapshot</h2>
         </div>
         <Link
           href="/profitability"
-          className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
+          className="shrink-0 text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
         >
           Full view <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
       {/* Portfolio total + trend */}
-      <div className="flex items-center gap-4 p-4 rounded-xl bg-surface-inset mb-4">
-        <div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4 rounded-xl bg-surface-inset mb-4">
+        <div className="min-w-0">
           <p className="text-xs text-foreground-muted">Portfolio net profit this month</p>
           <p className={cn(
             "text-2xl font-bold tabular-nums",
@@ -456,7 +456,7 @@ function ProfitabilitySnapshot({ data }: { data: DashboardData }) {
             £{Math.abs(data.portfolio_net_profit_this_month).toLocaleString()}
           </p>
         </div>
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="flex min-w-0 items-center gap-1 sm:ml-auto">
           {netTrend === "up" && <TrendingUp className="h-5 w-5 text-emerald-500" />}
           {netTrend === "down" && <TrendingDown className="h-5 w-5 text-red-500" />}
           {netTrend === "flat" && <Minus className="h-5 w-5 text-foreground-muted" />}
@@ -466,7 +466,7 @@ function ProfitabilitySnapshot({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="cq-duo grid gap-4">
         {/* Best Performing */}
         <div>
           <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Top Performers</p>
@@ -524,11 +524,11 @@ function ProfitabilitySnapshot({ data }: { data: DashboardData }) {
 function RecentActivity({ activity }: { activity: ActivityFeedItem[] }) {
   return (
     <div className="rounded-bento bg-surface-card shadow-bento p-6">
-      <div className="flex items-center gap-2.5 mb-5">
-        <div className="p-2 rounded-lg bg-brand-subtle">
+      <div className="flex min-w-0 items-center gap-2.5 mb-5">
+        <div className="shrink-0 p-2 rounded-lg bg-brand-subtle">
           <Activity className="h-4 w-4 text-brand" strokeWidth={2} />
         </div>
-        <h2 className="text-base font-semibold text-foreground">Recent Activity</h2>
+        <h2 className="truncate text-base font-semibold text-foreground">Recent Activity</h2>
       </div>
 
       {activity.length > 0 ? (
@@ -615,17 +615,17 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
       </div>
 
       {/* Desktop bento dashboard (hidden below md) */}
-      <div className="hidden md:block space-y-[var(--gap-bento)]">
+      <div className="cq hidden md:block space-y-[var(--gap-bento)]">
 
       {/* ── Greeting ─────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-        <div>
+      <div className="cq-row gap-2">
+        <div className="min-w-0">
           <p className="text-foreground-secondary text-sm">{today}</p>
           <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">
             {greeting}, {userName}
           </h1>
         </div>
-        <p className="text-[13px] text-foreground-muted">
+        <p className="min-w-0 text-[13px] text-foreground-muted">
           {summary}
           {riskSuffix}
         </p>
@@ -638,12 +638,13 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
 
       {/* ── Dense two-column bento: each column packs its own panels (masonry),
              so a tall card on one side never leaves dead space on the other ── */}
-      <div className="grid gap-[var(--gap-bento)] items-start xl:grid-cols-2">
+      <div className="cq-bento grid gap-[var(--gap-bento)] items-start">
         {/* Column 1 — needs attention + to-do */}
-        <div className="space-y-[var(--gap-bento)]">
+        <div className="cq space-y-[var(--gap-bento)]">
           {/* Needs-attention and to-do sit side by side as two vertical
-              columns of equal height; stacks below md. */}
-          <div className="grid gap-[var(--gap-bento)] items-stretch md:grid-cols-2">
+              columns of equal height, but only once this column is wide
+              enough for both — otherwise they stack full width. */}
+          <div className="cq-pair grid gap-[var(--gap-bento)] items-stretch">
             <ActionQueue actions={data.actions} />
             <DashboardTodos
               todos={liveTodos}
@@ -656,13 +657,13 @@ export function PMDashboardPage({ data, userName, activity, todos, todoHistory, 
         </div>
 
         {/* Column 2 — progress & operations */}
-        <div className="space-y-[var(--gap-bento)]">
+        <div className="cq space-y-[var(--gap-bento)]">
           {reminders === null ? (
             <MaintenanceProgressCard maintenance={data.maintenance_summary} />
           ) : (
             // Maintenance donut pulls back to 60% so the reminders rail (40%)
-            // fits vertically alongside it; stacks below md.
-            <div className="grid gap-[var(--gap-bento)] items-stretch md:grid-cols-[3fr_2fr]">
+            // fits vertically alongside it; stacks when the column is narrow.
+            <div className="cq-pair-32 grid gap-[var(--gap-bento)] items-stretch">
               <MaintenanceProgressCard maintenance={data.maintenance_summary} />
               <DashboardReminders reminders={reminders} />
             </div>

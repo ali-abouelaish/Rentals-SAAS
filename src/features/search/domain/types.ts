@@ -11,6 +11,8 @@ export type SearchResultKind =
   | "key"
   | "supplier"
   | "certificate"
+  // Maintenance work orders — `maintenance_jobs` in the schema.
+  | "work_order"
   | "action";
 
 export type SearchResult = {
@@ -48,6 +50,7 @@ export const KIND_LABELS: Record<Exclude<SearchResultKind, "action">, string> = 
   key: "Keys",
   supplier: "Suppliers",
   certificate: "Certificates",
+  work_order: "Work Orders",
 };
 
 // Order in which sections render in the dropdown / sheet.
@@ -56,6 +59,7 @@ export const KIND_ORDER: SearchResultKind[] = [
   "unit",
   "pm_tenant",
   "contract",
+  "work_order",
   "client",
   "owner",
   "landlord",
@@ -91,6 +95,8 @@ export function kindToHref(
       return `/maintenance?supplier=${id}`;
     case "certificate":
       return parentId ? `/properties/${parentId}` : `/compliance`;
+    case "work_order":
+      return `/maintenance?job=${id}`;
     case "action":
       return "#";
   }

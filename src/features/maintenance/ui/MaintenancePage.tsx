@@ -79,6 +79,12 @@ function JobRow({ job, onClick }: JobRowProps) {
       <td className="py-3 pr-3 pl-4 w-4">
         <span className={cn("h-2 w-2 rounded-full block", pColors.dot)} title={JOB_PRIORITY_LABELS[job.priority]} />
       </td>
+      {/* Reference */}
+      <td className="py-3 pr-4 whitespace-nowrap">
+        <span className="text-xs font-mono tabular-nums text-foreground-secondary">
+          {job.reference}
+        </span>
+      </td>
       {/* Title + property */}
       <td className="py-3 pr-4">
         <p className="text-sm font-medium text-foreground line-clamp-1">{job.title}</p>
@@ -169,6 +175,8 @@ interface MaintenancePageProps {
   tickets: MaintenanceTicketListItem[];
   suppliers: MaintenanceSupplier[];
   properties: { id: string; name: string }[];
+  /** Reference the next work order will receive, previewed in the create form. */
+  nextReference: string | null;
   initialJobId?: string;
   initialTicketId?: string;
   initialSupplierId?: string;
@@ -181,6 +189,7 @@ export function MaintenancePage({
   tickets: initialTickets,
   suppliers: initialSuppliers,
   properties,
+  nextReference,
   initialJobId,
   initialTicketId,
   initialSupplierId,
@@ -262,6 +271,7 @@ export function MaintenancePage({
       result = result.filter(
         (j) =>
           j.title.toLowerCase().includes(q) ||
+          (j.reference ?? "").toLowerCase().includes(q) ||
           (j.property_name ?? "").toLowerCase().includes(q) ||
           (j.assigned_to ?? "").toLowerCase().includes(q)
       );
@@ -485,7 +495,7 @@ export function MaintenancePage({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search work orders…"
+            placeholder="Search by reference, title, property…"
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-surface-card text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50"
           />
         </div>
@@ -542,6 +552,9 @@ export function MaintenancePage({
               <thead>
                 <tr className="text-[11px] font-semibold text-foreground-muted uppercase tracking-wider border-b border-border">
                   <th className="pb-3 pt-4 pl-4 w-4" />
+                  <th className="text-left pb-3 pt-4 pr-4" title="Sequential works order reference — quote this to the contractor">
+                    Ref
+                  </th>
                   <th className="text-left pb-3 pt-4 pr-4">Work order</th>
                   <th className="text-left pb-3 pt-4 pr-4 hidden md:table-cell">Category</th>
                   <th className="text-left pb-3 pt-4 pr-4">Status</th>
@@ -645,6 +658,7 @@ export function MaintenancePage({
         <RaiseJobModal
           properties={properties}
           suppliers={suppliers}
+          nextReference={nextReference}
           onClose={() => setRaiseOpen(false)}
           onSuccess={() => { setRaiseOpen(false); router.refresh(); }}
         />

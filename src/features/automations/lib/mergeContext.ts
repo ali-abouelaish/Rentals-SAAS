@@ -192,7 +192,7 @@ export async function buildMergeContext(
       const { data, error } = await admin
         .from("maintenance_jobs")
         .select(
-          `title, status, created_at, scheduled_date,
+          `reference, title, status, created_at, scheduled_date,
            supplier:maintenance_suppliers(name),
            property:properties(address_line_1, address_line_2, postcode)`
         )
@@ -211,6 +211,7 @@ export async function buildMergeContext(
       return {
         context: {
           ...shared,
+          works_order_ref: (data.reference as string) ?? "",
           job_title: (data.title as string) ?? "",
           job_status: ((data.status as string) ?? "").replace(/_/g, " "),
           supplier_name: supplier?.name ?? "",
@@ -218,7 +219,9 @@ export async function buildMergeContext(
           days_open: String(daysOpen),
           scheduled_date: fmtDate(data.scheduled_date as string | null),
         },
-        entityLabel: (data.title as string) || "Works order",
+        entityLabel: [data.reference as string | null, data.title as string]
+          .filter(Boolean)
+          .join(" · ") || "Works order",
       };
     }
 

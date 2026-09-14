@@ -12,3 +12,10 @@ import/source/
 import/out/
 import/contracts/
 import/images/
+# Python virtualenv for the SpareRoom scraper. Recreate from requirements.txt —
+# it is platform-specific (Windows Scripts/ vs Linux bin/) and must never be
+# shared between the dev machine and the VPS.
+venv/
+
+# Scraper session cookies (mydeposits). Short-lived credentials, never committed.
+md_cookies.txt

@@ -1,9 +1,9 @@
 // Single source of truth for every mydeposits (Total Property) endpoint detail.
 //
-// Their docs give endpoint *paths* but not request/response schemas, and the
-// service path prefixes / API version below are best-effort guesses from the
-// published path fragments. If any prove wrong against the sandbox, fix them
-// HERE — nothing else in the integration hardcodes a URL or version.
+// Their docs give endpoint *paths* but not request/response schemas. The
+// hosts and service prefixes below are verified live against the sandbox
+// (2026-08-20) — see MD_SERVICE. If any prove wrong, fix them HERE; nothing
+// else in the integration hardcodes a URL or version.
 
 export type MdEnvironment = "sandbox" | "production";
 
@@ -29,15 +29,21 @@ export const MD_API_VERSION = "v1";
 
 /**
  * Service path prefixes (Total Property names its services after Infinity
- * Stones). Unverified — adjust if sandbox 404s.
+ * Stones). Combined with MD_API_VERSION these yield `/rs/api/v1/...` etc.
  *   - RealityStone: properties, tenancies, deposits, payments, certificates
  *   - TimeStone:    release requests + settlements
  *   - SpaceStone:   reference-data lookups
+ *
+ * Verified live against sandbox with a real bearer token (2026-08-20):
+ *   {apiBase}/rs/api/v1/deposits|properties|tenancies -> 200
+ *   {apiBase}/ts/api/v1/release-requests              -> 200
+ * The `/api` segment is required — `/rs/v1/...` 404s. SpaceStone resource
+ * names are still unconfirmed (the prefix follows the same shape).
  */
 export const MD_SERVICE = {
-  realityStone: "/rs",
-  timeStone: "/ts",
-  spaceStone: "/sps",
+  realityStone: "/rs/api",
+  timeStone: "/ts/api",
+  spaceStone: "/sps/api",
 } as const;
 
 export function resolveMdEnvironment(): MdEnvironment {

@@ -103,3 +103,37 @@ export type PublishedModuleConfig = {
   property_management_enabled: boolean;
 };
 
+
+/**
+ * A tenant's subscription to a paid integration, as the super admin sees it.
+ *
+ * Mirrors `tenant_integration_subscriptions`. The price is the one frozen at
+ * activation, not the current catalogue price — that is the number to invoice.
+ */
+export type AdminIntegrationSubscription = {
+  integration_key: string;
+  status: "active" | "pending_setup" | "cancelled";
+  monthly_price_pence: number;
+  is_grandfathered: boolean;
+  activated_at: string | null;
+  cancelled_at: string | null;
+  billing_starts_on: string | null;
+  ends_on: string | null;
+  notes: string | null;
+};
+
+/**
+ * An envelope top-up purchase awaiting (or already on) an invoice.
+ *
+ * `price_pence` is the price frozen at the point of sale, not the current
+ * catalogue price — it is the number to bill.
+ */
+export type AdminEnvelopePurchase = {
+  id: string;
+  pack_key: string;
+  envelopes: number;
+  price_pence: number;
+  billing_period: string;
+  purchased_at: string;
+  invoiced_at: string | null;
+};

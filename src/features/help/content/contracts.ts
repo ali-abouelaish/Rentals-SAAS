@@ -27,5 +27,6 @@ Every tenancy is assigned a unique **standing order reference** (e.g. \`MAPL-SMI
 
 - Converting an application in [Bookings](/bookings) creates the contract for you — as a **draft** (room booked) or **active** (room occupied), depending on whether the tenant has signed and paid.
 - Keep deposit-protection details current; the contract tracks them so you can stay compliant.
+- **Send for e-signature.** Once a contract has been generated from a template, the **Document** tab has a *Send for signature* button. It emails the tenancy agreement to the tenant to sign and then to the landlord to countersign, in that order. The status updates by itself as they sign, and when both are done the contract moves to **signed** with the executed copy and audit trail stored against it. The template needs a signature field for each party — add those in [Contract Templates](/contracts/templates).
 - Active and signed contracts are what populate [Rent Collection](/rent-collection) and rent income in [Profitability](/profitability).`,
 };

@@ -52,6 +52,7 @@ export const MERGE_FIELDS: Record<Exclude<TemplateEntityType, "none">, MergeFiel
     { key: "property_address", label: "Property address", example: "12 Harbour St, SE1 2AB" },
   ],
   works_order: [
+    { key: "works_order_ref", label: "Works order reference", example: "WO-00042" },
     { key: "job_title", label: "Job title", example: "Boiler not heating" },
     { key: "job_status", label: "Job status", example: "in progress" },
     { key: "supplier_name", label: "Contractor name", example: "Ace Plumbing" },

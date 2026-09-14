@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { ContractStatusBadge } from "./ContractStatusBadge";
+import { ContractSigningPanel } from "./ContractSigningPanel";
 import { DepositBadge } from "./DepositBadge";
 import { GiveNoticeModal } from "./GiveNoticeModal";
 import { ProRataField } from "./ProRataField";
@@ -533,6 +534,12 @@ function DocumentContent({ contract, isEditing, onSaved }: { contract: PropertyC
       ) : (
         <p className="text-sm text-foreground-secondary">No document linked yet.</p>
       )}
+
+      {/* E-signature — sits with the document, since that is what gets signed. */}
+      <ContractSigningPanel
+        contractId={contract.id}
+        hasGeneratedDocument={Boolean(contract.generated_pdf_path)}
+      />
 
       {canRegenerate && (
         <div className="rounded-lg border border-border bg-surface-inset p-3 space-y-2">

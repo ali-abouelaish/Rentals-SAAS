@@ -11,12 +11,19 @@ import {
   canLandlordBeInvited,
   createTenancy,
   getDepositAmount,
+  getAvailableDepositSchemes,
   createDeposit,
   createDepositPayment,
   getPaymentDetails,
   type TenancyTenant,
 } from "@/lib/mydeposits/realityStone";
+import { getOffices } from "@/lib/mydeposits/spaceStone";
 import { secureDepositSchema, type SecureDepositInput, type MdProtection } from "../domain/types";
+
+/** `look-up/property-types` id 1 = "other" — our schema has no property type. */
+const MD_PROPERTY_TYPE_OTHER = 1;
+/** `look-up/rent-frequencies` id 2 = monthly; contracts store rent as PCM. */
+const MD_RENT_FREQUENCY_MONTHLY = 2;
 
 export type SecureDepositResult = {
   ok: boolean;
@@ -92,17 +99,47 @@ export async function secureDeposit(input: SecureDepositInput): Promise<SecureDe
   };
 
   // 3. Property.
+  //
+  // mydeposits needs an office to hang the property off, plus a country/region
+  // pair as objects. The agency's own office record carries both, so one
+  // lookup supplies officeId and the address defaults without a second call.
   if (!row.remote_property_id) {
-    if (parsed.landlord?.email) {
-      await canLandlordBeInvited(ctx, parsed.landlord.email, pid).catch(() => null);
+    const offices = await getOffices(ctx);
+    const office = offices[0];
+    if (!office) throw new Error("mydeposits returned no offices for this agency.");
+    const country = office.address?.country ?? { id: 225, iso: "GB", text: "United Kingdom" };
+    const region = office.address?.region ?? null;
+
+    const landlord = {
+      email: parsed.landlord.email,
+      firstName: parsed.landlord.firstName,
+      lastName: parsed.landlord.lastName,
+      phone: parsed.landlord.phone,
+    };
+
+    // Advisory pre-flight: a "no" here means the invite will fail, but the
+    // create call returns the authoritative error either way.
+    const { canBeInvited } = await canLandlordBeInvited(ctx, landlord, office.id, {}, pid);
+    if (!canBeInvited) {
+      warning = `mydeposits will not invite ${landlord.email} — check the landlord's account.`;
     }
+
     const { propertyId } = await addPropertyByAgency(
       ctx,
       {
-        addressLine1: property.address_line_1 as string,
-        addressLine2: property.address_line_2 ?? null,
-        postcode: property.postcode ?? null,
-        area: property.area ?? null,
+        officeId: office.id,
+        name: (property.address_line_1 as string).slice(0, 100),
+        propertyTypeId: MD_PROPERTY_TYPE_OTHER,
+        landlord,
+        address: {
+          addressLine1: property.address_line_1 as string,
+          addressLine2: property.address_line_2 ?? null,
+          city: property.area ?? "",
+          postcode: property.postcode ?? "",
+          country,
+          region,
+          isAddressSetManually: true,
+        },
       },
       pid
     );
@@ -113,20 +150,22 @@ export async function secureDeposit(input: SecureDepositInput): Promise<SecureDe
   // 4. Tenancy.
   if (!row.remote_tenancy_id) {
     const tenants: TenancyTenant[] = parsed.tenants.map((t) => ({
-      fullName: t.fullName,
+      firstName: t.firstName,
+      lastName: t.lastName,
       email: t.email,
       phone: t.phone ?? null,
       dob: t.dob ?? null,
-      isLead: t.isLead,
+      isLeadTenant: t.isLead,
     }));
     const { tenancyId } = await createTenancy(
       ctx,
       {
         propertyId: row.remote_property_id!,
+        tenancyName: `${property.address_line_1} — ${contract.start_date}`.slice(0, 100),
         startDate: contract.start_date,
-        expiryDate: contract.expiry_date,
-        rentAmount: contract.rent_pcm,
-        rentFrequency: "monthly",
+        endDate: contract.expiry_date,
+        rent: contract.rent_pcm,
+        rentFrequencyId: MD_RENT_FREQUENCY_MONTHLY,
         tenants,
       },
       pid
@@ -137,7 +176,11 @@ export async function secureDeposit(input: SecureDepositInput): Promise<SecureDe
 
   // 5. Reconcile the expected deposit amount (advisory only).
   try {
-    const remoteAmount = await getDepositAmount(ctx, row.remote_tenancy_id!, pid);
+    const remoteAmount = await getDepositAmount(
+      ctx,
+      { rent: contract.rent_pcm, rentFrequencyId: MD_RENT_FREQUENCY_MONTHLY },
+      pid
+    );
     if (remoteAmount != null && Math.round(remoteAmount * 100) !== depositPence) {
       warning = `Deposit mismatch: contract £${contract.deposit} vs scheme £${remoteAmount}.`;
     }
@@ -147,9 +190,16 @@ export async function secureDeposit(input: SecureDepositInput): Promise<SecureDe
 
   // 6. Deposit.
   if (!row.remote_deposit_id) {
+    // schemeId must be one the tenancy is actually eligible for — an arbitrary
+    // id is rejected with "Scheme is not available for region".
+    const schemes = await getAvailableDepositSchemes(ctx, row.remote_tenancy_id!, pid);
+    const schemeId = schemes[0]?.id;
+    if (schemeId == null) {
+      throw new Error("mydeposits returned no available deposit schemes for this tenancy.");
+    }
     const { depositId, status } = await createDeposit(
       ctx,
-      { tenancyId: row.remote_tenancy_id!, amount: contract.deposit },
+      { tenancyId: row.remote_tenancy_id!, schemeId, amount: contract.deposit },
       pid
     );
     if (!depositId) throw new Error("mydeposits did not return a deposit id.");
@@ -173,7 +223,7 @@ export async function secureDeposit(input: SecureDepositInput): Promise<SecureDe
       pid
     );
     if (!paymentId) throw new Error("mydeposits did not return a payment id.");
-    const details = await getPaymentDetails(ctx, paymentId, pid).catch(() => null);
+    const details = await getPaymentDetails(ctx, row.remote_deposit_id!, pid).catch(() => null);
     await patch({
       remote_payment_id: paymentId,
       payment_instructions: details,

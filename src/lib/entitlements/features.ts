@@ -36,6 +36,8 @@ export type FeatureKey =
   | "automations"
   | "certificates"
   | "owner_statements"
+  | "e_signing"
+  | "listing_feeds"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -76,8 +78,39 @@ export const ALL_FEATURES: FeatureKey[] = [
   "automations",
   "certificates",
   "owner_statements",
+  "e_signing",
+  "listing_feeds",
   "admin",
 ];
+
+/**
+ * Features that are OFF unless the agency has subscribed to the integration
+ * that grants them.
+ *
+ * Every other feature key is on by default and only a `tenant_feature_entitlements`
+ * row can take it away. That default is right for features that ship with the
+ * product, and wrong for a paid integration — a new paid feature would
+ * otherwise arrive switched on for every agency on the platform, and be billed
+ * to nobody.
+ *
+ * These keys invert that: no active subscription (see
+ * `tenant_integration_subscriptions`) means no access. A super admin can still
+ * grant one by hand from the features manager, which is how a trial or a
+ * goodwill extension is done without a subscription row.
+ *
+ * Keep in step with `featureKeys` in `src/lib/integrations/catalog.ts` — a key
+ * listed here with no integration granting it is unreachable.
+ */
+export const PAID_FEATURES: ReadonlySet<FeatureKey> = new Set<FeatureKey>([
+  "e_signing",
+  "mydeposits",
+  "tds",
+  "dps",
+]);
+
+export function isPaidFeature(key: FeatureKey): boolean {
+  return PAID_FEATURES.has(key);
+}
 
 export const FEATURE_META: Record<FeatureKey, { label: string; description: string }> = {
   dashboard: { label: "Dashboard", description: "Main dashboard and overview widgets." },
@@ -204,6 +237,16 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
     label: "Landlords & Statements",
     description:
       "The Landlords section for property owners — contact details, management fee, contract dates and the properties they own — plus their monthly statements: the rent owed on each property less the management fee, rechargeable works and other deductions, with opening/closing balances, an agency-branded PDF, and scheduled monthly draft generation.",
+  },
+  listing_feeds: {
+    label: "Landlord Spreadsheets",
+    description:
+      "Import a landlord's room listings from their own Google Sheet — columns auto-mapped, re-read daily into the scraped listings feed. Note: the entitlement row for this has existed since 20260728000005 but the key was missing from this list, so it was silently discarded and the feature ran ungated for every agency.",
+  },
+  e_signing: {
+    label: "E-signing",
+    description:
+      "Send tenancy agreements, works orders and owner statements for legally binding electronic signature via BoldSign, with the signed PDF and audit trail filed against the record. Paid integration — granted by an active subscription on the Integrations page, not on by default."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

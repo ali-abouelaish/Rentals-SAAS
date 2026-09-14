@@ -18,6 +18,15 @@ export async function stampContractPdf({ sourceBytes, fields, context }: StampIn
   for (const field of fields) {
     if (field.page_index < 0 || field.page_index >= pages.length) continue;
 
+    // E-signature fields are placed by BoldSign at send time, not stamped —
+    // they bind to no data, and drawing anything in the box would sit under the
+    // signature the signer later adds.
+    //
+    // Defaulted rather than compared directly: migrations are applied by hand,
+    // so between deploy and migration this column is absent. Treating undefined
+    // as "not data" would skip every field and generate blank contracts.
+    if ((field.field_kind ?? "data") !== "data") continue;
+
     const value = resolveFieldValue(field, context);
     if (!value) continue;
 

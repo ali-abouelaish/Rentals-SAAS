@@ -1,6 +1,8 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth/requireRole";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 import type {
   MaintenanceJob,
   MaintenanceCost,
@@ -76,6 +78,24 @@ export async function getMaintenanceJob(jobId: string): Promise<MaintenanceJob |
   if (error) throw error;
   if (!data) return null;
   return mapJobRow(data as unknown as Record<string, unknown>);
+}
+
+/**
+ * The reference the next work order will get, without consuming it — shown as
+ * a preview in the create form. Read-only counterpart to next_works_order_ref,
+ * which the insert trigger calls.
+ */
+export async function peekNextWorksOrderRef(): Promise<string | null> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("peek_works_order_ref", {
+    p_tenant_id: profile.tenant_id,
+  });
+  if (error) {
+    console.error("[maintenance.peek-ref]", error);
+    return null;
+  }
+  return (data as string | null) ?? null;
 }
 
 /** Aggregate summary counts + costs for the dashboard card. */

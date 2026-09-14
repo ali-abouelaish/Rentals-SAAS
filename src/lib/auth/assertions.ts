@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
 import { requireUserProfile } from "./requireRole";
 import { ADMIN_ROLES } from "./roles";
 
@@ -187,5 +188,22 @@ export async function assertKeyCreate(target: {
  */
 export async function assertKeysDashboardRead(): Promise<{ tenantId: string }> {
   const profile = await requireUserProfile();
+  return { tenantId: profile.tenant_id };
+}
+
+/**
+ * Access to the AI room enhancer.
+ *
+ * The page is already gated (login + the `room_enhancer` entitlement), but the
+ * route it posts to is what actually spends money — every call is a paid
+ * image generation against our own OPENAI_API_KEY. Left open, the endpoint is
+ * a billable resource anyone who knows the URL can drain, so it re-checks both
+ * rather than trusting that callers arrived via the page.
+ */
+export async function assertRoomEnhancerAccess(): Promise<{ tenantId: string }> {
+  const profile = await requireUserProfile();
+  if (!(await hasFeature("room_enhancer"))) {
+    throw new AssertionError("Room Enhancer is not enabled for this agency", 403);
+  }
   return { tenantId: profile.tenant_id };
 }

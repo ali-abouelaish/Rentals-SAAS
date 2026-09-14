@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
-import { Sparkles, Shield, ChevronDown, LogOut } from "lucide-react";
+import { Sparkles, Shield, ChevronDown, LogOut, ArrowLeft } from "lucide-react";
 import { SUPER_ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import { signOut } from "@/features/auth/actions/auth";
 import { useState, useEffect, Suspense } from "react";
@@ -13,6 +13,9 @@ import {
   PM_NAV_GROUPS,
   PM_SETTINGS_ITEMS,
   PM_ASSISTANT_ITEM,
+  ADMIN_NAV_GROUPS,
+  ADMIN_NAV_HREFS,
+  isAdminRoute,
   isPmRoute,
   brandInitials,
   type NavItem,
@@ -43,6 +46,14 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
   const [settingsOpen, setSettingsOpen] = useState(onSettingsRoute);
 
   const isSuperAdminOnly = (profile.role ?? "").toLowerCase() === "super_admin";
+
+  // Show the admin sections whenever we are inside /admin. A super admin who also
+  // administers an agency gets their normal sidebar until they cross into the
+  // console, at which point it becomes the console's own navigation — the same way
+  // the sidebar already switches between the RA and PM contexts.
+  const onAdminRoute = isAdminRoute(pathname);
+  const showAdminNav = isSuperAdminOnly || onAdminRoute;
+
   const hasBoth =
     moduleConfig.rental_agency_enabled && moduleConfig.property_management_enabled;
   const hasPmOnly =
@@ -78,14 +89,17 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
 
   // Resolve the single best-matching href so nested routes (e.g. /contracts vs
   // /contracts/templates) highlight only the most specific nav item.
+  // ADMIN_NAV_HREFS is always included, and the longest-match sort below is what
+  // makes it correct: on /admin/tenants both "/admin" and "/admin/tenants" match,
+  // and only the more specific one highlights.
   const activeHrefs = isPm
     ? [
         ...PM_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href)),
         ...PM_SETTINGS_ITEMS.map((i) => i.href),
         PM_ASSISTANT_ITEM.href,
-        "/admin",
+        ...ADMIN_NAV_HREFS,
       ]
-    : [...RA_NAV_ITEMS.map((i) => i.href), "/admin"];
+    : [...RA_NAV_ITEMS.map((i) => i.href), ...ADMIN_NAV_HREFS];
 
   const bestMatch =
     activeHrefs
@@ -138,7 +152,24 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
   };
 
   // Logo block — initials/logo mark with brand name + module label.
-  const logoBlock = (
+  //
+  // The console gets its own identity rather than the agency's. Showing an
+  // agency's logo and brand colour above a cross-tenant admin nav invites exactly
+  // the mistake this console can least afford: thinking you are inside one agency
+  // while acting on all of them.
+  const logoBlock = showAdminNav ? (
+    <div className="flex items-center gap-3 px-5 pt-6 pb-5">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-fg shadow-glow shrink-0">
+        <Shield size={19} strokeWidth={2.2} />
+      </div>
+      <div className="flex flex-col min-w-0">
+        <span className="text-sm font-bold tracking-tight text-white truncate">
+          Harbor Ops
+        </span>
+        <span className="text-[11px] text-sidebar-text">Super Admin</span>
+      </div>
+    </div>
+  ) : (
     <div className="flex items-center gap-3 px-5 pt-6 pb-5">
       {raLogoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -163,11 +194,43 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
     </div>
   );
 
-  // PM body: labelled groups + collapsible settings. RA body: flat list.
-  const navBody = isSuperAdminOnly ? (
+  // Admin body: the console's own sections, as labelled groups.
+  const adminBody = (
     <div className="space-y-0.5">
-      {renderLink({ href: "/admin", label: "Super Admin", icon: Shield })}
+      {ADMIN_NAV_GROUPS.map((group) => (
+        <div key={group.title}>
+          <div className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+            {group.title}
+          </div>
+          <div className="space-y-0.5">{group.items.map(renderLink)}</div>
+        </div>
+      ))}
+
+      {/* A super admin who also administers an agency needs a way back out. One
+          who does not has nowhere to go, so they get no dead link. */}
+      {!isSuperAdminOnly && (
+        <div className="pt-4">
+          <Link
+            href={hasPmOnly ? "/dashboard?view=pm" : "/dashboard"}
+            prefetch={false}
+            onClick={() => setNavigatingTo("/dashboard")}
+            className="group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text transition-all duration-base ease-default hover:bg-white/[0.06] hover:text-white"
+          >
+            <ArrowLeft
+              size={17}
+              strokeWidth={1.8}
+              className="shrink-0 text-sidebar-text transition-colors group-hover:text-white"
+            />
+            <span className="flex-1 truncate">Back to app</span>
+          </Link>
+        </div>
+      )}
     </div>
+  );
+
+  // PM body: labelled groups + collapsible settings. RA body: flat list.
+  const navBody = showAdminNav ? (
+    adminBody
   ) : isPm ? (
     <div className="space-y-0.5">
       {PM_NAV_GROUPS.map((group) => {

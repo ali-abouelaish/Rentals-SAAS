@@ -1,5 +1,6 @@
 // TimeStone service: release requests + settlements (negotiate / accept).
-// Endpoint paths are best-effort (see config.ts MD_SERVICE / MD_API_VERSION).
+// Paths verified live against sandbox 2026-08-21 (route existence confirmed by
+// an empty 404 body vs the gateway's "Resource not found" envelope).
 
 import { mdFetch, type MdContext } from "./apiClient";
 import { MD_API_VERSION, MD_SERVICE } from "./config";
@@ -13,6 +14,25 @@ import {
 } from "./schemas";
 
 const TS = `${MD_SERVICE.timeStone}/${MD_API_VERSION}`;
+
+/**
+ * Release-request status ids from `/ts/api/v1/lookups/release-request-statuses`
+ * (verified 2026-08-21). Note the scheme spells it "canceled".
+ */
+export const MD_RELEASE_STATUS = {
+  draft: 1,
+  open: 11,
+  negotiation: 21,
+  unclaimed: 26,
+  accepted: 31,
+  court: 41,
+  evidenceReview: 46,
+  resolution: 51,
+  resolved: 55,
+  canceled: 61,
+  singleRelease: 71,
+  closed: 81,
+} as const;
 
 export async function createReleaseRequest(
   ctx: MdContext,
@@ -106,20 +126,28 @@ export async function amendSettlement(
 ): Promise<MdSettlement> {
   const raw = await mdFetch<Record<string, unknown>>(
     ctx,
-    `${TS}/release-requests/${encodeURIComponent(releaseRequestId)}/settlements/${encodeURIComponent(settlementId)}/amend`,
-    { method: "POST", body: JSON.stringify(body), protectionId }
+    // Amendment is request-scoped, not settlement-scoped; the settlement id
+    // goes in the body. `/settlements/{id}/amend` does not exist.
+    `${TS}/release-requests/${encodeURIComponent(releaseRequestId)}/settlements/amendment`,
+    { method: "POST", body: JSON.stringify({ settlementId, ...body }), protectionId }
   );
   return zSettlement.parse(raw);
 }
 
+/**
+ * Cancel via the status endpoint — `POST /release-requests/{id}/cancel` does
+ * not exist. `statusId` comes from `look-up` set
+ * `/ts/api/v1/lookups/release-request-statuses`.
+ */
 export async function cancelReleaseRequest(
   ctx: MdContext,
   releaseRequestId: string,
-  protectionId?: string
+  protectionId?: string,
+  statusId: number = MD_RELEASE_STATUS.canceled
 ): Promise<void> {
   await mdFetch<unknown>(
     ctx,
-    `${TS}/release-requests/${encodeURIComponent(releaseRequestId)}/cancel`,
-    { method: "POST", protectionId }
+    `${TS}/release-requests/${encodeURIComponent(releaseRequestId)}/status`,
+    { method: "PUT", body: JSON.stringify({ statusId }), protectionId }
   );
 }

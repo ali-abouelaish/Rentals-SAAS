@@ -46,21 +46,21 @@ export function DashboardReminders({ reminders }: { reminders: InboxMessage[] })
 
   return (
     <div className="rounded-bento bg-surface-card shadow-bento p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-brand-subtle">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="shrink-0 p-2 rounded-lg bg-brand-subtle">
             <AlarmClock className="h-4 w-4 text-brand" strokeWidth={2} />
           </div>
-          <h2 className="text-base font-semibold text-foreground">Reminders</h2>
+          <h2 className="truncate text-base font-semibold text-foreground">Reminders</h2>
           {pendingCount > 0 && (
-            <span className="text-xs font-medium text-foreground-secondary bg-surface-inset px-2 py-0.5 rounded-full">
+            <span className="shrink-0 text-xs font-medium text-foreground-secondary bg-surface-inset px-2 py-0.5 rounded-full">
               {pendingCount} pending
             </span>
           )}
         </div>
         <Link
           href="/reminders"
-          className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
+          className="shrink-0 text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
         >
           View <ArrowRight className="h-3.5 w-3.5" />
         </Link>
@@ -79,9 +79,11 @@ export function DashboardReminders({ reminders }: { reminders: InboxMessage[] })
                 key={row.id}
                 className="rounded-xl border border-border bg-surface-inset/40 p-3"
               >
-                <div className="flex items-center gap-2 text-foreground-secondary">
-                  <ChannelIcon channel={row.channel} />
-                  <span className="text-sm font-medium text-foreground truncate">
+                <div className="flex min-w-0 items-center gap-2 text-foreground-secondary">
+                  <span className="shrink-0">
+                    <ChannelIcon channel={row.channel} />
+                  </span>
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
                     {row.subject || row.body.slice(0, 80)}
                   </span>
                   {row.recurrence && (
@@ -90,8 +92,8 @@ export function DashboardReminders({ reminders }: { reminders: InboxMessage[] })
                     </span>
                   )}
                 </div>
-                <div className="mt-1.5 flex items-center gap-2 text-[11px] text-foreground-muted">
-                  <span className={cn("rounded-full px-2 py-0.5 font-medium", badge.cls)}>
+                <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px] text-foreground-muted">
+                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 font-medium", badge.cls)}>
                     {badge.label}
                   </span>
                   <span className="truncate">

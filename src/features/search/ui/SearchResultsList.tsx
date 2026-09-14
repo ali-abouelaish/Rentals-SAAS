@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, FileSignature, HardHat, Home, Key as KeyIcon, Landmark, Search, ShieldCheck, Users, Users2, Warehouse } from "lucide-react";
+import { Building2, FileSignature, HardHat, Home, Key as KeyIcon, Landmark, Search, ShieldCheck, Users, Users2, Warehouse, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -32,6 +32,7 @@ const ICON_BY_KIND: Record<SearchResultKind, typeof Search> = {
   key: KeyIcon,
   supplier: HardHat,
   certificate: ShieldCheck,
+  work_order: Wrench,
   action: Landmark,
 };
 

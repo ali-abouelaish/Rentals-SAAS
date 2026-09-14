@@ -38,6 +38,8 @@ import { acquisitionInsightsArticle } from "./acquisition-insights";
 import { marketingArticle } from "./marketing";
 import { sharesArticle } from "./shares";
 import { settingsBookingFormsArticle } from "./settings-booking-forms";
+import { settingsIntegrationsArticle } from "./settings-integrations";
+import { settingsESigningArticle } from "./settings-e-signing";
 import { settingsBankDetailsArticle } from "./settings-bank-details";
 import { teamArticle } from "./team";
 import { depositsTdsArticle } from "./deposits-tds";
@@ -98,6 +100,8 @@ export const HELP_ARTICLES: HelpArticle[] = [
   marketingArticle,
   sharesArticle,
   settingsBookingFormsArticle,
+  settingsIntegrationsArticle,
+  settingsESigningArticle,
   settingsBankDetailsArticle,
   teamArticle,
   depositsTdsArticle,

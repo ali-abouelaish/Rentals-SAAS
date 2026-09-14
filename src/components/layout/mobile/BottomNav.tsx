@@ -19,12 +19,14 @@ import {
   ClipboardList,
   LayoutGrid,
   Plus,
+  Building2,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import type { PublishedModuleConfig } from "@/features/admin/domain/types";
-import { resolveActiveModule, canSeeItem, type NavItem } from "../navConfig";
+import { resolveActiveModule, canSeeItem, isAdminRoute, type NavItem } from "../navConfig";
 import { QuickActionSheet } from "./QuickActionSheet";
 import { MoreMenuSheet } from "./MoreMenuSheet";
 
@@ -54,6 +56,18 @@ const RA_TAB_CANDIDATES: Tab[] = [
   { href: "/rentals", label: "Rentals", short: "Rentals", icon: ClipboardList },
 ];
 
+/**
+ * Tabs for the super-admin console.
+ *
+ * A super-admin-only account was previously shown the RA tabs — Leads, Clients,
+ * Rentals — every one of which `requireRole` bounces straight back to /dashboard.
+ * The bottom bar was four dead ends and a More button.
+ */
+const ADMIN_TAB_CANDIDATES: Tab[] = [
+  { href: "/admin/tenants", label: "Agencies", short: "Agencies", icon: Building2 },
+  { href: "/admin/billing", label: "Billing", short: "Billing", icon: CreditCard },
+];
+
 function BottomNavInner({ profile, moduleConfig, entitlements }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -69,10 +83,25 @@ function BottomNavInner({ profile, moduleConfig, entitlements }: Props) {
   const hasBoth =
     moduleConfig.rental_agency_enabled && moduleConfig.property_management_enabled;
 
-  const candidates = module === "pm" ? PM_TAB_CANDIDATES : RA_TAB_CANDIDATES;
+  // Matches the sidebar and the More sheet: inside /admin, or for an account that
+  // is only ever a super admin, this bar navigates the console.
+  const isSuperAdminOnly = (role ?? "").toLowerCase() === "super_admin";
+  const showAdminNav = isSuperAdminOnly || isAdminRoute(pathname);
+
+  const candidates = showAdminNav
+    ? ADMIN_TAB_CANDIDATES
+    : module === "pm"
+      ? PM_TAB_CANDIDATES
+      : RA_TAB_CANDIDATES;
   const midTabs = candidates.filter((t) => canSeeItem(t, role, entitlements)).slice(0, 2);
 
-  const homeHref = module === "pm" && hasBoth ? "/dashboard?view=pm" : "/dashboard";
+  const homeHref = showAdminNav
+    ? "/admin"
+    : module === "pm" && hasBoth
+      ? "/dashboard?view=pm"
+      : "/dashboard";
+  const homeActive = showAdminNav ? pathname === "/admin" : pathname === "/dashboard";
+
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname === href || pathname.startsWith(href + "/");
 
@@ -109,7 +138,12 @@ function BottomNavInner({ profile, moduleConfig, entitlements }: Props) {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
         <div className="grid h-14 grid-cols-5 items-stretch px-1">
-          <TabLink href={homeHref} short="Home" icon={Home} active={pathname === "/dashboard"} />
+          <TabLink
+            href={homeHref}
+            short={showAdminNav ? "Admin" : "Home"}
+            icon={Home}
+            active={homeActive}
+          />
 
           {midTabs[0] ? (
             <TabLink href={midTabs[0].href} short={midTabs[0].short} icon={midTabs[0].icon} active={isActive(midTabs[0].href)} />
@@ -117,17 +151,23 @@ function BottomNavInner({ profile, moduleConfig, entitlements }: Props) {
             <span />
           )}
 
-          {/* center ＋ create */}
-          <div className="flex items-start justify-center">
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              aria-label="Create"
-              className="-mt-5 grid h-12 w-12 place-items-center rounded-full border-4 border-surface-card bg-gradient-to-br from-brand to-brand-hover text-brand-fg shadow-lg transition-transform active:scale-90"
-            >
-              <Plus className="h-6 w-6" strokeWidth={2.4} />
-            </button>
-          </div>
+          {/* center ＋ create — omitted in the console, where every quick action
+              it offers (new client, new rental) is an agency route a super admin
+              cannot reach. The cell is kept so the 5-column layout is unchanged. */}
+          {showAdminNav ? (
+            <span />
+          ) : (
+            <div className="flex items-start justify-center">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                aria-label="Create"
+                className="-mt-5 grid h-12 w-12 place-items-center rounded-full border-4 border-surface-card bg-gradient-to-br from-brand to-brand-hover text-brand-fg shadow-lg transition-transform active:scale-90"
+              >
+                <Plus className="h-6 w-6" strokeWidth={2.4} />
+              </button>
+            </div>
+          )}
 
           {midTabs[1] ? (
             <TabLink href={midTabs[1].href} short={midTabs[1].short} icon={midTabs[1].icon} active={isActive(midTabs[1].href)} />

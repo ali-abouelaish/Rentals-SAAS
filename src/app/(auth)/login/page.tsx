@@ -16,6 +16,11 @@ function SubmitButton() {
   );
 }
 
+// The login page reads search params and drives an auth cookie write; there is
+// nothing to gain from prerendering it, and the static export of this route
+// group has intermittently failed to resolve its client-reference manifest.
+export const dynamic = "force-dynamic";
+
 const initialState: { error?: string } = {};
 
 function LoginForm() {

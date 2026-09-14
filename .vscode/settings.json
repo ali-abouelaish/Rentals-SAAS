@@ -1,0 +1,7 @@
+{
+  // This is a Node/Next.js project. The `venv/` at the repo root exists only for
+  // the SpareRoom scraper (scripts/OGSCRPAPER.py), which is spawned explicitly by
+  // src/lib/scrapers/runSpareroomScript.ts — it never needs to be active in a shell.
+  "python.terminal.activateEnvironment": false,
+  "python.terminal.activateEnvInCurrentTerminal": false
+}

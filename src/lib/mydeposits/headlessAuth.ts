@@ -1,8 +1,10 @@
 // Headless "Login" (Consumer) auth flow for mydeposits / Total Property.
 //
 // The documented alternative (mydeposits.txt:99-129) to the browser
-// authorization-code redirect in ./oauth.ts, which currently dead-ends on a
-// blank /connect/authorize page (see project_mydeposits_sandbox_auth memory).
+// authorization-code redirect in ./oauth.ts. NOTE: the browser flow WORKS as of
+// 2026-08-20 — the "blank /connect/authorize page" that motivated this module
+// was our own `scope` parameter (see the requestedScopes() comment in oauth.ts).
+// This module is kept as a diagnostic / script-only path.
 // The flow:
 //
 //   1. getLoginOptions(email)                    GET  /api/v1/ui/login-options
@@ -11,12 +13,12 @@
 //        SMS(2): body { code }   Email(1): body { token: <magic-link GUID> }
 //   4. codeFromSession(cookies) -> exchangeCode(...)  POST authorize [-> consent] -> code -> token
 //
-// Steps 1-3 are CONFIRMED live against sandbox. Step 4 was reverse-engineered
-// from the login SPA bundle and confirmed up to the consent step: authorize must
-// be POSTed (GET dead-ends on empty 200), it 302s to /consent, consent is granted
-// with PUT /api/v1/ui/consent. The chain is currently BLOCKED upstream by a
-// client-config bug (consent required but empty scope list; grant not honoured →
-// /consent loop). See codeFromSession + project_mydeposits_sandbox_auth.
+// All four steps are CONFIRMED live against sandbox (2026-08-20, end to end to
+// an access + refresh token). The consent hop is real but satisfiable: it 302s
+// to /consent, which is granted with PUT /api/v1/ui/consent, after which the
+// callback issues the code. The old "consent loop" was the same `scope`-param
+// bug — an explicit scope made the consent screen list no scopes, so the grant
+// could never be satisfied. See codeFromSession + project_mydeposits_sandbox_auth.
 //
 // Gated behind MYDEPOSITS_AUTH_MODE=headless — nothing calls this until the
 // connect route/UI opt in.
@@ -30,7 +32,6 @@ export const MD_AUTH_METHOD = { email: 1, sms: 2 } as const;
 export type MdAuthMethod = (typeof MD_AUTH_METHOD)[keyof typeof MD_AUTH_METHOD];
 
 const UI = "/api/v1/ui";
-const scopes = () => process.env.MYDEPOSITS_SCOPES || "openid profile offline_access";
 
 async function readJson(res: Response, label: string): Promise<unknown> {
   const text = await res.text();
@@ -105,20 +106,18 @@ export async function headlessLogin(
 }
 
 /**
- * Step 4 — drive the authenticated authorize interaction to a code. Reverse-
- * engineered + confirmed live against sandbox:
- *   - authorize must be POSTed (a GET dead-ends on an empty 200 upstream); it
- *     302s into the interaction chain.
- *   - the chain may pass through /consent, which is granted out-of-band with
+ * Step 4 — drive the authenticated authorize interaction to a code. Confirmed
+ * live against sandbox (2026-08-20):
+ *   - authorize 302s into the interaction chain (POST and GET both work; the
+ *     empty-200 dead end was the `scope` parameter, not the method).
+ *   - the chain passes through /consent, granted out-of-band with
  *     PUT /api/v1/ui/consent { deny:false, returnUrl } → { validReturnUrl }.
  *   - we follow the chain (max hops) until a Location carries ?code=.
  *
- * ⚠ As of this writing the sandbox client is misconfigured: it REQUIRES consent
- * but the consent screen returns an empty scope list, and granting it is not
- * honoured by /connect/authorize/callback — the chain loops back to /consent
- * forever. That is a mydeposits-side client-config problem, surfaced here as the
- * "consent loop" error. No request shape breaks it; it needs RequireConsent=false
- * (or a fixed consent config) on their client. See project_mydeposits_sandbox_auth.
+ * ⚠ Do NOT add a `scope` parameter here. An explicit scope makes the consent
+ * screen come back with an empty scope list, which can never be satisfied — the
+ * "consent loop" this integration was stuck on. Omitting it lets the server
+ * substitute the client's registered scopes. See oauth.ts requestedScopes().
  */
 const MAX_AUTHZ_HOPS = 6;
 
@@ -134,7 +133,6 @@ async function codeFromSession(
     client_id: clientId,
     response_type: "code",
     redirect_uri: redirectUri,
-    scope: scopes(),
     state: randomState(),
     code_challenge: challengeFromVerifier(codeVerifier),
     code_challenge_method: "S256",

@@ -10,6 +10,8 @@ import { aiDetectFields } from "../actions/ai-detect";
 import { updateContractTemplateMeta } from "../actions/templates";
 import { DATA_KEY_GROUPS } from "../domain/data-keys";
 import type {
+  FieldKind,
+  SignerRole,
   AiFieldProposal,
   ContractTemplateField,
   ContractTemplateWithFields,
@@ -45,6 +47,16 @@ function findIncompleteField(
 ): { localId: string; message: string } | null {
   for (const f of fields) {
     const name = f.label?.trim() ? `"${f.label.trim()}"` : "An unnamed field";
+    if ((f.field_kind ?? "data") !== "data") {
+      // Signature fields bind to no data — what they need is a signer.
+      if (!f.signer_role) {
+        return { localId: f.localId, message: `${name} is a signature field — please choose who signs it before saving.` };
+      }
+      continue;
+    }
+    if (!f.source) {
+      return { localId: f.localId, message: `${name} has no binding — please choose what it should read before saving.` };
+    }
     if (f.source === "booking_response" && !f.question_id) {
       return { localId: f.localId, message: `${name} is bound to "Booking form answer" — please choose which question it should read before saving.` };
     }
@@ -68,6 +80,10 @@ function toEditable(f: ContractTemplateField): EditableField {
     y: f.y,
     width: f.width,
     height: f.height,
+    // Defaulted for the window between deploying this and applying the
+    // migration that adds the column.
+    field_kind: f.field_kind ?? "data",
+    signer_role: f.signer_role ?? null,
     source: f.source,
     question_id: f.question_id,
     data_key: f.data_key,
@@ -125,6 +141,8 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
       y: rect.y,
       width: rect.width,
       height: rect.height,
+      field_kind: "data",
+      signer_role: null,
       source: "manual",
       question_id: null,
       data_key: null,
@@ -189,6 +207,9 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
       y: p.y,
       width: p.width,
       height: p.height,
+      // The detector proposes data bindings only; it has no signature binding.
+      field_kind: "data",
+      signer_role: null,
       source: p.suggested_source,
       question_id: p.suggested_source === "booking_response" ? p.suggested_question_id : null,
       data_key:
@@ -666,9 +687,65 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
       </div>
 
       <div className="space-y-1">
+        <label className="text-xs font-medium text-foreground">Field type</label>
+        <select
+          value={field.field_kind}
+          onChange={(e) => {
+            const kind = e.target.value as FieldKind;
+            // Switching between a merge field and a signature clears whichever
+            // set of bindings no longer applies, so a converted field can never
+            // carry a stale source or a stale signer.
+            onChange(
+              kind === "data"
+                ? { field_kind: kind, signer_role: null, source: "manual", manual_key: field.manual_key ?? "field" }
+                : {
+                    field_kind: kind,
+                    signer_role: field.signer_role ?? "tenant",
+                    source: null,
+                    data_key: null,
+                    question_id: null,
+                    manual_key: null,
+                    manual_default: null,
+                  }
+            );
+          }}
+          className="w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm"
+        >
+          <option value="data">Merge field — printed onto the contract</option>
+          <option value="signature">Signature — signed electronically</option>
+          <option value="initial">Initials — signed electronically</option>
+          <option value="date_signed">Date signed — filled automatically</option>
+        </select>
+        <p className="text-[11px] text-foreground-muted">
+          {field.field_kind === "data"
+            ? "Merge fields are printed onto the PDF when the contract is generated."
+            : "E-signature fields stay blank on the generated PDF and are filled in by the signer."}
+        </p>
+      </div>
+
+      {field.field_kind !== "data" && (
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-foreground">Who signs this</label>
+          <select
+            value={field.signer_role ?? "tenant"}
+            onChange={(e) => onChange({ signer_role: e.target.value as SignerRole })}
+            className="w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm"
+          >
+            <option value="tenant">Tenant</option>
+            <option value="landlord">Landlord</option>
+          </select>
+          <p className="text-[11px] text-foreground-muted">
+            The tenant signs first, then the landlord countersigns. Each party gets their own
+            signing link and only sees their own fields.
+          </p>
+        </div>
+      )}
+
+      {field.field_kind === "data" && (
+      <div className="space-y-1">
         <label className="text-xs font-medium text-foreground">Bind to</label>
         <select
-          value={field.source}
+          value={field.source ?? "manual"}
           onChange={(e) =>
             onChange({
               source: e.target.value as FieldSource,
@@ -690,6 +767,7 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
           <option value="computed">Computed</option>
         </select>
       </div>
+      )}
 
       {field.source === "booking_response" && (
         <div className="space-y-1">
@@ -734,7 +812,8 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
         </div>
       )}
 
-      {["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"].includes(field.source) && (
+      {field.source !== null &&
+        ["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"].includes(field.source) && (
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground">Field</label>
           <select
@@ -743,7 +822,7 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
             className="w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm"
           >
             <option value="">Select a field…</option>
-            {(DATA_KEY_GROUPS[field.source] ?? []).map((opt) => (
+            {(DATA_KEY_GROUPS[field.source ?? "manual"] ?? []).map((opt) => (
               <option key={opt.key} value={opt.key}>
                 {opt.label}
               </option>

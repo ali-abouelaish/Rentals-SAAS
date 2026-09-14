@@ -36,11 +36,20 @@ type FormValues = z.infer<typeof schema>;
 interface RaiseJobModalProps {
   properties: { id: string; name: string }[];
   suppliers: MaintenanceSupplier[];
+  /** Reference this work order will get — previewed, not reserved. The DB
+   *  trigger allocates the real one on insert. */
+  nextReference: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: RaiseJobModalProps) {
+export function RaiseJobModal({
+  properties,
+  suppliers,
+  nextReference,
+  onClose,
+  onSuccess,
+}: RaiseJobModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -80,7 +89,9 @@ export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: Rai
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Work order created");
+        toast.success(
+          result?.reference ? `Work order ${result.reference} created` : "Work order created"
+        );
         onSuccess();
       }
     } finally {
@@ -95,7 +106,17 @@ export function RaiseJobModal({ properties, suppliers, onClose, onSuccess }: Rai
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="text-base font-semibold text-foreground">New Work Order</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold text-foreground">New Work Order</h2>
+              {nextReference && (
+                <span
+                  className="rounded-md bg-surface-inset px-1.5 py-0.5 text-[11px] font-mono tabular-nums text-foreground-secondary"
+                  title="The reference this work order will be given when you save"
+                >
+                  {nextReference}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-foreground-muted mt-0.5">
               Standalone — no tenant ticket required.
             </p>

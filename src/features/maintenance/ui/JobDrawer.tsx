@@ -38,6 +38,7 @@ import { updateJobStatus, addJobCost, deleteJobCost, deleteJobPhoto, uploadJobPh
 import { assignSupplierToJob } from "../actions/suppliers";
 import { addJobComment, deleteJobComment } from "../actions/comments";
 import { CommentsPanel } from "./CommentsPanel";
+import { WorksOrderSigningPanel } from "./WorksOrderSigningPanel";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AddReminderDialog } from "@/features/automations/ui/AddReminderDialog";
@@ -396,6 +397,12 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
                   {JOB_PRIORITY_LABELS[job.priority]}
                 </span>
                 <span className="text-xs text-foreground-secondary">{JOB_CATEGORY_LABELS[job.category]}</span>
+                <span
+                  className="text-xs font-mono tabular-nums text-foreground-muted"
+                  title="Works order reference"
+                >
+                  {job.reference}
+                </span>
               </div>
               <SheetTitle className="text-base font-semibold leading-snug">{job.title}</SheetTitle>
               <SheetDescription className="text-xs text-foreground-secondary mt-0.5">
@@ -410,7 +417,11 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
                 onChanged={(s) => onJobUpdated({ id: job.id, status: s })}
               />
               <AddReminderDialog
-                entity={{ type: "works_order", id: job.id, label: job.title }}
+                entity={{
+                  type: "works_order",
+                  id: job.id,
+                  label: job.reference ? `${job.reference} · ${job.title}` : job.title,
+                }}
                 triggerLabel="Reminder"
               />
             </div>
@@ -506,6 +517,15 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
                   Pick from your preferred suppliers directory. Manage the directory in the Suppliers tab.
                 </p>
               </div>
+
+              {/* E-signature — sits under the supplier picker because the
+                  assigned contractor is who signs. */}
+              <WorksOrderSigningPanel
+                jobId={job.id}
+                hasContractorEmail={Boolean(
+                  suppliers.find((s) => s.id === job.supplier_id)?.email?.trim()
+                )}
+              />
 
               {/* Dates */}
               <div className="text-xs text-foreground-muted">

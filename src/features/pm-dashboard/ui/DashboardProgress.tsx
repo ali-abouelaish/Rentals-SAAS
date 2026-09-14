@@ -33,6 +33,8 @@ export function SegmentedDonut({
   stroke?: number;
   centerLabel: string;
 }) {
+  // The SVG is drawn at `size` but displayed at whatever the card can spare,
+  // so a narrow column shrinks the ring rather than squeezing the legend out.
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
@@ -46,8 +48,16 @@ export function SegmentedDonut({
   let acc = 0;
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={centerLabel}>
+    <div
+      className="cq relative shrink-0 aspect-square"
+      style={{ width: `min(100%, ${size}px)` }}
+    >
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="h-full w-full"
+        role="img"
+        aria-label={centerLabel}
+      >
         {/* Track */}
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--surface-inset)" strokeWidth={stroke} />
 
@@ -87,7 +97,9 @@ export function SegmentedDonut({
           ))}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold tabular-nums text-foreground leading-none">{total}</span>
+        <span className="text-[clamp(1.125rem,20cqi,1.875rem)] font-bold tabular-nums text-foreground leading-none">
+          {total}
+        </span>
         <span className="text-[11px] font-medium text-foreground-muted mt-1">{centerLabel}</span>
       </div>
     </div>
@@ -102,10 +114,13 @@ export function Legend({ segments, total }: { segments: Segment[]; total: number
         return (
           <li key={seg.key} className="flex items-center gap-2.5">
             <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-            <span className="text-sm text-foreground-secondary truncate">{seg.label}</span>
+            {/* Wraps rather than truncates — "Resolved this month" is the
+                longest label and clipping it to "Resolve…" tells the reader
+                nothing. */}
+            <span className="min-w-0 text-sm leading-snug text-foreground-secondary">{seg.label}</span>
             <span className="ml-auto flex items-baseline gap-1.5 shrink-0">
               <span className="text-sm font-semibold tabular-nums text-foreground">{seg.value}</span>
-              <span className="text-[11px] tabular-nums text-foreground-muted w-8 text-right">{pct}%</span>
+              <span className="inline-block w-8 text-right text-[11px] tabular-nums text-foreground-muted">{pct}%</span>
             </span>
           </li>
         );
@@ -137,15 +152,15 @@ function DonutCard({
 }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   return (
-    <div className="rounded-bento bg-surface-card shadow-bento p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className={cn("p-2 rounded-lg", iconWrap)}>
+    <div className="cq rounded-bento bg-surface-card shadow-bento p-6">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className={cn("shrink-0 p-2 rounded-lg", iconWrap)}>
             <Icon className={cn("h-4 w-4", iconColor)} strokeWidth={2} />
           </div>
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          <h2 className="truncate text-base font-semibold text-foreground">{title}</h2>
           {badge && (
-            <span className="text-xs font-medium text-foreground-secondary bg-surface-inset px-2 py-0.5 rounded-full">
+            <span className="shrink-0 text-xs font-medium text-foreground-secondary bg-surface-inset px-2 py-0.5 rounded-full">
               {badge}
             </span>
           )}
@@ -153,7 +168,7 @@ function DonutCard({
         {href && (
           <Link
             href={href}
-            className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
+            className="shrink-0 text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors flex items-center gap-1"
           >
             View <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -161,12 +176,12 @@ function DonutCard({
       </div>
 
       {total === 0 ? (
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
           <SegmentedDonut segments={segments} centerLabel={centerLabel} />
           <p className="text-sm text-foreground-muted">Nothing to track yet.</p>
         </div>
       ) : (
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
           <SegmentedDonut segments={segments} centerLabel={centerLabel} />
           <Legend segments={segments} total={total} />
         </div>

@@ -11,9 +11,11 @@ import type {
   TenantDetails,
   TenantFeatureEntitlement,
   TenantListItem,
-  TenantUserListItem
+  TenantUserListItem,
+  AdminIntegrationSubscription,
+  AdminEnvelopePurchase
 } from "../domain/types";
-import { ALL_FEATURES } from "@/lib/entitlements/features";
+import { ALL_FEATURES, PAID_FEATURES } from "@/lib/entitlements/features";
 
 const TENANTS_PAGE_SIZE = 25;
 
@@ -377,10 +379,61 @@ export async function getTenantFeatureEntitlements(
     return {
       tenant_id: tenantId,
       feature_key: feature,
-      is_enabled: row ? Boolean(row.is_enabled) : true,
+      // No row means "the default", and the default differs by feature kind:
+      // product features are on unless switched off, paid integrations are off
+      // unless subscribed. Reporting a paid feature as enabled here would show
+      // super admins an Active badge for something the agency cannot use.
+      is_enabled: row ? Boolean(row.is_enabled) : !PAID_FEATURES.has(feature),
       ends_on: row?.ends_on ?? null,
       updated_at: row?.updated_at ?? new Date(0).toISOString()
     };
   });
+}
+
+/**
+ * Envelope top-ups this tenant has bought but not yet been invoiced for.
+ *
+ * Without this they simply never get billed: the purchase is instant and
+ * uncharged by design, and the only record that it owes anything is this row.
+ */
+export async function getTenantEnvelopePurchases(
+  tenantId: string
+): Promise<AdminEnvelopePurchase[]> {
+  await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("tenant_envelope_purchases")
+    .select("id, pack_key, envelopes, price_pence, billing_period, purchased_at, invoiced_at")
+    .eq("tenant_id", tenantId)
+    .order("purchased_at", { ascending: false });
+
+  // The table is applied by hand — report none rather than breaking the page.
+  if (error) return [];
+  return (data ?? []) as AdminEnvelopePurchase[];
+}
+
+/**
+ * The tenant's integration subscriptions, for the super-admin view.
+ *
+ * This is what to bill: an agency's monthly integration total is the sum of the
+ * active, non-grandfathered rows. There is no charge ledger — activation
+ * records the price and the start date, and invoicing reads it from here.
+ */
+export async function getTenantIntegrationSubscriptions(
+  tenantId: string
+): Promise<AdminIntegrationSubscription[]> {
+  await requireSuperAdmin();
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("tenant_integration_subscriptions")
+    .select(
+      "integration_key, status, monthly_price_pence, is_grandfathered, activated_at, cancelled_at, billing_starts_on, ends_on, notes"
+    )
+    .eq("tenant_id", tenantId);
+
+  // The table is applied by hand. Until it exists, report no subscriptions
+  // rather than breaking the whole features page.
+  if (error) return [];
+  return (data ?? []) as AdminIntegrationSubscription[];
 }
 

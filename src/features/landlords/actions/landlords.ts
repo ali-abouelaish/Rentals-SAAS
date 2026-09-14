@@ -1,8 +1,5 @@
 "use server";
 
-import { execFile } from "node:child_process";
-import path from "node:path";
-import { promisify } from "node:util";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -11,8 +8,11 @@ import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { runLandlordSheet } from "@/features/listing-feeds/lib/run-feed";
 import type { SheetRunSummary } from "@/features/listing-feeds/domain/types";
-
-const execFileAsync = promisify(execFile);
+import {
+  parseScraperSummary,
+  runSpareroomScript,
+  SpareroomScriptError,
+} from "@/lib/scrapers/runSpareroomScript";
 
 /**
  * Read a landlord's spreadsheet right after their link is saved, so adding the
@@ -45,11 +45,6 @@ async function importSheetAfterSave(
     return null;
   }
 }
-
-// Same lock file the daily cron scrape uses (see crontab), so an on-demand
-// run and the scheduled all-landlords run can never execute concurrently.
-const SCRAPER_LOCK_FILE = "/tmp/harborops_scraper.lock";
-const SCRAPER_TIMEOUT_MS = 120_000;
 
 function parseLandlordFormData(formData: FormData) {
   const paysCommission = String(formData.get("pays_commission") ?? "yes") === "yes";
@@ -192,55 +187,29 @@ export async function runLandlordScraper(landlordId: string) {
     throw new Error("This landlord has no SpareRoom profile URL set.");
   }
 
-  // Resolve the venv Python for the current platform. flock is POSIX-only, so we
-  // only use it where available (the production VPS) and run Python directly
-  // elsewhere (e.g. local Windows dev), which is why the daily-cron lock is guarded.
-  const isWindows = process.platform === "win32";
-  const pythonBin = path.join(
-    process.cwd(),
-    "venv",
-    isWindows ? "Scripts" : "bin",
-    isWindows ? "python.exe" : "python"
-  );
-  const scriptPath = path.join(process.cwd(), "scripts", "OGSCRPAPER.py");
-  const useFlock = !isWindows;
-  const runOpts = {
-    cwd: process.cwd(),
-    env: { ...process.env, TENANT_ID: profile.tenant_id, LANDLORD_ID: landlordId },
-    timeout: SCRAPER_TIMEOUT_MS,
-    maxBuffer: 10 * 1024 * 1024,
-  } as const;
-
   let stdout: string;
   try {
-    const res = useFlock
-      ? await execFileAsync("flock", ["-n", SCRAPER_LOCK_FILE, pythonBin, scriptPath], runOpts)
-      : await execFileAsync(pythonBin, [scriptPath], runOpts);
-    stdout = res.stdout ?? "";
-  } catch (err: unknown) {
-    const e = err as { code?: string; killed?: boolean; signal?: string; stdout?: string; stderr?: string };
-    // Runtime missing (no flock, no venv, no python) — NOT lock contention.
-    if (e.code === "ENOENT") {
-      throw new Error(
-        "Scraper runtime not available here. On-demand scraping needs Python and the project venv on the host running the app — it works on the production server, but not in local dev without a local Python venv."
-      );
+    const res = await runSpareroomScript({ tenantId: profile.tenant_id, landlordId });
+    stdout = res.stdout;
+  } catch (err) {
+    if (!(err instanceof SpareroomScriptError)) throw err;
+    // Same failures, said in terms of this landlord and this button.
+    switch (err.kind) {
+      case "runtime-missing":
+        throw new Error(
+          "Scraper runtime not available here. On-demand scraping needs Python and the project venv on the host running the app — it works on the production server, but not in local dev without a local Python venv."
+        );
+      case "timeout":
+        throw new Error(
+          `Scraper timed out for ${landlord.name} — the profile may have too many listings. The daily run will still pick it up.`
+        );
+      case "lock-held":
+        throw new Error(
+          "The scraper is already running (likely the scheduled daily run) — try again in a few minutes."
+        );
+      default:
+        throw new Error(err.message);
     }
-    // Killed by our timeout.
-    if (e.killed || e.signal === "SIGTERM") {
-      throw new Error(
-        `Scraper timed out after ${SCRAPER_TIMEOUT_MS / 1000}s for ${landlord.name} — the profile may have too many listings. The daily run will still pick it up.`
-      );
-    }
-    const outText = (e.stdout ?? "").trim();
-    const errText = (e.stderr ?? "").trim();
-    // flock -n exits 1 with no output only when the lock is already held.
-    if (useFlock && !outText && !errText) {
-      throw new Error(
-        "The scraper is already running (likely the scheduled daily run) — try again in a few minutes."
-      );
-    }
-    const lastLine = (errText || outText).split("\n").filter(Boolean).pop();
-    throw new Error(lastLine || "Scraper run failed.");
   }
 
   // The run completed (exit 0). Interpret what it actually did.
@@ -250,27 +219,29 @@ export async function runLandlordScraper(landlordId: string) {
     );
   }
   revalidatePath(`/landlords/${landlordId}`);
-  const match = stdout.match(/Successfully posted (\d+) listings/);
-  // No match means the run bailed before writing: it could not read the profile
-  // at all. That is a failure to check, not a finding of "nothing live" — and the
-  // difference matters, because we deliberately leave the existing listings in
-  // place rather than clearing them on an unreadable source.
-  if (!match) {
+
+  const { posted, swept } = parseScraperSummary(stdout);
+  // No summary line means the run bailed before writing: it could not read the
+  // profile at all. That is a failure to check, not a finding of "nothing live"
+  // — and the difference matters, because we deliberately leave the existing
+  // listings in place rather than clearing them on an unreadable source.
+  if (posted === null) {
     throw new Error(
       `Couldn't read ${landlord.name}'s SpareRoom profile — it may be blocked, empty, or the URL may be wrong. Their existing listings have been left as they were.`
     );
   }
-  const count = Number(match[1]);
-  // A clean read that found nothing is a real answer, and the stale rows have
-  // just been cleared — say so, or it looks like the run did nothing.
-  if (count === 0) {
+  // A clean read that found nothing is a real answer, and the dead rows have just
+  // been swept — say so, or it looks like the run did nothing.
+  if (posted === 0) {
     return {
-      count,
+      count: posted,
       message: `${landlord.name} has no live listings — any previously scraped ones have been removed.`,
     };
   }
   return {
-    count,
-    message: `Scraped ${count} listing${count === 1 ? "" : "s"} for ${landlord.name}.`,
+    count: posted,
+    message:
+      `Scraped ${posted} listing${posted === 1 ? "" : "s"} for ${landlord.name}.` +
+      (swept ? ` Removed ${swept} that are no longer live.` : ""),
   };
 }

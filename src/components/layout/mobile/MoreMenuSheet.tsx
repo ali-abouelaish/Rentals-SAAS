@@ -16,6 +16,8 @@ import {
   PM_SETTINGS_ITEMS,
   PM_ASSISTANT_ITEM,
   RA_NAV_ITEMS,
+  ADMIN_NAV_GROUPS,
+  isAdminRoute,
   canSeeItem,
   type NavItem,
   type NavGroup,
@@ -42,7 +44,13 @@ export function MoreMenuSheet({
   const hasBoth =
     moduleConfig.rental_agency_enabled && moduleConfig.property_management_enabled;
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  // "/admin" is the parent of every admin section, so a prefix match would light
+  // Overview up on all of them. It gets an exact match; everything else keeps the
+  // prefix match so nested routes still highlight their section.
+  const isActive = (href: string) =>
+    href === "/admin"
+      ? pathname === "/admin"
+      : pathname === href || pathname.startsWith(href + "/");
 
   const linkHref = (item: NavItem) => {
     const needsViewParam =
@@ -96,10 +104,32 @@ export function MoreMenuSheet({
 
   const superAdmin: NavItem = { href: "/admin", label: "Super Admin", icon: Shield };
 
+  const isSuperAdminOnly = (role ?? "").toLowerCase() === "super_admin";
+  // Same rule as the desktop sidebar: inside /admin, this sheet becomes the
+  // console's navigation. A super-admin-only account has no agency nav to show.
+  const showAdminNav = isSuperAdminOnly || isAdminRoute(pathname);
+
   return (
     <MobileSheet open={open} onOpenChange={onOpenChange}>
-      <MobileSheetContent title="All areas">
-        {module === "pm" ? (
+      <MobileSheetContent title={showAdminNav ? "Super Admin" : "All areas"}>
+        {showAdminNav ? (
+          <>
+            {ADMIN_NAV_GROUPS.map((group) => (
+              <Group key={group.title} group={group} />
+            ))}
+            {!isSuperAdminOnly && (
+              <div className="mt-3 border-t border-border pt-2">
+                <Row
+                  item={{
+                    href: hasBoth || module === "pm" ? "/dashboard?view=pm" : "/dashboard",
+                    label: "Back to app",
+                    icon: ChevronRight,
+                  }}
+                />
+              </div>
+            )}
+          </>
+        ) : module === "pm" ? (
           <>
             {PM_NAV_GROUPS.map((group) => (
               <Group key={group.title} group={group} />

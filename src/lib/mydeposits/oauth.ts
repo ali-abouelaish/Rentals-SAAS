@@ -19,17 +19,33 @@ type MdTokenResponse = {
   error_description?: string;
 };
 
-/** Build the /connect/authorize URL the admin is redirected to. */
 /**
- * Scopes requested at authorize time. Overridable via MYDEPOSITS_SCOPES so the
- * grant can be tuned without a code change — the sandbox IdentityServer exposes
- * per-service API scopes (RS.* deposits, TS.* releases, SpS.* lookups, PS.*
- * payments) and the client registration decides which we're allowed to request.
+ * Scopes sent on the authorize request.
+ *
+ * ⚠ LEAVE MYDEPOSITS_SCOPES UNSET. Total Property's IdentityServer rejects an
+ * explicit `scope` parameter on this client: sending ANY value — even a bare
+ * `openid` — makes /connect/authorize return an empty 200 instead of the 302
+ * to the login page. That empty 200 is the "blank page" this integration
+ * dead-ended on for months. Proven live 2026-08-20:
+ *
+ *   no scope param                     -> 302 /login?returnUrl=...   ✅
+ *   scope=openid                       -> 200, 0-byte body           ❌
+ *   scope=openid profile offline_access-> 200, 0-byte body           ❌
+ *   scope=RS.Ext                       -> 200, 0-byte body           ❌
+ *
+ * With the parameter omitted the server substitutes the client's own
+ * registered scope list, which is everything we need (confirmed in the issued
+ * token): TS.Ext SpS.Ext RS.Ext NS.Ext SM.Ext ALS.Ext FS.Ext IS.Ext PS.Ext
+ * IdentityServerApi openid profile offline_access.
+ *
+ * The env var stays as an escape hatch in case they ever fix the client so an
+ * explicit (narrower) grant becomes possible.
  */
-function requestedScopes(): string {
-  return process.env.MYDEPOSITS_SCOPES || "openid profile offline_access";
+function requestedScopes(): string | null {
+  return process.env.MYDEPOSITS_SCOPES?.trim() || null;
 }
 
+/** Build the /connect/authorize URL the admin is redirected to. */
 export function buildAuthorizeUrl(
   env: MdEnvironment,
   opts: { state: string; codeChallenge: string; redirectUri: string }
@@ -39,26 +55,20 @@ export function buildAuthorizeUrl(
     client_id: clientId,
     response_type: "code",
     redirect_uri: opts.redirectUri,
-    scope: requestedScopes(),
     state: opts.state,
     code_challenge: opts.codeChallenge,
     code_challenge_method: "S256",
   });
-  // Interactive flow for this provider: send the admin to the auth host's login
-  // SPA with the authorize request as `returnUrl`. The SPA authenticates (email
-  // magic-link / SMS code; sandbox OTP 1111), establishes the IdentityServer
-  // session, then replays returnUrl so /connect/authorize 302s back to our
-  // redirect_uri with ?code=...&state=...  Hitting /connect/authorize directly
-  // returns an empty 200 — it never redirects to a login page on its own.
-  //
-  // ⚠ BROKEN UPSTREAM (confirmed 2026-06-09, mydeposits SANDBOX): this exact
-  // redirect rendered a working login form ~2 days prior, but the auth host's
-  // /login now returns a blank SPA shell and /connect/authorize returns empty 200
-  // even WITH a valid idsrv session. A recent server-side regression on their
-  // side — no code change here can work around it. Escalated to mydeposits.
-  // See memory: project_mydeposits_sandbox_auth.
-  const authorizePath = `/connect/authorize?${params.toString()}`;
-  return `${mdUrls(env).authBase}/login?returnUrl=${encodeURIComponent(authorizePath)}`;
+  // Deliberately conditional and normally absent — see requestedScopes().
+  const scope = requestedScopes();
+  if (scope) params.set("scope", scope);
+
+  // Hit /connect/authorize directly. It 302s to the auth host's login SPA on
+  // its own and carries the request through login -> consent -> back to our
+  // redirect_uri with ?code=&state=. The previous `/login?returnUrl=<authorize>`
+  // wrapper is unnecessary (and isn't what their docs describe); the blank page
+  // it appeared to cause was really the `scope` parameter above.
+  return `${mdUrls(env).authBase}/connect/authorize?${params.toString()}`;
 }
 
 async function postToken(env: MdEnvironment, body: URLSearchParams): Promise<MdTokenSet> {

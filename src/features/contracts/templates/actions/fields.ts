@@ -21,13 +21,24 @@ function rowFromInput(input: FieldInput, tenantId: string, templateId: string) {
     y: Math.max(0, input.y),
     width: Math.max(1, input.width),
     height: Math.max(1, input.height),
-    source: input.source,
-    question_id: input.source === "booking_response" ? input.question_id : null,
-    data_key: ["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"].includes(input.source)
-      ? input.data_key
-      : null,
-    manual_key: input.source === "manual" ? input.manual_key : null,
-    manual_default: input.source === "manual" ? input.manual_default : null,
+    field_kind: input.field_kind,
+    signer_role: input.field_kind === "data" ? null : input.signer_role,
+    // An e-signature field binds to no data, so every binding column is cleared
+    // rather than carrying over whatever the field held before it was converted.
+    source: input.field_kind === "data" ? input.source : null,
+    question_id:
+      input.field_kind === "data" && input.source === "booking_response"
+        ? input.question_id
+        : null,
+    data_key:
+      input.field_kind === "data" &&
+      input.source !== null &&
+      ["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"].includes(input.source)
+        ? input.data_key
+        : null,
+    manual_key: input.field_kind === "data" && input.source === "manual" ? input.manual_key : null,
+    manual_default:
+      input.field_kind === "data" && input.source === "manual" ? input.manual_default : null,
     format: input.format,
     font_size: input.font_size,
     font_weight: input.font_weight,
@@ -45,6 +56,7 @@ export async function saveContractTemplateFields(input: z.infer<typeof saveTempl
 
   // Validate every data_key against the whitelist before writing.
   for (const f of parsed.fields) {
+    if (f.field_kind !== "data" || f.source === null) continue;
     if (["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"].includes(f.source)) {
       if (!isValidDataKey(f.source, f.data_key)) {
         throw new Error(`Invalid data_key "${f.data_key}" for source "${f.source}"`);

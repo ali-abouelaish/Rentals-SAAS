@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import { AssertionError, assertRoomEnhancerAccess } from "@/lib/auth/assertions";
+
 export const runtime = "nodejs";
 
 let openaiClient: OpenAI | null = null;
@@ -23,6 +25,16 @@ function getOpenAI() {
 type Mode = "generate" | "edit";
 
 export async function POST(request: NextRequest) {
+  // Auth before anything else: every path past here spends OpenAI credit.
+  try {
+    await assertRoomEnhancerAccess();
+  } catch (err) {
+    if (err instanceof AssertionError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    throw err;
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
       { error: "Server missing OPENAI_API_KEY." },

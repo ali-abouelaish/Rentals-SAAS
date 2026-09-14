@@ -26,6 +26,7 @@ import {
   Banknote,
   Landmark,
   Wrench,
+  Plug,
   TrendingUp,
   Search,
   Share2,
@@ -36,6 +37,8 @@ import {
   Mail,
   Bell,
   Zap,
+  HeartPulse,
+  ScrollText,
 } from "lucide-react";
 import { ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import type { PublishedModuleConfig } from "@/features/admin/domain/types";
@@ -129,6 +132,7 @@ export const PM_SETTINGS_ITEMS: NavItem[] = [
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
   { href: "/settings/email", label: "Email Sending", icon: Mail, allowedRoles: ADMIN_ROLES },
   { href: "/settings/messaging", label: "Messaging", icon: Bell, allowedRoles: ADMIN_ROLES, entitlement: "automations" },
+  { href: "/settings/integrations", label: "Integrations", icon: Plug, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES },
 ];
 
@@ -138,6 +142,58 @@ export const PM_ASSISTANT_ITEM: NavItem = {
   icon: Sparkles,
   allowedRoles: ADMIN_ROLES,
 };
+
+/**
+ * The super-admin console's own sections.
+ *
+ * These used to be a horizontal tab bar rendered by the /admin layout, which
+ * meant the sidebar showed a single "Super Admin" link and then the real
+ * navigation lived somewhere else entirely — a super admin's sidebar was almost
+ * empty while every section hid in a strip above the page. They are ordinary nav
+ * groups now, so the sidebar, the mobile sheet and the active-highlight logic all
+ * read from this one list.
+ *
+ * No `allowedRoles` on the items: the whole /admin tree is already gated by
+ * `requireSuperAdmin()` in its layout, and the surfaces below only render these
+ * groups for a super admin. Adding a role check here would be a third place to
+ * keep in step with the other two.
+ */
+export const ADMIN_NAV_GROUPS: NavGroup[] = [
+  {
+    title: "Platform",
+    items: [
+      { href: "/admin", label: "Overview", icon: LayoutDashboard },
+      // "Agencies", not "Tenants". In this schema `tenants` are agencies while
+      // `pm_tenants` are renters, and the admin console is the one place both
+      // meanings are in play at once.
+      { href: "/admin/tenants", label: "Agencies", icon: Building2 },
+      { href: "/admin/billing", label: "Billing", icon: CreditCard },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { href: "/admin/health", label: "System Health", icon: HeartPulse },
+      { href: "/admin/activity", label: "Activity Log", icon: ScrollText },
+    ],
+  },
+  {
+    title: "Integrations",
+    items: [
+      { href: "/admin/deposit-schemes", label: "Deposit Schemes", icon: Landmark },
+      { href: "/admin/e-signing", label: "E-signing", icon: FileSignature },
+    ],
+  },
+];
+
+/** Every admin href, for the sidebar's longest-match active resolution. */
+export const ADMIN_NAV_HREFS = ADMIN_NAV_GROUPS.flatMap((group) =>
+  group.items.map((item) => item.href)
+);
+
+export function isAdminRoute(pathname: string) {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
 
 export const PM_ROUTE_PREFIXES = [
   "/inbox",
@@ -160,6 +216,8 @@ export const PM_ROUTE_PREFIXES = [
   "/settings/team",
   "/settings/email",
   "/settings/messaging",
+  "/settings/integrations",
+  "/settings/e-signing",
   "/deposits",
   "/settings/deposits",
   "/forms",

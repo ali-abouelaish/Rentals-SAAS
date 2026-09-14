@@ -80,19 +80,33 @@ export const MD_STATUS_CONFIG: Record<MdProtectionStatus, { label: string; bg: s
 
 // ── Input schemas ──────────────────────────────────────────────────────────
 export const secureDepositTenantSchema = z.object({
-  fullName: z.string().min(1, "Tenant name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Valid email required"),
   phone: z.string().optional().nullable(),
   dob: z.string().optional().nullable(),
   isLead: z.boolean().default(false),
 });
 
+/**
+ * mydeposits requires the landlord's full identity (not just an email) to
+ * create an agency-managed property — first name, last name, email and a
+ * non-null phone are all enforced server-side.
+ */
+export const secureDepositLandlordSchema = z.object({
+  firstName: z.string().min(1, "Landlord first name is required"),
+  lastName: z.string().min(1, "Landlord last name is required"),
+  email: z.string().email("Valid landlord email required"),
+  phone: z
+    .string()
+    .min(1, "Landlord phone is required")
+    .regex(/^\+[1-9]\d{6,14}$/, "Use international format, e.g. +447700900123"),
+});
+
 export const secureDepositSchema = z.object({
   contractId: z.string().uuid(),
   tenants: z.array(secureDepositTenantSchema).min(1, "At least one tenant is required"),
-  landlord: z
-    .object({ email: z.string().email().optional().nullable() })
-    .optional(),
+  landlord: secureDepositLandlordSchema,
 });
 
 export const releaseRequestSchema = z.object({

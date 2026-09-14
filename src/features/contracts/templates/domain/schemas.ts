@@ -13,6 +13,8 @@ export const fieldSourceSchema = z.enum([
 ]);
 
 export const fieldFormatSchema = z.enum(["text", "date", "currency_gbp", "number", "multiline"]);
+export const fieldKindSchema = z.enum(["data", "signature", "initial", "date_signed"]);
+export const signerRoleSchema = z.enum(["tenant", "landlord", "guarantor"]);
 export const fieldFontWeightSchema = z.enum(["normal", "bold"]);
 export const fieldTextAlignSchema = z.enum(["left", "center", "right"]);
 
@@ -25,7 +27,10 @@ export const templateFieldInputSchema = z
     y: z.number().min(0),
     width: z.number().positive(),
     height: z.number().positive(),
-    source: fieldSourceSchema,
+    field_kind: fieldKindSchema.default("data"),
+    signer_role: signerRoleSchema.nullable().default(null),
+    // Null for e-signature fields, which bind to no data.
+    source: fieldSourceSchema.nullable(),
     question_id: z.string().uuid().nullable(),
     data_key: z.string().max(120).nullable(),
     manual_key: z.string().max(60).nullable(),
@@ -39,6 +44,28 @@ export const templateFieldInputSchema = z
     sort_order: z.number().int().min(0),
   })
   .superRefine((value, ctx) => {
+    // E-signature fields bind to no data — they need a signer instead, and none
+    // of the source/data_key rules below apply to them.
+    if (value.field_kind !== "data") {
+      if (!value.signer_role) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["signer_role"],
+          message: "Choose who signs this field",
+        });
+      }
+      return;
+    }
+
+    if (!value.source) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["source"],
+        message: "source is required for a merge field",
+      });
+      return;
+    }
+
     if (value.source === "booking_response" && !value.question_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

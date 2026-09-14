@@ -389,3 +389,104 @@ html {
   height: 1px;
   background: linear-gradient(90deg, rgba(16, 62, 115, 0), rgba(79, 209, 255, 0.65), rgba(16, 62, 115, 0));
 }
+/* ── Width-aware panel grids (container queries) ─────────────
+   The app shell reserves a fixed 260px sidebar plus ~116px of shell and
+   main padding, so a viewport breakpoint says nothing useful about how
+   much room a panel actually has: a 1440px laptop leaves the dashboard
+   1064px, and a nested `md:grid-cols-2` inside an `xl:grid-cols-2` gave
+   every panel ~250px — headers, donut legends and KPI values all clumped.
+
+   These grids size off their own container instead of the viewport, so a
+   column only splits when it can genuinely hold two panels side by side,
+   at any nesting depth. Put `.cq` on the PARENT (a container query always
+   resolves against an ancestor, never the element itself) and the sizing
+   class on the grid.
+
+   Browsers without @container support fall back to a single column, which
+   is the safe reading order. */
+
+.cq {
+  container-type: inline-size;
+}
+
+/* Every grid below stacks first and opts into columns as room appears. */
+.cq-bento,
+.cq-pair,
+.cq-pair-32,
+.cq-kpis,
+.cq-duo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Outer bento: two independently packed columns. Needs ~560px a side. */
+@container (min-width: 1160px) {
+  .cq-bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* A pair of full panels side by side — each side needs ~420px to keep
+   list rows (icon + two lines of text + action pill) on one line. */
+@container (min-width: 860px) {
+  .cq-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Donut panel + narrow rail. 3fr leaves room for donut plus legend,
+   2fr for the rail's badge + timestamp line. */
+@container (min-width: 720px) {
+  .cq-pair-32 {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+/* KPI strip: 1 up, then 2 up, then all four across. */
+@container (min-width: 420px) {
+  .cq-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 900px) {
+  .cq-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Two small blocks inside a single panel (best/worst performer, paired
+   form fields). Threshold includes the panel's own padding. */
+@container (min-width: 520px) {
+  .cq-duo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Stacked controls that sit on one row once the panel can take it. */
+.cq-row {
+  display: flex;
+  flex-direction: column;
+}
+@container (min-width: 520px) {
+  .cq-row {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+/* KPI headline number: shrinks with its card instead of overflowing it. */
+.cq-stat {
+  font-size: clamp(1.375rem, 9cqi, 1.875rem);
+  line-height: 1.15;
+}
+
+/* Secondary header notes ("next 30 days") — the first thing to drop when a
+   panel is too narrow to hold the title, the note and the "View all" link. */
+.cq-note {
+  display: none;
+}
+@container (min-width: 520px) {
+  .cq-note {
+    display: inline;
+  }
+}

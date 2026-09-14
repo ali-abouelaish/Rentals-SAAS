@@ -97,6 +97,10 @@ Required in `.env.local`:
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account key for landlord listing spreadsheets; needs the Sheets **and** Drive APIs enabled. Optional for Sheets (public sheets read credential-free); **required** for Drive room-photo import. Resolution order: this var → `GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON` → `GOOGLE_SERVICE_ACCOUNT_FILE` (path) → `./service_account.json` (gitignored, the usual setup). Base64-encode if using an env var |
 | `PORTAL_TOKEN_SECRET` | HMAC secret for renter portal magic-link + session tokens (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (shared; also used by `mydeposits-poll`) |
+| `BOLDSIGN_API_KEY` | BoldSign e-signing API key (verify with `npm run boldsign:probe`) |
+| `BOLDSIGN_HOST` | Optional BoldSign API host; defaults to the EU region `https://api-eu.boldsign.com` |
+| `BOLDSIGN_ENV` | BoldSign environment (`sandbox` \| `live`); defaults to `sandbox` |
+| `BOLDSIGN_WEBHOOK_SECRET` | HMAC secret for verifying inbound BoldSign webhooks |
 
 For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`, and optionally `DEV_TENANT_NAME`.
 

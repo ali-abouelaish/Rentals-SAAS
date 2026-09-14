@@ -129,27 +129,27 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
   }
 
   return (
-    <div className="rounded-bento bg-surface-card shadow-bento p-6 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-brand-subtle">
+    <div className="cq rounded-bento bg-surface-card shadow-bento p-6 h-full flex flex-col">
+      {/* Header — title truncates before the Add task button is squeezed. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="shrink-0 p-2 rounded-lg bg-brand-subtle">
             <ListTodo className="h-4 w-4 text-brand" strokeWidth={2} />
           </div>
-          <h2 className="text-base font-semibold text-foreground">To-do list</h2>
+          <h2 className="truncate text-base font-semibold text-foreground">To-do list</h2>
           {open.length > 0 && (
-            <span className="text-xs font-medium text-foreground-secondary bg-surface-inset px-2 py-0.5 rounded-full">
+            <span className="shrink-0 text-xs font-medium text-foreground-secondary bg-surface-inset px-2 py-0.5 rounded-full">
               {open.length} open
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           {done.length > 0 && (
             <button
               type="button"
               onClick={handleClearDone}
               title="Move completed tasks to history now (they clear automatically each day)"
-              className="text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors"
+              className="shrink-0 whitespace-nowrap text-[13px] font-medium text-foreground-muted hover:text-brand transition-colors"
             >
               Clear done ({done.length})
             </button>
@@ -171,7 +171,7 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
       {/* Completion donut — merged in from the old "To-do progress" card so
           the list and its progress live in one container */}
       {todos.length > 0 && (
-        <div className="flex items-center gap-5 mb-5 pb-5 border-b border-border">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-4 mb-5 pb-5 border-b border-border">
           <SegmentedDonut segments={progressSegments} size={104} stroke={15} centerLabel="Tasks" />
           <Legend segments={progressSegments} total={todos.length} />
         </div>
@@ -204,7 +204,7 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
         </div>
 
         {/* Due date + Property */}
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="cq-duo grid gap-3">
           <div>
             <label htmlFor="todo-due" className="block text-sm font-medium text-foreground mb-0.5">
               Due date
@@ -244,7 +244,7 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
         </div>
 
         {/* Visibility + submit */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div className="cq-row gap-3">
           <div>
             <label className="block text-sm font-medium text-foreground mb-0.5">Visibility</label>
             <p className="text-[11px] text-foreground-muted mb-1.5">

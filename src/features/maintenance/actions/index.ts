@@ -144,26 +144,32 @@ export async function createMaintenanceJob(raw: z.infer<typeof NewJobSchema>) {
   const d = parsed.data;
   const supabase = createSupabaseServerClient();
 
-  const { error } = await supabase.from("maintenance_jobs").insert({
-    tenant_id: profile.tenant_id,
-    property_id: d.property_id,
-    unit_id: d.unit_id ?? null,
-    title: d.title,
-    description: d.description ?? null,
-    category: d.category,
-    priority: d.priority,
-    status: "open",
-    reported_by: d.reported_by ?? null,
-    assigned_to: d.assigned_to ?? null,
-    supplier_id: d.supplier_id ?? null,
-    scheduled_date: d.scheduled_date ?? null,
-    total_cost: 0,
-  });
+  // `reference` is assigned by the maintenance_jobs_set_reference trigger —
+  // never send one from here, and read it back so the caller can quote it.
+  const { data: job, error } = await supabase
+    .from("maintenance_jobs")
+    .insert({
+      tenant_id: profile.tenant_id,
+      property_id: d.property_id,
+      unit_id: d.unit_id ?? null,
+      title: d.title,
+      description: d.description ?? null,
+      category: d.category,
+      priority: d.priority,
+      status: "open",
+      reported_by: d.reported_by ?? null,
+      assigned_to: d.assigned_to ?? null,
+      supplier_id: d.supplier_id ?? null,
+      scheduled_date: d.scheduled_date ?? null,
+      total_cost: 0,
+    })
+    .select("id, reference")
+    .single();
   if (error) return { error: error.message };
 
   revalidatePath("/maintenance");
   revalidatePath("/dashboard");
-  return { success: true };
+  return { success: true, jobId: job.id as string, reference: job.reference as string };
 }
 
 export async function updateMaintenanceJob(
@@ -397,7 +403,7 @@ export async function promoteTicketToJob(ticketId: string) {
       reported_by: pm?.full_name ?? null,
       total_cost: 0,
     })
-    .select("id")
+    .select("id, reference")
     .single();
   if (jobErr) return { error: jobErr.message };
 
@@ -442,7 +448,7 @@ export async function promoteTicketToJob(ticketId: string) {
 
   revalidatePath("/maintenance");
   revalidatePath("/dashboard");
-  return { success: true, jobId: job.id };
+  return { success: true, jobId: job.id as string, reference: job.reference as string };
 }
 
 // ──────────────────────────────────────────────────────────

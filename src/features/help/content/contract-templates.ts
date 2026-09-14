@@ -20,6 +20,7 @@ Contract Templates let you upload your tenancy agreement PDFs once, mark the dyn
 ## Tips
 
 - Marked fields are auto-stamped from booking and tenant data, keeping generated contracts consistent.
+- **Signature fields.** In the field panel, set **Field type** to *Signature*, *Initials*, or *Date signed* to place an e-signature box instead of a merge field. Choose **Who signs this** — Tenant or Landlord — and each party gets their own signing link showing only their own boxes. These boxes stay blank on the generated PDF; they are filled in when the contract is sent for signature from the contract's Document tab.
 - Templates can be scoped per portfolio.
 - This feature requires the **Contract Templates** entitlement; it connects to [Contracts](/contracts) and the data captured in [Bookings](/bookings).`,
 };

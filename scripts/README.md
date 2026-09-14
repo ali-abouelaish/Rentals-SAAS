@@ -57,6 +57,32 @@ In `.env` or the environment where you run the scraper:
 
 Run from project root (with the Next.js app running): `python scripts/OGSCRPAPER.py`. The script loads vars from `.env.local` via python-dotenv.
 
+`TENANT_ID` is per-invocation, not global: the script handles exactly one tenant per run and scopes every write and every delete to it. To cover several tenants, invoke it once per tenant.
+
+`LANDLORD_ID` (optional) narrows a run to a single landlord — what the in-app **Run scraper** button sets. A narrowed run deliberately skips the orphan sweep, because one profile tells it nothing about the rest of the roster.
+
+## 2a. Schedule
+
+The daily run is scheduled **in the repo**, not in the VPS crontab: the schedule lives in `src/lib/cron/jobCatalogue.ts` and fires at **09:00 Europe/London** via node-cron (registered by `src/lib/cron/scheduler.ts`, started from `src/instrumentation.ts` when the Node server boots). It shares that slot with the rent-reminder job. There is a manual/backup trigger at `GET /api/cron/spareroom-scraper`, guarded by `CRON_SECRET`.
+
+> **Deploying this for the first time:** remove the old `OGSCRPAPER.py` line from the VPS crontab (`crontab -e` as the app user), or the scrape runs twice a night. `flock` keeps the two from overlapping, so nothing corrupts if you forget — the second run just fails on the lock — but the crontab copy is the reason the deployed script drifted several builds behind the repo in the first place.
+
+Both entry points serialise on `/tmp/harborops_scraper.lock`. That matters: each run sweeps rows whose `last_seen_at` predates its own start, so two concurrent runs would sweep each other's writes.
+
+## 2b. How rows are written
+
+Runs **upsert then sweep**, rather than delete then insert:
+
+1. Each listing is keyed by `external_ref = spareroom:<advert id>`, derived from the advert URL, so a re-read updates the same row. Row ids survive, and with them `leads.listing_id` — the old delete/insert cycle minted new ids nightly and silently severed every SpareRoom lead's link to its listing.
+2. Every row written gets `last_seen_at` = the run's start timestamp.
+3. Afterwards, rows for landlords the run read **end-to-end** whose `last_seen_at` is older than that are deleted: they were live yesterday and are not live now.
+
+A landlord only counts as read end-to-end if the profile paginated cleanly *and* every listing page under it loaded. Anything less and the landlord is neither written nor swept, and their existing rows are left alone — the run reports them so they can be chased. This is what keeps a hiccup at SpareRoom from wiping good data, and it is why the run also refuses to treat an unrecognised HTTP 200 (soft block, captcha interstitial, renamed markup) as "this landlord has no live ads".
+
+A guarded orphan sweep clears the two classes no landlord-scoped sweep can reach — rows whose landlord was deleted (`landlord_id` is null), and rows for a landlord whose `spareroom_profile_url` has since been cleared. It runs only on a full-roster run where at least half the roster read cleanly.
+
+Scope: all of this is `source = 'spareroom'` only. Spreadsheet-imported rows are untouched and keep their own no-delete behaviour.
+
 ## 3. Replace the “load from Google Sheet” block
 
 Replace the block that loads from the public Google Sheet CSV with one of the two options below.
