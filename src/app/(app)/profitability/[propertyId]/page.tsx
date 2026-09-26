@@ -15,17 +15,18 @@ interface Props {
 export default async function PropertyProfitabilityRoute({ params }: Props) {
   await requireRole([...ADMIN_ROLES]);
 
+  // notFound() signals by throwing, so it must sit OUTSIDE the try: called
+  // inside, its control-flow error was caught below and rendered to the user as
+  // the literal string "NEXT_NOT_FOUND". A property belonging to another tenant
+  // reads as absent here, which is the common way to reach this path.
+  let property: Awaited<ReturnType<typeof getPropertyProfitability>>;
+  let trend: Awaited<ReturnType<typeof getPropertyMonthlyTrend>>;
+
   try {
-    const [property, trend] = await Promise.all([
+    [property, trend] = await Promise.all([
       getPropertyProfitability(params.propertyId),
       getPropertyMonthlyTrend(params.propertyId, 12),
     ]);
-
-    if (!property) {
-      notFound();
-    }
-
-    return <PropertyDetailPage property={property} trend={trend} />;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     const isMissingTable =
@@ -54,4 +55,10 @@ export default async function PropertyProfitabilityRoute({ params }: Props) {
       </div>
     );
   }
+
+  if (!property) {
+    notFound();
+  }
+
+  return <PropertyDetailPage property={property} trend={trend} />;
 }

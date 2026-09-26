@@ -73,7 +73,12 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <aside className="relative z-10 w-full max-w-md bg-surface-card shadow-xl border-l border-border h-full overflow-y-auto">
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Overhead"
+        className="relative z-10 flex h-dvh w-full max-w-md flex-col overflow-y-auto border-l border-border bg-surface-card pb-[env(safe-area-inset-bottom)] shadow-xl"
+      >
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-border bg-surface-card">
           <h2 className="text-base font-semibold text-foreground">
             {isEdit ? "Edit overhead" : "Add overhead"}
@@ -81,7 +86,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-surface-inset text-foreground-muted"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-foreground-muted hover:bg-surface-inset sm:h-8 sm:w-8"
             aria-label="Close"
           >
             <X size={16} />
@@ -95,7 +100,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
             </label>
             <select
               {...register("category")}
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {Object.entries(OVERHEAD_CATEGORY_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
@@ -111,7 +116,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
               {...register("label")}
               type="text"
               placeholder="e.g. Xero subscription"
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             />
             {errors.label && (
               <p className="text-xs text-red-600 mt-1">{errors.label.message}</p>
@@ -130,7 +135,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
                 step="0.01"
                 min="0"
                 placeholder="0.00"
-                className="w-full rounded-lg border border-border bg-surface-inset pl-7 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-lg border border-border bg-surface-inset pl-7 pr-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
             {errors.amount_pounds && (
@@ -144,7 +149,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
               {...register("vendor")}
               type="text"
               placeholder="Optional"
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
 
@@ -194,13 +199,13 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
                 min="1"
                 max="31"
                 placeholder="1"
-                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
           )}
 
           {costMode === "amortised" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Spread over (months)
@@ -210,7 +215,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
                   type="number"
                   min="1"
                   placeholder="12"
-                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
               <div>
@@ -220,7 +225,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
                 <input
                   {...register("amortise_start_date")}
                   type="date"
-                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
             </div>
@@ -233,18 +238,18 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
             <input
               {...register("date_incurred")}
               type="date"
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             />
             {errors.date_incurred && (
               <p className="text-xs text-red-600 mt-1">{errors.date_incurred.message}</p>
             )}
           </div>
 
-          <label className="flex items-center gap-2 text-xs">
+          <label className="flex min-h-11 md:min-h-0 items-center gap-2 text-xs">
             <input
               {...register("is_active")}
               type="checkbox"
-              className="rounded border-border text-brand focus:ring-brand"
+              className="h-6 w-6 md:h-4 md:w-4 rounded border-border text-brand focus:ring-brand"
             />
             <span className="text-foreground">Active (recurring overheads will keep posting)</span>
           </label>
@@ -255,7 +260,7 @@ export function OverheadDrawer({ open, editing, onClose, onSuccess }: Props) {
               {...register("notes")}
               rows={2}
               placeholder="Optional"
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand resize-none"
             />
           </div>
 

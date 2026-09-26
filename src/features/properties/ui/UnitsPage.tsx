@@ -213,7 +213,7 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
           <Link
             href="/keys"
             title="Track key sets and who holds them across your properties"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-semibold text-foreground-secondary hover:bg-surface-inset hover:text-foreground hover:border-border-strong transition-colors"
+            className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-semibold text-foreground-secondary hover:bg-surface-inset hover:text-foreground hover:border-border-strong transition-colors"
           >
             <KeyRound className="h-4 w-4" />
             Keys
@@ -225,7 +225,7 @@ export function UnitsPage({ portfolios: initialPortfolios, initialProperties, in
           />
           <Link
             href="/properties/new"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+            className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add property

@@ -188,7 +188,7 @@ export function MobileDashboardHome({
       {/* Big section tiles */}
       <section>
         <h2 className="mb-3 px-0.5 text-sm font-semibold text-foreground">Your portfolio</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {tiles.map((t) => (
             <Link
               key={t.href}

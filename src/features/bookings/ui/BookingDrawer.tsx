@@ -60,7 +60,7 @@ function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: 
     <div className="space-y-5 py-1">
       <section>
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Applicant</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <InfoRow label="Full name" value={booking.applicant_name} />
           <InfoRow label="Email" value={booking.applicant_email} />
           <InfoRow label="Phone" value={booking.applicant_phone} />
@@ -70,8 +70,8 @@ function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: 
 
       <section>
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Application</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
             <InfoRow label="Unit applied for" value={unitLabel} />
           </div>
           {booking.unit?.property.portfolio && (
@@ -92,12 +92,12 @@ function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: 
             <InfoRow label="Reviewed at" value={format(new Date(booking.reviewed_at), "d MMM yyyy")} />
           )}
           {booking.rejection_reason && (
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <InfoRow label="Rejection reason" value={booking.rejection_reason} />
             </div>
           )}
           {booking.converted_pm_tenant_id && (
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <InfoRow label="Converted to tenant" value="Yes — tenant record created" />
             </div>
           )}
@@ -109,7 +109,7 @@ function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: 
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">
             Agent &amp; offer
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow label="Agent" value={booking.agent_name} />
             <InfoRow label="Agent email" value={booking.agent_email} />
             <InfoRow
@@ -131,7 +131,7 @@ function OverviewContent({ booking, onSaved }: { booking: Booking; onSaved: (b: 
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
+          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
           placeholder="Add notes about this application…"
         />
         {notes !== (booking.notes ?? "") && (
@@ -316,7 +316,7 @@ function FormsContent({
           <select
             value={formId}
             onChange={(e) => setFormId(e.target.value)}
-            className="h-10 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            className="h-10 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
           >
             <option value="">Select a form…</option>
             {activeForms.map((f) => (
@@ -330,7 +330,7 @@ function FormsContent({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-10 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            className="h-10 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
             placeholder="applicant@example.com"
           />
         </div>
@@ -573,7 +573,7 @@ function ActionsContent({
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 resize-none"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 resize-none"
               placeholder="Enter the reason for rejection…"
             />
             <div className="flex gap-2">
@@ -694,7 +694,7 @@ export function BookingDrawer({ booking, open, onClose, onBookingUpdated, hasFor
       <SheetContent side="right" className="flex flex-col p-0 w-full max-w-[540px]">
         {/* Header */}
         <SheetHeader className="shrink-0">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
                 <BookingStatusBadge status={localBooking.status} />
@@ -733,15 +733,17 @@ export function BookingDrawer({ booking, open, onClose, onBookingUpdated, hasFor
         />
 
         {/* Tabs */}
-        <div className="border-b border-border px-6 pt-2 pb-0 shrink-0">
-          <div className="flex">
+        {/* Scrolls sideways rather than squashing its labels — the same
+            treatment ui/tabs.tsx got in Phase 0. */}
+        <div className="border-b border-border px-4 sm:px-6 pt-2 pb-0 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max">
             {tabs.map((tab) => (
               <button
                 key={tab.value}
                 type="button"
                 onClick={() => setActiveTab(tab.value)}
                 className={cn(
-                  "px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+                  "px-4 py-2.5 min-h-11 shrink-0 whitespace-nowrap text-[13px] font-medium border-b-2 transition-colors -mb-px",
                   activeTab === tab.value
                     ? "border-brand text-brand"
                     : "border-transparent text-foreground-secondary hover:text-foreground hover:border-border"

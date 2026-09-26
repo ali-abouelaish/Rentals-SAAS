@@ -38,6 +38,7 @@ export type FeatureKey =
   | "owner_statements"
   | "e_signing"
   | "listing_feeds"
+  | "support_tickets"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -80,6 +81,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "owner_statements",
   "e_signing",
   "listing_feeds",
+  "support_tickets",
   "admin",
 ];
 
@@ -247,6 +249,11 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
     label: "E-signing",
     description:
       "Send tenancy agreements, works orders and owner statements for legally binding electronic signature via BoldSign, with the signed PDF and audit trail filed against the record. Paid integration — granted by an active subscription on the Integrations page, not on by default."
+  },
+  support_tickets: {
+    label: "Contact Support",
+    description:
+      "Lets any agency user raise a support ticket with Harbor Ops, attach screenshots, and follow the reply thread. Tickets land in the super admin Support Tickets queue. Switching this off removes the agency's in-app route to us — leave it on."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

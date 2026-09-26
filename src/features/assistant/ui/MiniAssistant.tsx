@@ -67,7 +67,7 @@ export function MiniAssistant() {
                 onClick={() => void load(true)}
                 aria-label="Start a new chat"
                 title="New chat"
-                className="absolute right-12 top-3 z-10 rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground"
+                className="absolute right-12 top-3 grid h-11 w-11 place-items-center md:h-auto md:w-auto z-10 rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground"
               >
                 <MessageSquarePlus className="h-4 w-4" />
               </button>
@@ -76,7 +76,7 @@ export function MiniAssistant() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close AI assistant"
-              className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground"
+              className="absolute right-3 top-3 grid h-11 w-11 place-items-center md:h-auto md:w-auto z-10 rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>

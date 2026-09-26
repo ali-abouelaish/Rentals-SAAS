@@ -77,7 +77,7 @@ export function RentCollectionList({ rows }: { rows: Row[] }) {
               type="button"
               onClick={() => setFilter(f.key)}
               className={cn(
-                "h-8 rounded-full border px-3 text-xs font-medium transition-colors",
+                "h-11 sm:h-8 min-w-11 sm:min-w-0 rounded-full border px-3 text-xs font-medium transition-colors",
                 filter === f.key
                   ? "border-brand bg-brand/10 text-brand"
                   : "border-border bg-surface-card text-foreground-secondary hover:bg-surface-inset"
@@ -88,15 +88,15 @@ export function RentCollectionList({ rows }: { rows: Row[] }) {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tenant, property…"
-              className="h-8 w-56 rounded-lg border border-border bg-surface-card pl-8 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              className="h-11 sm:h-8 w-full rounded-lg border border-border bg-surface-card pl-8 pr-3 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand sm:w-56"
             />
           </div>
           <label className="sr-only" htmlFor="rc-sort">Sort</label>
@@ -104,7 +104,7 @@ export function RentCollectionList({ rows }: { rows: Row[] }) {
             id="rc-sort"
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="h-8 rounded-lg border border-border bg-surface-card px-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            className="h-11 sm:h-8 shrink-0 rounded-lg border border-border bg-surface-card px-2 text-base sm:text-xs focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
           >
             {SORTS.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>

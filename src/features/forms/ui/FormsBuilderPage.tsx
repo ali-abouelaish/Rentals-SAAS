@@ -39,9 +39,9 @@ import type { Client } from "@/features/clients/domain/types";
 import { QUESTION_TYPE_LABELS } from "@/lib/types/question";
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 const selectCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({
   label,
@@ -336,7 +336,7 @@ export function FormsBuilderPage({
                 </div>
               </form>
             ) : (
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-base font-semibold text-foreground">
@@ -363,7 +363,11 @@ export function FormsBuilderPage({
                     /f/{selectedForm.public_slug}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                {/* `shrink-0` here defeated the `flex-wrap` beside it: the row
+                    could not shrink below the width of all nine controls on one
+                    line, so it never wrapped and pushed the page 355px wide on
+                    a phone. `min-w-0` lets it shrink, and then wrapping works. */}
+                <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
                   <Button
                     type="button"
                     variant="outline"
@@ -386,7 +390,7 @@ export function FormsBuilderPage({
                     href={`${appUrl}/f/${selectedForm.public_slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
+                    className="inline-flex items-center gap-1 h-11 md:h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     Open
@@ -412,7 +416,7 @@ export function FormsBuilderPage({
                   </Button>
                   <Link
                     href={`/forms/${selectedForm.id}/responses`}
-                    className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
+                    className="inline-flex items-center gap-1 h-11 md:h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
                   >
                     <FileBarChart2 className="h-3.5 w-3.5" />
                     Responses
@@ -422,6 +426,7 @@ export function FormsBuilderPage({
                     onClick={() => handleToggleActive(selectedForm)}
                     disabled={isPending}
                     title={selectedForm.is_active ? "Deactivate form" : "Activate form"}
+                    className="grid h-11 w-11 place-items-center md:inline-flex md:h-auto md:w-auto"
                   >
                     {selectedForm.is_active ? (
                       <ToggleRight className="h-5 w-5 text-green-600" />
@@ -434,7 +439,7 @@ export function FormsBuilderPage({
                     onClick={() => handleDuplicate(selectedForm)}
                     disabled={isPending}
                     title="Duplicate form"
-                    className="text-foreground-muted hover:text-foreground transition-colors"
+                    className="grid h-11 w-11 place-items-center md:inline-flex md:h-auto md:w-auto text-foreground-muted hover:text-foreground transition-colors"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
@@ -443,6 +448,7 @@ export function FormsBuilderPage({
                     onClick={() => setDeletingId(selectedForm.id)}
                     disabled={isPending}
                     title="Delete form"
+                    className="grid h-11 w-11 place-items-center md:inline-flex md:h-auto md:w-auto"
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </button>

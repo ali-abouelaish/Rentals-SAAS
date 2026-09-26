@@ -90,7 +90,7 @@ export function OwnerStatementsPanel({
                 type="month"
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="h-9 rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                className="h-11 md:h-9 rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
               />
             </div>
             <Tooltip content="Creates a draft you can edit. Nothing is emailed to the landlord until you send it.">
@@ -131,7 +131,7 @@ export function OwnerStatementsPanel({
                     <td className="py-2 pr-3">
                       <Link
                         href={`/owners/${ownerId}/statements/${s.id}`}
-                        className="inline-flex items-center gap-1.5 text-brand hover:underline"
+                        className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-brand hover:underline"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         {monthLabel(s.period_year, s.period_month)}

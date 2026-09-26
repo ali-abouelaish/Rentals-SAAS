@@ -116,7 +116,7 @@ export default async function InboxDetailPage({ params }: { params: Params }) {
                   name="resolution_notes"
                   rows={3}
                   placeholder="What was done? (optional, kept for audit)"
-                  className="flex w-full rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20"
+                  className="flex w-full rounded-lg border border-border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20"
                 />
               </div>
               <Button type="submit" variant="secondary">Mark as completed</Button>
@@ -140,7 +140,7 @@ export default async function InboxDetailPage({ params }: { params: Params }) {
                   name="resolution_notes"
                   rows={3}
                   placeholder="Brief reason. Stored for audit only — not sent to the tenant."
-                  className="flex w-full rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20"
+                  className="flex w-full rounded-lg border border-border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20"
                 />
               </div>
               <Button type="submit" variant="destructive">Decline</Button>

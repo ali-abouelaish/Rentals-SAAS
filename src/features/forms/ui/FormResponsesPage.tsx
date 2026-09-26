@@ -236,7 +236,7 @@ function SubmissionDetail({
                         href={`/api/forms/download?path=${encodeURIComponent(path)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-foreground hover:bg-surface-inset transition-colors"
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground hover:bg-surface-inset transition-colors"
                       >
                         <Paperclip className="h-3.5 w-3.5 text-brand" />
                         File {i + 1}

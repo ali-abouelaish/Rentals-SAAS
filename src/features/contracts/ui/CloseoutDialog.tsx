@@ -15,10 +15,10 @@ import { estimateContractArrears, type ArrearsEstimate } from "../actions/rent-p
 import type { TenancyEntry } from "../domain/history";
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 const selectCls = inputCls;
 const textareaCls =
-  "min-h-[88px] w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "min-h-[88px] w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({
   label,
@@ -238,7 +238,7 @@ export function CloseoutDialog({
                       type="button"
                       key={opt.label}
                       onClick={() => field.onChange(opt.v)}
-                      className={`flex-1 h-9 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`flex-1 h-11 md:h-9 rounded-lg border text-sm font-medium transition-colors ${
                         field.value === opt.v
                           ? "border-brand bg-brand/10 text-brand"
                           : "border-border bg-surface-inset text-foreground-secondary hover:bg-surface-card"
@@ -270,7 +270,7 @@ export function CloseoutDialog({
               <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
                 Deposit release
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <FormField
                   label={`Returned (£) of £${depositHeld.toLocaleString()}`}
                   htmlFor="closeout-deposit-returned"

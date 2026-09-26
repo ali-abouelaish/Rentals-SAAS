@@ -72,7 +72,7 @@ export function KanbanCard({ unit, onClick, isDragging: isDraggingProp }: Kanban
         type="button"
         {...attributes}
         {...listeners}
-        className="absolute top-2 right-2 p-1 text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+        className="absolute top-2 right-2 p-1 text-foreground-muted opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
         onClick={(e) => e.stopPropagation()}
         aria-label="Drag"
       >
@@ -92,7 +92,7 @@ export function KanbanCard({ unit, onClick, isDragging: isDraggingProp }: Kanban
           <p className="text-xs text-foreground-secondary leading-tight truncate">
             {unit.property?.address_line_1}
           </p>
-          <p className="text-sm font-semibold text-foreground leading-tight">
+          <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground leading-tight">
             {formatUnitLabel(unit)}
           </p>
         </div>
@@ -115,7 +115,7 @@ export function KanbanCard({ unit, onClick, isDragging: isDraggingProp }: Kanban
           )}
 
           {(unit.pm_tenant || unit.resident) && (
-            <span className="flex items-center gap-1 text-[10px] text-foreground-muted ml-auto">
+            <span className="flex min-h-11 md:min-h-0 items-center gap-1 text-[10px] text-foreground-muted ml-auto">
               <User className="h-2.5 w-2.5" />
               <span className="truncate max-w-[80px]">
                 {unit.pm_tenant?.full_name ?? unit.resident?.full_name}

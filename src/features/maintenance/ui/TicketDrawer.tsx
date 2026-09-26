@@ -348,7 +348,7 @@ export function TicketDrawer({
                 {ticket.job_id ? (
                   <a
                     href={`/maintenance?job=${ticket.job_id}`}
-                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2 text-sm font-medium text-foreground hover:border-brand/40 hover:bg-surface-inset transition-colors"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm font-medium text-foreground hover:border-brand/40 hover:bg-surface-inset transition-colors"
                   >
                     <Wrench size={14} className="text-brand" />
                     View linked work order

@@ -13,6 +13,7 @@ import {
   type ThresholdMetric,
 } from "../domain/rules";
 import type { MessageEntityType, MessageTemplateRow, ScheduledMessageRow } from "../domain/types";
+import { notifyAutomationFailure } from "./alerts";
 import { addDaysISO, londonToday, londonWallTimeToUtc } from "./london";
 import { buildMergeContext } from "./mergeContext";
 import { claimLegacyRentSlot } from "./parity";
@@ -339,6 +340,14 @@ export async function fireRuleForEntity(opts: {
       entityId: opts.entityId,
       error: runErr.message,
     });
+    if (!isDry) {
+      await notifyAutomationFailure({
+        tenantId: rule.tenant_id,
+        kind: "enqueue_failed",
+        reason: `Could not record the run: ${runErr.message}`,
+        ruleId: rule.id,
+      });
+    }
     return "error";
   }
 
@@ -402,6 +411,12 @@ export async function fireRuleForEntity(opts: {
       entityId: opts.entityId,
       error: enqueue.error,
     });
+    await notifyAutomationFailure({
+      tenantId: rule.tenant_id,
+      kind: "enqueue_failed",
+      reason: enqueue.error,
+      ruleId: rule.id,
+    });
     return "error";
   }
 
@@ -413,6 +428,17 @@ export async function fireRuleForEntity(opts: {
     })
     .eq("id", run.id);
   return "fired";
+}
+
+/** Rule-level sweep failure → agency alert. Dry-run rules stay quiet. */
+async function alertRuleError(rule: AutomationRuleRow, reason: string): Promise<void> {
+  if (rule.dry_run) return;
+  await notifyAutomationFailure({
+    tenantId: rule.tenant_id,
+    kind: "rule_error",
+    reason,
+    ruleId: rule.id,
+  });
 }
 
 /**
@@ -439,7 +465,17 @@ export async function evaluateAutomationRules(
   for (const raw of (rawRules ?? []) as Record<string, unknown>[]) {
     const parsed = parseRuleRow(raw);
     if (parsed) rules.push(parsed);
-    else console.error("[automations] skipping rule with invalid config", { ruleId: raw.id });
+    else {
+      console.error("[automations] skipping rule with invalid config", { ruleId: raw.id });
+      if (raw.active === true && raw.dry_run !== true) {
+        await notifyAutomationFailure({
+          tenantId: raw.tenant_id as string,
+          kind: "rule_error",
+          reason: "The rule's configuration is invalid and it was skipped",
+          ruleId: raw.id as string,
+        });
+      }
+    }
   }
 
   const templates = await loadTemplates(admin, rules.map((r) => r.template_id));
@@ -457,6 +493,7 @@ export async function evaluateAutomationRules(
       if (!template) {
         console.error("[automations] rule template missing", { ruleId: rule.id });
         errors++;
+        await alertRuleError(rule, "The rule's message template no longer exists");
         continue;
       }
 
@@ -467,6 +504,7 @@ export async function evaluateAutomationRules(
         const entry = DATE_FIELD_REGISTRY[rule.trigger_config.field];
         if (!entry) {
           errors++;
+          await alertRuleError(rule, `Unknown date field "${rule.trigger_config.field}"`);
           continue;
         }
         // "N days BEFORE the anchor" → today's sweep targets anchor = today+N.
@@ -530,10 +568,9 @@ export async function evaluateAutomationRules(
       }
     } catch (err) {
       errors++;
-      console.error("[automations] rule evaluation failed", {
-        ruleId: rule.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[automations] rule evaluation failed", { ruleId: rule.id, error: message });
+      await alertRuleError(rule, message);
     }
   }
 

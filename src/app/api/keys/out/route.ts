@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AssertionError, assertKeysDashboardRead } from "@/lib/auth/assertions";
+import { AssertionError, assertKeysDashboardRead, rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 import { getKeysOutForTenant } from "@/features/keys/data/queries";
 
 export async function GET(_req: NextRequest) {
@@ -8,6 +8,7 @@ export async function GET(_req: NextRequest) {
     const items = await getKeysOutForTenant(tenantId);
     return NextResponse.json({ items });
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }

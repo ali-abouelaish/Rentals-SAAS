@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { DEFAULT_TEMPLATES } from "../domain/defaultTemplates";
 import { TEMPLATE_ENTITY_TYPES, type MessageEntityType } from "../domain/types";
+import { WELCOME_TEMPLATE_KEY } from "../domain/mergeFields";
 import { buildMergeContext, sharedContext } from "../lib/mergeContext";
 import { renderTemplate } from "../lib/render";
 import { getTenantMessaging } from "../lib/settings";
@@ -196,6 +197,23 @@ export async function previewTemplate(templateId: string): Promise<TemplatePrevi
     anchor_date: context.today,
     anchor_date_iso: new Date().toISOString().slice(0, 10),
   };
+
+  // Same for the welcome email's send-time fields. The real portal link is a
+  // 20-minute token minted when a staff member actually sends, so a preview
+  // shows a stand-in rather than burning a live one.
+  if (template.key === WELCOME_TEMPLATE_KEY) {
+    const { data: agencyRow } = await admin
+      .from("tenants")
+      .select("contact_email")
+      .eq("id", profile.tenant_id)
+      .maybeSingle();
+    context = {
+      ...context,
+      portal_link: "https://your-portal-sign-in-link (generated when you send)",
+      portal_url: "https://your-workspace/portal/login",
+      agency_email: ((agencyRow?.contact_email as string | null) ?? "").trim(),
+    };
+  }
 
   const body = renderTemplate(template.body as string, context);
   const subject = template.subject

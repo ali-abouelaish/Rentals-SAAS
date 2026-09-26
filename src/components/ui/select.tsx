@@ -36,8 +36,10 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         )}
         <select
           className={cn(
-            "flex h-8 w-full rounded-lg border bg-gradient-to-br from-surface-card to-surface-app/80 px-2 py-1",
-            "text-xs border-border/70 text-foreground-secondary shadow-sm",
+            // 44px under a thumb, the dense 32px from `sm`. `text-base` below
+            // `sm` keeps iOS Safari from zooming the page in on focus.
+            "flex h-11 w-full rounded-lg border bg-gradient-to-br from-surface-card to-surface-app/80 px-2 py-1 sm:h-8",
+            "text-base sm:text-xs border-border/70 text-foreground-secondary shadow-sm",
             "transition-all duration-150 cursor-pointer",
             "hover:border-brand hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]",
             "focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/25",

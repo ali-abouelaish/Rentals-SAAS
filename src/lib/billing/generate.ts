@@ -12,6 +12,7 @@ import {
   type BillingPeriod,
   type EnvelopePurchaseInput,
   type InvoiceLineDraft,
+  type PlatformChargeInput,
   type SubscriptionInput,
   type UsageInput,
 } from "./rates";
@@ -67,6 +68,7 @@ export async function generatePlatformInvoices(
     { data: subscriptions },
     { data: purchases },
     { data: usageCounters },
+    { data: charges },
     { data: existing },
   ] = await Promise.all([
     admin.from("tenants").select("id, name").order("name", { ascending: true }),
@@ -90,6 +92,13 @@ export async function generatePlatformInvoices(
       .select("id, tenant_id, meter_key, quantity, billable, unit_price_pence, amount_pence, period_start")
       .eq("period_start", usagePeriod.start)
       .gt("amount_pence", 0),
+    // Agreed charges — the base fee and anything negotiated. Filtered to the
+    // period in code by chargeBillable rather than in SQL: the window rule has
+    // to match subscriptions exactly, and expressing it once keeps the two from
+    // drifting apart.
+    admin
+      .from("tenant_platform_charges")
+      .select("id, tenant_id, label, amount_pence, billing_starts_on, ends_on"),
     // Void invoices are invisible here. They are superseded records, and the
     // partial unique index deliberately allows a replacement — so a voided
     // month regenerates cleanly and its released purchases land on the new
@@ -156,6 +165,19 @@ export async function generatePlatformInvoices(
     usageByTenant.set(row.tenant_id as string, list);
   }
 
+  const chargesByTenant = new Map<string, PlatformChargeInput[]>();
+  for (const row of charges ?? []) {
+    const list = chargesByTenant.get(row.tenant_id as string) ?? [];
+    list.push({
+      id: row.id as string,
+      label: row.label as string,
+      amountPence: row.amount_pence as number,
+      billingStartsOn: row.billing_starts_on as string,
+      endsOn: (row.ends_on as string | null) ?? null,
+    });
+    chargesByTenant.set(row.tenant_id as string, list);
+  }
+
   const existingByTenant = new Map(
     (existing ?? []).map((row) => [
       row.tenant_id as string,
@@ -177,6 +199,7 @@ export async function generatePlatformInvoices(
       subscriptions: subsByTenant.get(tenantId) ?? [],
       purchases: tenantPurchases,
       usage: usageByTenant.get(tenantId) ?? [],
+      charges: chargesByTenant.get(tenantId) ?? [],
       period,
     });
 

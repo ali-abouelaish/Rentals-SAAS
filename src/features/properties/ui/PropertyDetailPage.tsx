@@ -60,7 +60,7 @@ function Lightbox({ photos, startIdx, onClose }: { photos: UnitPhoto[]; startIdx
       <button
         type="button"
         onClick={onClose}
-        className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+        className="absolute top-4 right-4 flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
       >
         <X className="h-5 w-5" />
       </button>
@@ -171,7 +171,7 @@ function RoomCard({ unit, photos, onOpen }: { unit: Unit; photos: UnitPhoto[]; o
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-foreground">{label}</span>
+            <span className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">{label}</span>
             {unit.room_type && (
               <span className="rounded-full bg-surface-inset border border-border px-2 py-0.5 text-[10px] font-medium text-foreground-muted capitalize">
                 {unit.room_type}
@@ -190,7 +190,7 @@ function RoomCard({ unit, photos, onOpen }: { unit: Unit; photos: UnitPhoto[]; o
               </span>
             )}
             {(unit.pm_tenant || unit.resident) && (
-              <span className="flex items-center gap-1 text-xs text-foreground-muted">
+              <span className="flex min-h-11 md:min-h-0 items-center gap-1 text-xs text-foreground-muted">
                 · <User className="h-3 w-3" /> {unit.pm_tenant?.full_name ?? unit.resident?.full_name}
               </span>
             )}
@@ -316,7 +316,7 @@ export function PropertyDetailPage({
           <button
             type="button"
             onClick={() => router.push("/properties")}
-            className="mt-1 flex items-center justify-center h-9 w-9 rounded-xl border border-border bg-surface-card hover:bg-surface-inset transition-colors text-foreground-secondary hover:text-foreground shrink-0"
+            className="mt-1 flex items-center justify-center h-11 w-11 md:h-9 md:w-9 rounded-xl border border-border bg-surface-card hover:bg-surface-inset transition-colors text-foreground-secondary hover:text-foreground shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -328,7 +328,7 @@ export function PropertyDetailPage({
               </span>
               {property.portfolio && <PortfolioBadge portfolio={property.portfolio} />}
             </div>
-            <p className="flex items-center gap-1 text-sm text-foreground-muted mt-1">
+            <p className="flex min-h-11 md:min-h-0 items-center gap-1 text-sm text-foreground-muted mt-1">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               {[property.address_line_1, property.address_line_2, property.postcode, property.area]
                 .filter(Boolean)
@@ -338,23 +338,25 @@ export function PropertyDetailPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Wraps on a phone. `shrink-0` on a three-link row was 185px of the
+            page's horizontal overflow. */}
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/profitability/${property.id}`}
-            className="flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
+            className="flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
           >
             <PoundSterling className="h-3.5 w-3.5" />
             Profitability
           </Link>
           <Link
             href={`/properties/${property.id}/setup`}
-            className="flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
+            className="flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
           >
             Manage rooms
           </Link>
           <Link
             href={`/properties/${property.id}/edit`}
-            className="flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
+            className="flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" />
             Edit
@@ -363,7 +365,7 @@ export function PropertyDetailPage({
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border flex gap-0">
+      <div className="flex gap-0 overflow-x-auto overscroll-x-contain border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {[
           { value: "overview" as const, label: "Overview" },
           { value: "tenants" as const, label: "Tenants", icon: Users },
@@ -381,7 +383,7 @@ export function PropertyDetailPage({
               type="button"
               onClick={() => setActiveTab(tab.value)}
               className={cn(
-                "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5",
+                "px-4 py-2.5 min-h-11 text-sm font-medium border-b-2 transition-colors -mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap",
                 activeTab === tab.value
                   ? "border-brand text-brand"
                   : "border-transparent text-foreground-secondary hover:text-foreground hover:border-border"
@@ -442,7 +444,7 @@ export function PropertyDetailPage({
                 <ImageIcon className="h-4 w-4 text-brand" strokeWidth={1.8} />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Common area photos</h2>
+                <h2 className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">Common area photos</h2>
                 <p className="text-xs text-foreground-muted">{communalPhotos.length} photo{communalPhotos.length !== 1 ? "s" : ""}</p>
               </div>
             </div>
@@ -462,7 +464,7 @@ export function PropertyDetailPage({
                 <p className="text-sm">No common area photos yet</p>
                 <Link
                   href={`/properties/${property.id}/setup`}
-                  className="mt-2 text-xs text-brand hover:underline"
+                  className="mt-2 inline-flex min-h-11 items-center text-xs text-brand md:min-h-0 hover:underline"
                 >
                   Add photos on the setup page →
                 </Link>
@@ -479,7 +481,7 @@ export function PropertyDetailPage({
               </h2>
               <Link
                 href={`/properties/${property.id}/setup`}
-                className="text-xs text-brand hover:underline"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center text-xs text-brand hover:underline md:min-h-0 md:min-w-0"
               >
                 Manage rooms →
               </Link>
@@ -519,7 +521,7 @@ export function PropertyDetailPage({
           <div className="rounded-bento bg-surface-card shadow-bento p-5 space-y-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Overview</p>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {property.total_rooms && (
                 <div className="rounded-xl bg-surface-inset border border-border px-3 py-2.5 text-center">
                   <p className="text-xl font-bold text-foreground">{property.total_rooms}</p>

@@ -57,6 +57,47 @@ export type OwnerStatementEmailContext = {
   closingAmount: string;
 };
 
+/**
+ * Platform invoice — Harbor Ops billing an agency.
+ *
+ * Note the direction: every other template here is an AGENCY writing to its
+ * tenants, landlords or contractors, and carries agency branding. This one is
+ * us writing to the agency, so it carries ours.
+ */
+export type PlatformInvoiceEmailContext = {
+  agencyName: string;
+  invoiceNumber: string | null;
+  periodLabel: string;
+  totalAmount: string;
+  lineSummary: { description: string; amount: string }[];
+  paymentNote: string | null;
+};
+
+/**
+ * The shell for agency-authored messages (welcome packs and anything else an
+ * agency writes itself). Unlike the templates above, the copy is not in the
+ * .hbs file — the agency types it, `renderMessageBody` turns their markup into
+ * block HTML, and this only supplies the chrome. `bodyHtml` is the one field
+ * emitted unescaped, and it is generated, never user HTML.
+ */
+export type AgencyMessageEmailContext = {
+  agency: {
+    name: string;
+    initial: string;
+    logo_url: string | null;
+    primary_color: string;
+    footer_address: string;
+    contact_email: string | null;
+  };
+  /** Uppercase pill in the header, e.g. "Welcome". */
+  eyebrow: string | null;
+  headline: string | null;
+  /** Key facts read from the record — pre-chunked into rows of two. */
+  factRows: { label: string; value: string }[][];
+  bodyHtml: string;
+  preheader: string;
+};
+
 const TEMPLATES_DIR = path.join(process.cwd(), "emails");
 
 function compile<T>(filename: string): HandlebarsTemplateDelegate<T> {
@@ -68,6 +109,8 @@ let dueTpl: HandlebarsTemplateDelegate<RentEmailContext> | null = null;
 let overdueTpl: HandlebarsTemplateDelegate<RentEmailContext> | null = null;
 let commTpl: HandlebarsTemplateDelegate<CommunicationRequestEmailContext> | null = null;
 let ownerStatementTpl: HandlebarsTemplateDelegate<OwnerStatementEmailContext> | null = null;
+let platformInvoiceTpl: HandlebarsTemplateDelegate<PlatformInvoiceEmailContext> | null = null;
+let agencyMessageTpl: HandlebarsTemplateDelegate<AgencyMessageEmailContext> | null = null;
 
 function loadDue() {
   if (!dueTpl) dueTpl = compile<RentEmailContext>("rent-due.hbs");
@@ -86,11 +129,27 @@ function loadOwnerStatement() {
   return ownerStatementTpl;
 }
 
+function loadPlatformInvoice() {
+  if (!platformInvoiceTpl) {
+    platformInvoiceTpl = compile<PlatformInvoiceEmailContext>("platform-invoice.hbs");
+  }
+  return platformInvoiceTpl;
+}
+
+function loadAgencyMessage() {
+  if (!agencyMessageTpl) {
+    agencyMessageTpl = compile<AgencyMessageEmailContext>("agency-message.hbs");
+  }
+  return agencyMessageTpl;
+}
+
 export const templates = {
   rentDue: (ctx: RentEmailContext) => loadDue()(ctx),
   rentOverdue: (ctx: RentEmailContext) => loadOverdue()(ctx),
   communicationRequest: (ctx: CommunicationRequestEmailContext) => loadCommunication()(ctx),
   ownerStatement: (ctx: OwnerStatementEmailContext) => loadOwnerStatement()(ctx),
+  platformInvoice: (ctx: PlatformInvoiceEmailContext) => loadPlatformInvoice()(ctx),
+  agencyMessage: (ctx: AgencyMessageEmailContext) => loadAgencyMessage()(ctx),
 };
 
 const GBP = new Intl.NumberFormat("en-GB", {

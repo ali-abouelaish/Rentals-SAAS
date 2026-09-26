@@ -17,7 +17,7 @@ export function KanbanColumn({ status, units, onCardClick }: KanbanColumnProps) 
   const config = STATUS_CONFIG[status];
 
   return (
-    <div className="flex flex-col w-[240px] shrink-0">
+    <div className="flex flex-col w-[85vw] max-w-[280px] shrink-0 snap-start sm:w-[240px] sm:max-w-none">
       {/* Column header */}
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-1.5">
@@ -33,7 +33,7 @@ export function KanbanColumn({ status, units, onCardClick }: KanbanColumnProps) 
       <div
         ref={setNodeRef}
         className={cn(
-          "flex flex-col gap-2 min-h-[120px] max-h-[calc(100vh-15rem)] overflow-y-auto overscroll-contain rounded-xl p-2 transition-colors duration-150",
+          "flex flex-col gap-2 min-h-[120px] max-h-[calc(100dvh-15rem)] overflow-y-auto overscroll-contain rounded-xl p-2 transition-colors duration-150",
           isOver
             ? "bg-brand/5 border-2 border-dashed border-brand/40"
             : "bg-surface-inset/60 border-2 border-dashed border-transparent"

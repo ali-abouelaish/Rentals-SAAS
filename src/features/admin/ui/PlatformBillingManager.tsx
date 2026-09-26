@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Download, RefreshCw } from "lucide-react";
 
 import Link from "next/link";
 
@@ -12,8 +12,10 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils/cn";
 import { formatPence } from "@/lib/envelopes/packs";
 import { AddAdjustmentDialog } from "./AddAdjustmentDialog";
+import { EmailInvoiceDialog } from "./EmailInvoiceDialog";
 import type { PlatformBillingSummary, PlatformInvoiceRow } from "../data/billing";
 import {
+  exportInvoicePdfAction,
   generateInvoicesAction,
   issueInvoiceAction,
   markInvoicePaidAction,
@@ -60,6 +62,31 @@ export function PlatformBillingManager({
       }
       toast.success(result.message);
       router.refresh();
+    });
+  };
+
+  /**
+   * Download the PDF.
+   *
+   * The action returns a signed URL rather than bytes — a server action
+   * serialises through the RSC payload, so returning a megabyte of PDF would be
+   * slow and still need turning into a blob here. `link.click()` rather than
+   * `window.open` because the URL carries a download disposition, and a popup
+   * blocker would otherwise eat it.
+   */
+  const downloadPdf = (invoiceId: string) => {
+    startTransition(async () => {
+      const result = await exportInvoicePdfAction({ invoiceId });
+      if ("error" in result) {
+        toast.error("Could not build the PDF", { description: result.error });
+        return;
+      }
+      const link = document.createElement("a");
+      link.href = result.url;
+      link.download = result.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     });
   };
 
@@ -146,12 +173,32 @@ export function PlatformBillingManager({
                     <span className="min-w-0">
                       <span className="block text-sm font-medium text-foreground">
                         {invoice.tenant.name}
+                        {invoice.invoice_number && (
+                          <span className="ml-2 font-normal text-[11px] text-foreground-muted">
+                            {invoice.invoice_number}
+                          </span>
+                        )}
                       </span>
                       <span className="block text-[11px] text-foreground-muted mt-0.5">
                         {invoice.lines.length} line{invoice.lines.length === 1 ? "" : "s"}
                         {invoice.issued_at && <> · issued {formatDate(invoice.issued_at)}</>}
                         {invoice.paid_at && <> · paid {formatDate(invoice.paid_at)}</>}
+                        {invoice.emailed_at && <> · emailed {formatDate(invoice.emailed_at)}</>}
                       </span>
+                      {/* An issued invoice nobody has sent is the quiet failure
+                          here — it looks handled on screen while the agency has
+                          never seen it. */}
+                      {invoice.status === "issued" && !invoice.emailed_at && (
+                        <span className="block text-[11px] text-amber-700 mt-0.5">
+                          Not emailed yet
+                        </span>
+                      )}
+                      {invoice.email_error && (
+                        <span className="flex items-center gap-1 text-[11px] text-red-600 mt-0.5">
+                          <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
+                          Last send failed: {invoice.email_error}
+                        </span>
+                      )}
                     </span>
                   </button>
 
@@ -167,6 +214,33 @@ export function PlatformBillingManager({
                     <span className="text-sm font-semibold text-foreground">
                       {formatPence(invoice.total_pence)}
                     </span>
+
+                    <Tooltip content="Download the PDF. A draft downloads stamped DRAFT, so figures can be reviewed before issuing.">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        loading={isPending}
+                        onClick={() => downloadPdf(invoice.id)}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                    </Tooltip>
+
+                    {/* Only once issued. A draft gets rebuilt by the generator,
+                        so emailing one puts a figure in somebody's inbox that
+                        we are about to change. */}
+                    {(invoice.status === "issued" || invoice.status === "paid") && (
+                      <EmailInvoiceDialog
+                        invoiceId={invoice.id}
+                        agencyName={invoice.tenant.name}
+                        invoiceNumber={invoice.invoice_number}
+                        periodLabel={periodLabel}
+                        defaultEmail={invoice.billing_email}
+                        alreadySentTo={invoice.emailed_to}
+                        sentAt={invoice.emailed_at}
+                      />
+                    )}
 
                     <Tooltip content="Every invoice, subscription, envelope purchase and usage count for this agency.">
                       <Link

@@ -259,7 +259,7 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
         </div>
         <div className="min-w-[180px]">
@@ -267,7 +267,7 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
           <select
             value={portfolioId}
             onChange={(e) => setPortfolioId(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
             <option value="">All portfolios</option>
             {portfolios.map((p) => (
@@ -277,8 +277,8 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
             ))}
           </select>
         </div>
-        <label className="inline-flex items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+        <label className="inline-flex min-h-11 items-center gap-2 text-sm text-foreground md:min-h-0">
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-6 w-6 md:h-4 md:w-4" />
           Active
         </label>
         <Button variant="outline" size="sm" onClick={handleMetaSave} loading={isMetaPending}>
@@ -955,7 +955,7 @@ function FieldsSidebar({ fields, selectedId, onSelect, onDelete }: FieldsSidebar
                 e.stopPropagation();
                 onDelete(f.localId);
               }}
-              className="text-red-500 hover:bg-red-50 rounded p-0.5"
+              className="grid h-11 w-11 place-items-center text-red-500 hover:bg-red-50 rounded md:h-auto md:w-auto p-0.5"
               aria-label="Delete field"
             >
               <Trash2 size={12} />

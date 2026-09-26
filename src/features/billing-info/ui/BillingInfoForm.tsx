@@ -88,7 +88,7 @@ export function BillingInfoForm({ info }: Props) {
             <textarea
               name="notes"
               rows={2}
-              className="flex w-full rounded-lg border border-border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20"
+              className="flex w-full rounded-lg border border-border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:border-brand focus:ring-2 focus:ring-border-ring/20"
               placeholder="Internal notes"
               defaultValue={info?.notes ?? ""}
             />

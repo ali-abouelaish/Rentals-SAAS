@@ -110,7 +110,7 @@ export function CreateTenantForUnitDialog({ open, onClose, unit, onCreatedAndLin
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>New tenant — {unit.property?.name} · {unitLabel}</DialogTitle>
         </DialogHeader>
@@ -119,7 +119,7 @@ export function CreateTenantForUnitDialog({ open, onClose, unit, onCreatedAndLin
           from the Tenants module. They&apos;ll be linked to this unit straight away.
         </p>
         <form onSubmit={handleSubmit(handleCreate)} className="space-y-4 mt-2">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField
               label="Full name"
               hint="Optional — add it later if unknown"

@@ -27,7 +27,7 @@ import type { Form, FormQuestion } from "../domain/types";
 import type { Client } from "@/features/clients/domain/types";
 import type { Portfolio } from "@/features/properties/domain/types";
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({
   label,
@@ -200,7 +200,9 @@ export function FormBuilderPage({ form: initialForm, clients, appUrl, portfolios
               )}
               <p className="text-xs text-foreground-muted mt-1">/f/{form.public_slug}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+            {/* Same fix as FormsBuilderPage: `shrink-0` stopped `flex-wrap`
+                from ever taking effect. */}
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
               <Button type="button" variant="outline" size="sm" onClick={() => setEditingHeader(true)}>
                 <Pencil className="h-3.5 w-3.5 mr-1" />
                 Edit
@@ -227,6 +229,7 @@ export function FormBuilderPage({ form: initialForm, clients, appUrl, portfolios
                 onClick={handleToggleActive}
                 disabled={isPending}
                 title={form.is_active ? "Deactivate form" : "Activate form"}
+                className="grid h-11 w-11 place-items-center md:inline-flex md:h-auto md:w-auto"
               >
                 {form.is_active ? (
                   <ToggleRight className="h-5 w-5 text-green-600" />

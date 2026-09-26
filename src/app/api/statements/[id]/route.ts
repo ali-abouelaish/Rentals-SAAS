@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteUpload } from "@/features/statements/actions/manage";
+import { rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -9,6 +10,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     const message = err instanceof Error ? err.message : "Delete failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

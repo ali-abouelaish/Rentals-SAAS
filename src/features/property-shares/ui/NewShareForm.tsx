@@ -31,7 +31,7 @@ export function NewShareForm({ portfolios, properties }: NewShareFormProps) {
   return (
     <form action={handleSubmit} className="space-y-6">
       {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-sm text-error">
+        <div className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/5 px-3 py-2.5 md:py-2 text-base md:text-sm text-error">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>

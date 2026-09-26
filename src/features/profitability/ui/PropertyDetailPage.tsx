@@ -169,7 +169,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
       <div>
         <Link
           href="/profitability"
-          className="inline-flex items-center gap-1.5 text-sm text-foreground-muted hover:text-foreground transition-colors mb-3"
+          className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-sm text-foreground-muted hover:text-foreground transition-colors mb-3"
         >
           <ArrowLeft size={15} />
           Back to Profitability
@@ -179,7 +179,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
           <div className="flex items-center gap-3 flex-wrap">
             <Link
               href={`/properties/${property.property_id}`}
-              className="text-2xl font-bold tracking-tight font-heading text-foreground hover:text-brand transition-colors"
+              className="inline-flex min-h-11 items-center text-2xl font-bold tracking-tight md:min-h-0 font-heading text-foreground hover:text-brand transition-colors"
             >
               {property.property_name}
             </Link>
@@ -188,7 +188,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
               target="_blank"
               rel="noopener noreferrer"
               title="Open property view in new tab"
-              className="inline-flex items-center justify-center p-1 rounded-md text-foreground-muted hover:text-brand hover:bg-surface-inset transition-colors"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md p-1 text-foreground-muted transition-colors hover:bg-surface-inset hover:text-brand md:h-auto md:w-auto"
             >
               <ExternalLink size={16} />
             </a>
@@ -197,7 +197,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
               color={property.portfolio_color}
             />
           </div>
-          <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+          <div className="flex min-h-11 md:min-h-0 items-center gap-2 text-sm text-foreground-secondary">
             <span>
               {property.occupied_units}/{property.total_units} units occupied
             </span>
@@ -237,7 +237,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
               <button
                 type="button"
                 onClick={() => setEditingTarget(true)}
-                className="p-1 rounded hover:bg-surface-card text-foreground-muted hover:text-foreground transition-colors"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-surface-card md:h-auto md:w-auto md:p-1 text-foreground-muted hover:text-foreground transition-colors"
                 title={property.target_profit !== null ? "Edit target" : "Set target"}
               >
                 <Pencil size={12} />
@@ -312,12 +312,12 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
       {property.trend && (
         <div className="flex items-center gap-2">
           {property.trend === "up" && (
-            <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600">
+            <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-sm text-emerald-600">
               <TrendingUp size={16} /> Up from last month
             </span>
           )}
           {property.trend === "down" && (
-            <span className="inline-flex items-center gap-1.5 text-sm text-red-600">
+            <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-sm text-red-600">
               <TrendingDown size={16} /> Down from last month
               {property.last_month_net_profit !== null && (
                 <span className="text-foreground-muted">
@@ -327,7 +327,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
             </span>
           )}
           {property.trend === "flat" && (
-            <span className="inline-flex items-center gap-1.5 text-sm text-foreground-muted">
+            <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-sm text-foreground-muted">
               <Minus size={16} /> Flat vs last month
             </span>
           )}
@@ -458,7 +458,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
             {furnitureCosts.length > 0 && (
               <button
                 onClick={() => setFurnitureView((v) => (v === "amortised" ? "cash" : "amortised"))}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground-secondary hover:text-foreground transition-colors border border-border rounded-lg px-3 py-1.5"
+                className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-xs font-medium text-foreground-secondary hover:text-foreground transition-colors border border-border rounded-lg px-3 py-1.5"
               >
                 {furnitureView === "amortised" ? (
                   <ToggleRight size={14} className="text-brand" />
@@ -470,7 +470,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
             )}
             <button
               onClick={() => { setEditingCost(null); setShowCostModal(true); }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity"
+              className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity"
             >
               <Plus size={15} />
               Add Cost
@@ -586,7 +586,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
                       {cost.unit_id ?? "Property-wide"}
                     </td>
                     <td className="py-3 text-right">
-                      <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 justify-end opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => { setEditingCost(cost); setShowCostModal(true); }}
                           className="p-1.5 rounded-lg hover:bg-surface-card text-foreground-muted hover:text-foreground transition-colors"
@@ -624,7 +624,7 @@ export function PropertyDetailPage({ property, trend }: PropertyDetailPageProps)
               No costs logged yet.{" "}
               <button
                 onClick={() => setShowCostModal(true)}
-                className="text-brand font-medium hover:underline"
+                className="inline-flex min-h-11 items-center text-brand font-medium hover:underline md:min-h-0"
               >
                 Add the first cost
               </button>

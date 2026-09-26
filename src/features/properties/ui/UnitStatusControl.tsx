@@ -41,7 +41,7 @@ export function UnitStatusControl({
           setOpen(true);
         }}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full font-medium border border-transparent",
+          "inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-full font-medium border border-transparent",
           "select-none caret-transparent transition-all hover:ring-2 hover:ring-brand/25 active:scale-[0.97] cursor-pointer",
           size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm",
           config.bg,

@@ -40,7 +40,7 @@ import { deleteRule, runRuleNow, setRuleMode, updateRule } from "../actions/rule
 import { previewTemplate, type TemplatePreviewResult } from "../actions/templates";
 
 const inputCls =
-  "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
+  "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
 const hintCls = "text-[11px] text-foreground-muted mt-1";
 const errCls = "text-xs text-red-600 mt-1";
 
@@ -552,7 +552,7 @@ export function RuleDetail({
           </label>
         )}
 
-        <div className="rounded-xl border border-border p-3">
+        <div className="min-h-11 md:min-h-0 rounded-xl border border-border p-3">
           <label className="flex items-start gap-2">
             <input
               type="checkbox"

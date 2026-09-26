@@ -105,7 +105,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -113,7 +113,12 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
       />
 
       {/* Dialog */}
-      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-surface-card shadow-xl border border-border max-h-[90vh] overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cost"
+        className="relative z-10 max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface-card pb-[max(0px,env(safe-area-inset-bottom))] shadow-xl sm:max-h-[85dvh] sm:rounded-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border">
           <h2 className="text-base font-semibold text-foreground">
@@ -121,7 +126,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-surface-inset text-foreground-muted transition-colors"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-foreground-muted transition-colors hover:bg-surface-inset sm:h-8 sm:w-8"
           >
             <X size={16} />
           </button>
@@ -136,7 +141,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
             </label>
             <select
               {...register("cost_type")}
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {Object.entries(COST_TYPE_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
@@ -157,7 +162,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
                   ? "Describe this cost"
                   : "Optional custom label"
               }
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
 
@@ -229,14 +234,14 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
                 min="1"
                 max="31"
                 placeholder="1"
-                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
           )}
 
           {/* Amortised-specific */}
           {costMode === "amortised" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Spread over (months)
@@ -246,7 +251,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
                   type="number"
                   min="1"
                   placeholder="24"
-                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
               <div>
@@ -256,7 +261,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
                 <input
                   {...register("amortise_start_date")}
                   type="date"
-                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
             </div>
@@ -270,7 +275,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
             <input
               {...register("date_incurred")}
               type="date"
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             />
             {errors.date_incurred && (
               <p className="text-xs text-red-600 mt-1">{errors.date_incurred.message}</p>
@@ -284,7 +289,7 @@ export function CostModal({ propertyId, editingCost, onClose, onSuccess }: CostM
               {...register("notes")}
               rows={2}
               placeholder="Optional notes..."
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-brand resize-none"
             />
           </div>
 

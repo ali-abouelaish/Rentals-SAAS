@@ -119,7 +119,7 @@ export function TdsRepaymentDialog({ depositId, dan }: { depositId: string; dan:
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Raise a repayment request</DialogTitle>
             <DialogDescription>

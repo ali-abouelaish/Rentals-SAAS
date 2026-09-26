@@ -141,7 +141,7 @@ function PropertyGroup({
     <div className="rounded-xl border border-border bg-surface-card overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3 bg-surface-inset/60 border-b border-border">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10">
-          <Warehouse className="h-4 w-4 text-brand" strokeWidth={1.8} />
+          <Warehouse className="h-5 w-5 sm:h-4 sm:w-4 text-brand" strokeWidth={1.8} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

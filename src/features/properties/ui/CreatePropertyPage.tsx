@@ -73,10 +73,10 @@ function Field({
 }
 
 const inputCls =
-  "h-10 w-full rounded-xl border border-border bg-surface-inset px-3.5 text-sm transition-colors placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 w-full rounded-xl md:h-10 border border-border bg-surface-inset px-3.5 text-base sm:text-sm transition-colors placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 const selectCls =
-  "h-10 w-full rounded-xl border border-border bg-surface-inset px-3.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 w-full rounded-xl md:h-10 border border-border bg-surface-inset px-3.5 text-base sm:text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 /* Card-style multi-choice selector */
 function ChoiceGroup<T extends string>({
@@ -132,14 +132,14 @@ function PillGroup<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div className="flex rounded-xl border border-border bg-surface-inset p-0.5 w-fit">
+    <div className="flex max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-border bg-surface-inset p-0.5 [scrollbar-width:none] sm:w-fit [&::-webkit-scrollbar]:hidden">
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
           className={cn(
-            "px-4 py-1.5 text-sm font-medium rounded-lg transition-all",
+            "px-4 py-1.5 min-h-11 md:min-h-0 text-sm font-medium rounded-lg transition-all",
             value === opt.value
               ? "bg-surface-card text-foreground shadow-sm"
               : "text-foreground-muted hover:text-foreground"
@@ -169,7 +169,7 @@ function ToggleChip({
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all select-none w-full",
+        "flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all select-none w-full",
         checked
           ? "border-brand bg-brand/10 text-brand"
           : "border-border bg-surface-inset text-foreground-muted hover:text-foreground hover:bg-surface-card"
@@ -212,7 +212,7 @@ function SectionCard({
           <Icon className="h-4 w-4 text-brand" strokeWidth={1.8} />
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+          <h2 className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">{title}</h2>
           {description && <p className="text-xs text-foreground-muted">{description}</p>}
         </div>
       </div>
@@ -327,7 +327,7 @@ function SummaryPanel({
             )}
 
             {/* Bills */}
-            <div className="flex items-center gap-1.5 text-xs text-foreground-secondary">
+            <div className="flex min-h-11 md:min-h-0 items-center gap-1.5 text-xs text-foreground-secondary">
               <Zap className="h-3 w-3 text-amber-500" />
               {billsLabel}
             </div>
@@ -645,12 +645,12 @@ export function CreatePropertyPage({
   return (
     <div className="space-y-6">
       {/* Page header — matches dashboard pattern */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex items-center justify-center h-9 w-9 rounded-xl border border-border bg-surface-card hover:bg-surface-inset transition-colors text-foreground-secondary hover:text-foreground"
+            className="flex shrink-0 items-center justify-center h-11 w-11 md:h-9 md:w-9 rounded-xl border border-border bg-surface-card hover:bg-surface-inset transition-colors text-foreground-secondary hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -663,11 +663,11 @@ export function CreatePropertyPage({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-card transition-colors"
+            className="min-h-11 md:min-h-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-card transition-colors"
           >
             Cancel
           </button>
@@ -675,7 +675,7 @@ export function CreatePropertyPage({
             form="create-property-form"
             type="submit"
             disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
+            className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
           >
             {isPending ? "Saving…" : isEditMode ? "Save changes" : "Save property"}
           </button>
@@ -755,7 +755,7 @@ export function CreatePropertyPage({
                 </Field>
               )}
               {propertyType === "hmo" && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="Total rooms" error={errors.total_rooms?.message}>
                     <input type="number" min="1" {...register("total_rooms")} className={inputCls} placeholder="6" />
                   </Field>
@@ -914,7 +914,7 @@ export function CreatePropertyPage({
             </div>
 
             {/* Contract dates */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Contract start">
                 <input type="date" {...register("contract_start_date")} className={inputCls} />
               </Field>
@@ -924,7 +924,7 @@ export function CreatePropertyPage({
             </div>
 
             {/* Rent & schedule */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Monthly rent owed (£)">
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-foreground-muted">£</span>
@@ -961,7 +961,7 @@ export function CreatePropertyPage({
                 </div>
               ) : liveValues.contract_document_url ? (
                 <div className="flex items-center gap-3 text-sm">
-                  <a href={liveValues.contract_document_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-brand hover:underline">
+                  <a href={liveValues.contract_document_url} target="_blank" rel="noopener noreferrer" className="flex min-h-11 md:min-h-0 items-center gap-1.5 text-brand hover:underline">
                     <FileText className="h-3.5 w-3.5" />
                     View current contract
                   </a>
@@ -973,7 +973,7 @@ export function CreatePropertyPage({
                 <button
                   type="button"
                   onClick={() => contractFileRef.current?.click()}
-                  className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-surface-inset px-3 py-2 text-sm text-foreground-muted hover:border-brand/40 hover:text-brand transition-colors w-full"
+                  className="flex min-h-11 items-center gap-2 rounded-xl border border-dashed border-border bg-surface-inset px-3 py-2 text-sm text-foreground-muted hover:border-brand/40 hover:text-brand transition-colors w-full"
                 >
                   <FileText className="h-4 w-4" />
                   Upload contract (PDF or Word)
@@ -1015,7 +1015,7 @@ export function CreatePropertyPage({
                 />
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Min age" hint="Leave blank for no minimum">
                 <input type="number" min="18" max="99" {...register("min_age")} className={inputCls} placeholder="18" />
               </Field>

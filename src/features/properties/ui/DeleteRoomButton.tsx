@@ -56,7 +56,7 @@ export function DeleteRoomButton({ unitId, roomLabel, onDeleted }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center h-8 w-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors"
+        className="flex shrink-0 items-center justify-center h-11 w-11 md:h-8 md:w-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors"
         title="Delete room"
       >
         <Trash2 className="h-3.5 w-3.5" />

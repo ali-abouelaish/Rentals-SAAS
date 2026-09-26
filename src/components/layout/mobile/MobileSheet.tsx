@@ -52,7 +52,7 @@ export const MobileSheetContent = React.forwardRef<
           {title}
         </DialogPrimitive.Title>
         <DialogPrimitive.Close
-          className="-mr-1 rounded-full p-1.5 text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-border-ring/40"
+          className="-mr-1 grid h-11 w-11 place-items-center rounded-full text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-border-ring/40"
           aria-label="Close"
         >
           <X className="h-5 w-5" />

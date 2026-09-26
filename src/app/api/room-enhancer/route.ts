@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-import { AssertionError, assertRoomEnhancerAccess } from "@/lib/auth/assertions";
+import { AssertionError, assertRoomEnhancerAccess, rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 
 export const runtime = "nodejs";
 
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     await assertRoomEnhancerAccess();
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }

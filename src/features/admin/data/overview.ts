@@ -4,8 +4,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/auth/requireRole";
 import { getIntegration } from "@/lib/integrations/catalog";
 import {
+  chargeBillable,
   currentBillingPeriod,
   subscriptionBillable,
+  type PlatformChargeInput,
   type SubscriptionInput
 } from "@/lib/billing/rates";
 
@@ -65,12 +67,15 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     Date.now() - OVERDUE_AFTER_DAYS * 86_400_000
   ).toISOString();
 
-  const [subscriptions, invoices, envelopes, mailboxes, brands] = await Promise.all([
+  const [subscriptions, charges, invoices, envelopes, mailboxes, brands] = await Promise.all([
     admin
       .from("tenant_integration_subscriptions")
       .select(
         "tenant_id, integration_key, status, monthly_price_pence, is_grandfathered, billing_starts_on, ends_on"
       ),
+    admin
+      .from("tenant_platform_charges")
+      .select("id, tenant_id, label, amount_pence, billing_starts_on, ends_on"),
     admin
       .from("tenant_platform_invoices")
       .select("id, tenant_id, status, total_pence, issued_at, period_year, period_month"),
@@ -100,6 +105,29 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   // invoices is worse than none.
   let mrrPence = 0;
   let subscriptionCount = 0;
+
+  // Agreed charges are the base fees — for most agencies the bulk of MRR, and
+  // the reason this figure was meaningless before there was anywhere to set one.
+  // Filtered with chargeBillable, the same predicate the invoice run uses.
+  if (charges.error) {
+    unavailable.push("tenant_platform_charges");
+  } else {
+    for (const row of charges.data ?? []) {
+      const input: PlatformChargeInput = {
+        id: row.id as string,
+        label: row.label as string,
+        amountPence: row.amount_pence as number,
+        billingStartsOn: row.billing_starts_on as string,
+        endsOn: (row.ends_on as string | null) ?? null
+      };
+      if (chargeBillable(input, period)) {
+        mrrPence += input.amountPence;
+        // Discounts are charges too, but counting one as a "billable
+        // subscription" in the helper text would be misleading.
+        if (input.amountPence > 0) subscriptionCount += 1;
+      }
+    }
+  }
 
   if (subscriptions.error) {
     unavailable.push("tenant_integration_subscriptions");

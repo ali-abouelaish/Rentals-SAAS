@@ -77,7 +77,7 @@ export function RentCollectionRow({ row }: { row: Row }) {
           <div className="flex items-center gap-2 flex-wrap">
             <Link
               href={`/tenants?focus=${row.tenant.id}`}
-              className="text-sm font-semibold text-foreground hover:underline truncate"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-foreground hover:underline truncate sm:min-h-0"
             >
               {row.tenant.name}
             </Link>
@@ -128,7 +128,7 @@ export function RentCollectionRow({ row }: { row: Row }) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 text-[11px] text-foreground-muted hover:text-foreground"
+            className="flex min-h-11 sm:min-h-0 items-center gap-1 text-[11px] text-foreground-muted hover:text-foreground"
           >
             {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {expanded ? "Hide" : "History"}

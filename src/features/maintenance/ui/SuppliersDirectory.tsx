@@ -210,7 +210,7 @@ export function SuppliersDirectory({
                         }}
                         disabled={deletingId === supplier.id}
                         title="Remove this supplier from the directory"
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-all disabled:opacity-50"
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-all disabled:opacity-50"
                       >
                         <Trash2 size={13} />
                       </button>

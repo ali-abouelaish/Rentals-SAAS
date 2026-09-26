@@ -65,7 +65,7 @@ function ReminderButton({
         title={label}
         onClick={() => setOpen(true)}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+          "inline-flex min-h-11 sm:min-h-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
           overdue
             ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
             : "border-border bg-surface-card text-foreground-secondary hover:border-brand hover:bg-brand/5 hover:text-brand"
@@ -99,8 +99,10 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
 
   return (
     <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
-      {/* Header */}
-      <div className="grid grid-cols-[1fr_1.5fr_1fr_1fr_180px] gap-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted border-b border-border bg-surface-inset">
+      {/* Header — the five-column grid is desktop only. At 360px it gave each
+          1fr column about 25px, and `truncate` hid the damage rather than
+          fixing it: every value became an ellipsis. */}
+      <div className="hidden md:grid grid-cols-[1fr_1.5fr_1fr_1fr_180px] gap-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted border-b border-border bg-surface-inset">
         <span>Name</span>
         <span>Unit</span>
         <span>Nationality</span>
@@ -119,31 +121,46 @@ export function TenantsListView({ tenants, reminderStatus, onTenantClick }: Tena
             onClick={() => onTenantClick(tenant.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTenantClick(tenant.id); }}
             className={cn(
-              "w-full grid grid-cols-[1fr_1.5fr_1fr_1fr_180px] gap-4 px-4 py-3.5 text-left text-sm",
+              "w-full text-left text-sm border-b border-border-muted last:border-0",
+              "flex flex-col gap-2 px-4 py-3.5",
+              "md:grid md:grid-cols-[1fr_1.5fr_1fr_1fr_180px] md:gap-4 md:border-0",
               "hover:bg-surface-inset transition-colors cursor-pointer",
               i % 2 === 0 ? "" : "bg-surface-inset/40"
             )}
           >
+            {/* Identity — the card's heading on a phone, column one on desktop */}
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="font-medium text-foreground truncate">{tenant.full_name ?? "Unnamed tenant"}</span>
-              <span className="text-[11px] text-foreground-muted truncate">{tenant.email ?? "—"}</span>
+              <span className="font-medium text-foreground [overflow-wrap:anywhere] md:truncate">
+                {tenant.full_name ?? "Unnamed tenant"}
+              </span>
+              <span className="text-[11px] text-foreground-muted [overflow-wrap:anywhere] md:truncate">
+                {tenant.email ?? "—"}
+              </span>
             </div>
 
-            <div className="text-foreground-secondary text-xs truncate flex items-center">
+            {/* Unit */}
+            <div className="text-foreground-secondary text-xs flex items-center min-w-0 md:truncate">
+              <span className="font-medium text-foreground-muted mr-1.5 md:hidden">Unit</span>
               <UnitLabel tenant={tenant} />
             </div>
 
-            <div className="text-foreground-secondary text-xs flex items-center">
-              {tenant.nationality ?? "—"}
+            {/* Nationality + employment share a row on a phone: two short
+                values do not each need a line of their own. */}
+            <div className="flex gap-4 md:contents">
+              <div className="text-foreground-secondary text-xs flex items-center min-w-0">
+                <span className="font-medium text-foreground-muted mr-1.5 md:hidden">Nationality</span>
+                {tenant.nationality ?? "—"}
+              </div>
+
+              <div className="text-foreground-secondary text-xs flex items-center min-w-0">
+                <span className="font-medium text-foreground-muted mr-1.5 md:hidden">Employment</span>
+                {tenant.employment_status
+                  ? EMPLOYMENT_STATUS_LABELS[tenant.employment_status]
+                  : "—"}
+              </div>
             </div>
 
-            <div className="text-foreground-secondary text-xs flex items-center">
-              {tenant.employment_status
-                ? EMPLOYMENT_STATUS_LABELS[tenant.employment_status]
-                : "—"}
-            </div>
-
-            <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center md:justify-end" onClick={(e) => e.stopPropagation()}>
               <ReminderButton
                 pmTenantId={tenant.id}
                 tenantName={tenant.full_name ?? "Unnamed tenant"}

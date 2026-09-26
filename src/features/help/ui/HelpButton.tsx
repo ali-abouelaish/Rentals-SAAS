@@ -28,12 +28,15 @@ export function HelpButton() {
 
   return (
     <>
+      {/* Icon-only below `sm`, so it needs a thumb-sized box there even though
+          `size="sm"` is right once the "Help" label is showing. */}
       <Button
         type="button"
         variant="secondary"
         size="sm"
         onClick={() => setOpen(true)}
         aria-label="Help for this page"
+        className="h-11 w-11 p-0 sm:h-8 sm:w-auto sm:px-3"
       >
         <HelpCircle className="h-4 w-4" />
         <span className="hidden sm:inline">Help</span>

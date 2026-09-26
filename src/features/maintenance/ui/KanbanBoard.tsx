@@ -157,7 +157,7 @@ function KanbanColumn({ status, jobs, onJobClick }: KanbanColumnProps) {
   const sColors = JOB_STATUS_COLORS[status];
 
   return (
-    <div className="flex flex-col min-w-[260px] max-w-[300px]">
+    <div className="flex flex-col w-[85vw] min-w-0 max-w-[300px] shrink-0 snap-start sm:w-auto sm:min-w-[260px]">
       {/* Column header */}
       <div className="flex items-center justify-between mb-3 px-1">
         <span className={cn("text-xs font-semibold uppercase tracking-wider", sColors.text)}>
@@ -222,7 +222,7 @@ export function KanbanBoard({ jobs, onJobClick, onStatusChange }: KanbanBoardPro
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4 pt-1">
+      <div className="flex gap-4 overflow-x-auto overscroll-x-contain pb-4 pt-1 snap-x snap-mandatory md:snap-none">
         {KANBAN_COLUMNS.map((status) => (
           <KanbanColumn
             key={status}

@@ -26,8 +26,8 @@ const DEFAULT_FILTERS: PmTenantFilters = {
   search: "",
 };
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
@@ -151,12 +151,12 @@ export function TenantsPage({ initialTenants, reminderStatus, portalEnabled }: T
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Tenant</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(handleCreate)} className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField label="Full name *" error={errors.full_name?.message}>
                 <input {...register("full_name")} className={inputCls} />
               </FormField>

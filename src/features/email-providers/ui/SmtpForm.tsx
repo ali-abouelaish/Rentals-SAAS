@@ -13,7 +13,7 @@ import { saveSmtpProvider } from "../actions/smtp";
 import type { SmtpConfigForEdit } from "../data/provider";
 
 const inputCls =
-  "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
+  "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
 const hintCls = "text-[11px] text-foreground-muted mt-1";
 const errCls = "text-xs text-red-600 mt-1";
 

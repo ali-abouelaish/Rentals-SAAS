@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { getTenantDetails } from "@/features/admin/data/admin";
 import { getAgencyBillingHistory } from "@/features/admin/data/billing";
+import { AgencyPricingPanel } from "@/features/admin/ui/AgencyPricingPanel";
 import { formatPence } from "@/lib/envelopes/packs";
 import { cn } from "@/lib/utils/cn";
 
@@ -93,7 +94,7 @@ export default async function TenantBillingPage({
             label: "Current MRR",
             value: formatPence(history.mrrPence),
             tooltip:
-              "Sum of this agency's active, non-grandfathered subscriptions at the price each was frozen at when activated."
+              "Their agreed monthly charges plus active add-ons, less any recurring discount. Envelopes and metered usage are not recurring, so they are not counted here."
           },
           {
             label: "Outstanding",
@@ -120,65 +121,14 @@ export default async function TenantBillingPage({
       </div>
 
       <Card>
-        <CardContent className="pt-5 space-y-3">
-          <h2 className="text-base font-semibold text-foreground">Subscriptions</h2>
-          {history.subscriptions.length === 0 ? (
-            <p className="text-sm text-foreground-secondary">
-              No integration subscriptions. This agency is on the included features only.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Integration</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Billing from</TableHead>
-                    <TableHead>Ends</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {history.subscriptions.map((sub) => (
-                    <TableRow key={sub.integrationKey}>
-                      <TableCell className="text-sm text-foreground">
-                        {sub.name}
-                        {sub.blockedOnUs && (
-                          <Tooltip content="This scheme issues credentials per agency and only a super admin can apply them. The agency cannot clear this themselves — it is waiting on us.">
-                            <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 cursor-help">
-                              waiting on us
-                            </span>
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs text-foreground-secondary">
-                        {sub.status.replaceAll("_", " ")}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {sub.isGrandfathered ? (
-                          <Tooltip content="Kept free when paid integrations were introduced. Charging them now would break the promise the grandfathering migration made.">
-                            <span className="text-foreground-muted cursor-help">
-                              grandfathered
-                            </span>
-                          </Tooltip>
-                        ) : (
-                          <span className="text-foreground">
-                            {formatPence(sub.monthlyPricePence)}/mo
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs text-foreground-secondary">
-                        {shortDate(sub.billingStartsOn)}
-                      </TableCell>
-                      <TableCell className="text-xs text-foreground-secondary">
-                        {shortDate(sub.endsOn)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+        <CardContent className="pt-5">
+          <AgencyPricingPanel
+            tenantId={params.tenantId}
+            agencyName={tenant.name}
+            charges={history.charges}
+            subscriptions={history.subscriptions}
+            mrrPence={history.mrrPence}
+          />
         </CardContent>
       </Card>
 

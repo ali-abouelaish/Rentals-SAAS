@@ -110,7 +110,7 @@ export function UnitInfoDrawer({
 
           <div className="p-6 space-y-5">
             <div className="flex items-center gap-2 text-sm text-foreground-secondary">
-              <MapPin className="h-4 w-4 shrink-0 text-foreground-muted" />
+              <MapPin className="h-5 w-5 sm:h-4 sm:w-4 shrink-0 text-foreground-muted" />
               <span>
                 {fullAddress}
                 {unit.property.postcode ? ` · ${unit.property.postcode}` : ""}
@@ -118,7 +118,7 @@ export function UnitInfoDrawer({
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <InfoBox
                 icon={<PoundSterling className="h-4 w-4" />}
                 label="Rent pcm"
@@ -166,7 +166,7 @@ export function UnitInfoDrawer({
                   {unit.contact.phone && (
                     <a
                       href={`tel:${unit.contact.phone}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-inset"
+                      className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-inset"
                     >
                       <Phone className="h-3.5 w-3.5" />
                       Call
@@ -175,7 +175,7 @@ export function UnitInfoDrawer({
                   {unit.contact.email && (
                     <a
                       href={`mailto:${unit.contact.email}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-inset"
+                      className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-inset"
                     >
                       <Mail className="h-3.5 w-3.5" />
                       Email
@@ -186,7 +186,7 @@ export function UnitInfoDrawer({
                       href={`https://wa.me/${(unit.contact.whatsapp_number ?? unit.contact.phone ?? "").replace(/[^0-9]/g, "")}`}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-inset"
+                      className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-lg border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-inset"
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
                       WhatsApp
@@ -215,7 +215,7 @@ export function UnitInfoDrawer({
             {hasPhotos && (
               <a
                 href={`/api/shares/${encodeURIComponent(token)}/units/${unit.id}/images.zip`}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-inset"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm font-medium text-foreground hover:bg-surface-inset"
               >
                 <Download className="h-4 w-4" />
                 Download all photos ({unit.photos.length})

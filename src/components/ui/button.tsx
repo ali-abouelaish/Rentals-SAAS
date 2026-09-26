@@ -21,11 +21,32 @@ const buttonVariants = cva(
       },
       size: {
         xs: "h-7 px-2 text-xs",
-        sm: "h-8 px-3 text-xs",
-        md: "h-9 px-4",
-        lg: "h-10 px-5",
+        /**
+         * `sm` is the app's general-purpose small button, not a dense-row size:
+         * of 430 usages only 13 sit inside a table cell. It reaches 44px under
+         * a thumb and keeps its 32px desktop height. `xs` (20 usages) really is
+         * for tight inline spots and stays put.
+         */
+        sm: "h-11 min-w-11 px-3 text-xs md:h-8 md:min-w-0",
+        /**
+         * The general-purpose sizes reach 44px under a thumb and keep their
+         * desktop heights from `md`. `xs` and `sm` are deliberately dense —
+         * they sit inside table rows and inline toolbars, where forcing 44px
+         * would stretch every row — so those stay put and get handled in
+         * context.
+         */
+        md: "h-11 min-w-11 px-4 md:h-9 md:min-w-0",
+        lg: "h-11 min-w-11 px-5 md:h-10 md:min-w-0",
         xl: "h-11 px-6 text-base",
-        icon: "h-9 w-9 p-0",
+        /**
+         * 36px on a mouse, 44px under a thumb.
+         *
+         * An icon-only button has no label to aim at, so it is the one variant
+         * where the desktop size is genuinely unhittable on a phone. The text
+         * sizes keep their heights — their labels give them a wide target, and
+         * raising them all would stretch every dense row in the app.
+         */
+        icon: "h-11 w-11 p-0 md:h-9 md:w-9",
       },
     },
     defaultVariants: {

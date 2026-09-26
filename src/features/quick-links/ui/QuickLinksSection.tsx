@@ -254,7 +254,7 @@ function ManageDialog({ links }: { links: QuickLink[] }) {
           Manage links
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Manage Useful Resources</DialogTitle>
         </DialogHeader>
@@ -331,7 +331,7 @@ function LinkCard({ link }: { link: QuickLink }) {
     >
       <div className="flex items-start justify-between gap-2">
         <LinkFavicon url={link.url} />
-        <ExternalLink className="h-3.5 w-3.5 text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" strokeWidth={1.5} />
+        <ExternalLink className="h-3.5 w-3.5 text-foreground-muted opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-0.5 shrink-0" strokeWidth={1.5} />
       </div>
       <div>
         <p className="text-sm font-semibold text-foreground group-hover:text-brand transition-colors">

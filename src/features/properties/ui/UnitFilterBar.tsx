@@ -72,7 +72,7 @@ function FilterDropdown<T extends string>({
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "inline-flex items-center gap-1.5 h-8 rounded-lg border px-2.5 text-xs font-medium transition-colors",
+          "inline-flex items-center gap-1.5 h-11 sm:h-8 rounded-lg border px-3 sm:px-2.5 text-xs font-medium transition-colors",
           activeCount > 0
             ? "bg-brand text-brand-fg border-brand"
             : "bg-surface-card text-foreground-secondary border-border hover:bg-surface-inset hover:text-foreground"
@@ -184,7 +184,7 @@ export function UnitFilterBar({
             placeholder="Search unit, address, tenant…"
             value={filters.search}
             onChange={(e) => set("search", e.target.value)}
-            className="h-8 w-full rounded-lg border border-border bg-surface-card pl-9 pr-3 text-xs placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            className="h-11 sm:h-8 w-full rounded-lg border border-border bg-surface-card pl-9 pr-3 text-base sm:text-xs placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
           />
           {filters.search && (
             <button
@@ -244,7 +244,7 @@ export function UnitFilterBar({
             placeholder="Min"
             value={filters.minPrice}
             onChange={(e) => set("minPrice", e.target.value)}
-            className="h-8 w-16 rounded-lg border border-border bg-surface-card px-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
+            className="h-11 sm:h-8 w-20 sm:w-16 rounded-lg border border-border bg-surface-card px-2 text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
           />
           <span className="text-xs text-foreground-muted">–</span>
           <input
@@ -252,25 +252,25 @@ export function UnitFilterBar({
             placeholder="Max"
             value={filters.maxPrice}
             onChange={(e) => set("maxPrice", e.target.value)}
-            className="h-8 w-16 rounded-lg border border-border bg-surface-card px-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
+            className="h-11 sm:h-8 w-20 sm:w-16 rounded-lg border border-border bg-surface-card px-2 text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
           />
         </div>
 
         {/* Available dates */}
-        <div className="flex items-center gap-1">
+        <div className="flex w-full items-center gap-1 sm:w-auto">
           <span className="text-xs text-foreground-muted whitespace-nowrap">Avail.</span>
           <input
             type="date"
             value={filters.availableFrom}
             onChange={(e) => set("availableFrom", e.target.value)}
-            className="h-8 rounded-lg border border-border bg-surface-card px-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
+            className="h-11 sm:h-8 min-w-0 flex-1 sm:flex-none rounded-lg border border-border bg-surface-card px-2 text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
           />
           <span className="text-xs text-foreground-muted">–</span>
           <input
             type="date"
             value={filters.availableTo}
             onChange={(e) => set("availableTo", e.target.value)}
-            className="h-8 rounded-lg border border-border bg-surface-card px-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
+            className="h-11 sm:h-8 min-w-0 flex-1 sm:flex-none rounded-lg border border-border bg-surface-card px-2 text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
           />
         </div>
 
@@ -280,7 +280,7 @@ export function UnitFilterBar({
             <button
               type="button"
               onClick={clearAll}
-              className="flex items-center gap-1 text-xs text-foreground-secondary hover:text-foreground transition-colors"
+              className="flex min-h-11 md:min-h-0 items-center gap-1 text-xs text-foreground-secondary hover:text-foreground transition-colors"
             >
               <X className="h-3 w-3" />
               Clear
@@ -293,7 +293,7 @@ export function UnitFilterBar({
               type="button"
               onClick={() => onViewChange("list")}
               className={cn(
-                "flex h-8 w-8 items-center justify-center transition-colors",
+                "flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center transition-colors",
                 view === "list"
                   ? "bg-brand text-brand-fg"
                   : "text-foreground-muted hover:text-foreground hover:bg-surface-inset"
@@ -306,7 +306,7 @@ export function UnitFilterBar({
               type="button"
               onClick={() => onViewChange("kanban")}
               className={cn(
-                "flex h-8 w-8 items-center justify-center transition-colors",
+                "flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center transition-colors",
                 view === "kanban"
                   ? "bg-brand text-brand-fg"
                   : "text-foreground-muted hover:text-foreground hover:bg-surface-inset"
@@ -319,7 +319,7 @@ export function UnitFilterBar({
               type="button"
               onClick={() => onViewChange("sheet")}
               className={cn(
-                "flex h-8 w-8 items-center justify-center transition-colors",
+                "flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center transition-colors",
                 view === "sheet"
                   ? "bg-brand text-brand-fg"
                   : "text-foreground-muted hover:text-foreground hover:bg-surface-inset"

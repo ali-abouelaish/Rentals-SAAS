@@ -18,9 +18,9 @@ import {
 } from "../domain/types";
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 const areaCls =
-  "w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 /** Label above, hint under the label, inline error below — per the UI rules. */
 function Field({
@@ -345,11 +345,11 @@ export function OwnerDetailsForm({ owner }: { owner: OwnerLandlord }) {
           <p className="text-[11px] text-foreground-muted">
             Reminders ahead of the contract expiry date above. No effect if no expiry is set.
           </p>
-          <label className="flex items-center gap-2 text-sm text-foreground-secondary">
+          <label className="flex min-h-11 md:min-h-0 items-center gap-2 text-sm text-foreground-secondary">
             <input type="checkbox" {...register("alert_60_days")} className="rounded border-border" />
             Alert 60 days before expiry
           </label>
-          <label className="flex items-center gap-2 text-sm text-foreground-secondary">
+          <label className="flex min-h-11 md:min-h-0 items-center gap-2 text-sm text-foreground-secondary">
             <input type="checkbox" {...register("alert_30_days")} className="rounded border-border" />
             Alert 30 days before expiry
           </label>

@@ -238,7 +238,7 @@ export function CreateContractFromTemplateDialog({
                             href={r.fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-brand hover:underline"
+                            className="inline-flex min-h-11 min-w-11 justify-center md:min-h-0 md:min-w-0 items-center gap-1 text-sm text-brand hover:underline"
                           >
                             <ExternalLink size={13} />
                             View uploaded file
@@ -255,7 +255,7 @@ export function CreateContractFromTemplateDialog({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">Start date *</label>
                 <input

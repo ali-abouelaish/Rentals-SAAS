@@ -364,7 +364,7 @@ export function MaintenancePage({
             <button
               onClick={() => { setActiveTab("jobs"); setRaiseOpen(true); }}
               title="Create a work order directly — no tenant ticket needed"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity"
             >
               <Plus size={16} />
               New Work Order
@@ -384,11 +384,14 @@ export function MaintenancePage({
       </div>
 
       {/* ── Tab switcher ── */}
-      <div className="flex items-center gap-1 rounded-xl border border-border bg-surface-card p-1 w-fit">
+      {/* `w-fit` with three icon-and-count buttons came to 448px, which was the
+          whole of this page's horizontal overflow on a phone. Scrolls sideways
+          in its own box now, the way `ui/tabs.tsx` does. */}
+      <div className="flex max-w-full items-center gap-1 overflow-x-auto overscroll-x-contain rounded-xl border border-border bg-surface-card p-1 [scrollbar-width:none] sm:w-fit [&::-webkit-scrollbar]:hidden">
         <button
           onClick={() => setActiveTab("jobs")}
           className={cn(
-            "inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+            "inline-flex min-h-11 sm:min-h-0 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
             activeTab === "jobs"
               ? "bg-brand text-brand-fg shadow-sm"
               : "text-foreground-secondary hover:text-foreground"
@@ -410,7 +413,7 @@ export function MaintenancePage({
         <button
           onClick={() => setActiveTab("tickets")}
           className={cn(
-            "inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors relative",
+            "inline-flex min-h-11 sm:min-h-0 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-colors relative",
             activeTab === "tickets"
               ? "bg-brand text-brand-fg shadow-sm"
               : "text-foreground-secondary hover:text-foreground"
@@ -446,7 +449,7 @@ export function MaintenancePage({
           onClick={() => setActiveTab("suppliers")}
           title="Your preferred contractors — assign them to jobs"
           className={cn(
-            "inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+            "inline-flex min-h-11 sm:min-h-0 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
             activeTab === "suppliers"
               ? "bg-brand text-brand-fg shadow-sm"
               : "text-foreground-secondary hover:text-foreground"
@@ -496,7 +499,7 @@ export function MaintenancePage({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by reference, title, property…"
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-surface-card text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50"
+            className="w-full pl-9 pr-3 py-2.5 sm:py-2 rounded-xl border border-border bg-surface-card text-base sm:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50"
           />
         </div>
 
@@ -507,7 +510,7 @@ export function MaintenancePage({
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-lg px-3 py-2.5 sm:py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 text-xs font-medium transition-colors",
                 statusFilter === f.value
                   ? "bg-brand text-brand-fg shadow-sm"
                   : "text-foreground-secondary hover:bg-surface-inset"

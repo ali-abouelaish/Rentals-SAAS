@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AssertionError, assertSearchAccess } from "@/lib/auth/assertions";
+import { AssertionError, assertSearchAccess, rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseSearchQuery } from "@/features/search/data/parser";
 import {
@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
     };
     return NextResponse.json(payload);
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }

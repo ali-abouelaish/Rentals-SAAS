@@ -229,7 +229,7 @@ const COLUMNS: ColumnDef[] = [
     sortValue: (u) => u.property?.portfolio?.name?.toLowerCase() ?? null,
     cell: (u) =>
       u.property?.portfolio ? (
-        <span className="inline-flex items-center gap-1.5 text-foreground-secondary">
+        <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-foreground-secondary">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: u.property.portfolio.color }} />
           <span className="truncate">{u.property.portfolio.name}</span>
         </span>
@@ -351,7 +351,7 @@ export function UnitsSheetView({ units, onUnitClick, onStatusChanged }: UnitsShe
       </div>
 
       {/* Sheet */}
-      <div className="overflow-auto rounded-xl border border-border bg-surface-card max-h-[calc(100vh-260px)]">
+      <div className="overflow-auto rounded-xl border border-border bg-surface-card max-h-[calc(100dvh-260px)]">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>

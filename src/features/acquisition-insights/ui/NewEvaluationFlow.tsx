@@ -258,10 +258,10 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
   const calc = calcPreview();
 
   const inputClass =
-    "h-10 w-full rounded-lg border border-border bg-surface-card px-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand";
+    "h-11 md:h-10 w-full rounded-lg border border-border bg-surface-card px-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand";
   const labelClass = "block text-[13px] font-medium text-foreground mb-1.5";
   const moneyInputClass =
-    "h-10 w-full rounded-lg border border-border bg-surface-card pl-7 pr-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand";
+    "h-11 md:h-10 w-full rounded-lg border border-border bg-surface-card pl-7 pr-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -282,7 +282,7 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
             <button
               type="button"
               onClick={() => setStep(i)}
-              className="flex flex-col items-center gap-1 flex-1"
+              className="flex min-h-11 sm:min-h-0 flex-col items-center gap-1 flex-1"
             >
               <div
                 className={cn(
@@ -399,11 +399,11 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-xl bg-surface-raised border border-border">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex min-h-11 md:min-h-0 items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   {...form.register("furnished")}
-                  className="h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                  className="h-5 w-5 sm:h-4 sm:w-4 rounded border-border text-brand focus:ring-brand"
                 />
                 <div>
                   <span className="text-[13px] font-medium text-foreground">Furnished</span>
@@ -519,7 +519,7 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
                   });
                   form.setValue("total_rooms", roomFields.length + 1);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-surface-raised border border-border px-3 py-1.5 text-[13px] font-medium text-foreground hover:bg-border transition-colors"
+                className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-lg bg-surface-raised border border-border px-3 py-1.5 text-[13px] font-medium text-foreground hover:bg-border transition-colors"
               >
                 <Plus size={14} />
                 Add Room
@@ -552,7 +552,7 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className={labelClass}>Room Type</label>
                         <select
@@ -587,11 +587,11 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
                       </div>
                     </div>
 
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex min-h-11 md:min-h-0 items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         {...form.register(`rooms.${idx}.couples_allowed`)}
-                        className="h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                        className="h-5 w-5 sm:h-4 sm:w-4 rounded border-border text-brand focus:ring-brand"
                       />
                       <span className="text-[13px] text-foreground-secondary">Couples allowed</span>
                     </label>
@@ -846,7 +846,7 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
         {/* ── Step 5: Results ── */}
         {step === 5 && (
           <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <ResultCard
                 label="Projected Monthly Income"
                 value={fmt(calc.projected_monthly_income)}
@@ -924,7 +924,7 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
             type="button"
             onClick={prev}
             disabled={step === 0}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-[13px] font-medium text-foreground hover:bg-border disabled:opacity-40 disabled:cursor-not-allowed transition"
+            className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-[13px] font-medium text-foreground hover:bg-border disabled:opacity-40 disabled:cursor-not-allowed transition"
           >
             <ChevronLeft size={16} />
             Back
@@ -934,7 +934,7 @@ export function NewEvaluationFlow({ portfolios }: NewEvaluationFlowProps) {
             <button
               type="button"
               onClick={next}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-[13px] font-semibold text-brand-fg shadow-glow hover:opacity-90 transition"
+              className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-[13px] font-semibold text-brand-fg shadow-glow hover:opacity-90 transition"
             >
               Next
               <ChevronRight size={16} />
@@ -990,7 +990,7 @@ function MoneyField({
           type="number"
           min={0}
           placeholder={placeholder}
-          className="h-10 w-full rounded-lg border border-border bg-surface-card pl-7 pr-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand"
+          className="h-11 md:h-10 w-full rounded-lg border border-border bg-surface-card pl-7 pr-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand"
         />
       </div>
       {error && <p className="text-xs text-red-400 mt-1">{error}</p>}

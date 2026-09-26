@@ -28,7 +28,6 @@ import {
   Wrench,
   Plug,
   TrendingUp,
-  Search,
   Share2,
   Wallet,
   ShieldCheck,
@@ -39,6 +38,7 @@ import {
   Zap,
   HeartPulse,
   ScrollText,
+  LifeBuoy,
 } from "lucide-react";
 import { ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
 import type { PublishedModuleConfig } from "@/features/admin/domain/types";
@@ -74,6 +74,9 @@ export const RA_NAV_ITEMS: NavItem[] = [
   { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
+  // Deliberately NO allowedRoles: every agency user — not just admins — must be
+  // able to reach us. Don't "fix" this to ADMIN_ROLES like its neighbours.
+  { href: "/helpdesk", label: "Contact Support", icon: LifeBuoy, entitlement: "support_tickets" },
 ];
 
 export const PM_NAV_GROUPS: NavGroup[] = [
@@ -104,7 +107,6 @@ export const PM_NAV_GROUPS: NavGroup[] = [
   {
     title: "Growth",
     items: [
-      { href: "/acquisition-insights", label: "Acquisition Insights", icon: Search, allowedRoles: ADMIN_ROLES },
       { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
     ],
   },
@@ -122,6 +124,9 @@ export const PM_NAV_GROUPS: NavGroup[] = [
       { href: "/compliance", label: "Compliance", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlement: "certificates" },
       { href: "/reminders", label: "Reminders", icon: Bell, allowedRoles: ADMIN_ROLES, entitlement: "automations" },
       { href: "/automations", label: "Automations", icon: Zap, allowedRoles: ADMIN_ROLES, entitlement: "automations" },
+      // Deliberately NO allowedRoles: every agency user — not just admins — must be
+      // able to reach us. Don't "fix" this to ADMIN_ROLES like its neighbours.
+      { href: "/helpdesk", label: "Contact Support", icon: LifeBuoy, entitlement: "support_tickets" },
     ],
   },
 ];
@@ -168,6 +173,9 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       // meanings are in play at once.
       { href: "/admin/tenants", label: "Agencies", icon: Building2 },
       { href: "/admin/billing", label: "Billing", icon: CreditCard },
+      // Billing is what agencies owe us; Finance is our own P&L — that revenue
+      // set against what it costs to run the platform. Adjacent on purpose.
+      { href: "/admin/finance", label: "Finance", icon: TrendingUp },
     ],
   },
   {
@@ -175,6 +183,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/health", label: "System Health", icon: HeartPulse },
       { href: "/admin/activity", label: "Activity Log", icon: ScrollText },
+      { href: "/admin/support", label: "Support Tickets", icon: LifeBuoy },
     ],
   },
   {
@@ -224,6 +233,7 @@ export const PM_ROUTE_PREFIXES = [
   "/reminders",
   "/automations",
   "/owners",
+  "/helpdesk",
 ];
 
 export function isPmRoute(pathname: string) {

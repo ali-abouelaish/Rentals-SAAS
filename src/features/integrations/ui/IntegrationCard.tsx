@@ -208,7 +208,7 @@ export function IntegrationCard({
               <button
                 type="button"
                 onClick={onCancel}
-                className="text-[11px] font-medium text-red-600 hover:text-red-700 hover:underline transition-colors"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center text-[11px] font-medium text-red-600 transition-colors hover:text-red-700 hover:underline md:min-h-0 md:min-w-0"
               >
                 Cancel
               </button>

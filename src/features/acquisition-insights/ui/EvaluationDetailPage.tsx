@@ -199,7 +199,7 @@ export function EvaluationDetailPage({
       {/* Back */}
       <Link
         href="/acquisition-insights"
-        className="inline-flex items-center gap-1.5 text-[13px] text-foreground-secondary hover:text-foreground transition-colors"
+        className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-[13px] text-foreground-secondary hover:text-foreground transition-colors"
       >
         <ArrowLeft size={14} />
         Back to Evaluations
@@ -266,7 +266,7 @@ export function EvaluationDetailPage({
             {ev.linked_property && (
               <Link
                 href={`/properties?highlight=${ev.linked_property.id}`}
-                className="inline-flex items-center gap-1.5 rounded-full bg-surface-raised border border-border px-3 py-1.5 text-[12px] font-medium text-foreground hover:bg-border transition-colors"
+                className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-full bg-surface-raised border border-border px-3 py-1.5 text-[12px] font-medium text-foreground hover:bg-border transition-colors"
               >
                 <ExternalLink size={12} />
                 {ev.linked_property.name}
@@ -532,14 +532,14 @@ export function EvaluationDetailPage({
 
               {/* Comparables */}
               {ev.ai_comparable_properties && ev.ai_comparable_properties.length > 0 && (
-                <div className="rounded-xl border border-border bg-surface-raised overflow-hidden">
+                <div className="rounded-xl border border-border bg-surface-raised overflow-x-auto">
                   <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-2">
                       <Building2 size={14} className="text-foreground-secondary" />
                       Comparable Properties Used
                     </h3>
                   </div>
-                  <table className="w-full text-[12px]">
+                  <table className="w-full min-w-[520px] text-[12px]">
                     <thead>
                       <tr className="border-b border-border bg-surface-card">
                         <th className="px-4 py-2.5 text-left font-medium text-foreground-secondary">Area</th>
@@ -604,7 +604,7 @@ export function EvaluationDetailPage({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <ComparisonCard
               label="Monthly Income"
               predicted={fmt(ev.projected_monthly_income)}
@@ -639,7 +639,7 @@ export function EvaluationDetailPage({
                 <button
                   type="button"
                   onClick={() => setEditingNotes(true)}
-                  className="inline-flex items-center gap-1.5 text-[12px] text-foreground-secondary hover:text-foreground transition-colors"
+                  className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-[12px] text-foreground-secondary hover:text-foreground transition-colors"
                 >
                   <Edit2 size={13} />
                   Edit
@@ -660,7 +660,7 @@ export function EvaluationDetailPage({
                     type="button"
                     onClick={saveNotes}
                     disabled={notesPending}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12px] font-semibold text-brand-fg hover:opacity-90 disabled:opacity-60 transition"
+                    className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12px] font-semibold text-brand-fg hover:opacity-90 disabled:opacity-60 transition"
                   >
                     {notesPending ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                     Save
@@ -701,7 +701,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface-raised overflow-hidden">
+    <div className="rounded-xl border border-border bg-surface-raised overflow-x-auto">
       <div className="px-4 py-3 border-b border-border bg-surface-card">
         <span className="text-[13px] font-semibold text-foreground">{title}</span>
       </div>

@@ -64,12 +64,16 @@ export function formatPeriod(period: BillingPeriod): string {
 // ============================================================
 
 export type InvoiceLineDraft = {
-  kind: "integration" | "envelopes" | "adjustment" | "usage";
+  kind: "integration" | "envelopes" | "adjustment" | "usage" | "plan";
   description: string;
   quantity: number;
   unitPricePence: number;
   amountPence: number;
-  sourceKind?: "integration_subscription" | "envelope_purchase" | "usage_counter";
+  sourceKind?:
+    | "integration_subscription"
+    | "envelope_purchase"
+    | "usage_counter"
+    | "platform_charge";
   sourceRef?: string;
 };
 
@@ -198,6 +202,53 @@ export function usageLine(usage: UsageInput): InvoiceLineDraft {
 }
 
 /**
+ * A recurring charge agreed with an agency: base plan fee, custom line, or an
+ * ongoing discount (negative `amountPence`).
+ *
+ * Read from `tenant_platform_charges` rather than the code catalogue — this is
+ * the half of an agency's bill that is negotiated rather than derived.
+ */
+export type PlatformChargeInput = {
+  id: string;
+  label: string;
+  amountPence: number;
+  billingStartsOn: string;
+  endsOn: string | null;
+};
+
+/**
+ * Whether an agreed charge applies to this period.
+ *
+ * Same window rule as `subscriptionBillable`, deliberately: a charge starting
+ * mid-period bills from its first whole period, and one ending inside the period
+ * still bills it, because the agency had the month.
+ *
+ * A zero amount raises no line — it is neither a charge nor a discount, and an
+ * invoice reading "Harbor Ops Professional £0" invites a question nobody wants.
+ */
+export function chargeBillable(
+  charge: PlatformChargeInput,
+  period: BillingPeriod
+): boolean {
+  if (charge.amountPence === 0) return false;
+  if (charge.billingStartsOn > period.end) return false;
+  if (charge.endsOn && charge.endsOn < period.start) return false;
+  return true;
+}
+
+export function platformChargeLine(charge: PlatformChargeInput): InvoiceLineDraft {
+  return {
+    kind: "plan",
+    description: charge.label,
+    quantity: 1,
+    unitPricePence: charge.amountPence,
+    amountPence: charge.amountPence,
+    sourceKind: "platform_charge",
+    sourceRef: charge.id,
+  };
+}
+
+/**
  * Every line for one agency for one period.
  *
  * Purchases are matched on their own `billingPeriod`, which was stamped at the
@@ -213,9 +264,18 @@ export function buildInvoiceLines(input: {
   subscriptions: SubscriptionInput[];
   purchases: EnvelopePurchaseInput[];
   usage?: UsageInput[];
+  charges?: PlatformChargeInput[];
   period: BillingPeriod;
 }): InvoiceLineDraft[] {
   const lines: InvoiceLineDraft[] = [];
+
+  // Agreed charges lead the invoice: the base fee is the headline of the
+  // relationship, and the catalogue add-ons below it read as additions to it.
+  for (const charge of input.charges ?? []) {
+    if (chargeBillable(charge, input.period)) {
+      lines.push(platformChargeLine(charge));
+    }
+  }
 
   for (const subscription of input.subscriptions) {
     if (subscriptionBillable(subscription, input.period)) {

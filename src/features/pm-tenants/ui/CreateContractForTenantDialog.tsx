@@ -30,9 +30,9 @@ import {
 import type { PmTenant } from "../domain/types";
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 const selectCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({
   label,
@@ -252,14 +252,14 @@ export function CreateContractForTenantDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>New Contract — {tenant.full_name}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
           <input type="hidden" {...register("pm_tenant_id")} />
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
               <FormField label="Property *">
                 <SearchableSelect
                   value={propertyId}
@@ -270,7 +270,7 @@ export function CreateContractForTenantDialog({
                 />
               </FormField>
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <FormField label="Unit *" error={errors.unit_id?.message}>
                 <Controller
                   name="unit_id"
@@ -348,7 +348,7 @@ export function CreateContractForTenantDialog({
               </select>
             </FormField>
 
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Controller
                 name="pro_rata_amount"
                 control={control}
@@ -371,13 +371,13 @@ export function CreateContractForTenantDialog({
               />
             </div>
 
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <FormField label="Contract document">
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   disabled={isPending}
-                  className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+                  className="min-h-11 md:min-h-0 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
                   onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
                 />
               </FormField>

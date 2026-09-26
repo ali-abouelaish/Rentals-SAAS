@@ -165,7 +165,7 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
               href={unit.drive_folder_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-foreground-link hover:underline"
+              className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-xs text-foreground-link hover:underline"
             >
               <ExternalLink className="h-3 w-3" />
               Google Drive folder
@@ -204,7 +204,7 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
                 <Amenity label="Pets OK" value={property.pets_ok} />
               </div>
               {property.floor_plan_url && (
-                <div className="flex items-center gap-1 text-xs text-foreground-muted border-t border-border pt-2 mt-1">
+                <div className="flex min-h-11 md:min-h-0 items-center gap-1 text-xs text-foreground-muted border-t border-border pt-2 mt-1">
                   <Lock className="h-3 w-3" />
                   <span>Floor plan available (restricted)</span>
                 </div>
@@ -220,7 +220,7 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-1">
       {unitType === "room" && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField label="Room number" error={errors.room_number?.message}>
             <input {...register("room_number")} className={inputCls} placeholder="e.g. 3" />
           </FormField>
@@ -236,7 +236,7 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Status">
           <select {...register("status")} className={selectCls}>
             <option value="available">Available</option>
@@ -257,7 +257,7 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
         </FormField>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Notice given">
           <select
             {...register("notice_given", { setValueAs: (v) => v === "true" })}
@@ -272,7 +272,7 @@ export function OverviewTab({ unit, isEditing, onSaved }: OverviewTabProps) {
         </FormField>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Min PCM (£)">
           <input type="number" {...register("min_price_pcm")} className={inputCls} />
         </FormField>

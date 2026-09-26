@@ -55,7 +55,7 @@ function Field({ label, hint, required, error, htmlFor, children }: FieldProps) 
 
 const inputClass = (hasError: boolean) =>
   cn(
-    "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
+    "w-full rounded-xl border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
     hasError ? "border-red-400" : "border-border"
   );
 
@@ -150,7 +150,7 @@ export function SupplierModal({ supplier, onClose, onSuccess }: SupplierModalPro
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field
               label="Trade"
               hint="Main trade they cover."
@@ -184,7 +184,7 @@ export function SupplierModal({ supplier, onClose, onSuccess }: SupplierModalPro
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field
               label="Phone"
               hint="Optional. Include country code, e.g. +44."

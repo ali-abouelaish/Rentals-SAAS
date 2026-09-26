@@ -216,7 +216,7 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">
+          <h1 className="inline-flex min-h-11 items-center text-2xl font-bold tracking-tight md:min-h-0 font-heading text-foreground">
             Profitability
           </h1>
           <p className="text-sm text-foreground-secondary mt-0.5">
@@ -230,7 +230,7 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
               key={v}
               onClick={() => setViewMode(v)}
               className={cn(
-                "px-4 py-2 text-xs font-semibold capitalize transition-colors",
+                "px-4 py-2 min-h-11 sm:min-h-0 text-xs font-semibold capitalize transition-colors",
                 viewMode === v
                   ? "bg-brand text-brand-fg"
                   : "text-foreground-secondary hover:bg-surface-inset"
@@ -297,7 +297,7 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search property…"
-                className="bg-surface-inset border border-border rounded-lg pl-8 pr-7 py-1.5 text-xs font-medium text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-brand w-48"
+                className="bg-surface-inset border border-border rounded-lg pl-8 pr-7 py-1.5 min-h-11 md:min-h-0 text-base md:text-xs font-medium text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-brand w-48"
               />
               {search && (
                 <button
@@ -316,7 +316,7 @@ export function ProfitabilityPage({ properties, graphData }: ProfitabilityPagePr
               <select
                 value={portfolioFilter}
                 onChange={(e) => setPortfolioFilter(e.target.value)}
-                className="appearance-none bg-surface-inset border border-border rounded-lg pl-3 pr-8 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer"
+                className="appearance-none bg-surface-inset border border-border rounded-lg min-h-11 md:min-h-0 text-base md:text-xs pl-3 pr-8 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer"
               >
                 <option value="all">All portfolios</option>
                 {portfolios.map((p) => (

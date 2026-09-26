@@ -207,3 +207,23 @@ export async function assertRoomEnhancerAccess(): Promise<{ tenantId: string }> 
   }
   return { tenantId: profile.tenant_id };
 }
+
+/**
+ * Re-throw Next's control-flow signals instead of swallowing them.
+ *
+ * `redirect()` and `notFound()` work by throwing, and `requireUserProfile()`
+ * redirects when there is no session. A route that catches broadly then turns
+ * that signal into its own error response: an anonymous caller got HTTP 500
+ * "Search failed" where it should have been bounced to /login, which both
+ * reports a server fault that did not happen and hides the real ones. Call this
+ * first in an API route's catch, before any `instanceof AssertionError` test.
+ */
+export function rethrowIfNextControlFlow(err: unknown): void {
+  const digest = (err as { digest?: unknown } | null)?.digest;
+  if (
+    typeof digest === "string" &&
+    (digest === "NEXT_NOT_FOUND" || digest.startsWith("NEXT_REDIRECT"))
+  ) {
+    throw err;
+  }
+}

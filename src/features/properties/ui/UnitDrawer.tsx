@@ -76,7 +76,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants, form
       <SheetContent side="right" className="flex flex-col p-0">
         {/* Header */}
         <SheetHeader className="shrink-0">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 {portfolio && <PortfolioBadge portfolio={portfolio} size="sm" />}
@@ -100,13 +100,13 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants, form
                 <h2 className="text-base font-semibold text-foreground">{formatUnitLabel(localUnit)}</h2>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
               <Button
                 type="button"
                 variant={isEditing ? "secondary" : "outline"}
                 size="sm"
                 onClick={() => setIsEditing(!isEditing)}
-                className="h-8"
+                className="h-11 sm:h-8"
               >
                 <Pencil className="h-3.5 w-3.5 mr-1" />
                 {isEditing ? "Editing" : "Edit"}
@@ -116,7 +116,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants, form
         </SheetHeader>
 
         {/* Tabs */}
-        <div className="border-b border-border px-6 pt-2 pb-0 shrink-0">
+        <div className="border-b border-border px-4 sm:px-6 pt-2 pb-0 shrink-0">
           <Tabs defaultValue="overview" className="!space-y-0">
             <TabsList className="!bg-transparent !border-0 !shadow-none !p-0 gap-0 h-auto">
               {[
@@ -132,7 +132,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants, form
                   type="button"
                   onClick={() => setActiveTab(tab.value)}
                   className={cn(
-                    "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+                    "px-4 py-2.5 min-h-11 shrink-0 whitespace-nowrap text-sm font-medium border-b-2 transition-colors -mb-px",
                     activeTab === tab.value
                       ? "border-brand text-brand"
                       : "border-transparent text-foreground-secondary hover:text-foreground hover:border-border"
@@ -146,7 +146,7 @@ export function UnitDrawer({ unit, open, onClose, onUnitUpdated, pmTenants, form
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
           {activeTab === "overview" && (
             <OverviewTab
               unit={localUnit}

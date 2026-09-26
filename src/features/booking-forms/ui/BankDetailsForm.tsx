@@ -28,10 +28,10 @@ import type { PortfolioBankDetails } from "../domain/types";
 import type { Portfolio } from "@/features/properties/domain/types";
 
 const inputCls =
-  "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
+  "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
 
 const selectCls =
-  "h-10 w-full rounded-xl border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50";
+  "h-11 md:h-10 w-full rounded-xl border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50";
 
 interface BankDetailsFormProps {
   portfolios: Portfolio[];
@@ -283,7 +283,7 @@ export function BankDetailsForm({ portfolios, bankDetails }: BankDetailsFormProp
                             }
                           });
                         }}
-                        className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-inset"
+                        className="h-11 w-11 md:h-8 md:w-8 inline-flex items-center justify-center rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-inset"
                       >
                         <StarOff size={14} />
                       </button>
@@ -291,7 +291,7 @@ export function BankDetailsForm({ portfolios, bankDetails }: BankDetailsFormProp
                     {row.is_default && (
                       <span
                         title="Default account"
-                        className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-amber-500"
+                        className="h-11 w-11 md:h-8 md:w-8 inline-flex items-center justify-center rounded-lg text-amber-500"
                       >
                         <Star size={14} fill="currentColor" />
                       </span>
@@ -301,7 +301,7 @@ export function BankDetailsForm({ portfolios, bankDetails }: BankDetailsFormProp
                       title="Edit"
                       disabled={editorState !== null}
                       onClick={() => setEditorState({ mode: "edit", row })}
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-inset disabled:opacity-50"
+                      className="h-11 w-11 md:h-8 md:w-8 inline-flex items-center justify-center rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-inset disabled:opacity-50"
                     >
                       <Pencil size={14} />
                     </button>
@@ -335,7 +335,7 @@ export function BankDetailsForm({ portfolios, bankDetails }: BankDetailsFormProp
                           }
                         });
                       }}
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
+                      className="h-11 w-11 md:h-8 md:w-8 inline-flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
                     >
                       <Trash2 size={14} />
                     </button>

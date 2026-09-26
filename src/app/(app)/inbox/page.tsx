@@ -55,8 +55,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Search
               href={`/inbox?status=${f.value}`}
               className={
                 active
-                  ? "inline-flex items-center rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-fg"
-                  : "inline-flex items-center rounded-full border border-border bg-surface-card px-3 py-1 text-xs font-semibold text-foreground-secondary hover:border-border-strong hover:text-foreground"
+                  ? "inline-flex min-h-11 min-w-11 justify-center md:min-h-0 md:min-w-0 items-center rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-fg"
+                  : "inline-flex min-h-11 min-w-11 justify-center md:min-h-0 md:min-w-0 items-center rounded-full border border-border bg-surface-card px-3 py-1 text-xs font-semibold text-foreground-secondary hover:border-border-strong hover:text-foreground"
               }
             >
               {f.label}

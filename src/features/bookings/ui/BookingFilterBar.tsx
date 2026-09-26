@@ -14,9 +14,9 @@ interface BookingFilterBarProps {
 }
 
 const inputCls =
-  "h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 const selectCls =
-  "h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 export function BookingFilterBar({
   filters,
@@ -32,16 +32,16 @@ export function BookingFilterBar({
     filters.search || filters.portfolioId || filters.status || filters.dateFrom || filters.dateTo;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {/* Search */}
-      <div className="relative">
+      <div className="relative w-full sm:w-auto">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted pointer-events-none" />
         <input
           type="text"
           placeholder="Search applicant, property…"
           value={filters.search}
           onChange={(e) => update({ search: e.target.value })}
-          className={`${inputCls} pl-8 w-52`}
+          className={`${inputCls} pl-8 w-full sm:w-52`}
         />
       </div>
 
@@ -50,7 +50,7 @@ export function BookingFilterBar({
         <select
           value={filters.portfolioId}
           onChange={(e) => update({ portfolioId: e.target.value })}
-          className={`${selectCls} w-40`}
+          className={`${selectCls} w-full sm:w-40`}
         >
           <option value="">All portfolios</option>
           {portfolios.map((p) => (
@@ -63,7 +63,7 @@ export function BookingFilterBar({
       <select
         value={filters.status}
         onChange={(e) => update({ status: e.target.value as BookingStatus | "" })}
-        className={`${selectCls} w-40`}
+        className={`${selectCls} w-full sm:w-40`}
       >
         <option value="">All statuses</option>
         {Object.entries(BOOKING_STATUS_CONFIG).map(([v, cfg]) => (
@@ -76,14 +76,14 @@ export function BookingFilterBar({
         type="date"
         value={filters.dateFrom}
         onChange={(e) => update({ dateFrom: e.target.value })}
-        className={`${inputCls} w-36`}
+        className={`${inputCls} w-full sm:w-36`}
         title="From date"
       />
       <input
         type="date"
         value={filters.dateTo}
         onChange={(e) => update({ dateTo: e.target.value })}
-        className={`${inputCls} w-36`}
+        className={`${inputCls} w-full sm:w-36`}
         title="To date"
       />
 
@@ -106,7 +106,7 @@ export function BookingFilterBar({
         <button
           type="button"
           onClick={() => onViewChange("list")}
-          className={`rounded-md p-1.5 transition-colors ${view === "list" ? "bg-surface-card shadow-sm text-foreground" : "text-foreground-muted hover:text-foreground"}`}
+          className={`grid h-11 w-11 place-items-center rounded-md transition-colors sm:h-7 sm:w-7 ${view === "list" ? "bg-surface-card shadow-sm text-foreground" : "text-foreground-muted hover:text-foreground"}`}
           title="List view"
         >
           <List className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function BookingFilterBar({
         <button
           type="button"
           onClick={() => onViewChange("kanban")}
-          className={`rounded-md p-1.5 transition-colors ${view === "kanban" ? "bg-surface-card shadow-sm text-foreground" : "text-foreground-muted hover:text-foreground"}`}
+          className={`grid h-11 w-11 place-items-center rounded-md transition-colors sm:h-7 sm:w-7 ${view === "kanban" ? "bg-surface-card shadow-sm text-foreground" : "text-foreground-muted hover:text-foreground"}`}
           title="Kanban view"
         >
           <LayoutGrid className="h-4 w-4" />

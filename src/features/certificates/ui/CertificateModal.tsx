@@ -68,7 +68,7 @@ function Field({ label, hint, required, error, htmlFor, children }: FieldProps) 
 
 const inputClass = (hasError: boolean) =>
   cn(
-    "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
+    "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
     hasError ? "border-red-400" : "border-border"
   );
 
@@ -155,25 +155,30 @@ export function CertificateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-surface-card rounded-bento shadow-2xl overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Certificate"
+        className="relative flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-bento bg-surface-card shadow-2xl sm:max-h-[85dvh] sm:rounded-bento"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4 sm:px-6">
           <h2 className="text-base font-semibold text-foreground">
             {isEdit ? "Edit Certificate" : "Add Certificate"}
           </h2>
           <button
             onClick={onClose}
             title="Close without saving"
-            className="p-1.5 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-inset transition-colors"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground sm:h-8 sm:w-8"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
           {property ? (
             <input type="hidden" {...register("propertyId")} />
           ) : (
@@ -198,7 +203,7 @@ export function CertificateModal({
             </Field>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field
               label="Certificate type"
               hint="Statutory compliance certificate or licence."
@@ -254,7 +259,7 @@ export function CertificateModal({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field
               label="Issue date"
               hint="Use DD/MM/YYYY via the date picker."
@@ -287,7 +292,7 @@ export function CertificateModal({
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field
               label="Contractor"
               hint="Optional. Who issued it — expiry automations chase them for renewal."
@@ -339,7 +344,7 @@ export function CertificateModal({
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
               title="Stored privately; downloadable from the certificate list"
-              className="w-full text-sm text-foreground-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-surface-inset file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground"
+              className="min-h-11 md:min-h-0 w-full text-sm text-foreground-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-surface-inset file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground"
             />
           </Field>
 

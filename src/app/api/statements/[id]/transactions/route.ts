@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUploadTransactions } from "@/features/statements/data/queries";
+import { rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -11,6 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         : transactions;
     return NextResponse.json({ transactions: filtered });
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     const message = err instanceof Error ? err.message : "Failed to load transactions";
     return NextResponse.json({ error: message }, { status: 500 });
   }

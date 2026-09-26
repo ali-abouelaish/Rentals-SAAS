@@ -9,6 +9,14 @@ import { generatePlatformInvoices } from "@/lib/billing/generate";
 import { billingPeriod, formatPeriod, invoiceTotals } from "@/lib/billing/rates";
 import { formatPence } from "@/lib/envelopes/packs";
 import { logPlatformAudit } from "@/lib/audit/platformAudit";
+import { Resend } from "resend";
+import { templates } from "@/lib/email/render";
+import {
+  invoiceFilename,
+  loadInvoiceForPdf,
+  renderInvoicePdf,
+  signedInvoicePdfUrl,
+} from "../lib/platformInvoicePdf";
 
 const ADMIN_PATH = "/admin/billing";
 
@@ -143,6 +151,19 @@ const transitionSchema = z.object({
   invoiceId: z.string().uuid("Invalid invoice"),
 });
 
+const emailInvoiceSchema = z.object({
+  invoiceId: z.string().uuid("Invalid invoice"),
+  // Optional override. Validated as an address either way — a typo here sends
+  // an agency's bill to a stranger.
+  to: z
+    .string()
+    .trim()
+    .email("Enter a valid email address")
+    .max(254, "That address is too long")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+});
+
 /**
  * Issue a draft — the point at which it becomes the agency's bill.
  *
@@ -160,15 +181,20 @@ export async function issueInvoiceAction(input: { invoiceId: string }): Promise<
   // audit row wants to say what it moved from.
   const context = await invoiceAuditContext(parsed.data.invoiceId);
 
-  const { data, error } = await createSupabaseAdminClient()
-    .from("tenant_platform_invoices")
-    .update({ status: "issued", issued_at: new Date().toISOString() })
-    .eq("id", parsed.data.invoiceId)
-    .eq("status", "draft")
-    .select("id");
+  // Through the RPC rather than a bare UPDATE: issuing also mints the
+  // sequential invoice number, and the two have to happen in one statement.
+  // Split, there is a window where an invoice is issued with no reference, and
+  // a retry would mint a second number for the same document.
+  const { data, error } = await createSupabaseAdminClient().rpc("issue_platform_invoice", {
+    p_invoice_id: parsed.data.invoiceId,
+  });
 
   if (error) return { error: error.message };
-  if (!data || data.length === 0) {
+
+  const outcome = data as { ok: boolean; reason?: string; invoice_number?: string } | null;
+
+  if (!outcome?.ok) {
+    if (outcome?.reason === "not_found") return { error: "Invoice not found." };
     return { error: "That invoice isn't a draft any more — reload and check its status." };
   }
 
@@ -181,12 +207,15 @@ export async function issueInvoiceAction(input: { invoiceId: string }): Promise<
     entityType: "platform_invoice",
     entityId: parsed.data.invoiceId,
     before: { status: "draft" },
-    after: { status: "issued" },
+    after: { status: "issued", invoice_number: outcome.invoice_number },
     metadata: context.metadata,
   });
 
   revalidatePath(ADMIN_PATH);
-  return { success: true, message: "Invoice issued. The agency can now see it." };
+  return {
+    success: true,
+    message: `Invoice ${outcome.invoice_number} issued. The agency can now see it.`,
+  };
 }
 
 export async function markInvoicePaidAction(input: { invoiceId: string }): Promise<Result> {
@@ -468,4 +497,177 @@ export async function addInvoiceAdjustmentAction(input: {
       totals.totalPence
     )}.`,
   };
+}
+
+// ============================================================
+// The document: export and email
+// ============================================================
+
+/**
+ * A short-lived signed URL to the invoice PDF.
+ *
+ * Returns a URL rather than the bytes: a server action serialises its return
+ * value through the RSC payload, so sending a megabyte of PDF back that way
+ * would be slow and would still need converting to a blob on the client. A
+ * signed URL lets the browser download it directly.
+ *
+ * Works on any status, drafts included — a draft PDF is stamped DRAFT across
+ * the top, which is exactly what someone reviewing figures before issuing
+ * wants.
+ */
+export async function exportInvoicePdfAction(input: {
+  invoiceId: string;
+}): Promise<{ error: string } | { success: true; url: string; filename: string }> {
+  const actor = await requireSuperAdmin();
+
+  const parsed = transitionSchema.safeParse(input);
+  if (!parsed.success) return { error: "Invalid invoice." };
+
+  try {
+    const signed = await signedInvoicePdfUrl(parsed.data.invoiceId);
+    if (!signed) return { error: "Invoice not found." };
+
+    const context = await invoiceAuditContext(parsed.data.invoiceId);
+    await logPlatformAudit({
+      actor: { id: actor.id },
+      category: "billing",
+      action: "invoice_exported",
+      summary: `Invoice PDF downloaded — ${context.label}`,
+      tenantId: context.tenantId,
+      entityType: "platform_invoice",
+      entityId: parsed.data.invoiceId,
+      metadata: context.metadata,
+    });
+
+    return { success: true, url: signed.url, filename: signed.filename };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Could not build the invoice PDF.",
+    };
+  }
+}
+
+/**
+ * Email the invoice to the agency's billing contact, with the PDF attached.
+ *
+ * Only issued or paid invoices. A draft is our working copy and gets rebuilt by
+ * the generator — emailing one would put a figure in somebody's inbox that we
+ * are about to change, and there is no way to unsend it.
+ *
+ * Sent via raw Resend rather than the `sendEmail` dispatcher, matching the
+ * owner-statement send: `EmailMessage` has no attachments field, so nothing
+ * with a PDF can go through the per-tenant transports yet. That is also
+ * correct here for a second reason — this is Harbor Ops writing to the agency,
+ * so it should NOT go out through the agency's own mailbox.
+ */
+export async function emailInvoiceAction(input: {
+  invoiceId: string;
+  /** Override the billing contact for this send only. */
+  to?: string;
+}): Promise<Result> {
+  const actor = await requireSuperAdmin();
+
+  const parsed = emailInvoiceSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid request" };
+  }
+
+  const loaded = await loadInvoiceForPdf(parsed.data.invoiceId);
+  if (!loaded) return { error: "Invoice not found." };
+
+  if (loaded.record.status === "draft") {
+    return {
+      error: "Issue the invoice first. A draft can still change, and an email can't be unsent.",
+    };
+  }
+  if (loaded.record.status === "void") {
+    return { error: "This invoice is void — there is nothing to send." };
+  }
+
+  const recipient = (parsed.data.to ?? loaded.record.billingEmail ?? "").trim();
+  if (!recipient) {
+    return {
+      error:
+        "This agency has no billing email set. Add one under their Billing info, or type an address here.",
+    };
+  }
+
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const fromDomain = process.env.EMAIL_FROM_DOMAIN?.trim();
+  if (!apiKey || !fromDomain) {
+    return { error: "Email is not configured on this environment (RESEND_API_KEY / EMAIL_FROM_DOMAIN)." };
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = await renderInvoicePdf(loaded.props);
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Could not build the invoice PDF.",
+    };
+  }
+
+  const html = templates.platformInvoice({
+    agencyName: loaded.record.agencyName,
+    invoiceNumber: loaded.record.invoiceNumber,
+    periodLabel: loaded.record.periodLabel,
+    totalAmount: formatPence(loaded.record.totalPence),
+    // The PDF carries the full breakdown; the email shows enough to recognise
+    // the charge without opening an attachment on a phone.
+    lineSummary: loaded.props.lines.slice(0, 6).map((line) => ({
+      description: line.description,
+      amount: formatPence(line.amountPence),
+    })),
+    paymentNote: loaded.props.paymentNote,
+  });
+
+  const subject = loaded.record.invoiceNumber
+    ? `Harbor Ops invoice ${loaded.record.invoiceNumber} — ${loaded.record.periodLabel}`
+    : `Harbor Ops invoice — ${loaded.record.periodLabel}`;
+
+  const admin = createSupabaseAdminClient();
+
+  try {
+    const resend = new Resend(apiKey);
+    await resend.emails.send({
+      from: `Harbor Ops <billing@${fromDomain}>`,
+      to: recipient,
+      subject,
+      html,
+      attachments: [{ filename: invoiceFilename(loaded.record), content: buffer }],
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // Recorded on the invoice, not just logged: the next person looking at this
+    // row needs to know the send failed, or they will assume the agency has it.
+    await admin
+      .from("tenant_platform_invoices")
+      .update({ email_error: message })
+      .eq("id", parsed.data.invoiceId);
+    return { error: `Could not send: ${message}` };
+  }
+
+  await admin
+    .from("tenant_platform_invoices")
+    .update({
+      emailed_at: new Date().toISOString(),
+      emailed_to: recipient,
+      email_error: null,
+    })
+    .eq("id", parsed.data.invoiceId);
+
+  const context = await invoiceAuditContext(parsed.data.invoiceId);
+  await logPlatformAudit({
+    actor: { id: actor.id },
+    category: "billing",
+    action: "invoice_emailed",
+    summary: `Invoice emailed to ${recipient} — ${context.label}`,
+    tenantId: context.tenantId,
+    entityType: "platform_invoice",
+    entityId: parsed.data.invoiceId,
+    metadata: { ...context.metadata, to: recipient },
+  });
+
+  revalidatePath(ADMIN_PATH);
+  return { success: true, message: `Invoice emailed to ${recipient}.` };
 }

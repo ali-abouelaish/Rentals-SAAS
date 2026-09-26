@@ -113,7 +113,7 @@ export function AddRoomDialog({ property, onCreated }: AddRoomDialogProps) {
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-brand/40 bg-brand/5 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/10 transition-colors"
+          className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-lg border border-dashed border-brand/40 bg-brand/5 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/10 transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           Add room
@@ -128,7 +128,7 @@ export function AddRoomDialog({ property, onCreated }: AddRoomDialogProps) {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-1">
           {isHmo && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Room number">
                 <input
                   {...register("room_number")}
@@ -164,7 +164,7 @@ export function AddRoomDialog({ property, onCreated }: AddRoomDialogProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Min PCM (£)" error={errors.min_price_pcm?.message}>
               <input
                 type="number"
@@ -211,7 +211,7 @@ export function AddRoomDialog({ property, onCreated }: AddRoomDialogProps) {
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
+              className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-lg bg-brand px-4 py-1.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
             >
               {isPending ? "Adding…" : "Add room"}
             </button>

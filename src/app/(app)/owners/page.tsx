@@ -67,7 +67,7 @@ export default async function OwnersRoute({
             name="q"
             defaultValue={query}
             placeholder="Search by name, email or phone"
-            className="h-9 w-full rounded-lg border border-border bg-surface-inset pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            className="h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
           />
         </div>
       </form>

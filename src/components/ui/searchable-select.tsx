@@ -153,7 +153,7 @@ export function SearchableSelect({
           }
         }}
         className={cn(
-          "h-9 w-full rounded-lg border bg-surface-inset px-3 text-sm text-left flex items-center justify-between gap-2",
+          "h-11 md:h-9 w-full rounded-lg border bg-surface-inset px-3 text-base sm:text-sm text-left flex items-center justify-between gap-2",
           "focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors",
           error ? "border-red-400" : "border-border",
           !selected ? "text-foreground-muted" : "text-foreground",
@@ -184,7 +184,7 @@ export function SearchableSelect({
                 }}
                 onKeyDown={handleListKey}
                 placeholder="Search…"
-                className="h-8 w-full rounded-lg border border-border bg-surface-inset pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                className="h-11 sm:h-8 w-full rounded-lg border border-border bg-surface-inset pl-8 pr-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
               />
             </div>
           </div>

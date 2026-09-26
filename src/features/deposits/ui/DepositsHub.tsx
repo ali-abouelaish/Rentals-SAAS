@@ -142,7 +142,7 @@ export function DepositsHub({
             key={p.key}
             type="button"
             onClick={() => setActive(p.key)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`-mb-px border-b-2 px-4 py-2 min-h-11 sm:min-h-0 text-sm font-medium transition-colors ${
               active === p.key
                 ? "border-brand text-foreground"
                 : "border-transparent text-foreground-muted hover:text-foreground"

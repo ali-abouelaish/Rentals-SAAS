@@ -20,6 +20,30 @@ export const RULE_MERGE_FIELDS: MergeField[] = [
   { key: "anchor_date", label: "Trigger date", example: "1 August 2026" },
 ];
 
+/** Key of the seeded welcome / check-in template. */
+export const WELCOME_TEMPLATE_KEY = "tenant_welcome";
+
+/**
+ * Only present on the welcome email, which a person sends by hand from the
+ * tenant drawer. {{portal_link}} mints a magic link that dies in 20 minutes,
+ * so it is resolved at SEND time rather than at enqueue time like every other
+ * field — a queued message could sit until the next morning and arrive with a
+ * dead link. That is also why these are not offered on rule templates.
+ */
+export const WELCOME_MERGE_FIELDS: MergeField[] = [
+  {
+    key: "portal_link",
+    label: "Portal sign-in link",
+    example: "https://acme.harborops.co.uk/portal/auth?token=…",
+  },
+  {
+    key: "portal_url",
+    label: "Portal login page",
+    example: "https://acme.harborops.co.uk/portal/login",
+  },
+  { key: "agency_email", label: "Agency contact email", example: "hello@acme.co.uk" },
+];
+
 /**
  * The complete merge-field allowlist per entity type. Rendering only ever
  * substitutes keys from this map — anything else stays visible in the output
@@ -78,14 +102,26 @@ export const MERGE_FIELDS: Record<Exclude<TemplateEntityType, "none">, MergeFiel
   ],
 };
 
-/** All fields usable for a given entity type (shared + entity-specific). */
-export function mergeFieldsFor(entityType: TemplateEntityType | null): MergeField[] {
-  if (!entityType || entityType === "none") return SHARED_MERGE_FIELDS;
-  return [...SHARED_MERGE_FIELDS, ...MERGE_FIELDS[entityType]];
+/**
+ * All fields usable for a given entity type (shared + entity-specific), plus
+ * the send-time welcome fields when this is the welcome template.
+ */
+export function mergeFieldsFor(
+  entityType: TemplateEntityType | null,
+  templateKey?: string | null
+): MergeField[] {
+  const base =
+    !entityType || entityType === "none"
+      ? SHARED_MERGE_FIELDS
+      : [...SHARED_MERGE_FIELDS, ...MERGE_FIELDS[entityType]];
+  return templateKey === WELCOME_TEMPLATE_KEY ? [...base, ...WELCOME_MERGE_FIELDS] : base;
 }
 
-export function mergeKeysFor(entityType: TemplateEntityType | null): Set<string> {
-  return new Set(mergeFieldsFor(entityType).map((f) => f.key));
+export function mergeKeysFor(
+  entityType: TemplateEntityType | null,
+  templateKey?: string | null
+): Set<string> {
+  return new Set(mergeFieldsFor(entityType, templateKey).map((f) => f.key));
 }
 
 export function isMessageEntityType(value: string): value is MessageEntityType {

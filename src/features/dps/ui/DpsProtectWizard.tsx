@@ -253,7 +253,7 @@ export function DpsProtectWizard({
           if (!o) setResult(null);
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Register deposit with DPS</DialogTitle>
             <DialogDescription>

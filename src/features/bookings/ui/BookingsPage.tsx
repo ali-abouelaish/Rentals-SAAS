@@ -55,7 +55,7 @@ function FormLinksDropdown({ forms }: { forms: ActiveForm[] }) {
     return (
       <Link
         href="/settings/booking-forms"
-        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
       >
         <Link2 className="h-4 w-4" />
         No active forms
@@ -68,7 +68,7 @@ function FormLinksDropdown({ forms }: { forms: ActiveForm[] }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
       >
         <Link2 className="h-4 w-4" />
         Share form

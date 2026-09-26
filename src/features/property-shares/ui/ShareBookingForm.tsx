@@ -124,7 +124,7 @@ export function ShareBookingForm({ unit, token }: ShareBookingFormProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-surface-inset/40 py-6 text-sm text-foreground-muted">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className="h-5 w-5 sm:h-4 sm:w-4 animate-spin" />
         Loading booking forms…
       </div>
     );
@@ -142,7 +142,7 @@ export function ShareBookingForm({ unit, token }: ShareBookingFormProps) {
   return (
     <div className="space-y-4 rounded-2xl border border-border bg-surface-inset/40 p-4">
       <div className="flex items-center gap-2">
-        <FileText className="h-4 w-4 text-brand" />
+        <FileText className="h-5 w-5 sm:h-4 sm:w-4 text-brand" />
         <h3 className="text-sm font-semibold text-foreground">Send a booking form</h3>
       </div>
 
@@ -235,7 +235,7 @@ export function ShareBookingForm({ unit, token }: ShareBookingFormProps) {
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+        <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 md:py-2 text-base md:text-sm text-rose-800">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>

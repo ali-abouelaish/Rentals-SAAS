@@ -104,7 +104,7 @@ export function GoogleFormImportDialog({
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value.slice(0, MAX_CHARS))}
                 rows={10}
-                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
+                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
                 placeholder="Paste your Google Form questions here…"
                 autoFocus
               />

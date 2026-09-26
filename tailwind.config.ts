@@ -148,6 +148,8 @@ const config: Config = {
         "scale-in": "scaleIn var(--duration-base) var(--ease-default) forwards",
         shimmer: "shimmer 2s linear infinite",
         "pulse-subtle": "pulseSubtle 2s ease-in-out infinite",
+        "sheet-in": "sheetIn var(--duration-slow) var(--ease-default)",
+        "dialog-in": "dialogIn var(--duration-base) var(--ease-default)",
       },
       keyframes: {
         enter: {
@@ -177,6 +179,23 @@ const config: Config = {
         pulseSubtle: {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.7" },
+        },
+        /*
+         * Dialog entrances.
+         *
+         * `tailwindcss-animate` is not installed and is not in `plugins`, so
+         * the `animate-in` / `slide-in-from-*` / `zoom-in-95` classes in the
+         * Radix wrappers generate no CSS at all — dialogs have always appeared
+         * instantly. These two are real, and are what `ui/dialog.tsx` uses.
+         */
+        sheetIn: {
+          "0%": { opacity: "0", transform: "translateY(100%)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        /* Centred dialog (md and up). */
+        dialogIn: {
+          "0%": { opacity: "0", transform: "translate(-50%, -50%) scale(0.96)" },
+          "100%": { opacity: "1", transform: "translate(-50%, -50%) scale(1)" },
         },
       },
 

@@ -88,7 +88,7 @@ export function StatusPickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md p-5 sm:p-6">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg">Change status</DialogTitle>
         </DialogHeader>

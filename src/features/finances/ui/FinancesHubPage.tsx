@@ -107,7 +107,7 @@ export function FinancesHubPage({
       {/* Materialization status + actions */}
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-card px-3 py-2">
         {isPosted ? (
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-foreground-secondary">
+          <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-[11px] text-foreground-secondary">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
             <span>
               {postInfo.count} entr{postInfo.count === 1 ? "y" : "ies"} posted
@@ -118,7 +118,7 @@ export function FinancesHubPage({
             </span>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-foreground-secondary">
+          <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-[11px] text-foreground-secondary">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
             <span>No entries posted to the ledger yet for this month.</span>
           </span>
@@ -383,7 +383,7 @@ export function FinancesHubPage({
                       </Link>
                     </td>
                     <td className="px-4 py-2">
-                      <span className="inline-flex items-center gap-1.5 text-foreground-secondary">
+                      <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-foreground-secondary">
                         <span
                           className="h-2 w-2 rounded-full"
                           style={{ backgroundColor: p.portfolio_color }}

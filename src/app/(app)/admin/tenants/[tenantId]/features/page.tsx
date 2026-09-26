@@ -56,7 +56,14 @@ export default async function AdminTenantFeaturesPage({
           </div>
           <p className="text-xs text-foreground-secondary mb-4">
             What this agency activated for itself, and what to add to their next
-            monthly invoice. No payment is taken at activation.
+            monthly invoice. No payment is taken at activation. Read-only here —{" "}
+            <Link
+              href={`/admin/tenants/${params.tenantId}/billing`}
+              className="underline hover:text-foreground"
+            >
+              set what they pay on their billing page
+            </Link>
+            .
           </p>
           <TenantIntegrationsPanel
             subscriptions={subscriptions}

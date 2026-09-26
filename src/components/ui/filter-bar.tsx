@@ -23,11 +23,24 @@ FilterBar.displayName = "FilterBar";
 
 interface FilterRowProps extends React.HTMLAttributes<HTMLDivElement> { }
 
+/**
+ * One filter per line on a phone, wrapping inline from `sm`.
+ *
+ * `flex-wrap` alone was not enough: the children are selects and inputs with
+ * their own intrinsic widths, so on a narrow screen they wrapped into a ragged
+ * column of half-width controls. Stacking them is both tidier and easier to
+ * tap.
+ */
 const FilterRow = React.forwardRef<HTMLDivElement, FilterRowProps>(
     ({ className, children, ...props }, ref) => (
         <div
             ref={ref}
-            className={cn("flex flex-wrap items-end gap-3", className)}
+            className={cn(
+                "flex flex-col gap-3",
+                "sm:flex-row sm:flex-wrap sm:items-end",
+                "[&>*]:min-w-0 max-sm:[&>*]:w-full",
+                className
+            )}
             {...props}
         >
             {children}
@@ -122,7 +135,7 @@ const FilterActions = React.forwardRef<HTMLDivElement, FilterActionsProps>(
     ({ className, children, ...props }, ref) => (
         <div
             ref={ref}
-            className={cn("flex items-end gap-2", className)}
+            className={cn("flex flex-wrap items-end gap-2", className)}
             {...props}
         >
             {children}

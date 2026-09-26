@@ -69,7 +69,7 @@ export function UnitsKanbanView({ units, onUnitClick, onUnitsChange }: UnitsKanb
   return (
     <>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto pb-4 min-h-[500px]">
+        <div className="flex gap-3 overflow-x-auto overscroll-x-contain pb-4 min-h-[500px] snap-x snap-mandatory md:snap-none">
           {UNIT_STATUSES.map((status) => (
             <KanbanColumn
               key={status}

@@ -201,7 +201,7 @@ export function AssistantChat({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, ease: "easeOut", delay: 0.1 + i * 0.05 }}
                   onClick={() => void sendMessage(s)}
-                  className="group flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-card px-3.5 py-2.5 text-left text-[13px] text-foreground shadow-sm transition-all hover:border-brand/40 hover:bg-brand-subtle hover:text-brand hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+                  className="group flex min-h-11 items-center justify-between gap-2 rounded-xl border border-border bg-surface-card px-3.5 py-2.5 text-left text-[13px] text-foreground shadow-sm transition-all hover:border-brand/40 hover:bg-brand-subtle hover:text-brand hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
                 >
                   <span>{s}</span>
                   <ArrowRight className="h-3.5 w-3.5 shrink-0 -translate-x-1 text-brand opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
@@ -290,7 +290,7 @@ export function AssistantChat({
               autoFocus
               rows={1}
               placeholder="Ask about properties, tenants, rent, finances…"
-              className="max-h-32 w-full resize-none border-none bg-transparent text-[14.5px] leading-relaxed text-foreground placeholder:text-foreground-muted focus:outline-none"
+              className="max-h-32 min-h-11 w-full resize-none border-none bg-transparent md:min-h-0 text-[14.5px] leading-relaxed text-foreground placeholder:text-foreground-muted focus:outline-none"
               disabled={sending}
             />
           </div>

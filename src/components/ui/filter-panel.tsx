@@ -22,8 +22,15 @@ export function FilterPanel({ children, className, ...props }: FilterPanelProps)
 
 export function FilterRow({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     return (
+        // Stacks on a phone for the same reason as the FilterBar row: wrapped
+        // selects at their intrinsic widths read as clutter, not as a layout.
         <div
-            className={cn("flex flex-wrap items-center gap-3", className)}
+            className={cn(
+                "flex flex-col gap-3",
+                "sm:flex-row sm:flex-wrap sm:items-center",
+                "[&>*]:min-w-0 max-sm:[&>*]:w-full",
+                className
+            )}
             {...props}
         >
             {children}
@@ -54,8 +61,10 @@ export function FilterGroup({
 
 export function FilterActions({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     return (
+        // `ml-auto` only once the row is horizontal — in the stacked phone
+        // layout an auto left margin pushes the actions off to the right edge.
         <div
-            className={cn("flex items-center gap-2 ml-auto", className)}
+            className={cn("flex flex-wrap items-center gap-2 sm:ml-auto", className)}
             {...props}
         >
             {children}

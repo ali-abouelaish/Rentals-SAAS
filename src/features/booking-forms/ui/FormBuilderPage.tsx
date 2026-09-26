@@ -39,8 +39,8 @@ import { bookingFormSchema, type BookingFormValues } from "../domain/schemas";
 import type { BookingForm, FormQuestion } from "../domain/types";
 import type { Portfolio } from "@/features/properties/domain/types";
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
@@ -354,7 +354,7 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                 </div>
               </form>
             ) : (
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-semibold text-foreground">{selectedForm.name}</h2>
@@ -374,7 +374,9 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     <p className="text-sm text-foreground-secondary mt-0.5">{selectedForm.description}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                {/* Wraps instead of forcing one line — see the same fix in
+                    forms/ui/FormsBuilderPage.tsx. */}
+                <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
                   <Button type="button" variant="outline" size="sm" onClick={openHeaderEdit}>
                     <Pencil className="h-3.5 w-3.5 mr-1" />
                     Edit
@@ -403,7 +405,7 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     href={`${appUrl}/apply/${selectedForm.public_slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
+                    className="inline-flex items-center gap-1 h-11 md:h-8 px-3 rounded-lg border border-border text-sm text-foreground-secondary hover:text-foreground hover:bg-surface-inset transition-colors"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     Open
@@ -423,6 +425,7 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     onClick={() => handleToggleActive(selectedForm)}
                     disabled={isPending}
                     title={selectedForm.is_active ? "Deactivate form" : "Activate form"}
+                    className="grid h-11 w-11 place-items-center md:inline-flex md:h-auto md:w-auto"
                   >
                     {selectedForm.is_active ? (
                       <ToggleRight className="h-5 w-5 text-green-600" />
@@ -435,6 +438,7 @@ export function FormBuilderPage({ initialForms, portfolios, appUrl }: FormBuilde
                     onClick={() => handleDelete(selectedForm)}
                     disabled={isPending}
                     title="Delete form"
+                    className="grid h-11 w-11 place-items-center md:inline-flex md:h-auto md:w-auto"
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </button>
@@ -571,7 +575,7 @@ function FormPreview({ form }: { form: BookingForm }) {
         }}
       >
         <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand">
+          <div className="flex h-11 w-11 md:h-9 md:w-9 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand">
             <Home className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">

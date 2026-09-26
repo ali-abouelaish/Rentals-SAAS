@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { MessageEntityType, RecipientConfig } from "../domain/types";
+import { useCursorInsert } from "@/lib/hooks/useCursorInsert";
 import { mergeFieldsFor } from "../domain/mergeFields";
 import {
   createAdHocReminder,
@@ -25,7 +26,7 @@ import {
 } from "../actions/reminders";
 
 const inputCls =
-  "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
+  "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
 const hintCls = "text-[11px] text-foreground-muted mt-1";
 const errCls = "text-xs text-red-600 mt-1";
 
@@ -169,6 +170,9 @@ export function AddReminderDialog({
   const recipientMode = watch("recipientMode");
   const recurEnabled = watch("recurEnabled");
   const body = watch("body");
+  const { bindRef, insert, preventBlur } = useCursorInsert<HTMLTextAreaElement>();
+  // Pull RHF's ref out so it can be forwarded alongside our own.
+  const { ref: bodyRef, ...bodyField } = register("body");
 
   // Channel drives the recipient mode: in_app → staff; email → resolver/literal.
   useEffect(() => {
@@ -241,7 +245,7 @@ export function AddReminderDialog({
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Add reminder{entity ? ` — ${entity.label}` : ""}</DialogTitle>
         </DialogHeader>
@@ -333,7 +337,8 @@ export function AddReminderDialog({
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Message</label>
             <textarea
-              {...register("body")}
+              {...bodyField}
+              ref={(el) => bindRef(el, bodyRef)}
               rows={5}
               className={fieldError(!!errors.body)}
               placeholder="What should the reminder say?"
@@ -349,9 +354,14 @@ export function AddReminderDialog({
                   <button
                     key={f.key}
                     type="button"
-                    title={`Insert ${f.label} (e.g. ${f.example})`}
-                    className="text-[10px] rounded-full border border-border px-2 py-0.5 text-foreground-secondary hover:bg-surface-inset"
-                    onClick={() => setValue("body", `${body}${body ? " " : ""}{{${f.key}}}`)}
+                    title={`Insert ${f.label} (e.g. ${f.example}) at the cursor`}
+                    className="inline-flex min-h-11 items-center rounded-full border border-border px-2.5 py-0.5 text-[10px] text-foreground-secondary hover:bg-surface-inset md:min-h-0"
+                    onMouseDown={preventBlur}
+                    onClick={() =>
+                      insert(body ?? "", `{{${f.key}}}`, (next) =>
+                        setValue("body", next, { shouldDirty: true, shouldValidate: true })
+                      )
+                    }
                   >
                     {f.label}
                   </button>
@@ -374,7 +384,7 @@ export function AddReminderDialog({
             {errors.sendAtLocal && <p className={errCls}>{errors.sendAtLocal.message}</p>}
           </div>
 
-          <div className="rounded-xl border border-border p-3 space-y-2">
+          <div className="min-h-11 md:min-h-0 rounded-xl border border-border p-3 space-y-2">
             <label className="flex items-start gap-2">
               <input
                 type="checkbox"

@@ -34,7 +34,7 @@ function RentPaymentsCard({ unit }: { unit: Unit }) {
       <div className="rounded-lg border border-border bg-surface-card p-4">
         <div className="flex items-center gap-2 mb-1">
           <PoundSterling className="h-3.5 w-3.5 text-foreground-muted" />
-          <p className="text-sm font-semibold text-foreground">Rent payments</p>
+          <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">Rent payments</p>
         </div>
         <p className="text-xs text-foreground-secondary">
           Create a contract first — rent payments are tracked per contract. Past
@@ -48,7 +48,7 @@ function RentPaymentsCard({ unit }: { unit: Unit }) {
     <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
       <div className="flex items-center gap-2">
         <PoundSterling className="h-3.5 w-3.5 text-foreground-muted" />
-        <p className="text-sm font-semibold text-foreground">Rent payments</p>
+        <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">Rent payments</p>
       </div>
       <TenancyPaymentsList
         contractId={contract.id}
@@ -161,13 +161,13 @@ function CreateContractDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>New Contract — {unit.property?.name} · {unitLabel}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(handleCreate)} className="space-y-4 mt-2">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
               <FormField label="Tenant *" error={errors.pm_tenant_id?.message}>
                 <Controller
                   name="pm_tenant_id"
@@ -214,7 +214,7 @@ function CreateContractDialog({
                 ))}
               </select>
             </FormField>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Controller
                 name="pro_rata_amount"
                 control={control}
@@ -306,7 +306,7 @@ function ContractCard({
     return (
       <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
         <div>
-          <p className="text-sm font-semibold text-foreground">Contract</p>
+          <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">Contract</p>
           <p className="text-xs text-foreground-secondary mt-0.5">
             No contract yet for this tenant and unit.
           </p>
@@ -331,7 +331,7 @@ function ContractCard({
     <div className="rounded-lg border border-border bg-surface-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-foreground">Contract</p>
+          <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">Contract</p>
           <p className="text-xs text-foreground-secondary mt-0.5">
             From {new Date(contract.start_date).toLocaleDateString("en-GB")}
             {contract.rent_pcm ? ` · £${contract.rent_pcm}/mo` : ""}
@@ -366,7 +366,7 @@ function ContractCard({
           type="file"
           accept="application/pdf,image/*"
           disabled={uploading}
-          className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+          className="min-h-11 md:min-h-0 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) handleUpload(file);
@@ -460,7 +460,7 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">{current.full_name ?? "Unnamed tenant"}</p>
+              <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">{current.full_name ?? "Unnamed tenant"}</p>
               {current.email && <p className="text-xs text-foreground-secondary truncate">{current.email}</p>}
               {current.phone && <p className="text-xs text-foreground-muted">{current.phone}</p>}
             </div>
@@ -511,7 +511,7 @@ export function TenantTab({ unit, onUnitUpdated, pmTenants }: TenantTabProps) {
     <>
       <div className="space-y-3 py-1">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">
             {linking ? "Reassign tenant" : "Assign tenant to unit"}
           </h3>
           {linking && (

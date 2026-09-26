@@ -47,7 +47,7 @@ function StandingOrderRefRow({ value }: { value: string | null }) {
   const [copied, setCopied] = useState(false);
   if (!value) return null;
   return (
-    <div className="col-span-2 flex flex-col gap-0.5">
+    <div className="sm:col-span-2 flex flex-col gap-0.5">
       <span
         className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted"
         title="Give this to the tenant to use as their standing-order reference so rent payments reconcile automatically against this tenancy on bank statements."
@@ -83,8 +83,8 @@ function FormField({ label, error, children }: { label: string; error?: string; 
   );
 }
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 const TABS = [
   { value: "overview", label: "Overview" },
@@ -138,7 +138,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
       <div className="space-y-5 py-1">
         <section>
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Parties</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow label="Tenant" value={contract.pm_tenant?.full_name} />
             <InfoRow label="Contact" value={contract.pm_tenant?.phone} />
             <InfoRow label="Unit" value={contract.unit ? `${contract.unit.property.name} — ${contract.unit.unit_type === "room" && contract.unit.room_number ? `Room ${contract.unit.room_number}` : contract.unit.unit_type}` : null} />
@@ -146,7 +146,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
         </section>
         <section>
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Terms</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow label="Start date" value={new Date(contract.start_date).toLocaleDateString("en-GB")} />
             <InfoRow label="Expiry date" value={contract.expiry_date ? new Date(contract.expiry_date).toLocaleDateString("en-GB") : "Rolling / periodic"} />
             <InfoRow label="Rent PCM" value={`£${contract.rent_pcm.toLocaleString()}`} />
@@ -192,7 +192,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
     // noValidate: Zod owns validation — native min/max tooltips would fire
     // before submit and mask the inline errors.
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4 py-1">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Start date *" error={errors.start_date?.message}>
           <input type="date" {...register("start_date")} className={inputCls} />
         </FormField>
@@ -229,7 +229,7 @@ function OverviewContent({ contract, isEditing, onSaved }: { contract: PropertyC
           />
         )}
       />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Status">
           <select {...register("status")} className={selectCls}>
             {Object.entries(CONTRACT_STATUS_CONFIG).map(([v, cfg]) => (
@@ -265,7 +265,7 @@ function NoticeContent({ contract, onGiveNotice }: { contract: PropertyContract;
       <div className="space-y-4 py-1">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
           <p className="text-sm font-semibold text-amber-800">Notice has been given</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow label="Given by" value={contract.notice_given_by ? contract.notice_given_by.charAt(0).toUpperCase() + contract.notice_given_by.slice(1) : null} />
             <InfoRow label="Notice date" value={contract.notice_given_date ? new Date(contract.notice_given_date).toLocaleDateString("en-GB") : null} />
             <InfoRow label="Vacate date" value={contract.vacate_date ? new Date(contract.vacate_date).toLocaleDateString("en-GB") : null} />
@@ -348,7 +348,7 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
       )}
 
       {!isEditing ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <InfoRow label="Deposit amount" value={`£${contract.deposit.toLocaleString()}`} />
           <InfoRow label="Scheme" value={DEPOSIT_SCHEME_LABELS[contract.deposit_scheme]} />
           <InfoRow label="Scheme ref" value={contract.deposit_scheme_ref} />
@@ -359,7 +359,7 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
             <DepositBadge contract={contract} />
           </div>
           {contract.deposit_scheme === "mydeposits" && (
-            <div className="col-span-2 flex flex-wrap items-center gap-2 pt-1">
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1">
               <SecureDepositWizard
                 contractId={contract.id}
                 depositPounds={contract.deposit}
@@ -380,7 +380,7 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
             </div>
           )}
           {contract.deposit_scheme === "tds" && (
-            <div className="col-span-2 flex flex-wrap items-center gap-2 pt-1">
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1">
               <TdsProtectWizard
                 contractId={contract.id}
                 depositPounds={contract.deposit || contract.unit?.deposit || 0}
@@ -418,7 +418,7 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
             </div>
           )}
           {contract.deposit_scheme === "dps" && (
-            <div className="col-span-2 flex flex-wrap items-center gap-2 pt-1">
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1">
               <DpsProtectWizard
                 contractId={contract.id}
                 depositPounds={contract.deposit || contract.unit?.deposit || 0}
@@ -450,7 +450,7 @@ function DepositContent({ contract, isEditing, onSaved }: { contract: PropertyCo
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Deposit scheme">
               <select {...register("deposit_scheme")} className={selectCls}>
                 {Object.entries(DEPOSIT_SCHEME_LABELS).map(([v, l]) => (
@@ -610,7 +610,7 @@ export function ContractDrawer({ contract, open, onClose, onContractUpdated }: C
       <SheetContent side="right" className="flex flex-col p-0 w-full max-w-[560px]">
         {/* Header */}
         <SheetHeader className="shrink-0">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1.5 min-w-0">
               <ContractStatusBadge status={localContract.status} />
               <h2 className="text-base font-semibold text-foreground truncate">
@@ -621,7 +621,7 @@ export function ContractDrawer({ contract, open, onClose, onContractUpdated }: C
                 {new Date(localContract.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
               <AddReminderDialog
                 entity={{
                   type: "tenancy",
@@ -645,15 +645,17 @@ export function ContractDrawer({ contract, open, onClose, onContractUpdated }: C
         </SheetHeader>
 
         {/* Tabs */}
-        <div className="border-b border-border px-6 pt-2 pb-0 shrink-0">
-          <div className="flex">
+        {/* Scrolls sideways rather than squashing its labels — the same
+            treatment ui/tabs.tsx got in Phase 0. */}
+        <div className="border-b border-border px-4 sm:px-6 pt-2 pb-0 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max">
             {TABS.map((tab) => (
               <button
                 key={tab.value}
                 type="button"
                 onClick={() => setActiveTab(tab.value)}
                 className={cn(
-                  "px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+                  "px-4 py-2.5 min-h-11 shrink-0 whitespace-nowrap text-[13px] font-medium border-b-2 transition-colors -mb-px",
                   activeTab === tab.value
                     ? "border-brand text-brand"
                     : "border-transparent text-foreground-secondary hover:text-foreground hover:border-border"

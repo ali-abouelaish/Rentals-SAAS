@@ -24,6 +24,7 @@ import {
   markSent,
   requeueAt,
 } from "./queue";
+import { notifyAutomationFailure } from "./alerts";
 import { recheckRuleMessage } from "./evaluate";
 import {
   downgradeLegacyClaimOnFailure,
@@ -43,6 +44,9 @@ export type MessageDrainResult = {
 
 type Admin = ReturnType<typeof createSupabaseAdminClient>;
 
+/** Mirrors the 5-attempt cap in mark_scheduled_message_failed. */
+const MAX_ATTEMPTS = 5;
+
 /** Count of today's (London day) outbound sends for a tenant. */
 async function countSentToday(admin: Admin, tenantId: string): Promise<number> {
   const { count, error } = await admin
@@ -56,80 +60,16 @@ async function countSentToday(admin: Admin, tenantId: string): Promise<number> {
   return count ?? 0;
 }
 
-/** Blast-radius alert, at most once per tenant per London day. */
-async function alertRateLimitOnce(admin: Admin, tenantId: string, limit: number): Promise<void> {
-  const start = londonStartOfDay().toISOString();
-  const { data, error } = await admin
-    .from("error_events")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("source", "scheduled_messages_rate_limit")
-    .gte("created_at", start)
-    .limit(1);
-  if (error) {
-    console.error("[messages] rate-limit alert lookup failed", error.message);
-    return;
-  }
-  if (data && data.length > 0) return;
-  await admin.from("error_events").insert({
-    tenant_id: tenantId,
-    source: "scheduled_messages_rate_limit",
-    message: `Daily message limit of ${limit} reached; further messages deferred to tomorrow`,
-    context: {},
-  });
-}
-
-/**
- * When a rule-generated message permanently fails, tell the rule's creator via
- * an in-app reminder (at most once per rule per London day) plus an
- * error_events row — self-dogfooding the queue for its own alerting.
- */
-async function alertRuleFailureOnce(
-  admin: Admin,
-  row: ScheduledMessageRow,
-  reason: string
-): Promise<void> {
-  if (!row.rule_id) return;
-  try {
-    const start = londonStartOfDay().toISOString();
-    const { data: existing } = await admin
-      .from("error_events")
-      .select("id")
-      .eq("tenant_id", row.tenant_id)
-      .eq("source", "automation_rule_send_failure")
-      .contains("context", { ruleId: row.rule_id })
-      .gte("created_at", start)
-      .limit(1);
-    if (existing && existing.length > 0) return;
-
-    await admin.from("error_events").insert({
-      tenant_id: row.tenant_id,
-      source: "automation_rule_send_failure",
-      message: reason,
-      context: { ruleId: row.rule_id, messageId: row.id },
-    });
-
-    const { data: rule } = await admin
-      .from("automation_rules")
-      .select("name, created_by")
-      .eq("id", row.rule_id)
-      .maybeSingle();
-    if (!rule?.created_by) return;
-
-    await admin.from("scheduled_messages").insert({
-      tenant_id: row.tenant_id,
-      channel: "in_app",
-      recipient_kind: "staff",
-      assignee_user_id: rule.created_by,
-      subject: `Automation rule "${rule.name}" failed to send`,
-      body: `A message from the rule "${rule.name}" could not be delivered: ${reason}. Check the rule's activity log and the Reminders → Failed tab.`,
-      send_at: new Date().toISOString(),
-      status: "queued",
-    });
-  } catch (err) {
-    console.error("[messages] failed to raise rule-failure alert", {
+/** Alert agency when a transient failure just consumed the row's last attempt. */
+async function markFailedAndAlertIfFinal(row: ScheduledMessageRow, reason: string): Promise<void> {
+  await markFailed(row.id, reason);
+  if (row.attempts + 1 >= MAX_ATTEMPTS) {
+    await notifyAutomationFailure({
+      tenantId: row.tenant_id,
+      kind: "retries_exhausted",
+      reason,
+      ruleId: row.rule_id,
       messageId: row.id,
-      error: err instanceof Error ? err.message : String(err),
     });
   }
 }
@@ -235,7 +175,11 @@ export async function drainScheduledMessages(limit = 20): Promise<MessageDrainRe
             londonWallTimeToUtc(addDaysISO(londonToday(), 1), tenant.settings.windowStart),
             "Deferred: daily message limit reached"
           );
-          await alertRateLimitOnce(admin, row.tenant_id, tenant.settings.dailyLimit);
+          await notifyAutomationFailure({
+            tenantId: row.tenant_id,
+            kind: "daily_limit",
+            reason: `Daily message limit of ${tenant.settings.dailyLimit} reached; further messages deferred to tomorrow`,
+          });
           deferred++;
           continue;
         }
@@ -257,9 +201,15 @@ export async function drainScheduledMessages(limit = 20): Promise<MessageDrainRe
       if (!recipient.ok) {
         if (recipient.permanent) {
           await markFailedPermanent(row.id, recipient.reason);
-          await alertRuleFailureOnce(admin, row, recipient.reason);
+          await notifyAutomationFailure({
+            tenantId: row.tenant_id,
+            kind: "send_failed",
+            reason: recipient.reason,
+            ruleId: row.rule_id,
+            messageId: row.id,
+          });
         } else {
-          await markFailed(row.id, recipient.reason);
+          await markFailedAndAlertIfFinal(row, recipient.reason);
         }
         failed++;
         continue;
@@ -281,9 +231,15 @@ export async function drainScheduledMessages(limit = 20): Promise<MessageDrainRe
       try {
         if (err instanceof PermanentSendError) {
           await markFailedPermanent(row.id, message);
-          await alertRuleFailureOnce(admin, row, message);
+          await notifyAutomationFailure({
+            tenantId: row.tenant_id,
+            kind: "send_failed",
+            reason: message,
+            ruleId: row.rule_id,
+            messageId: row.id,
+          });
         } else {
-          await markFailed(row.id, message);
+          await markFailedAndAlertIfFinal(row, message);
         }
         // If a rent-preset shim claim was written for this attempt, mirror the
         // legacy cron's downgrade so the audit trail stays accurate.

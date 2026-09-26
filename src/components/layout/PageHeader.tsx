@@ -13,15 +13,17 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, action, className }: PageHeaderProps) {
   return (
     <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4", className)}>
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight font-heading text-foreground">
+      <div className="min-w-0">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading text-foreground [overflow-wrap:anywhere]">
           {title}
         </h1>
         {subtitle && (
           <p className="text-sm text-foreground-secondary mt-1">{subtitle}</p>
         )}
       </div>
-      {action && <div className="flex items-center gap-2">{action}</div>}
+      {/* Wraps rather than overflowing: a header with three actions used to
+          push the page wider than a phone screen. */}
+      {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
   );
 }
@@ -40,7 +42,7 @@ export function PageHero({ title, subtitle, badge, action, className }: PageHero
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl p-8 text-brand-fg",
+        "relative overflow-hidden rounded-2xl p-5 sm:p-8 text-brand-fg",
         "bg-brand",
         className
       )}
@@ -60,16 +62,18 @@ export function PageHero({ title, subtitle, badge, action, className }: PageHero
 
       {/* Content */}
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           {badge && (
             <div className="flex items-center gap-2 text-accent mb-2">
               <span className="text-sm font-medium">{badge}</span>
             </div>
           )}
-          <h1 className="text-3xl font-bold">{title}</h1>
-          {subtitle && <p className="text-brand-fg/70 text-lg mt-1">{subtitle}</p>}
+          <h1 className="text-2xl sm:text-3xl font-bold [overflow-wrap:anywhere]">{title}</h1>
+          {subtitle && (
+            <p className="text-brand-fg/70 text-base sm:text-lg mt-1">{subtitle}</p>
+          )}
         </div>
-        {action && <div>{action}</div>}
+        {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
       </div>
     </div>
   );

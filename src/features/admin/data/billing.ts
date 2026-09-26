@@ -8,7 +8,10 @@ import type { BillingPeriod } from "@/lib/billing/rates";
 
 export type PlatformInvoiceLine = {
   id: string;
-  kind: "integration" | "envelopes" | "adjustment";
+  // 'usage' was added to the table's CHECK by 20260913000004_usage_metering.sql
+  // and to InvoiceLineDraft in lib/billing/rates.ts, but missed here — so a
+  // metered overage line read back was typed as something it is not.
+  kind: "integration" | "envelopes" | "adjustment" | "usage" | "plan";
   description: string;
   quantity: number;
   unit_price_pence: number;
@@ -18,6 +21,7 @@ export type PlatformInvoiceLine = {
 export type PlatformInvoiceRow = {
   id: string;
   tenant: { id: string; name: string };
+  invoice_number: string | null;
   period_start: string;
   period_end: string;
   subtotal_pence: number;
@@ -27,6 +31,13 @@ export type PlatformInvoiceRow = {
   issued_at: string | null;
   paid_at: string | null;
   generated_at: string;
+  /** When the invoice was emailed, and to where. Null until it is sent. */
+  emailed_at: string | null;
+  emailed_to: string | null;
+  /** Last send failure. Surfaced so a failed send isn't mistaken for a sent one. */
+  email_error: string | null;
+  /** The agency's billing contact, to pre-fill the send dialog. */
+  billing_email: string | null;
   lines: PlatformInvoiceLine[];
 };
 
@@ -64,7 +75,7 @@ export async function getPlatformInvoices(
   const { data: invoices, error } = await admin
     .from("tenant_platform_invoices")
     .select(
-      "id, tenant_id, period_start, period_end, subtotal_pence, vat_pence, total_pence, status, issued_at, paid_at, generated_at, tenants(id, name)"
+      "id, tenant_id, invoice_number, period_start, period_end, subtotal_pence, vat_pence, total_pence, status, issued_at, paid_at, generated_at, emailed_at, emailed_to, email_error, tenants(id, name)"
     )
     .eq("period_year", period.year)
     .eq("period_month", period.month)
@@ -92,6 +103,26 @@ export async function getPlatformInvoices(
         .in("invoice_id", ids)
     : { data: [] as Record<string, unknown>[] };
 
+  // Billing contacts for every agency on this page, in one query. Needed to
+  // pre-fill the send dialog; fetching per invoice would be N+1 for a value
+  // that is the same for every invoice a tenant has.
+  const tenantIds = Array.from(
+    new Set((invoices ?? []).map((row) => row.tenant_id as string))
+  );
+  const { data: billingRows } = tenantIds.length
+    ? await admin
+        .from("tenant_billing_info")
+        .select("tenant_id, billing_email")
+        .in("tenant_id", tenantIds)
+    : { data: [] as Record<string, unknown>[] };
+
+  const billingByTenant = new Map(
+    (billingRows ?? []).map((row) => [
+      row.tenant_id as string,
+      (row.billing_email as string | null) ?? null,
+    ])
+  );
+
   const linesByInvoice = new Map<string, PlatformInvoiceLine[]>();
   for (const line of lines ?? []) {
     const list = linesByInvoice.get(line.invoice_id as string) ?? [];
@@ -118,6 +149,11 @@ export async function getPlatformInvoices(
         id: tenant?.id ?? (row.tenant_id as string),
         name: tenant?.name ?? "Unknown agency",
       },
+      invoice_number: (row.invoice_number as string | null) ?? null,
+      emailed_at: (row.emailed_at as string | null) ?? null,
+      emailed_to: (row.emailed_to as string | null) ?? null,
+      email_error: (row.email_error as string | null) ?? null,
+      billing_email: billingByTenant.get(row.tenant_id as string) ?? null,
       period_start: row.period_start as string,
       period_end: row.period_end as string,
       subtotal_pence: row.subtotal_pence as number,
@@ -162,6 +198,17 @@ export type AgencyInvoiceRow = {
   lines: PlatformInvoiceLine[];
 };
 
+export type AgencyChargeRow = {
+  id: string;
+  label: string;
+  amountPence: number;
+  billingStartsOn: string;
+  endsOn: string | null;
+  notes: string | null;
+  /** Whether it applies to the current month. */
+  isLive: boolean;
+};
+
 export type AgencySubscriptionRow = {
   integrationKey: string;
   name: string;
@@ -196,6 +243,8 @@ export type AgencyEnvelopePurchaseRow = {
 
 export type AgencyBillingHistory = {
   invoices: AgencyInvoiceRow[];
+  /** What we agreed this agency pays: base fee, custom lines, discounts. */
+  charges: AgencyChargeRow[];
   subscriptions: AgencySubscriptionRow[];
   usage: AgencyUsageRow[];
   purchases: AgencyEnvelopePurchaseRow[];
@@ -229,8 +278,13 @@ export async function getAgencyBillingHistory(
 
   const unavailable: string[] = [];
 
-  const [invoicesResult, subscriptionsResult, usageResult, purchasesResult] =
-    await Promise.all([
+  const [
+    invoicesResult,
+    chargesResult,
+    subscriptionsResult,
+    usageResult,
+    purchasesResult
+  ] = await Promise.all([
       admin
         .from("tenant_platform_invoices")
         .select(
@@ -239,6 +293,11 @@ export async function getAgencyBillingHistory(
         .eq("tenant_id", tenantId)
         .order("period_year", { ascending: false })
         .order("period_month", { ascending: false }),
+      admin
+        .from("tenant_platform_charges")
+        .select("id, label, amount_pence, billing_starts_on, ends_on, notes")
+        .eq("tenant_id", tenantId)
+        .order("billing_starts_on", { ascending: false }),
       admin
         .from("tenant_integration_subscriptions")
         .select(
@@ -259,6 +318,7 @@ export async function getAgencyBillingHistory(
     ]);
 
   if (invoicesResult.error) unavailable.push("tenant_platform_invoices");
+  if (chargesResult.error) unavailable.push("tenant_platform_charges");
   if (subscriptionsResult.error) unavailable.push("tenant_integration_subscriptions");
   if (usageResult.error) unavailable.push("tenant_usage_counters");
   if (purchasesResult.error) unavailable.push("tenant_envelope_purchases");
@@ -300,6 +360,25 @@ export async function getAgencyBillingHistory(
     paid_at: (row.paid_at as string | null) ?? null,
     lines: linesByInvoice.get(row.id as string) ?? [],
   }));
+
+  // "Live" means it applies to the month we are in now: started, not ended.
+  // Plain ISO string comparison, the same rule chargeBillable uses at invoice
+  // time, so the badge here and the invoice line cannot disagree.
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  const charges: AgencyChargeRow[] = (chargesResult.data ?? []).map((row) => {
+    const startsOn = row.billing_starts_on as string;
+    const endsOn = (row.ends_on as string | null) ?? null;
+    return {
+      id: row.id as string,
+      label: row.label as string,
+      amountPence: row.amount_pence as number,
+      billingStartsOn: startsOn,
+      endsOn,
+      notes: (row.notes as string | null) ?? null,
+      isLive: startsOn <= todayIso && (!endsOn || endsOn >= todayIso)
+    };
+  });
 
   const subscriptions: AgencySubscriptionRow[] = (subscriptionsResult.data ?? [])
     .map((row) => {
@@ -358,12 +437,22 @@ export async function getAgencyBillingHistory(
   // status and billing start visible, so the number the reader can verify by eye is
   // the right one to show. The platform-wide MRR on /admin uses the strict
   // predicate, because there it has to agree with what actually gets invoiced.
-  const mrrPence = subscriptions
-    .filter((sub) => sub.status === "active" && !sub.isGrandfathered)
-    .reduce((sum, sub) => sum + sub.monthlyPricePence, 0);
+  // Agreed charges FIRST — for most agencies the base fee is the whole
+  // relationship and the add-ons are the rounding. Discounts are negative and so
+  // subtract naturally. Ended or not-yet-started charges are excluded.
+  const chargeMrrPence = charges
+    .filter((charge) => charge.isLive)
+    .reduce((sum, charge) => sum + charge.amountPence, 0);
+
+  const mrrPence =
+    chargeMrrPence +
+    subscriptions
+      .filter((sub) => sub.status === "active" && !sub.isGrandfathered)
+      .reduce((sum, sub) => sum + sub.monthlyPricePence, 0);
 
   return {
     invoices,
+    charges,
     subscriptions,
     usage,
     purchases,

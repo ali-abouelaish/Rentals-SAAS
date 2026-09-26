@@ -88,12 +88,12 @@ export function LandlordContractCard({
   return (
     <div className="rounded-bento bg-surface-card shadow-bento p-5 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+        <p className="flex min-h-11 md:min-h-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
           <ScrollText className="h-3.5 w-3.5" />
           Landlord contract
         </p>
         <Tooltip content="Change the landlord, the contract terms, or upload a new signed agreement.">
-          <Link href={editHref} className="text-xs text-brand hover:underline">
+          <Link href={editHref} className="inline-flex min-h-11 min-w-11 items-center justify-center text-xs text-brand hover:underline md:min-h-0 md:min-w-0">
             Edit
           </Link>
         </Tooltip>
@@ -106,14 +106,14 @@ export function LandlordContractCard({
             <Tooltip content="Open the landlord's record — their standing deal, other properties and statements.">
               <Link
                 href={`/owners/${landlord.id}`}
-                className="flex items-center gap-2 text-sm font-semibold text-foreground transition-colors hover:text-brand"
+                className="flex min-h-11 md:min-h-0 items-center gap-2 text-sm font-semibold text-foreground transition-colors hover:text-brand"
               >
                 <UserRound className="h-3.5 w-3.5 shrink-0 text-foreground-muted" />
                 <span className="truncate">{landlord.name}</span>
               </Link>
             </Tooltip>
           ) : (
-            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <p className="flex min-h-11 md:min-h-0 items-center gap-2 text-sm font-semibold text-foreground">
               <UserRound className="h-3.5 w-3.5 shrink-0 text-foreground-muted" />
               <span className="truncate">{landlord.name}</span>
             </p>
@@ -123,7 +123,7 @@ export function LandlordContractCard({
               {landlord.email && (
                 <a
                   href={`mailto:${landlord.email}`}
-                  className="flex items-center gap-1.5 truncate text-xs text-foreground-secondary hover:text-brand"
+                  className="flex min-h-11 items-center gap-1.5 truncate text-xs text-foreground-secondary hover:text-brand md:min-h-0"
                 >
                   <Mail className="h-3 w-3 shrink-0" />
                   <span className="truncate">{landlord.email}</span>
@@ -132,7 +132,7 @@ export function LandlordContractCard({
               {landlord.phone && (
                 <a
                   href={`tel:${landlord.phone}`}
-                  className="flex items-center gap-1.5 text-xs text-foreground-secondary hover:text-brand"
+                  className="flex min-h-11 md:min-h-0 items-center gap-1.5 text-xs text-foreground-secondary hover:text-brand"
                 >
                   <Phone className="h-3 w-3 shrink-0" />
                   {landlord.phone}
@@ -165,7 +165,7 @@ export function LandlordContractCard({
             </span>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Row
               label="Start"
               hint="When your agreement with the landlord for this property began."
@@ -219,7 +219,7 @@ export function LandlordContractCard({
         <div className="rounded-xl border border-dashed border-border bg-surface-inset px-3 py-4 text-center">
           <ScrollText className="mx-auto mb-1.5 h-5 w-5 text-foreground-muted opacity-40" />
           <p className="text-xs text-foreground-muted">No contract recorded for this property</p>
-          <Link href={editHref} className="text-xs text-brand hover:underline">
+          <Link href={editHref} className="inline-flex min-h-11 min-w-11 items-center justify-center text-xs text-brand hover:underline md:min-h-0 md:min-w-0">
             Add the contract →
           </Link>
         </div>

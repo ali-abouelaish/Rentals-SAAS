@@ -504,5 +504,9 @@ Everything before this recorded a charge and stopped. A subscription knew its pr
 
 - **Apply the migration.**
 - **VAT is zero** (`VAT_RATE_BPS` in `rates.ts`). Set it to 2000 when registered; the rate is stamped per invoice at generation, so history keeps what it was billed at.
-- **Nothing is emailed.** Issuing makes an invoice visible to the agency in-app; there is no delivery, no PDF and no payment collection. A PDF would follow `OwnerStatementPdf` closely if wanted.
+- ~~Nothing is emailed.~~ **DONE 2026-09-15** — invoices now render to PDF, download via a signed URL, and email to the agency's billing contact with the PDF attached. Payment collection is still out of scope. Notes:
+  - The PDF is **Harbor Ops branded, not agency branded**. `OwnerStatementPdf` is the agency writing to its landlord; this is us writing to the agency, and their own logo on a bill from us would read as their invoice to themselves.
+  - **Invoice numbers** are minted by `issue_platform_invoice` in the same statement as the status change, at issue rather than generation — voided drafts then leave no gaps in what is supposed to be a sequential VAT series.
+  - **Only issued or paid invoices can be emailed.** A draft gets rebuilt by the generator, and an email cannot be unsent. Draft PDFs download stamped DRAFT so a reviewer can still check figures.
+  - Sent via raw Resend, like the owner-statement send: `EmailMessage` has no attachments field. Here that is doubly right — it must not go through the agency's own mailbox.
 - **No agency-facing invoice list yet.** The RLS policy allows it; no page reads it.

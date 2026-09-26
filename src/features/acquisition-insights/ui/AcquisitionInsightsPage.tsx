@@ -106,7 +106,7 @@ export function AcquisitionInsightsPage({
       : 0;
 
   const selectClass =
-    "h-9 rounded-lg border border-border bg-surface-card px-3 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-brand";
+    "h-11 md:h-9 rounded-lg border border-border bg-surface-card px-3 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
     <div className="space-y-6">
@@ -173,7 +173,7 @@ export function AcquisitionInsightsPage({
             placeholder="Search address, area…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-full rounded-lg border border-border bg-surface-card pl-9 pr-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand"
+            className="h-11 md:h-9 w-full rounded-lg border border-border bg-surface-card pl-9 pr-3 text-base md:text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
 

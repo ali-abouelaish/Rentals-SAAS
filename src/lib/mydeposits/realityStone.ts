@@ -124,13 +124,16 @@ export async function addPropertyByAgency(
 }
 
 /**
- * ⚠ UPSTREAM BLOCKER (sandbox, 2026-08-21): this endpoint returns HTTP 500 with
- * an empty body for every request shape tried, including the minimal
- * `{propertyId, tenancyName}`. So does its sibling
+ * ⚠ UPSTREAM BLOCKER (sandbox; found 2026-08-21, still reproducing 2026-09-15):
+ * this endpoint returns HTTP 500 with an empty body for every request shape
+ * tried, including the minimal `{propertyId, tenancyName}`. So does its sibling
  * `POST /tenants/can-be-invited-to-tenancy`. Binding and field validation both
- * pass first (a malformed body returns a proper 400), so the 500 happens after
- * validation — it is a mydeposits-side fault, not a payload problem. Property
- * creation against the same account and token succeeds. Reported to mydeposits.
+ * pass first (a malformed body returns a proper 400), and a *non-existent*
+ * propertyId 500s too rather than 404ing — so the handler faults before it ever
+ * resolves the property. `POST /tenancies/name/validate` (same module, same
+ * verb) and every tenancy read return 200, as does property creation on the
+ * same account and token: the blast radius is just these two command handlers.
+ * Reported to mydeposits. Re-check with `scripts/mydeposits-tenancy-probe.mjs`.
  *
  * The body below is the shape their validators accept. Note `tenancyName` (not
  * `name`) and `isLeadTenant` (not `isLead`) — both confirmed via

@@ -14,7 +14,7 @@ Automations sends messages for you on a schedule you define once: rent reminders
 ## Key concepts
 
 1. **Rules.** A rule = a trigger (a date approaching, something happening, or a threshold being crossed) + who to message + which template to use.
-2. **Templates.** Editable message texts with placeholders like {{renter_name}} that fill in per recipient. Manage them under **Templates**; each agency gets a starter set.
+2. **Templates.** Editable message texts with placeholders like {{renter_name}} that fill in per recipient. Manage them under **Templates**; each agency gets a starter set. Not every template belongs to a rule — **Welcome & check-in pack** is the copy staff send by hand from a tenant's drawer, and this is where you edit it.
 3. **Modes.** Every rule is **Off**, **Dry run**, or **Live**. Dry run evaluates daily and records what *would* have been sent — to whom, about what — without sending anything. Start every new rule in dry run.
 
 ## Key tasks

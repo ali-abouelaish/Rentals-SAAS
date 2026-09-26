@@ -68,3 +68,22 @@ export const guarantorSchema = z.object({
   payslips_url: z.string().nullable().optional().or(z.literal("")),
 });
 export type GuarantorFormValues = z.infer<typeof guarantorSchema>;
+
+/**
+ * The welcome / check-in email as it sits in the send dialog. Staff can tweak
+ * the copy for one send without touching the agency template, so this validates
+ * what is actually on screen rather than the stored template.
+ */
+export const welcomeEmailSendSchema = z.object({
+  subject: z
+    .string()
+    .trim()
+    .min(1, "Subject is required")
+    .max(200, "Max 200 characters"),
+  body: z
+    .string()
+    .trim()
+    .min(1, "Message is required")
+    .max(10000, "Max 10,000 characters"),
+});
+export type WelcomeEmailSendValues = z.infer<typeof welcomeEmailSendSchema>;

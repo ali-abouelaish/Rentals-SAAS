@@ -6,19 +6,19 @@ import { submitForm } from "../actions/form-submit";
 import type { Form, FormQuestion } from "../domain/types";
 
 const inputCls = (invalid: boolean) =>
-  `h-10 w-full rounded-xl border ${
+  `h-11 md:h-10 w-full rounded-xl border ${
     invalid ? "border-red-400 bg-red-50/30" : "border-border bg-surface-card/60"
-  } px-3.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand backdrop-blur-sm`;
+  } px-3.5 text-base md:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand backdrop-blur-sm`;
 
 const textareaCls = (invalid: boolean) =>
   `w-full rounded-xl border ${
     invalid ? "border-red-400 bg-red-50/30" : "border-border bg-surface-card/60"
-  } px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none backdrop-blur-sm`;
+  } px-3.5 py-2.5 text-base md:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none backdrop-blur-sm`;
 
 const selectCls = (invalid: boolean) =>
-  `h-10 w-full rounded-xl border ${
+  `h-11 md:h-10 w-full rounded-xl border ${
     invalid ? "border-red-400 bg-red-50/30" : "border-border bg-surface-card/60"
-  } px-3.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand backdrop-blur-sm`;
+  } px-3.5 text-base md:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand backdrop-blur-sm`;
 
 const SERIF: React.CSSProperties = {
   fontFamily: "var(--font-fraunces), Georgia, serif",
@@ -63,7 +63,7 @@ function FileInput({
           <button
             type="button"
             onClick={() => remove(i)}
-            className="text-foreground-muted hover:text-foreground transition-colors"
+            className="grid h-11 w-11 place-items-center md:inline-flex md:h-auto md:w-auto text-foreground-muted hover:text-foreground transition-colors"
             aria-label="Remove file"
           >
             <X className="h-4 w-4" />
@@ -390,7 +390,7 @@ export function PublicFormPage({ form, slug, token }: PublicFormPageProps) {
             placeholder="Jane Smith"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Email</label>
             <input

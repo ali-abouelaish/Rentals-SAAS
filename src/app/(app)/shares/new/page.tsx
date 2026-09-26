@@ -29,7 +29,7 @@ export default async function NewSharePage() {
       <div>
         <Link
           href="/shares"
-          className="inline-flex items-center gap-1 text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
+          className="inline-flex min-h-11 md:min-h-0 items-center gap-1 text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Back to shares

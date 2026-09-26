@@ -132,7 +132,8 @@ export function MonthlySummaryReport({
             <div className="px-4 py-3 border-b border-border">
               <h2 className="text-sm font-semibold text-foreground">By portfolio</h2>
             </div>
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-xs">
               <thead className="bg-surface-inset">
                 <tr className="text-left text-[11px] uppercase tracking-wider text-foreground-muted">
                   <th className="px-4 py-2 font-semibold">Portfolio</th>
@@ -166,6 +167,7 @@ export function MonthlySummaryReport({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* By property */}
@@ -173,7 +175,8 @@ export function MonthlySummaryReport({
             <div className="px-4 py-3 border-b border-border">
               <h2 className="text-sm font-semibold text-foreground">By property</h2>
             </div>
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-xs">
               <thead className="bg-surface-inset">
                 <tr className="text-left text-[11px] uppercase tracking-wider text-foreground-muted">
                   <th className="px-4 py-2 font-semibold">Property</th>
@@ -209,6 +212,7 @@ export function MonthlySummaryReport({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AssertionError, assertKeyCreate } from "@/lib/auth/assertions";
+import { AssertionError, assertKeyCreate, rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createKeysSchema } from "@/features/keys/domain/schemas";
 import { getPropertyKeys } from "@/features/keys/data/queries";
@@ -15,6 +15,7 @@ export async function GET(
     }
     return NextResponse.json(payload);
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
@@ -71,6 +72,7 @@ export async function POST(
 
     return NextResponse.json({ ok: true, ids: (data ?? []).map((r) => r.id) }, { status: 201 });
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }

@@ -175,7 +175,7 @@ export function MoreMenuSheet({
             <button
               type="submit"
               aria-label="Sign out"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-surface-inset hover:text-error"
+              className="flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-surface-inset hover:text-error"
             >
               <LogOut className="h-[18px] w-[18px]" />
             </button>

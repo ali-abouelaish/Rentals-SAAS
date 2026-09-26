@@ -100,11 +100,16 @@ export function RaiseJobModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-surface-card rounded-bento shadow-2xl overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="New work order"
+        className="relative flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-bento bg-surface-card shadow-2xl sm:max-h-[85dvh] sm:rounded-bento"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4 sm:px-6">
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold text-foreground">New Work Order</h2>
@@ -123,14 +128,14 @@ export function RaiseJobModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-inset transition-colors"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-foreground-muted transition-colors hover:bg-surface-inset hover:text-foreground sm:h-8 sm:w-8"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
 
           {/* Property */}
           <div>
@@ -158,7 +163,7 @@ export function RaiseJobModal({
               {...register("title")}
               placeholder="e.g. Blocked drain in bathroom"
               className={cn(
-                "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
+                "w-full rounded-xl border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
                 errors.title ? "border-red-400" : "border-border"
               )}
             />
@@ -168,12 +173,12 @@ export function RaiseJobModal({
           </div>
 
           {/* Category + Priority (side by side) */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Category</label>
               <select
                 {...register("category")}
-                className="w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
+                className="w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
               >
                 {(Object.keys(JOB_CATEGORY_LABELS) as JobCategory[]).map((k) => (
                   <option key={k} value={k}>{JOB_CATEGORY_LABELS[k]}</option>
@@ -184,7 +189,7 @@ export function RaiseJobModal({
               <label className="block text-sm font-medium text-foreground mb-1.5">Priority</label>
               <select
                 {...register("priority")}
-                className="w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
+                className="w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
               >
                 {(Object.keys(JOB_PRIORITY_LABELS) as JobPriority[]).map((k) => (
                   <option key={k} value={k}>{JOB_PRIORITY_LABELS[k]}</option>
@@ -200,12 +205,12 @@ export function RaiseJobModal({
               {...register("description")}
               rows={3}
               placeholder="Describe the issue in detail…"
-              className="w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50 resize-none"
+              className="w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50 resize-none"
             />
           </div>
 
           {/* Reported by + Assigned supplier */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-foreground mb-0.5">Reported by</label>
               <p className="text-[11px] text-foreground-muted mb-1.5">
@@ -214,7 +219,7 @@ export function RaiseJobModal({
               <input
                 {...register("reported_by")}
                 placeholder="Tenant name or 'Staff'"
-                className="w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50"
+                className="w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50"
               />
             </div>
             <div>
@@ -247,23 +252,23 @@ export function RaiseJobModal({
             <input
               type="date"
               {...register("scheduled_date")}
-              className="w-full rounded-xl border border-border bg-surface-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
+              className="w-full rounded-xl border border-border bg-surface-card px-3 py-2.5 text-base sm:py-2 sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-inset transition-colors"
+              className="min-h-11 w-full rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-inset sm:min-h-0 sm:w-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg hover:opacity-90 transition-opacity disabled:opacity-60"
+              className="min-h-11 w-full rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg transition-opacity hover:opacity-90 disabled:opacity-60 sm:min-h-0 sm:w-auto"
             >
               {submitting ? "Creating…" : "Create Work Order"}
             </button>

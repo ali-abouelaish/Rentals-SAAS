@@ -27,8 +27,8 @@ const DEFAULT_FILTERS: ContractFilters = {
   depositProtected: "",
 };
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
@@ -134,14 +134,14 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Contracts</h1>
           <p className="text-sm text-foreground-secondary mt-0.5">
             {contracts.length} contract{contracts.length !== 1 ? "s" : ""} · all periodic/rolling
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline">
             <Link href="/contracts/templates" title="Manage the contract templates used to generate agreements">
               <FileText className="h-4 w-4 mr-1.5" />
@@ -183,13 +183,13 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={(o) => { if (!o) { reset(); setContractFile(null); } setCreateOpen(o); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>New Contract</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(handleCreate)} className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
                 <FormField label="Unit *" error={errors.unit_id?.message}>
                   <Controller
                     name="unit_id"
@@ -207,7 +207,7 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
                   />
                 </FormField>
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <FormField label="Tenant *" error={errors.pm_tenant_id?.message}>
                   <Controller
                     name="pm_tenant_id"
@@ -255,7 +255,7 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
                   ))}
                 </select>
               </FormField>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Controller
                   name="pro_rata_amount"
                   control={control}
@@ -277,13 +277,13 @@ export function ContractsPage({ initialContracts, portfolios, units, pmTenants }
                   )}
                 />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <FormField label="Contract document">
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     disabled={isPending}
-                    className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+                    className="min-h-11 md:min-h-0 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-inset file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
                     onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
                   />
                 </FormField>

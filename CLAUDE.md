@@ -101,6 +101,8 @@ Required in `.env.local`:
 | `BOLDSIGN_HOST` | Optional BoldSign API host; defaults to the EU region `https://api-eu.boldsign.com` |
 | `BOLDSIGN_ENV` | BoldSign environment (`sandbox` \| `live`); defaults to `sandbox` |
 | `BOLDSIGN_WEBHOOK_SECRET` | HMAC secret for verifying inbound BoldSign webhooks |
+| `PLATFORM_INVOICE_PAYMENT_NOTE` | Optional payment instructions printed on platform invoice PDFs and emails; omitted entirely when unset |
+| `PLATFORM_SUPPORT_EMAIL` | Harbor Ops support inbox; receives new-ticket and agency-reply notifications from `/helpdesk`. Tickets still save when unset — only the email is skipped |
 
 For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`, and optionally `DEV_TENANT_NAME`.
 

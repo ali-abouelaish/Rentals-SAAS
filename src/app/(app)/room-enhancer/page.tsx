@@ -589,7 +589,7 @@ export default function RoomEnhancerPage() {
                             type="button"
                             onClick={() => setImageFiles((prev) => prev.filter((_, i) => i !== idx))}
                             disabled={loading}
-                            className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                            className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
                           >
                             <X className="h-3 w-3" />
                           </button>

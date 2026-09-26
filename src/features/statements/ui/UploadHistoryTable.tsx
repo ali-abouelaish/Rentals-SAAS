@@ -49,7 +49,7 @@ function DeleteButton({ uploadId, filename }: { uploadId: string; filename: stri
       type="button"
       onClick={onClick}
       disabled={isPending}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors disabled:opacity-50"
+      className="inline-flex h-11 w-11 shrink-0 md:h-8 md:w-8 items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors disabled:opacity-50"
       aria-label="Delete upload"
     >
       <Trash2 className="h-4 w-4" />

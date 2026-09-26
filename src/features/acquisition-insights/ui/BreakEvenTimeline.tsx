@@ -161,11 +161,11 @@ export function BreakEvenTimeline({
       </div>
 
       {/* Annual projection table */}
-      <div className="rounded-xl border border-border bg-surface-raised overflow-hidden">
+      <div className="rounded-xl border border-border bg-surface-raised overflow-x-auto">
         <div className="px-4 py-3 border-b border-border bg-surface-card">
           <span className="text-[13px] font-semibold text-foreground">Cumulative Recovery Projection</span>
         </div>
-        <table className="w-full text-[12px]">
+        <table className="w-full min-w-[520px] text-[12px]">
           <thead>
             <tr className="border-b border-border">
               <th className="px-4 py-2 text-left font-medium text-foreground-secondary">Period</th>

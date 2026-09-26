@@ -1,7 +1,7 @@
 import "./globals.css";
 import { Inter, Poppins } from "next/font/google";
 import type { ReactNode } from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClientToaster } from "@/components/shared/ClientToaster";
 import { getTenantBrandingByHost } from "@/lib/tenant";
 
@@ -16,6 +16,21 @@ const poppins = Poppins({
   variable: "--font-poppins",
   weight: ["600"]
 });
+
+/**
+ * `viewportFit: "cover"` is the part that matters.
+ *
+ * Next's default viewport tag omits it, which makes every `env(safe-area-inset-*)`
+ * resolve to 0 on iOS — so the mobile bottom nav, which pads itself with
+ * `env(safe-area-inset-bottom)`, sat underneath the home indicator on every
+ * iPhone. `maximumScale` is deliberately absent: capping zoom is an
+ * accessibility failure, and the layout should not need it.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getTenantBrandingByHost();

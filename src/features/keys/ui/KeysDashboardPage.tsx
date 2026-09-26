@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Key as KeyIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DataList, type DataListColumn } from "@/components/ui/data-list";
 import { cn } from "@/lib/utils/cn";
 import { KEY_PURPOSE_LABELS, type KeysOutItem } from "../domain/types";
 
@@ -60,6 +61,78 @@ export function KeysDashboardPage({ items: initial }: { items: KeysOutItem[] }) 
     });
   };
 
+  const columns: DataListColumn<KeysOutItem>[] = [
+    {
+      key: "property",
+      header: "Property",
+      priority: "primary",
+      cell: (item) => (
+        <>
+          <Link
+            href={`/properties/${item.property.id}`}
+            className="text-sm text-foreground hover:text-brand"
+          >
+            {item.property.address}
+          </Link>
+          {item.unitLabel && (
+            <p className="text-[11px] text-foreground-muted">{item.unitLabel}</p>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "set",
+      header: "Set / Copy",
+      cell: (item) => (
+        <>
+          {item.key.setName}
+          <span className="text-foreground-muted"> · {item.key.copyLabel}</span>
+        </>
+      ),
+    },
+    {
+      key: "holder",
+      header: "Holder",
+      cell: (item) => (
+        <>
+          <span className="text-foreground">{holderName(item)}</span>
+          {item.heldBy.kind === "contact" && item.heldBy.phone && (
+            <p className="text-[11px] text-foreground-muted">{item.heldBy.phone}</p>
+          )}
+        </>
+      ),
+    },
+    { key: "purpose", header: "Purpose", cell: (item) => KEY_PURPOSE_LABELS[item.purpose] },
+    { key: "out", header: "Out", cell: (item) => formatDate(item.checkedOutAt) },
+    {
+      key: "expected",
+      header: "Expected",
+      cell: (item) =>
+        item.expectedReturnAt ? (
+          <span className={cn(item.isOverdue ? "text-red-600 font-medium" : undefined)}>
+            {formatDate(item.expectedReturnAt)}
+          </span>
+        ) : (
+          <span className="text-foreground-muted">—</span>
+        ),
+    },
+    {
+      key: "action",
+      header: "Action",
+      priority: "action",
+      cell: (item) => (
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={pendingId === item.key.id}
+          onClick={() => onCheckin(item)}
+        >
+          Check in
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -86,7 +159,7 @@ export function KeysDashboardPage({ items: initial }: { items: KeysOutItem[] }) 
             type="button"
             onClick={() => setFilter(f)}
             className={cn(
-              "h-8 rounded-lg border px-3 text-xs font-medium",
+              "h-11 sm:h-8 rounded-lg border px-3 text-xs font-medium",
               filter === f
                 ? "border-brand bg-brand/10 text-brand"
                 : "border-border bg-surface-card text-foreground-secondary"
@@ -105,78 +178,21 @@ export function KeysDashboardPage({ items: initial }: { items: KeysOutItem[] }) 
           </p>
         </div>
       ) : (
-        <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-inset text-[11px] uppercase tracking-wide text-foreground-muted">
-              <tr>
-                <th className="text-left font-semibold px-4 py-2.5">Property</th>
-                <th className="text-left font-semibold px-4 py-2.5">Set / Copy</th>
-                <th className="text-left font-semibold px-4 py-2.5">Holder</th>
-                <th className="text-left font-semibold px-4 py-2.5">Purpose</th>
-                <th className="text-left font-semibold px-4 py-2.5">Out</th>
-                <th className="text-left font-semibold px-4 py-2.5">Expected</th>
-                <th className="text-right font-semibold px-4 py-2.5">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {visible.map((item) => (
-                <tr
-                  key={item.key.id}
-                  className={cn(
-                    "hover:bg-surface-inset/40",
-                    pendingId === item.key.id && "opacity-60 pointer-events-none"
-                  )}
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/properties/${item.property.id}`}
-                      className="text-sm text-foreground hover:text-brand"
-                    >
-                      {item.property.address}
-                    </Link>
-                    {item.unitLabel && (
-                      <p className="text-[11px] text-foreground-muted">{item.unitLabel}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    {item.key.setName}
-                    <span className="text-foreground-muted"> · {item.key.copyLabel}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="text-sm text-foreground">{holderName(item)}</div>
-                    {item.heldBy.kind === "contact" && item.heldBy.phone && (
-                      <p className="text-[11px] text-foreground-muted">{item.heldBy.phone}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-foreground-secondary">
-                    {KEY_PURPOSE_LABELS[item.purpose]}
-                  </td>
-                  <td className="px-4 py-3 text-foreground-secondary">
-                    {formatDate(item.checkedOutAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {item.expectedReturnAt ? (
-                      <span
-                        className={cn(
-                          item.isOverdue ? "text-red-600 font-medium" : "text-foreground-secondary"
-                        )}
-                      >
-                        {formatDate(item.expectedReturnAt)}
-                      </span>
-                    ) : (
-                      <span className="text-foreground-muted">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="secondary" onClick={() => onCheckin(item)}>
-                      Check in
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        /*
+         * `DataList`, not a raw table.
+         *
+         * The wrapper here was `overflow-hidden` around seven columns, so on a
+         * phone everything from "Purpose" rightwards — the Check in button
+         * included — was clipped away with no way to scroll to it. Clipped
+         * content is invisible to the overflow audit too, which is why this
+         * survived a green sweep.
+         */
+        <DataList
+          rows={visible}
+          getRowKey={(item) => item.key.id}
+          caption="Keys currently signed out"
+          columns={columns}
+        />
       )}
     </div>
   );

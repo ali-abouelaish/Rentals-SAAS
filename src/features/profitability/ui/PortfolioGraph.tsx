@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -51,7 +51,25 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
+/**
+ * Recharts sizes itself to its container but knows nothing about legibility:
+ * twelve month labels and a full £ y-axis are unreadable at 360px. This drives
+ * the handful of props that need to thin out on a phone.
+ */
+function useIsNarrow(breakpoint = 640) {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [breakpoint]);
+  return narrow;
+}
+
 export function PortfolioGraph({ data, portfolios }: PortfolioGraphProps) {
+  const isNarrow = useIsNarrow();
   const [period, setPeriod] = useState(12);
   const [view, setView] = useState<"actual" | "projected" | "both">("actual");
 
@@ -67,7 +85,7 @@ export function PortfolioGraph({ data, portfolios }: PortfolioGraphProps) {
             <button
               key={months}
               onClick={() => setPeriod(months)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 text-xs font-medium transition-colors ${
                 period === months
                   ? "bg-brand text-brand-fg"
                   : "text-foreground-secondary hover:bg-surface-inset"
@@ -84,7 +102,7 @@ export function PortfolioGraph({ data, portfolios }: PortfolioGraphProps) {
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+              className={`px-3 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 text-xs font-medium capitalize transition-colors ${
                 view === v
                   ? "bg-brand text-brand-fg"
                   : "text-foreground-secondary hover:bg-surface-inset"
@@ -97,22 +115,28 @@ export function PortfolioGraph({ data, portfolios }: PortfolioGraphProps) {
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={isNarrow ? 220 : 300}>
         <LineChart data={sliced} margin={{ top: 5, right: 16, left: 8, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e5e7eb)" vertical={false} />
           <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="4 4" strokeWidth={1} />
           <XAxis
             dataKey="month"
-            tick={{ fontSize: 11, fill: "var(--foreground-muted, #9ca3af)" }}
+            tick={{ fontSize: isNarrow ? 10 : 11, fill: "var(--foreground-muted, #9ca3af)" }}
             axisLine={false}
             tickLine={false}
+            interval={isNarrow ? "preserveStartEnd" : 0}
+            minTickGap={isNarrow ? 24 : 5}
           />
           <YAxis
             tick={{ fontSize: 11, fill: "var(--foreground-muted, #9ca3af)" }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v: number) => `£${v < 0 ? "-" : ""}${Math.abs(v).toLocaleString()}`}
-            width={72}
+            tickFormatter={(v: number) =>
+              isNarrow
+                ? `£${v < 0 ? "-" : ""}${Math.abs(v) >= 1000 ? `${Math.round(Math.abs(v) / 1000)}k` : Math.abs(v)}`
+                : `£${v < 0 ? "-" : ""}${Math.abs(v).toLocaleString()}`
+            }
+            width={isNarrow ? 44 : 72}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend

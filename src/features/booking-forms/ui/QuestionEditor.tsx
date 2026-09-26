@@ -32,9 +32,9 @@ import {
 import { formQuestionSchema, type FormQuestionValues } from "../domain/schemas";
 import { QUESTION_TYPE_LABELS, type FormQuestion } from "../domain/types";
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const textareaCls = "w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const textareaCls = "w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
@@ -139,7 +139,7 @@ function AddQuestionForm({ formId, nextSortOrder, onAdded, onCancel }: AddQuesti
             {options.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="flex-1 text-sm text-foreground bg-surface-inset rounded-lg px-3 py-1.5">{opt}</span>
-                <button type="button" onClick={() => removeOption(i)}>
+                <button type="button" onClick={() => removeOption(i)} className="grid h-11 w-11 shrink-0 place-items-center md:h-auto md:w-auto">
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                 </button>
               </div>
@@ -264,7 +264,7 @@ function EditQuestionForm({ question, onSaved, onCancel }: EditQuestionFormProps
             {options.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="flex-1 text-sm text-foreground bg-surface-inset rounded-lg px-3 py-1.5">{opt}</span>
-                <button type="button" onClick={() => removeOption(i)}>
+                <button type="button" onClick={() => removeOption(i)} className="grid h-11 w-11 shrink-0 place-items-center md:h-auto md:w-auto">
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                 </button>
               </div>
@@ -356,7 +356,7 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing touch-none mt-0.5 shrink-0 text-foreground-muted hover:text-foreground"
+        className="cursor-grab active:cursor-grabbing touch-none mt-0.5 grid h-11 w-11 shrink-0 place-items-center text-foreground-muted hover:text-foreground md:h-auto md:w-auto"
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-4 w-4" />
@@ -387,12 +387,12 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
           </>
         )}
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button
           type="button"
           onClick={() => setEditing(true)}
           title="Edit"
-          className="text-foreground-muted hover:text-foreground"
+          className="grid h-11 w-11 place-items-center text-foreground-muted hover:text-foreground md:h-auto md:w-auto"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
@@ -401,13 +401,19 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
           onClick={() => setConfirmingDelete(true)}
           disabled={isPending}
           title="Delete"
+          className="grid h-11 w-11 place-items-center md:h-auto md:w-auto"
         >
           <Trash2 className="h-3.5 w-3.5 text-red-500" />
         </button>
       </div>
 
       {confirmingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit question"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
+        >
           <div className="w-full max-w-sm rounded-bento bg-surface-card shadow-bento p-6 space-y-4 mx-4">
             <h3 className="text-base font-semibold text-foreground">Delete question</h3>
             <p className="text-sm text-foreground-muted">
@@ -421,7 +427,7 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
                 disabled={isPending}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
+                className="min-h-11 md:min-h-0 rounded-lg px-4 py-2 text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -429,7 +435,7 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
                 type="button"
                 onClick={handleDelete}
                 disabled={isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-60"
+                className="inline-flex min-h-11 md:min-h-0 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-60"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 {isPending ? "Deleting…" : "Delete question"}

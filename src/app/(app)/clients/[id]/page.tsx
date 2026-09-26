@@ -136,7 +136,7 @@ export default async function ClientDetailPage({
               <Link
                 key={`${rental.id}-edit`}
                 href={`/rentals/${rental.id}`}
-                className="text-xs text-brand hover:underline"
+                className="inline-flex min-h-11 items-center text-xs text-brand hover:underline md:min-h-0"
               >
                 Edit rental
               </Link>

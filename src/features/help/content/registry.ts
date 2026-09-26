@@ -4,6 +4,7 @@ import { generalArticle } from "./general";
 // Shared
 import { dashboardArticle } from "./dashboard";
 import { meArticle } from "./me";
+import { helpdeskArticle } from "./helpdesk";
 // Rental Agency module
 import { earningsArticle } from "./earnings";
 import { clientsArticle } from "./clients";
@@ -66,6 +67,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   // Shared
   dashboardArticle,
   meArticle,
+  helpdeskArticle,
   // Rental Agency module
   earningsArticle,
   clientsArticle,

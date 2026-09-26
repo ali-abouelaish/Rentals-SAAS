@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveFlag } from "@/features/statements/actions/manage";
+import { rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 
 export async function PATCH(_req: NextRequest, { params }: { params: { flagId: string } }) {
   try {
@@ -9,6 +10,7 @@ export async function PATCH(_req: NextRequest, { params }: { params: { flagId: s
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     const message = err instanceof Error ? err.message : "Resolve failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

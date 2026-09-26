@@ -114,13 +114,13 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="bg-surface-inset rounded-xl p-4 space-y-3 border border-border">
       <p className="text-xs font-semibold text-foreground uppercase tracking-wider">New Cost</p>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
           <label className="block text-xs font-medium text-foreground mb-1">Description <span className="text-red-500">*</span></label>
           <input
             {...register("description")}
             placeholder="e.g. Plumber call-out"
-            className={cn("w-full rounded-lg border px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50", errors.description ? "border-red-400" : "border-border")}
+            className={cn("w-full rounded-lg border px-3 py-2.5 text-base sm:py-2 sm:text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50", errors.description ? "border-red-400" : "border-border")}
           />
         </div>
         <div>
@@ -131,7 +131,7 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
             min="0.01"
             {...register("amount_pounds")}
             placeholder="0.00"
-            className={cn("w-full rounded-lg border px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50", errors.amount_pounds ? "border-red-400" : "border-border")}
+            className={cn("w-full rounded-lg border px-3 py-2.5 text-base sm:py-2 sm:text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50", errors.amount_pounds ? "border-red-400" : "border-border")}
           />
           {errors.amount_pounds && <p className="text-xs text-red-600 mt-0.5">{errors.amount_pounds.message}</p>}
         </div>
@@ -140,7 +140,7 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
           <input
             type="date"
             {...register("date_incurred")}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50"
+            className="w-full rounded-lg border border-border px-3 py-2.5 text-base sm:py-2 sm:text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50"
           />
         </div>
         <div>
@@ -148,7 +148,7 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
           <input
             {...register("supplier")}
             placeholder="Contractor name"
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50"
+            className="w-full rounded-lg border border-border px-3 py-2.5 text-base sm:py-2 sm:text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50"
           />
         </div>
         <div>
@@ -156,10 +156,10 @@ function AddCostForm({ jobId, propertyId, onSaved, onCancel }: AddCostFormProps)
           <input
             {...register("invoice_ref")}
             placeholder="INV-001"
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50"
+            className="w-full rounded-lg border border-border px-3 py-2.5 text-base sm:py-2 sm:text-sm bg-surface-card focus:outline-none focus:ring-2 focus:ring-brand/50"
           />
         </div>
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <label className="flex items-start gap-2 text-sm text-foreground">
             <input
               type="checkbox"
@@ -475,7 +475,7 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
               )}
 
               {/* Detail grid */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
                   { icon: Tag, label: "Category", value: JOB_CATEGORY_LABELS[job.category] },
                   { icon: BarChart2, label: "Priority", value: JOB_PRIORITY_LABELS[job.priority] },
@@ -589,14 +589,14 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                         <span className="text-sm font-semibold tabular-nums text-foreground">
                           {fmtPounds(cost.amount)}
                         </span>
                         <button
                           onClick={() => handleDeleteCost(cost)}
                           disabled={deletingCostId === cost.id}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-foreground-muted hover:text-red-600 transition-all"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-foreground-muted hover:text-red-600 transition-all"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -653,7 +653,7 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
               </div>
 
               {photos.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {photos.map((photo) => (
                     <div key={photo.id} className="relative group rounded-xl overflow-hidden bg-surface-inset aspect-square">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -670,7 +670,7 @@ export function JobDrawer({ job, suppliers, open, onClose, onJobUpdated }: JobDr
                       <button
                         onClick={() => handleDeletePhoto(photo.id)}
                         disabled={deletingPhotoId === photo.id}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-black/60 text-white hover:bg-red-600/80 transition-all"
+                        className="absolute top-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 rounded-lg bg-black/60 text-white hover:bg-red-600/80 transition-all"
                       >
                         <Trash2 size={12} />
                       </button>

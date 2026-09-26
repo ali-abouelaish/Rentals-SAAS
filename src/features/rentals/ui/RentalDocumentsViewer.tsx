@@ -79,7 +79,7 @@ export function RentalDocumentsViewer({ sets }: { sets: ViewerSet[] }) {
       ))}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl p-4 md:p-6">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="capitalize">
               {activeSet ? formatSetType(activeSet.set_type) : "Documents"}

@@ -40,7 +40,7 @@ export function TemplatesListPage({ templates, portfolios }: Props) {
         <div>
           <Link
             href="/contracts"
-            className="inline-flex items-center gap-1 text-sm font-medium text-foreground-muted hover:text-foreground transition-colors mb-2"
+            className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-foreground-muted hover:text-foreground transition-colors sm:min-h-0 sm:mb-2"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to contracts
@@ -79,7 +79,7 @@ export function TemplatesListPage({ templates, portfolios }: Props) {
             const portfolio = t.portfolio_id ? portfolioMap.get(t.portfolio_id) : null;
             return (
               <div key={t.id} className="flex items-center justify-between p-4 hover:bg-surface-inset transition">
-                <Link href={`/contracts/templates/${t.id}`} className="flex-1 min-w-0">
+                <Link href={`/contracts/templates/${t.id}`} className="flex min-h-11 flex-1 min-w-0 flex-col justify-center">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-brand/10 text-brand flex items-center justify-center shrink-0">
                       <FileText size={18} />
@@ -103,7 +103,7 @@ export function TemplatesListPage({ templates, portfolios }: Props) {
                   type="button"
                   onClick={() => handleDelete(t.id, t.name)}
                   disabled={isPending}
-                  className="ml-3 inline-flex items-center justify-center h-8 w-8 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
+                  className="ml-3 inline-flex items-center justify-center h-11 w-11 md:h-8 md:w-8 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
                   aria-label="Delete template"
                 >
                   <Trash2 size={16} />

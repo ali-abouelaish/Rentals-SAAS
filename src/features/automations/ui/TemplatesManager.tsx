@@ -8,6 +8,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Eye, Pencil, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useCursorInsert } from "@/lib/hooks/useCursorInsert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +21,7 @@ import {
   type MessageTemplateRow,
   type TemplateEntityType,
 } from "../domain/types";
-import { mergeFieldsFor, RULE_MERGE_FIELDS } from "../domain/mergeFields";
+import { mergeFieldsFor, RULE_MERGE_FIELDS, WELCOME_TEMPLATE_KEY } from "../domain/mergeFields";
 import { smsSegments } from "../lib/render";
 import {
   createTemplate,
@@ -32,7 +33,7 @@ import {
 } from "../actions/templates";
 
 const inputCls =
-  "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
+  "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50";
 const hintCls = "text-[11px] text-foreground-muted mt-1";
 const errCls = "text-xs text-red-600 mt-1";
 
@@ -72,26 +73,58 @@ type CreateValues = z.infer<typeof createSchema>;
 
 function MergeChips({
   entityType,
+  templateKey,
   onInsert,
+  onPreventBlur,
 }: {
   entityType: TemplateEntityType;
+  /** Unlocks the welcome-only fields on the welcome template. */
+  templateKey?: string | null;
   onInsert: (key: string) => void;
+  /** Stops the click stealing focus, so the caret stays where it was. */
+  onPreventBlur: (event: React.MouseEvent) => void;
 }) {
-  const fields = [...mergeFieldsFor(entityType), ...RULE_MERGE_FIELDS];
+  const isWelcome = templateKey === WELCOME_TEMPLATE_KEY;
+  // The welcome email is sent by hand, never by a rule, so there is no trigger
+  // date to offer — showing {{anchor_date}} here would only ever render blank.
+  const fields = [
+    ...mergeFieldsFor(entityType, templateKey),
+    ...(isWelcome ? [] : RULE_MERGE_FIELDS),
+  ];
   return (
-    <div className="flex flex-wrap gap-1 mt-1.5">
-      {fields.map((f) => (
-        <button
-          key={f.key}
-          type="button"
-          title={`Insert ${f.label} (e.g. ${f.example})`}
-          className="text-[10px] rounded-full border border-border px-2 py-0.5 text-foreground-secondary hover:bg-surface-inset"
-          onClick={() => onInsert(f.key)}
-        >
-          {f.label}
-        </button>
-      ))}
-    </div>
+    <>
+      <div className="flex flex-wrap gap-1 mt-1.5">
+        {fields.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            title={`Insert ${f.label} (e.g. ${f.example}) at the cursor`}
+            className="inline-flex min-h-11 items-center rounded-full border border-border px-2.5 py-0.5 text-[10px] text-foreground-secondary hover:bg-surface-inset md:min-h-0"
+            onMouseDown={onPreventBlur}
+            onClick={() => onInsert(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      {isWelcome && (
+        <div className={hintCls}>
+          <p>
+            Staff send this one by hand from a tenant&apos;s drawer, and can tweak the
+            wording for a single send. {"{{portal_link}}"} becomes a fresh sign-in link,
+            valid 20 minutes, at the moment it is sent.
+          </p>
+          <p className="mt-1">
+            This one is laid out as a designed HTML email — your logo, colours and the
+            property/rent panel are applied for you. Write plain text and use{" "}
+            <code>{"# Headline"}</code> on the first line,{" "}
+            <code>{"## Section"}</code>, <code>{"- bullet"}</code>,{" "}
+            <code>{"**bold**"}</code>, <code>{"---"}</code> for a divider, and{" "}
+            <code>{"[Label](link)"}</code> alone on a line for a button.
+          </p>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -121,6 +154,9 @@ function EditTemplateDialog({
     },
   });
   const body = watch("body");
+  const { bindRef, insert, preventBlur } = useCursorInsert<HTMLTextAreaElement>();
+  // Pull RHF's ref out so it can be forwarded alongside our own.
+  const { ref: bodyRef, ...bodyField } = register("body");
   const sms = template.channel === "sms" ? smsSegments(body ?? "") : null;
 
   const onSubmit = (values: EditValues) => {
@@ -143,7 +179,7 @@ function EditTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
             Edit template — {CHANNEL_LABELS[template.channel]},{" "}
@@ -169,7 +205,12 @@ function EditTemplateDialog({
           )}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Body</label>
-            <textarea {...register("body")} rows={8} className={fieldError(!!errors.body)} />
+            <textarea
+              {...bodyField}
+              ref={(el) => bindRef(el, bodyRef)}
+              rows={8}
+              className={fieldError(!!errors.body)}
+            />
             <p className={hintCls}>
               Plain text with {"{{placeholders}}"}. Blank lines start new paragraphs in
               emails. Max 10,000 characters.
@@ -190,7 +231,13 @@ function EditTemplateDialog({
             {errors.body && <p className={errCls}>{errors.body.message}</p>}
             <MergeChips
               entityType={template.entity_type}
-              onInsert={(key) => setValue("body", `${body ?? ""}{{${key}}}`)}
+              templateKey={template.key}
+              onPreventBlur={preventBlur}
+              onInsert={(key) =>
+                insert(body ?? "", `{{${key}}}`, (next) =>
+                  setValue("body", next, { shouldDirty: true, shouldValidate: true })
+                )
+              }
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">
@@ -222,6 +269,9 @@ function CreateTemplateDialog({ open, onClose }: { open: boolean; onClose: () =>
     defaultValues: { name: "", subject: "", body: "", channel: "email", entityType: "tenancy" },
   });
   const body = watch("body");
+  const { bindRef, insert, preventBlur } = useCursorInsert<HTMLTextAreaElement>();
+  // Pull RHF's ref out so it can be forwarded alongside our own.
+  const { ref: bodyRef, ...bodyField } = register("body");
   const channel = watch("channel");
   const entityType = watch("entityType");
 
@@ -246,7 +296,7 @@ function CreateTemplateDialog({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>New template</DialogTitle>
         </DialogHeader>
@@ -257,7 +307,7 @@ function CreateTemplateDialog({ open, onClose }: { open: boolean; onClose: () =>
             <p className={hintCls}>e.g. &quot;Inspection notice&quot;. Max 120 characters.</p>
             {errors.name && <p className={errCls}>{errors.name.message}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Channel</label>
               <select {...register("channel")} className={fieldError(false)}>
@@ -291,14 +341,24 @@ function CreateTemplateDialog({ open, onClose }: { open: boolean; onClose: () =>
           )}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Body</label>
-            <textarea {...register("body")} rows={8} className={fieldError(!!errors.body)} />
+            <textarea
+              {...bodyField}
+              ref={(el) => bindRef(el, bodyRef)}
+              rows={8}
+              className={fieldError(!!errors.body)}
+            />
             <p className={hintCls}>
               Plain text with {"{{placeholders}}"}. Max 10,000 characters.
             </p>
             {errors.body && <p className={errCls}>{errors.body.message}</p>}
             <MergeChips
               entityType={entityType}
-              onInsert={(key) => setValue("body", `${body ?? ""}{{${key}}}`)}
+              onPreventBlur={preventBlur}
+              onInsert={(key) =>
+                insert(body ?? "", `{{${key}}}`, (next) =>
+                  setValue("body", next, { shouldDirty: true, shouldValidate: true })
+                )
+              }
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">

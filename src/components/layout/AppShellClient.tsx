@@ -9,6 +9,7 @@ import { brandInitials } from "./navConfig";
 import { GlobalSearchBar } from "@/features/search/ui/GlobalSearchBar";
 import { HelpButton } from "@/features/help/ui/HelpButton";
 import { MiniAssistant } from "@/features/assistant/ui/MiniAssistant";
+import { useTrackLastPage } from "@/features/helpdesk/lib/lastPage";
 import type { PublishedModuleConfig, TenantBrandingSettings } from "@/features/admin/domain/types";
 
 type Profile = { display_name: string | null; role: string | null; avatar_url: string | null };
@@ -33,6 +34,8 @@ export function AppShellClient({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  // So a support ticket can say which page the user came from.
+  useTrackLastPage(pathname);
   const isSuperAdminPanel = pathname.startsWith("/admin");
   const applyTenantBranding = !isSuperAdminPanel && branding;
 

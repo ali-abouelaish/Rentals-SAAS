@@ -1,0 +1,4 @@
+# Saved browser session — contains live Supabase auth cookies. Never commit.
+.auth/
+# Screenshots / traces from runs.
+artifacts/

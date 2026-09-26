@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AssertionError, assertKeyAccess } from "@/lib/auth/assertions";
+import { AssertionError, assertKeyAccess, rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 import { getKeyHistory } from "@/features/keys/data/queries";
 
 export async function GET(
@@ -11,6 +11,7 @@ export async function GET(
     const history = await getKeyHistory(params.keyId);
     return NextResponse.json({ history });
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }

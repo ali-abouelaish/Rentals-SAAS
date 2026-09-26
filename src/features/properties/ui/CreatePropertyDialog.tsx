@@ -109,14 +109,14 @@ export function CreatePropertyDialog({ portfolios, onCreated }: CreatePropertyDi
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Property</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-1">
           {/* Type + Portfolio */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Property type" error={errors.property_type?.message}>
               <select {...register("property_type")} className={selectCls}>
                 <option value="hmo">HMO (rooms)</option>
@@ -153,7 +153,7 @@ export function CreatePropertyDialog({ portfolios, onCreated }: CreatePropertyDi
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Address line 2">
               <input
                 {...register("address_line_2")}
@@ -166,7 +166,7 @@ export function CreatePropertyDialog({ portfolios, onCreated }: CreatePropertyDi
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Area">
               <input
                 {...register("area")}
@@ -192,7 +192,7 @@ export function CreatePropertyDialog({ portfolios, onCreated }: CreatePropertyDi
 
           {/* HMO-only: room count */}
           {propertyType === "hmo" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Total rooms">
                 <input
                   type="number"
@@ -225,7 +225,7 @@ export function CreatePropertyDialog({ portfolios, onCreated }: CreatePropertyDi
           {/* Amenities */}
           <div>
             <p className="text-sm font-medium text-foreground mb-2">Amenities</p>
-            <div className="grid grid-cols-3 gap-y-2 gap-x-3">
+            <div className="grid grid-cols-2 gap-y-2 gap-x-3 sm:grid-cols-3">
               {(
                 [
                   ["furnished", "Furnished"],
@@ -240,7 +240,7 @@ export function CreatePropertyDialog({ portfolios, onCreated }: CreatePropertyDi
                   ["pets_ok", "Pets OK"],
                 ] as const
               ).map(([field, label]) => (
-                <label key={field} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                <label key={field} className="flex min-h-11 md:min-h-0 items-center gap-2 text-sm text-foreground cursor-pointer">
                   <input type="checkbox" {...register(field)} className="rounded border-border" />
                   {label}
                 </label>

@@ -81,7 +81,7 @@ export function ShareDetailActions({
             readOnly
             value={shareUrl}
             onFocus={(e) => e.currentTarget.select()}
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground"
           />
           <Button
             type="button"
@@ -89,7 +89,7 @@ export function ShareDetailActions({
             variant="outline"
             size="md"
           >
-            {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-5 w-5 sm:h-4 sm:w-4 text-success" /> : <Copy className="h-4 w-4" />}
             {copied ? "Copied" : "Copy"}
           </Button>
           <Button asChild variant="outline" size="md">
@@ -132,7 +132,7 @@ export function ShareDetailActions({
           </p>
 
           {error && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2.5 md:py-2 text-base md:text-sm text-error">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>

@@ -115,7 +115,7 @@ export function InviteTeamMemberDialog() {
               New members join as Admin. Admin is required to access the property-management tools.
             </p>
             <div
-              className="flex items-center gap-2 rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground-secondary"
+              className="flex items-center gap-2 rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground-secondary"
               title="Only the Admin role is available today. Admin unlocks all property-management pages; limited roles will come later."
             >
               <ShieldCheck className="h-4 w-4 text-accent" />

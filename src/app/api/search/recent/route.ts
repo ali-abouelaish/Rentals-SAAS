@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AssertionError, assertSearchAccess } from "@/lib/auth/assertions";
+import { AssertionError, assertSearchAccess, rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 import type { RecentEntity } from "@/features/search/domain/types";
 
 /**
@@ -13,6 +13,7 @@ export async function GET() {
     const empty: RecentEntity[] = [];
     return NextResponse.json(empty);
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }

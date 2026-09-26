@@ -89,7 +89,7 @@ export function ShareBody({ units, commissionPct, token }: ShareBodyProps) {
       {/* ── Filter panel ── */}
       <section>
         <div className="mb-3">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-card/80 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-foreground-secondary backdrop-blur">
+          <div className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-full border border-border bg-surface-card/80 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-foreground-secondary backdrop-blur">
             <SlidersHorizontal className="h-3 w-3 text-brand" />
             Refine the list
           </div>

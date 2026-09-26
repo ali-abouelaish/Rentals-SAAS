@@ -24,7 +24,7 @@ type Props = {
 };
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 export function SendReminderDialog({ open, pmTenantId, tenantName, onOpenChange }: Props) {
   const { toast } = useToast();
@@ -98,7 +98,7 @@ export function SendReminderDialog({ open, pmTenantId, tenantName, onOpenChange 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>
             Send rent reminder{tenantName ? ` — ${tenantName}` : ""}
@@ -119,7 +119,7 @@ export function SendReminderDialog({ open, pmTenantId, tenantName, onOpenChange 
                 <button
                   type="button"
                   onClick={() => handleKindChange("rent_due")}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 md:py-2 text-base md:text-sm transition-colors ${
                     kind === "rent_due"
                       ? "border-brand bg-brand/5 text-brand"
                       : "border-border bg-surface-card text-foreground-secondary hover:border-brand/40"
@@ -131,7 +131,7 @@ export function SendReminderDialog({ open, pmTenantId, tenantName, onOpenChange 
                 <button
                   type="button"
                   onClick={() => handleKindChange("rent_overdue")}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 md:py-2 text-base md:text-sm transition-colors ${
                     kind === "rent_overdue"
                       ? "border-red-300 bg-red-50 text-red-700"
                       : "border-border bg-surface-card text-foreground-secondary hover:border-red-300"
@@ -156,7 +156,7 @@ export function SendReminderDialog({ open, pmTenantId, tenantName, onOpenChange 
                   <button
                     type="button"
                     onClick={handleResetBody}
-                    className="text-xs text-brand hover:underline"
+                    className="inline-flex min-h-11 items-center text-xs text-brand hover:underline md:min-h-0"
                   >
                     Reset to default
                   </button>

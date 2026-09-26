@@ -14,7 +14,7 @@ import { formSchema, type FormValues } from "../domain/schemas";
 import type { Form } from "../domain/types";
 import type { Portfolio } from "@/features/properties/domain/types";
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({
   label,

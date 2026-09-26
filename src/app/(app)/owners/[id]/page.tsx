@@ -41,7 +41,7 @@ export default async function OwnerDetailRoute({ params }: { params: { id: strin
 
       <Link
         href="/owners"
-        className="inline-flex items-center gap-1.5 text-sm text-foreground-secondary hover:text-foreground"
+        className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-sm text-foreground-secondary hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Landlords

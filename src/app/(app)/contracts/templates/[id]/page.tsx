@@ -31,7 +31,7 @@ export default async function ContractTemplateEditorRoute({
       <div>
         <Link
           href="/contracts/templates"
-          className="inline-flex items-center gap-1 text-sm text-foreground-secondary hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1 text-sm text-foreground-secondary hover:text-foreground sm:min-h-0"
         >
           <ChevronLeft size={16} /> Back to templates
         </Link>

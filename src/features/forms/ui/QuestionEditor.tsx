@@ -34,9 +34,9 @@ import {
 import { formQuestionSchema, type FormQuestionValues } from "../domain/schemas";
 import type { FormQuestion } from "../domain/types";
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const textareaCls = "w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const textareaCls = "w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function FormField({
   label,
@@ -163,7 +163,7 @@ function AddQuestionForm({ formId, nextSortOrder, onAdded, onCancel }: AddQuesti
                 <span className="flex-1 text-sm text-foreground bg-surface-inset rounded-lg px-3 py-1.5">
                   {opt}
                 </span>
-                <button type="button" onClick={() => removeOption(i)}>
+                <button type="button" onClick={() => removeOption(i)} className="grid h-11 w-11 shrink-0 place-items-center md:h-auto md:w-auto">
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                 </button>
               </div>
@@ -311,7 +311,7 @@ function EditQuestionForm({ question, onSaved, onCancel }: EditQuestionFormProps
                 <span className="flex-1 text-sm text-foreground bg-surface-inset rounded-lg px-3 py-1.5">
                   {opt}
                 </span>
-                <button type="button" onClick={() => removeOption(i)}>
+                <button type="button" onClick={() => removeOption(i)} className="grid h-11 w-11 shrink-0 place-items-center md:h-auto md:w-auto">
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                 </button>
               </div>
@@ -405,7 +405,7 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing touch-none mt-0.5 shrink-0 text-foreground-muted hover:text-foreground"
+        className="cursor-grab active:cursor-grabbing touch-none mt-0.5 grid h-11 w-11 shrink-0 place-items-center text-foreground-muted hover:text-foreground md:h-auto md:w-auto"
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-4 w-4" />
@@ -442,12 +442,12 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
           </>
         )}
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button
           type="button"
           onClick={() => setEditing(true)}
           title="Edit"
-          className="text-foreground-muted hover:text-foreground"
+          className="grid h-11 w-11 place-items-center text-foreground-muted hover:text-foreground md:h-auto md:w-auto"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
@@ -456,6 +456,7 @@ function SortableQuestionItem({ question, onUpdated, onDeleted }: SortableQuesti
           onClick={handleDelete}
           disabled={isPending}
           title="Delete"
+          className="grid h-11 w-11 place-items-center md:h-auto md:w-auto"
         >
           <Trash2 className="h-3.5 w-3.5 text-red-500" />
         </button>

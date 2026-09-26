@@ -82,7 +82,7 @@ function KeyRowMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-foreground-secondary hover:bg-surface-inset"
+        className="h-11 w-11 md:h-8 md:w-8 inline-flex items-center justify-center rounded-lg text-foreground-secondary hover:bg-surface-inset"
         aria-label="More"
       >
         <MoreVertical size={15} />

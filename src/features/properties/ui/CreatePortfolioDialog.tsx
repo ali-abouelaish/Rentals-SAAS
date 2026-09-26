@@ -112,7 +112,7 @@ export function ManagePortfoliosDialog({ portfolios, onCreated, onDeleted }: Man
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Manage portfolios</DialogTitle>
         </DialogHeader>

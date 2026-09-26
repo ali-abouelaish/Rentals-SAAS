@@ -78,7 +78,7 @@ export function Pagination({
                     page === "ellipsis" ? (
                         <span
                             key={`ellipsis-${index}`}
-                            className="flex h-9 w-9 items-center justify-center"
+                            className="flex h-11 w-11 md:h-9 md:w-9 items-center justify-center"
                         >
                             <MoreHorizontal className="h-4 w-4 text-foreground-muted" />
                         </span>
@@ -87,7 +87,7 @@ export function Pagination({
                             key={page}
                             onClick={() => onPageChange(page)}
                             className={cn(
-                                "flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all",
+                                "flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-lg text-sm font-medium transition-all",
                                 currentPage === page
                                     ? "bg-brand text-brand-fg shadow-sm"
                                     : "text-foreground-secondary hover:bg-surface-100 hover:text-brand"

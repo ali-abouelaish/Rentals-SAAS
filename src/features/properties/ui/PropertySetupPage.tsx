@@ -62,7 +62,7 @@ function TypePill({
       type="button"
       onClick={onClick}
       className={cn(
-        "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all",
+        "px-3 py-1.5 min-h-11 min-w-11 md:min-h-0 md:min-w-0 text-xs font-semibold rounded-lg border transition-all",
         active
           ? "border-brand bg-brand/10 text-brand"
           : "border-border bg-surface-inset text-foreground-muted hover:text-foreground"
@@ -215,7 +215,7 @@ function RoomSetupCard({
             <DoorOpen className="h-4 w-4 text-foreground-muted" strokeWidth={1.8} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">{roomLabel}</p>
+            <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground">{roomLabel}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               {unit.room_type && (
                 <span className="text-xs text-foreground-secondary capitalize">{unit.room_type}</span>
@@ -238,7 +238,7 @@ function RoomSetupCard({
               <button
                 type="button"
                 onClick={handleEdit}
-                className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-surface-inset hover:bg-surface-card transition-colors text-foreground-muted hover:text-foreground"
+                className="flex shrink-0 items-center justify-center h-11 w-11 md:h-8 md:w-8 rounded-lg border border-border bg-surface-inset hover:bg-surface-card transition-colors text-foreground-muted hover:text-foreground"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
@@ -316,7 +316,7 @@ function RoomSetupCard({
                   <button
                     type="button"
                     onClick={() => handleDeletePhoto(photo)}
-                    className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -347,7 +347,7 @@ function RoomSetupCard({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
+              className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
             >
               {isPending ? "Saving…" : "Save room"}
             </button>
@@ -443,7 +443,7 @@ function PropertyPhotosPanel({
                     <button
                       type="button"
                       onClick={() => handleDelete(photo)}
-                      className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <X className="h-2.5 w-2.5" />
                     </button>
@@ -514,12 +514,12 @@ export function PropertySetupPage({
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex items-center justify-center h-9 w-9 rounded-xl border border-border bg-surface-card hover:bg-surface-inset transition-colors text-foreground-secondary hover:text-foreground"
+            className="flex shrink-0 items-center justify-center h-11 w-11 md:h-9 md:w-9 rounded-xl border border-border bg-surface-card hover:bg-surface-inset transition-colors text-foreground-secondary hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -530,11 +530,11 @@ export function PropertySetupPage({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AddRoomDialog property={property} onCreated={handleUnitCreated} />
           <Link
             href={`/properties/${property.id}/edit`}
-            className="flex items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
+            className="flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl border border-border bg-surface-card px-4 py-2 text-sm font-medium text-foreground-secondary hover:bg-surface-inset hover:text-foreground transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" />
             Edit details
@@ -542,7 +542,7 @@ export function PropertySetupPage({
           <button
             type="button"
             onClick={() => router.push("/properties")}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+            className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
           >
             Finish setup
           </button>
@@ -559,7 +559,7 @@ export function PropertySetupPage({
               <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10 mb-4">
                 <DoorOpen className="h-7 w-7 text-brand" />
               </div>
-              <p className="text-sm font-semibold text-foreground mb-1">No rooms yet</p>
+              <p className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground mb-1">No rooms yet</p>
               <p className="text-xs text-foreground-secondary max-w-xs mx-auto">
                 Use the “Add room” button above to create rooms for this property.
               </p>
@@ -624,7 +624,7 @@ export function PropertySetupPage({
               <button
                 type="button"
                 onClick={() => router.push("/properties")}
-                className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+                className="w-full inline-flex min-h-11 md:min-h-0 items-center justify-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
               >
                 Finish setup
               </button>

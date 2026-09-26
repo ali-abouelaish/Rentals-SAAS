@@ -142,7 +142,7 @@ export function RemindersInbox({
               key={t.key}
               onClick={() => setParam("tab", t.key === "pending" ? null : t.key)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium",
+                "px-3 py-1.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 text-xs font-medium",
                 tab === t.key
                   ? "bg-surface-inset text-foreground"
                   : "text-foreground-secondary hover:text-foreground"
@@ -163,7 +163,7 @@ export function RemindersInbox({
         <select
           value={entityFilter ?? ""}
           onChange={(e) => setParam("entity", e.target.value || null)}
-          className="rounded-xl border border-border bg-surface-card px-2 py-1.5 text-xs text-foreground"
+          className="min-h-11 md:min-h-0 rounded-xl border border-border bg-surface-card px-2 py-1.5 text-xs text-foreground"
           title="Only show reminders linked to one kind of record"
         >
           <option value="">All records</option>

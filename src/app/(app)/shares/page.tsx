@@ -30,7 +30,7 @@ export default async function SharesPage() {
         </div>
         <Link
           href="/shares/new"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+          className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
         >
           <Plus className="h-4 w-4" />
           New share
@@ -45,7 +45,7 @@ export default async function SharesPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-surface-card overflow-hidden">
-          <div className="grid grid-cols-[1.8fr_0.8fr_1.4fr_0.8fr_0.9fr_0.7fr_0.9fr] gap-3 px-4 py-2 border-b border-border/50 bg-surface-inset/30">
+          <div className="hidden md:grid grid-cols-[1.8fr_0.8fr_1.4fr_0.8fr_0.9fr_0.7fr_0.9fr] gap-3 px-4 py-2 border-b border-border/50 bg-surface-inset/30">
             <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Name</div>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Scope</div>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">Statuses</div>
@@ -69,12 +69,12 @@ export default async function SharesPage() {
                 <Link
                   key={share.id}
                   href={`/shares/${share.id}`}
-                  className={`grid grid-cols-[1.8fr_0.8fr_1.4fr_0.8fr_0.9fr_0.7fr_0.9fr] gap-3 px-4 py-3 text-sm transition-colors hover:bg-surface-inset/40 ${
+                  className={`flex flex-col gap-1.5 md:grid md:grid-cols-[1.8fr_0.8fr_1.4fr_0.8fr_0.9fr_0.7fr_0.9fr] gap-3 px-4 py-3 text-sm transition-colors hover:bg-surface-inset/40 ${
                     i % 2 === 1 ? "bg-surface-inset/20" : ""
                   }`}
                 >
                   <div className="min-w-0">
-                    <div className="font-medium text-foreground truncate">{share.name}</div>
+                    <div className="font-medium text-foreground [overflow-wrap:anywhere] md:truncate">{share.name}</div>
                     {share.description && (
                       <p className="mt-0.5 text-xs text-foreground-muted line-clamp-1">
                         {share.description}
@@ -127,7 +127,7 @@ export default async function SharesPage() {
 function StatusBadge({ status }: { status: "active" | "expired" | "revoked" }) {
   if (status === "active") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+      <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
         Active
       </span>
@@ -135,14 +135,14 @@ function StatusBadge({ status }: { status: "active" | "expired" | "revoked" }) {
   }
   if (status === "expired") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+      <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
         <Clock className="h-3 w-3" />
         Expired
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-800">
+    <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-800">
       <Ban className="h-3 w-3" />
       Revoked
     </span>

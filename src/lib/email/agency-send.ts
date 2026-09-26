@@ -15,6 +15,9 @@ export type SendAgencyEmailParams = {
   pmTenantId?: string;
   /** Recorded in email_log.template_key for auditing. */
   templateKey?: string;
+  /** Overrides the default reply-to (the agency's contact_email). Also means
+   *  the send no longer fails for an agency with no contact_email set. */
+  replyTo?: string;
 };
 
 export type SendAgencyEmailResult = { providerId: string };
@@ -40,10 +43,11 @@ export async function sendAgencyEmail({
   text,
   pmTenantId,
   templateKey,
+  replyTo,
 }: SendAgencyEmailParams): Promise<SendAgencyEmailResult> {
   const transport = new ResendTransport(agency);
   try {
-    const { messageId } = await transport.send({ to, subject, html, text, pmTenantId, templateKey });
+    const { messageId } = await transport.send({ to, subject, html, text, pmTenantId, templateKey, replyTo });
     await logEmail({
       tenantId: agency.id,
       providerType: "resend_default",

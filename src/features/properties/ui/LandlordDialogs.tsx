@@ -35,9 +35,9 @@ import {
 import type { OwnerLandlord, PropertyManager } from "../domain/types";
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 const selectCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 function Field({
   label,
@@ -171,7 +171,7 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add owner landlord</DialogTitle>
         </DialogHeader>
@@ -195,7 +195,7 @@ export function CreateOwnerLandlordDialog({ onCreated }: CreateOwnerLandlordDial
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Phone">
               <input {...register("phone")} className={inputCls} placeholder="+44 7700 000000" />
             </Field>
@@ -264,7 +264,7 @@ export function CreatePropertyManagerDialog({ onCreated }: CreatePropertyManager
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add property manager</DialogTitle>
         </DialogHeader>
@@ -296,7 +296,7 @@ export function CreatePropertyManagerDialog({ onCreated }: CreatePropertyManager
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Phone">
               <input {...register("phone")} className={inputCls} placeholder="+44 7700 000000" />
             </Field>
@@ -399,14 +399,14 @@ export function EditOwnerLandlordDialog({ landlord, onUpdated }: EditOwnerLandlo
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground hover:underline"
+          className="inline-flex min-h-11 min-w-11 justify-center md:min-h-0 md:min-w-0 items-center gap-1 text-xs text-foreground-muted hover:text-foreground hover:underline"
         >
           <Pencil className="h-3 w-3" />
           Edit
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Edit owner landlord</DialogTitle>
         </DialogHeader>
@@ -427,7 +427,7 @@ export function EditOwnerLandlordDialog({ landlord, onUpdated }: EditOwnerLandlo
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Phone">
               <input {...register("phone")} className={inputCls} placeholder="+44 7700 000000" />
             </Field>
@@ -510,14 +510,14 @@ export function EditPropertyManagerDialog({ manager, onUpdated }: EditPropertyMa
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground hover:underline"
+          className="inline-flex min-h-11 min-w-11 justify-center md:min-h-0 md:min-w-0 items-center gap-1 text-xs text-foreground-muted hover:text-foreground hover:underline"
         >
           <Pencil className="h-3 w-3" />
           Edit
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Edit property manager</DialogTitle>
         </DialogHeader>
@@ -546,7 +546,7 @@ export function EditPropertyManagerDialog({ manager, onUpdated }: EditPropertyMa
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Phone">
               <input {...register("phone")} className={inputCls} placeholder="+44 7700 000000" />
             </Field>

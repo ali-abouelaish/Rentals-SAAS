@@ -88,7 +88,7 @@ export function MonthPicker({ value, max, min }: Props) {
         disabled={!canPrev || pending}
         onClick={() => canPrev && goTo(prev)}
         aria-label="Previous month"
-        className="h-7 w-7"
+        className="h-11 w-11 md:h-7 md:w-7"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -96,7 +96,7 @@ export function MonthPicker({ value, max, min }: Props) {
         value={value}
         onChange={(e) => goTo(e.target.value)}
         disabled={pending}
-        className="h-7 rounded-md bg-transparent px-2 text-xs font-semibold text-foreground focus:outline-none"
+        className="h-11 sm:h-7 rounded-md bg-transparent px-2 text-xs font-semibold text-foreground focus:outline-none"
         aria-label="Select month"
       >
         {options.map((o) => (
@@ -112,7 +112,7 @@ export function MonthPicker({ value, max, min }: Props) {
         disabled={!canNext || pending}
         onClick={() => canNext && goTo(next)}
         aria-label="Next month"
-        className="h-7 w-7"
+        className="h-11 w-11 md:h-7 md:w-7"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

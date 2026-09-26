@@ -147,7 +147,7 @@ export function UnitCard({ unit, commissionPct, onOpenInfo }: UnitCardProps) {
               {commissionPct}%
             </span>
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.14em] text-brand">
+          <span className="inline-flex min-h-11 md:min-h-0 items-center gap-1 text-[11px] font-medium uppercase tracking-[0.14em] text-brand">
             View details
             <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </span>

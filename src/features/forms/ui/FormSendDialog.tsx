@@ -133,7 +133,7 @@ export function FormSendDialog({
                 onBlur={() => {
                   if (emailInput.trim()) addEmails(emailInput);
                 }}
-                className="h-9 flex-1 rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                className="h-9 flex-1 rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                 placeholder="email@example.com — press Enter or comma to add"
               />
               <Button

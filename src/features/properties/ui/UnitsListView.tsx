@@ -245,7 +245,7 @@ function formatPropertyType(type: string) {
    unit + status + rent, with price / availability / tenant shown as a
    compact meta line and the rest surfaced in the unit drawer. */
 const GRID_LG = "lg:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr_80px_140px]";
-const ROW_COLS = cn("grid items-center gap-2 sm:gap-3 grid-cols-[1fr_auto_auto]", GRID_LG);
+const ROW_COLS = cn("grid items-center gap-x-3 gap-y-1 grid-cols-[1fr_auto] sm:gap-3 lg:gap-3", GRID_LG);
 const HEADER_COLS = cn("hidden lg:grid gap-3", GRID_LG);
 
 function ReminderCell({
@@ -371,9 +371,9 @@ function UnitRow({
         )}
       >
         {/* Unit label (+ compact meta below lg) */}
-        <div className="flex flex-col justify-center min-w-0 lg:flex-row lg:items-center lg:justify-start lg:pl-5 lg:border-l-2 lg:border-border">
+        <div className="col-span-full flex flex-col justify-center min-w-0 lg:col-span-1 lg:flex-row lg:items-center lg:justify-start lg:pl-5 lg:border-l-2 lg:border-border">
           <span className="text-sm font-medium text-foreground truncate">{formatUnitLabel(unit)}</span>
-          <span className="lg:hidden mt-0.5 text-xs text-foreground-muted truncate">
+          <span className="lg:hidden mt-0.5 text-xs text-foreground-muted [overflow-wrap:anywhere] lg:truncate">
             {metaBits.join(" · ")}
           </span>
         </div>
@@ -478,7 +478,7 @@ function UnitRow({
                 type="button"
                 title="Rent paid this month - click to undo"
                 onClick={() => setConfirmUndo(true)}
-                className="flex items-center gap-1 rounded-lg border border-green-400 bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                className="flex min-h-11 md:min-h-0 items-center gap-1 rounded-lg border border-green-400 bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
               >
                 <PoundSterling className="h-3 w-3" />
                 Paid
@@ -489,7 +489,7 @@ function UnitRow({
               type="button"
               title="Mark rent paid"
               onClick={() => setDialogOpen(true)}
-              className="flex items-center gap-1 rounded-lg border border-border bg-surface-card px-2 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:border-green-400 hover:text-green-700 hover:bg-green-50"
+              className="flex min-h-11 md:min-h-0 items-center gap-1 rounded-lg border border-border bg-surface-card px-2 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:border-green-400 hover:text-green-700 hover:bg-green-50"
             >
               <PoundSterling className="h-3 w-3" />
               Paid
@@ -556,7 +556,7 @@ function PropertyGroup({
           <div className="flex items-center gap-2 flex-wrap">
             <Link
               href={`/properties/${property.id}`}
-              className="text-sm font-semibold text-foreground hover:text-brand hover:underline transition-colors"
+              className="inline-flex min-h-11 items-center md:min-h-0 text-sm font-semibold text-foreground hover:text-brand hover:underline transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               {property.name}
@@ -573,7 +573,7 @@ function PropertyGroup({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-xs text-foreground-muted mt-0.5">
+          <div className="flex min-h-11 md:min-h-0 items-center gap-1 text-xs text-foreground-muted mt-0.5">
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">
               {property.address_line_1}
@@ -589,7 +589,7 @@ function PropertyGroup({
           </span>
           <Link
             href={`/properties/${property.id}/edit`}
-            className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-surface-inset hover:bg-surface-card transition-colors text-foreground-muted hover:text-foreground"
+            className="flex shrink-0 items-center justify-center h-11 w-11 md:h-8 md:w-8 rounded-lg border border-border bg-surface-inset hover:bg-surface-card transition-colors text-foreground-muted hover:text-foreground"
             title="Edit property"
           >
             <Pencil className="h-3.5 w-3.5" />

@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Pencil, Check, X, Plus, Trash2, ShieldCheck, FileText, Send } from "lucide-react";
+import { Pencil, Check, X, Plus, Trash2, ShieldCheck, FileText, Send, MailPlus } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils/cn";
 import { RightToRentBadge } from "./RightToRentBadge";
 import { CreateContractForTenantDialog } from "./CreateContractForTenantDialog";
+import { SendWelcomeEmailDialog } from "./SendWelcomeEmailDialog";
 import { updatePmTenant, deletePmTenant, uploadPmTenantDocument } from "../actions/pm-tenants";
 import { sendPortalInvite } from "@/features/portal/actions/staff";
 import { createGuarantor, deleteGuarantor } from "../actions/guarantors";
@@ -54,8 +56,8 @@ function FormField({ label, error, children }: { label: string; error?: string; 
   );
 }
 
-const inputCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
-const selectCls = "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const inputCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+const selectCls = "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 const TABS = [
   { value: "overview", label: "Overview" },
@@ -134,7 +136,7 @@ function OverviewContent({
         {(unit || contract) && (
           <section>
             <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Current Tenancy</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <InfoRow label="Property" value={unit?.property?.name} />
               <InfoRow label="Unit" value={unitLabel} />
               <InfoRow label="Address" value={unit?.property?.address_line_1} />
@@ -146,7 +148,7 @@ function OverviewContent({
                 label="Contract status"
                 value={contract?.status ? contract.status.replace("_", " ") : null}
               />
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-foreground-muted">Contract document</span>
                 {contract?.document_url ? (
                   <a
@@ -168,21 +170,21 @@ function OverviewContent({
         )}
         <section>
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Personal</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow label="Full name" value={tenant.full_name} />
             <InfoRow label="Date of birth" value={tenant.date_of_birth ? new Date(tenant.date_of_birth).toLocaleDateString("en-GB") : null} />
             <InfoRow label="Nationality" value={tenant.nationality} />
             <InfoRow label="Phone" value={tenant.phone} />
             <InfoRow label="Email" value={tenant.email} />
             <InfoRow label="WhatsApp" value={tenant.whatsapp_number} />
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <InfoRow label="Current address" value={tenant.current_address} />
             </div>
           </div>
         </section>
         <section>
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Employment</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow label="Status" value={tenant.employment_status ? EMPLOYMENT_STATUS_LABELS[tenant.employment_status] : null} />
             <InfoRow label="Employer" value={tenant.employer_name} />
             <InfoRow label="Job title" value={tenant.job_title} />
@@ -191,7 +193,7 @@ function OverviewContent({
         </section>
         <section>
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Previous Landlord</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow label="Name" value={tenant.current_landlord_name} />
             <InfoRow label="Contact" value={tenant.current_landlord_contact} />
           </div>
@@ -208,7 +210,7 @@ function OverviewContent({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-1">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Full name *" error={errors.full_name?.message}>
           <input {...register("full_name")} className={inputCls} />
         </FormField>
@@ -231,7 +233,7 @@ function OverviewContent({
       <FormField label="Current address">
         <textarea {...register("current_address")} rows={2} className={`${inputCls} h-auto py-2`} />
       </FormField>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Employment status">
           <select {...register("employment_status")} className={selectCls}>
             <option value="">Select…</option>
@@ -250,7 +252,7 @@ function OverviewContent({
           <input {...register("employer_address")} className={inputCls} />
         </FormField>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Previous landlord">
           <input {...register("current_landlord_name")} className={inputCls} />
         </FormField>
@@ -339,7 +341,7 @@ function GuarantorsContent({ tenant, onTenantUpdated }: { tenant: PmTenant; onTe
       {showForm ? (
         <form onSubmit={handleSubmit(handleAdd)} className="rounded-lg border border-border bg-surface-inset p-4 space-y-3">
           <input type="hidden" {...register("pm_tenant_id")} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Full name *" error={errors.full_name?.message}>
               <input {...register("full_name")} className={inputCls} />
             </FormField>
@@ -444,7 +446,7 @@ function ContractContent({
             </span>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <InfoRow label="Property" value={unit?.property?.name} />
           <InfoRow label="Unit" value={unitLabel} />
           <InfoRow label="Address" value={unit?.property?.address_line_1} />
@@ -457,7 +459,7 @@ function ContractContent({
 
       <section>
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Dates</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <InfoRow label="Start date" value={fmtDate(contract.start_date)} />
           <InfoRow label="Expiry date" value={fmtDate(contract.expiry_date)} />
           <InfoRow
@@ -469,7 +471,7 @@ function ContractContent({
 
       <section>
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Financial</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <InfoRow label="Rent (PCM)" value={fmtMoney(contract.rent_pcm)} />
           <InfoRow label="Deposit" value={fmtMoney(contract.deposit)} />
           <InfoRow label="Pro-rata first month" value={fmtMoney(contract.pro_rata_amount)} />
@@ -482,7 +484,7 @@ function ContractContent({
 
       <section>
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">Deposit Protection</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <InfoRow
             label="Scheme"
             value={contract.deposit_scheme ? DEPOSIT_SCHEME_LABELS[contract.deposit_scheme as DepositScheme] ?? contract.deposit_scheme : null}
@@ -495,7 +497,7 @@ function ContractContent({
       {showLifecycle && (
         <section>
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground-muted mb-3">End of Tenancy</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InfoRow
               label="Notice given by"
               value={contract.notice_given_by ? contract.notice_given_by[0].toUpperCase() + contract.notice_given_by.slice(1) : null}
@@ -594,7 +596,7 @@ function RightToRentContent({ tenant, isEditing, onSaved }: { tenant: PmTenant; 
       </div>
 
       {!isEditing ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <InfoRow label="Document type" value={tenant.right_to_rent_type ? RIGHT_TO_RENT_LABELS[tenant.right_to_rent_type] : null} />
           <InfoRow label="Share code" value={tenant.right_to_rent_code} />
           <InfoRow label="Expiry date" value={tenant.right_to_rent_expiry ? new Date(tenant.right_to_rent_expiry).toLocaleDateString("en-GB") : null} />
@@ -602,7 +604,7 @@ function RightToRentContent({ tenant, isEditing, onSaved }: { tenant: PmTenant; 
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField label="Document type">
               <select {...register("right_to_rent_type")} className={selectCls}>
                 <option value="">Select…</option>
@@ -670,7 +672,7 @@ function EmergencyContactContent({ tenant, isEditing, onSaved }: { tenant: PmTen
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 py-1">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Full name">
           <input {...register("emergency_contact_name")} className={inputCls} />
         </FormField>
@@ -768,7 +770,7 @@ function DocumentsContent({
                 type="file"
                 accept="application/pdf,image/*"
                 disabled={uploading === "contract"}
-                className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+                className="min-h-11 md:min-h-0 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleContractUpload(file);
@@ -801,7 +803,7 @@ function DocumentsContent({
             type="file"
             accept="image/*"
             disabled={uploading === "passport_photo"}
-            className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) handleUpload("passport_photo", file);
@@ -836,7 +838,7 @@ function DocumentsContent({
             type="file"
             accept="image/*,application/pdf"
             disabled={uploading === "passport_scan"}
-            className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
+            className="min-h-11 md:min-h-0 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-card file:px-3 file:py-1 file:text-xs file:font-medium file:text-foreground file:cursor-pointer disabled:opacity-50"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) handleUpload("passport_scan", file);
@@ -875,11 +877,13 @@ export function TenantDrawer({
   const [activeTab, setActiveTab] = useState("overview");
   const [localTenant, setLocalTenant] = useState<PmTenant | null>(tenant);
   const [sendingPortalLink, startPortalLinkTransition] = useTransition();
+  const [welcomeEmailOpen, setWelcomeEmailOpen] = useState(false);
 
   useEffect(() => {
     setLocalTenant(tenant);
     setIsEditing(false);
     setActiveTab("overview");
+    setWelcomeEmailOpen(false);
   }, [tenant?.id]);
 
   if (!localTenant) return null;
@@ -896,21 +900,35 @@ export function TenantDrawer({
       <SheetContent side="right" className="flex flex-col p-0 w-full sm:max-w-[874px]">
         {/* Header */}
         <SheetHeader className="shrink-0">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2">
                 <RightToRentBadge tenant={localTenant} />
               </div>
-              <h2 className="text-base font-semibold text-foreground truncate">{localTenant.full_name}</h2>
-              <p className="text-xs text-foreground-secondary">{localTenant.email} · {localTenant.phone}</p>
+              <h2 className="text-base font-semibold text-foreground [overflow-wrap:anywhere] sm:truncate">{localTenant.full_name}</h2>
+              <p className="text-xs text-foreground-secondary [overflow-wrap:anywhere]">{localTenant.email} · {localTenant.phone}</p>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+              {localTenant.email ? (
+                <Tooltip content="Sends your agency's welcome pack — check-in steps, how to use the portal, who to contact. You can review and tweak the wording before it goes.">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-11 sm:h-8"
+                    onClick={() => setWelcomeEmailOpen(true)}
+                  >
+                    <MailPlus className="h-3.5 w-3.5 mr-1" />
+                    Welcome email
+                  </Button>
+                </Tooltip>
+              ) : null}
               {portalEnabled && localTenant.email ? (
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className="h-8"
+                  className="h-11 sm:h-8"
                   loading={sendingPortalLink}
                   title="Emails this tenant a sign-in link for their tenant portal (valid for 20 minutes)"
                   onClick={() => {
@@ -933,7 +951,7 @@ export function TenantDrawer({
                 variant={isEditing ? "secondary" : "outline"}
                 size="sm"
                 onClick={() => setIsEditing(!isEditing)}
-                className="h-8"
+                className="h-11 sm:h-8"
               >
                 <Pencil className="h-3.5 w-3.5 mr-1" />
                 {isEditing ? "Editing" : "Edit"}
@@ -943,7 +961,7 @@ export function TenantDrawer({
         </SheetHeader>
 
         {/* Tabs */}
-        <div className="border-b border-border px-6 pt-2 pb-0 shrink-0 overflow-x-auto">
+        <div className="border-b border-border px-4 sm:px-6 pt-2 pb-0 shrink-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max">
             {TABS.map((tab) => (
               <button
@@ -951,7 +969,7 @@ export function TenantDrawer({
                 type="button"
                 onClick={() => setActiveTab(tab.value)}
                 className={cn(
-                  "px-3 py-2.5 text-[13px] font-medium border-b-2 transition-colors -mb-px whitespace-nowrap",
+                  "px-3 py-2.5 min-h-11 shrink-0 text-[13px] font-medium border-b-2 transition-colors -mb-px whitespace-nowrap",
                   activeTab === tab.value
                     ? "border-brand text-brand"
                     : "border-transparent text-foreground-secondary hover:text-foreground hover:border-border"
@@ -1045,6 +1063,13 @@ export function TenantDrawer({
           )}
         </div>
       </SheetContent>
+
+      <SendWelcomeEmailDialog
+        pmTenantId={localTenant.id}
+        tenantName={localTenant.full_name ?? "this tenant"}
+        open={welcomeEmailOpen}
+        onClose={() => setWelcomeEmailOpen(false)}
+      />
     </Sheet>
   );
 }

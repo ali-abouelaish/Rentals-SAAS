@@ -25,6 +25,23 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+/**
+ * Two shapes from one component.
+ *
+ * On a phone this is a bottom sheet: docked to the bottom edge, capped below
+ * the viewport height, and scrolled internally. It used to be the centred box
+ * below at every width with no height cap and no overflow, so any form taller
+ * than the screen was clipped with its submit button somewhere off-screen and
+ * no way to scroll to it — which described most of the ~70 dialogs in the app.
+ *
+ * The scroll lives on an inner wrapper, not on the Content itself, so the close
+ * button stays pinned while the form moves under it. That is also why padding
+ * moved inward: pass `className="p-0"` here and you will change the shell, not
+ * the body.
+ *
+ * Callers still control width with `max-w-*`; they no longer need to pass
+ * `max-h-*` or `overflow-y-auto`.
+ */
 const DialogContent = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
@@ -34,20 +51,27 @@ const DialogContent = React.forwardRef<
         <DialogPrimitive.Content
             ref={ref}
             className={cn(
-                "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]",
-                "rounded-2xl border border-border bg-surface-card p-6 shadow-xl",
-                "data-[state=open]:animate-in data-[state=closed]:animate-out",
-                "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-                "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
-                "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-                "duration-200",
+                "fixed z-50 flex flex-col border border-border bg-surface-card shadow-xl",
+                // Phone — bottom sheet.
+                "inset-x-0 bottom-0 mx-auto w-full max-w-lg max-h-[88dvh] rounded-t-2xl",
+                "max-md:data-[state=open]:animate-sheet-in",
+                // Tablet and up — the centred dialog this has always been.
+                "md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:max-h-[85dvh]",
+                "md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl",
+                "md:data-[state=open]:animate-dialog-in",
                 className
             )}
             {...props}
         >
-            {children}
-            <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-2 text-foreground-muted opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-border-ring disabled:pointer-events-none">
+            {/* Grab handle — the affordance that reads "sheet", phone only. */}
+            <div
+                aria-hidden
+                className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-border-strong md:hidden"
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 md:pb-6">
+                {children}
+            </div>
+            <DialogPrimitive.Close className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-lg text-foreground-muted opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-border-ring disabled:pointer-events-none md:right-4 md:top-4 md:h-9 md:w-9">
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
             </DialogPrimitive.Close>
@@ -60,8 +84,9 @@ const DialogHeader = ({
     className,
     ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
+    // `pr-10` keeps a long title clear of the close button in the corner.
     <div
-        className={cn("flex flex-col space-y-1.5 mb-4", className)}
+        className={cn("flex flex-col space-y-1.5 mb-4 pr-10", className)}
         {...props}
     />
 );
@@ -71,8 +96,17 @@ const DialogFooter = ({
     className,
     ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
+    // Stacked and full-width on a phone (thumb-sized targets, no ambiguity
+    // about which button is primary); inline and right-aligned from `sm`.
+    // The `gap-2` matters — stacked buttons used to sit flush against
+    // each other because the only spacing was `sm:space-x-2`.
     <div
-        className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6", className)}
+        className={cn(
+            "mt-6 flex flex-col-reverse gap-2",
+            "sm:flex-row sm:justify-end",
+            "[&>*]:w-full sm:[&>*]:w-auto",
+            className
+        )}
         {...props}
     />
 );

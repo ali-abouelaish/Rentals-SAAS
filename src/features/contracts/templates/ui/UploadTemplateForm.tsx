@@ -58,7 +58,7 @@ export function UploadTemplateForm({ portfolios }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. AST — 12 month, Acton portfolio"
-          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
           required
         />
       </div>
@@ -72,7 +72,7 @@ export function UploadTemplateForm({ portfolios }: Props) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
-          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent resize-none"
+          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent resize-none"
         />
       </div>
 
@@ -84,7 +84,7 @@ export function UploadTemplateForm({ portfolios }: Props) {
           id="tmpl-portfolio"
           value={portfolioId}
           onChange={(e) => setPortfolioId(e.target.value)}
-          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+          className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
         >
           <option value="">All portfolios</option>
           {portfolios.map((p) => (
@@ -107,7 +107,7 @@ export function UploadTemplateForm({ portfolios }: Props) {
           type="file"
           accept="application/pdf,.pdf"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-foreground-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-surface-inset file:px-4 file:py-2 file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-card"
+          className="min-h-11 sm:min-h-0 block w-full text-sm text-foreground-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-surface-inset file:px-4 file:py-2 file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-card"
           required
         />
         <p className="text-xs text-foreground-secondary">

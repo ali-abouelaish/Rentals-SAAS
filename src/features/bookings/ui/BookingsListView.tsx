@@ -26,7 +26,9 @@ export function BookingsListView({ bookings, onBookingClick }: BookingsListViewP
 
   return (
     <div className="rounded-bento bg-surface-card shadow-bento overflow-hidden">
-      <div className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] gap-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted border-b border-border bg-surface-inset">
+      {/* Column headings are meaningless once the row becomes a card, and the
+          five-column grid left each 1fr about 25px at 360px. Desktop only. */}
+      <div className="hidden md:grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] gap-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted border-b border-border bg-surface-inset">
         <span>Applicant</span>
         <span>Unit</span>
         <span>Portfolio</span>
@@ -47,7 +49,9 @@ export function BookingsListView({ bookings, onBookingClick }: BookingsListViewP
             type="button"
             onClick={() => onBookingClick(booking.id)}
             className={cn(
-              "w-full grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] gap-4 px-4 py-3.5 text-left text-sm",
+              "w-full text-left text-sm border-b border-border-muted last:border-0",
+              "flex flex-col gap-2 px-4 py-3.5",
+              "md:grid md:grid-cols-[1.5fr_2fr_1fr_1fr_1fr] md:gap-4 md:border-0",
               "hover:bg-surface-inset transition-colors cursor-pointer",
               i % 2 === 0 ? "" : "bg-surface-inset/40"
             )}
@@ -56,10 +60,14 @@ export function BookingsListView({ bookings, onBookingClick }: BookingsListViewP
               {booking.booking_reference && (
                 <span className="font-mono text-[10px] font-medium text-foreground-muted">{booking.booking_reference}</span>
               )}
-              <span className="font-medium text-foreground truncate">{booking.applicant_name}</span>
-              <span className="text-[11px] text-foreground-muted truncate">{booking.applicant_email}</span>
+              <span className="font-medium text-foreground [overflow-wrap:anywhere] md:truncate">{booking.applicant_name}</span>
+              <span className="text-[11px] text-foreground-muted [overflow-wrap:anywhere] md:truncate">{booking.applicant_email}</span>
             </div>
-            <div className="text-xs text-foreground-secondary truncate flex items-center">{unitLabel}</div>
+            <div className="text-xs text-foreground-secondary flex items-center min-w-0 md:truncate">
+              <span className="font-medium text-foreground-muted mr-1.5 shrink-0 md:hidden">Unit</span>
+              <span className="[overflow-wrap:anywhere] md:truncate">{unitLabel}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 md:contents">
             <div className="flex items-center">
               {portfolio ? (
                 <span
@@ -77,6 +85,7 @@ export function BookingsListView({ bookings, onBookingClick }: BookingsListViewP
             </div>
             <div className="flex items-center">
               <BookingStatusBadge status={booking.status} size="sm" />
+            </div>
             </div>
           </button>
         );

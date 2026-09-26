@@ -18,6 +18,49 @@ export type DefaultTemplate = {
 
 export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {
+    key: "tenant_welcome",
+    name: "Welcome & check-in pack",
+    channel: "email",
+    entityType: "tenancy",
+    subject: "Welcome to {{property_address}}",
+    body: `# Welcome to your new home
+
+Hi {{renter_name}}, we are glad to have you with us. Everything you need to get settled in is below — keep this email handy for your first week.
+
+## Checking in
+
+Get in touch to arrange a time to collect your keys, and we will meet you at the property to walk through the check-in and the inventory together.
+
+- Bring photo ID to the key handover
+- Take meter readings on your first day and send them to us
+- Flag anything damaged within 7 days so it is recorded against the inventory, not you
+
+## Your tenant portal
+
+Your portal is where you can check rent and payment history, find your standing-order reference, report a maintenance issue, and see your deposit protection details.
+
+[Sign in to your portal]({{portal_link}})
+
+That link is valid for 20 minutes. After it expires, request a new one any time at {{portal_url}} using this email address.
+
+## Paying your rent
+
+Please set up a standing order using the payment reference shown in your portal — that is how we match your payment to your tenancy automatically. The amount and due day are at the top of this email.
+
+## Important contacts
+
+- **General enquiries** — {{agency_email}}
+- **Maintenance and repairs** — raise a request in your portal so it reaches the right person and you can track it
+- **Out-of-hours emergencies** — gas leak, flood, no heat or hot water in winter, or anything unsafe: [add your emergency number here]
+
+---
+
+If anything is unclear, just reply to this email.
+
+Thanks,
+{{agency_name}}`,
+  },
+  {
     key: "rent_due_upcoming",
     name: "Rent due soon",
     channel: "email",

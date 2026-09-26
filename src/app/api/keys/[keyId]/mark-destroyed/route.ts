@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AssertionError, assertKeyMutate } from "@/lib/auth/assertions";
+import { AssertionError, assertKeyMutate, rethrowIfNextControlFlow } from "@/lib/auth/assertions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(
@@ -43,6 +43,7 @@ export async function POST(
 
     return NextResponse.json({ ok: true, status: "destroyed" });
   } catch (err) {
+    rethrowIfNextControlFlow(err);
     if (err instanceof AssertionError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }

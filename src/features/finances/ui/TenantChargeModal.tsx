@@ -70,9 +70,14 @@ export function TenantChargeModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-surface-card shadow-xl border border-border max-h-[90vh] overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Tenant charge"
+        className="relative z-10 max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface-card pb-[max(0px,env(safe-area-inset-bottom))] shadow-xl sm:max-h-[85dvh] sm:rounded-2xl"
+      >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border">
           <h2 className="text-base font-semibold text-foreground">
             {isEdit ? "Edit tenant charge" : "Add tenant charge"}
@@ -80,7 +85,7 @@ export function TenantChargeModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-surface-inset text-foreground-muted"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-foreground-muted hover:bg-surface-inset sm:h-8 sm:w-8"
             aria-label="Close"
           >
             <X size={16} />
@@ -99,13 +104,13 @@ export function TenantChargeModal({
               />
             ) : null}
             {isEdit ? (
-              <div className="rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground-secondary">
+              <div className="rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground-secondary">
                 Contract is locked once a charge is created.
               </div>
             ) : (
               <select
                 {...register("contract_id")}
-                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               >
                 {contracts.length === 0 ? (
                   <option value="">No active contracts</option>
@@ -129,7 +134,7 @@ export function TenantChargeModal({
             </label>
             <select
               {...register("charge_type")}
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {Object.entries(TENANT_CHARGE_TYPE_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
@@ -145,14 +150,14 @@ export function TenantChargeModal({
               {...register("label")}
               type="text"
               placeholder="e.g. Electricity"
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             />
             {errors.label && (
               <p className="text-xs text-red-600 mt-1">{errors.label.message}</p>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Amount (£) <span className="text-red-500">*</span>
@@ -165,7 +170,7 @@ export function TenantChargeModal({
                   step="0.01"
                   min="0"
                   placeholder="0.00"
-                  className="w-full rounded-lg border border-border bg-surface-inset pl-7 pr-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="w-full rounded-lg border border-border bg-surface-inset pl-7 pr-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
               {errors.amount_pounds && (
@@ -182,7 +187,7 @@ export function TenantChargeModal({
                 min="1"
                 max="31"
                 placeholder="1"
-                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               />
               {errors.recurrence_day && (
                 <p className="text-xs text-red-600 mt-1">{errors.recurrence_day.message}</p>
@@ -190,7 +195,7 @@ export function TenantChargeModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Start date <span className="text-red-500">*</span>
@@ -198,7 +203,7 @@ export function TenantChargeModal({
               <input
                 {...register("start_date")}
                 type="date"
-                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               />
               {errors.start_date && (
                 <p className="text-xs text-red-600 mt-1">{errors.start_date.message}</p>
@@ -209,7 +214,7 @@ export function TenantChargeModal({
               <input
                 {...register("end_date")}
                 type="date"
-                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               />
               {errors.end_date && (
                 <p className="text-xs text-red-600 mt-1">{errors.end_date.message}</p>
@@ -217,11 +222,11 @@ export function TenantChargeModal({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-xs">
+          <label className="flex min-h-11 md:min-h-0 items-center gap-2 text-xs">
             <input
               {...register("is_active")}
               type="checkbox"
-              className="rounded border-border text-brand focus:ring-brand"
+              className="h-6 w-6 md:h-4 md:w-4 rounded border-border text-brand focus:ring-brand"
             />
             <span className="text-foreground">Active</span>
           </label>
@@ -232,7 +237,7 @@ export function TenantChargeModal({
               {...register("notes")}
               rows={2}
               placeholder="Optional"
-              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+              className="w-full rounded-lg border border-border bg-surface-inset px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand resize-none"
             />
           </div>
 

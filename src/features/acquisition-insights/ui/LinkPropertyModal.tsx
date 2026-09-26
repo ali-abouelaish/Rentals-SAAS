@@ -51,12 +51,17 @@ export function LinkPropertyModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-border bg-surface-card shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Link property"
+        className="relative z-10 flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border bg-surface-card pb-[max(0px,env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[85dvh] sm:rounded-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
@@ -67,7 +72,7 @@ export function LinkPropertyModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-foreground-secondary hover:text-foreground hover:bg-surface-raised transition-colors"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-foreground-secondary transition-colors hover:bg-surface-raised hover:text-foreground sm:h-8 sm:w-8"
           >
             <X size={18} />
           </button>
@@ -85,13 +90,13 @@ export function LinkPropertyModal({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search properties…"
-              className="h-9 w-full rounded-lg border border-border bg-surface-raised pl-9 pr-3 text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand"
+              className="h-11 md:h-9 w-full rounded-lg border border-border bg-surface-raised pl-9 pr-3 text-base md:text-[13px] text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
         </div>
 
         {/* Property list */}
-        <div className="max-h-80 overflow-y-auto divide-y divide-border">
+        <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-border sm:max-h-80">
           {filtered.length === 0 ? (
             <div className="py-10 text-center">
               <Building2 className="h-8 w-8 text-foreground-secondary mx-auto mb-2" />

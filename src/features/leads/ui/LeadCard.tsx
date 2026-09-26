@@ -89,7 +89,7 @@ export function LeadCard({ lead, onOpen }: Props) {
       <div className="flex items-center gap-3 shrink-0 ml-4">
         <StatusBadge status={lead.status} size="sm" />
         <ArrowRight
-          className="h-4 w-4 text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-4 w-4 text-foreground-muted opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         />
       </div>
     </button>

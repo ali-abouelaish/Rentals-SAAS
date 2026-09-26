@@ -13,6 +13,9 @@
     "boldsign:send-probe": "node --env-file=.env.local scripts/boldsign-send-probe.mjs",
     "boldsign:brand-probe": "node --env-file=.env.local scripts/boldsign-brand-probe.mjs",
     "test": "node --test \"src/**/*.test.ts\"",
+    "mobile:login": "node e2e/login.mjs",
+    "mobile:audit": "node e2e/mobile-audit.mjs",
+    "mobile:audit:strict": "node e2e/mobile-audit.mjs --strict",
     "import:portfolio": "node --env-file=.env.local import/run.mjs",
     "deploy": "bash scripts/deploy.sh",
     "rollback": "bash scripts/rollback.sh",
@@ -67,6 +70,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/archiver": "^7.0.0",
     "@types/node": "^20.14.12",
     "@types/nodemailer": "^6.4.17",

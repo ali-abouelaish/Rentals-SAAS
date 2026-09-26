@@ -196,7 +196,7 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
             {...register("title")}
             placeholder="e.g. Chase gas certificate for 12 Oak Rd"
             className={cn(
-              "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
+              "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/50",
               errors.title ? "border-red-400" : "border-border"
             )}
           />
@@ -215,7 +215,7 @@ export function DashboardTodos({ todos, setTodos, initialHistory, properties }: 
               type="date"
               {...register("due_date")}
               className={cn(
-                "w-full rounded-xl border bg-surface-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50",
+                "w-full rounded-xl border bg-surface-card px-3 py-2.5 md:py-2 text-base md:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50",
                 errors.due_date ? "border-red-400" : "border-border"
               )}
             />
@@ -451,7 +451,7 @@ function TodoRow({
         type="button"
         onClick={() => onDelete(todo)}
         title="Delete task"
-        className="shrink-0 p-1.5 rounded-lg text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-50 focus:opacity-100 transition-all"
+        className="shrink-0 p-1.5 rounded-lg text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-red-50 focus:opacity-100 transition-all"
       >
         <Trash2 className="h-4 w-4" />
       </button>

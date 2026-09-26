@@ -12,9 +12,9 @@ interface ContractFilterBarProps {
 }
 
 const inputCls =
-  "h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 const selectCls =
-  "h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 rounded-lg border border-border bg-surface-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 export function ContractFilterBar({ filters, onChange, portfolios, total }: ContractFilterBarProps) {
   const update = (partial: Partial<ContractFilters>) => onChange({ ...filters, ...partial });
@@ -22,15 +22,15 @@ export function ContractFilterBar({ filters, onChange, portfolios, total }: Cont
   const hasActive = filters.search || filters.portfolioId || filters.status || filters.depositProtected;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="relative w-full sm:w-auto">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted pointer-events-none" />
         <input
           type="text"
           placeholder="Search tenant, property…"
           value={filters.search}
           onChange={(e) => update({ search: e.target.value })}
-          className={`${inputCls} pl-8 w-52`}
+          className={`${inputCls} pl-8 w-full sm:w-52`}
         />
       </div>
 
@@ -38,7 +38,7 @@ export function ContractFilterBar({ filters, onChange, portfolios, total }: Cont
         <select
           value={filters.portfolioId}
           onChange={(e) => update({ portfolioId: e.target.value })}
-          className={`${selectCls} w-40`}
+          className={`${selectCls} w-full sm:w-40`}
         >
           <option value="">All portfolios</option>
           {portfolios.map((p) => (
@@ -50,7 +50,7 @@ export function ContractFilterBar({ filters, onChange, portfolios, total }: Cont
       <select
         value={filters.status}
         onChange={(e) => update({ status: e.target.value as ContractStatus | "" })}
-        className={`${selectCls} w-40`}
+        className={`${selectCls} w-full sm:w-40`}
       >
         <option value="">All statuses</option>
         {Object.entries(CONTRACT_STATUS_CONFIG).map(([v, cfg]) => (
@@ -61,7 +61,7 @@ export function ContractFilterBar({ filters, onChange, portfolios, total }: Cont
       <select
         value={filters.depositProtected}
         onChange={(e) => update({ depositProtected: e.target.value as ContractFilters["depositProtected"] })}
-        className={`${selectCls} w-44`}
+        className={`${selectCls} w-full sm:w-44`}
       >
         <option value="">Deposit: any</option>
         <option value="yes">Deposit protected</option>

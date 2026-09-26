@@ -30,7 +30,7 @@ import {
 import { FeeOverrideDialog } from "./FeeOverrideDialog";
 
 const inputCls =
-  "h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
+  "h-11 md:h-9 w-full rounded-lg border border-border bg-surface-inset px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand";
 
 const STATUS_STYLES: Record<string, string> = {
   draft: "bg-surface-inset text-foreground-secondary",

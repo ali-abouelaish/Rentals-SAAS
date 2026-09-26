@@ -90,7 +90,7 @@ export function StatementUploader({ portfolios }: { portfolios: PortfolioOption[
           id="statement-portfolio"
           value={portfolioId}
           onChange={(e) => setPortfolioId(e.target.value)}
-          className="block w-full h-9 px-3 rounded-lg border border-border bg-surface-card text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-ring/40"
+          className="block w-full h-11 md:h-9 px-3 rounded-lg border border-border bg-surface-card text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-ring/40"
         >
           <option value="">Pick a portfolio…</option>
           {portfolios.map((p) => (

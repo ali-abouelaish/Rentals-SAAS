@@ -194,7 +194,7 @@ export function PhotosTab({ unit }: PhotosTabProps) {
                 <button
                   type="button"
                   onClick={() => handleDelete(photo)}
-                  className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

@@ -35,7 +35,7 @@ export function OwnerPropertiesTable({ properties }: { properties: OwnerProperty
                 <td className="py-2 pr-3">
                   <Link
                     href={`/properties/${p.id}`}
-                    className="inline-flex items-center gap-1.5 text-brand hover:underline"
+                    className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-brand hover:underline"
                   >
                     <Warehouse className="h-3.5 w-3.5" />
                     {p.address_line_1 ?? p.name}

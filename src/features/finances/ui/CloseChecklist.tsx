@@ -236,7 +236,7 @@ export function CloseChecklist({
           <Button
             type="button"
             variant="ghost"
-            size="xs"
+            size="sm"
             onClick={runRefresh}
             disabled={busy === "refresh" || isClosed}
           >
@@ -261,13 +261,13 @@ export function CloseChecklist({
               label={row.label}
               hint={row.hint}
               actionLabel={
-                <label className="inline-flex items-center gap-1.5 text-[11px] cursor-pointer">
+                <label className="inline-flex min-h-11 md:min-h-0 items-center gap-1.5 text-[11px] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={checklist[row.key]}
                     disabled={isClosed || busy === "attest"}
                     onChange={(e) => runAttest(row.key, e.target.checked)}
-                    className="rounded border-border text-brand focus:ring-brand"
+                    className="h-6 w-6 md:h-4 md:w-4 rounded border-border text-brand focus:ring-brand"
                   />
                   <span>I&apos;ve reviewed</span>
                 </label>
