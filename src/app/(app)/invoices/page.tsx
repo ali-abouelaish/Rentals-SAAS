@@ -35,7 +35,7 @@ export default async function InvoicesPage({
   const statusOptions = [
     { value: "all", label: "All Status" },
     { value: "draft", label: "Draft" },
-    { value: "submitted", label: "Submitted" },
+    { value: "submitted", label: "Ready to send" },
     { value: "approved", label: "Approved" },
     { value: "sent", label: "Sent" },
     { value: "paid", label: "Paid" },

@@ -4,6 +4,13 @@ export type EmailProviderType = "resend_default" | "graph" | "gmail" | "smtp";
 
 export type EmailProviderStatus = "active" | "unverified" | "disabled" | "error";
 
+/** A file attached to an outbound message (e.g. an invoice PDF). */
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+};
+
 /** A single outbound message, transport-agnostic. */
 export type EmailMessage = {
   to: string;
@@ -19,6 +26,8 @@ export type EmailMessage = {
   pmTenantId?: string;
   /** Recorded in email_log.template_key for auditing. */
   templateKey?: string;
+  /** Files to attach. Every transport supports these; sendEmail caps the total size. */
+  attachments?: EmailAttachment[];
 };
 
 /** OAuth credential blob (graph / gmail), stored encrypted. */

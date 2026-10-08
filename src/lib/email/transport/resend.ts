@@ -40,6 +40,7 @@ export class ResendTransport implements Transport {
       text: message.text,
       replyTo,
       headers,
+      attachments: message.attachments,
     });
   }
 }

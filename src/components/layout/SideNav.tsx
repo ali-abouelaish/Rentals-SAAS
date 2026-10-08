@@ -119,7 +119,14 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
     // stays in PM mode for tenants with both modules enabled.
     const needsViewParam =
       isPm && hasBoth && (item.href === "/dashboard" || item.href.startsWith("/settings"));
-    const linkHref = needsViewParam ? `${item.href}?view=pm` : item.href;
+    // And the reverse: a settings page shared with PM (e.g. /settings/email)
+    // would otherwise flip an RA sidebar into PM mode.
+    const needsRaViewParam = !isPm && hasBoth && isPmRoute(item.href);
+    const linkHref = needsViewParam
+      ? `${item.href}?view=pm`
+      : needsRaViewParam
+        ? `${item.href}?view=ra`
+        : item.href;
 
     return (
       <Link

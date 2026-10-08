@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
+import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 
 export async function createBillingProfile(formData: FormData) {
@@ -160,16 +160,4 @@ export async function uploadBillingLogo(
     if (error instanceof Error) return { error: error.message };
     return { error: "Unable to upload logo." };
   }
-}
-
-export async function getEmailTemplate() {
-  const supabase = createSupabaseServerClient();
-  const profile = await requireUserProfile();
-  const { data } = await supabase
-    .from("email_templates")
-    .select("*")
-    .eq("tenant_id", profile.tenant_id)
-    .eq("key", "invoice_send")
-    .single();
-  return data;
 }

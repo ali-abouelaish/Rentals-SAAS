@@ -35,6 +35,11 @@ export class SmtpTransport implements Transport {
       port: creds.port,
       secure: creds.secure,
       auth: { user: creds.user, pass: creds.pass },
+      // nodemailer's defaults (2 min to connect, 10 min idle) would hang a
+      // person waiting on a Send button; fail fast and let sendEmail fall back.
+      connectionTimeout: 15_000,
+      greetingTimeout: 15_000,
+      socketTimeout: 30_000,
     });
 
     const info = await transporter.sendMail({
@@ -44,6 +49,11 @@ export class SmtpTransport implements Transport {
       html: message.html,
       text: message.text,
       replyTo: message.replyTo ?? this.config.replyTo ?? undefined,
+      attachments: message.attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        contentType: a.contentType,
+      })),
     });
 
     return { messageId: info.messageId ?? "" };

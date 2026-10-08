@@ -8,6 +8,9 @@ import { failEmailProvider } from "@/lib/email-providers/alert";
 import type { Agency } from "./branding";
 import type { EmailMessage, EmailProviderType } from "./transport/types";
 
+/** Microsoft Graph's inline-attachment ceiling — the strictest of our transports. */
+const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
+
 export type SendEmailResult = {
   /** Transport message id. On the Resend default path this is the Resend id
    *  (load-bearing: persisted to rent_reminder_log.email_provider_id and
@@ -32,6 +35,16 @@ export async function sendEmail(
   message: EmailMessage,
   ctx?: { agency?: Agency },
 ): Promise<SendEmailResult> {
+  // Checked before a transport is chosen: an oversized message is the caller's
+  // problem, and must not reach the custom-provider failure path below, which
+  // would wrongly flag the agency's mailbox as broken.
+  const attachmentBytes = (message.attachments ?? []).reduce((sum, a) => sum + a.content.length, 0);
+  if (attachmentBytes > MAX_ATTACHMENT_BYTES) {
+    throw new Error(
+      `Attachments total ${(attachmentBytes / 1024 / 1024).toFixed(1)} MB; the limit is 3 MB.`,
+    );
+  }
+
   const agency = ctx?.agency ?? (await loadAgency(tenantId));
   if (!agency) throw new Error(`Agency ${tenantId} not found`);
 

@@ -16,11 +16,17 @@ export const requireUserProfile = cache(async () => {
   }
 
   const supabase = createSupabaseServerClient();
-  let { data: profile } = await supabase
+  // maybeSingle: "no row" is data=null with no error, so any error here is a
+  // real failure (e.g. Supabase unreachable). It must not be mistaken for a
+  // first login — that path provisions a brand-new tenant with the service key.
+  let { data: profile, error: profileError } = await supabase
     .from("user_profiles")
     .select("*")
     .eq("id", decoded.id)
-    .single();
+    .maybeSingle();
+  if (profileError) {
+    throw new Error(`Could not load your profile: ${profileError.message}`);
+  }
 
   if (!profile) {
     profile = await ensureTenantSetup(decoded.id, decoded.email);

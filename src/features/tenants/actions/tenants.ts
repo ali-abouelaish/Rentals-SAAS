@@ -1,15 +1,19 @@
-"use server";
+// Server-only helper, deliberately NOT "use server": it provisions a tenant with
+// the service-role key for an arbitrary user id, so it must never be exposed as
+// a client-callable server action. Its only caller is requireUserProfile.
+import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function ensureTenantSetup(userId: string, email?: string) {
   const supabase = createSupabaseServerClient();
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("user_profiles")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
+  if (existingError) throw new Error(`Could not load your profile: ${existingError.message}`);
 
   if (existing) return existing;
 

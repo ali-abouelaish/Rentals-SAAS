@@ -49,6 +49,18 @@ export class GraphTransport implements Transport {
         },
         toRecipients: [{ emailAddress: { address: message.to } }],
         ...(replyTo ? { replyTo: [{ emailAddress: { address: replyTo } }] } : {}),
+        // Inline file attachments are capped at ~3 MB per request by Graph;
+        // sendEmail enforces that cap before any transport is chosen.
+        ...(message.attachments?.length
+          ? {
+              attachments: message.attachments.map((a) => ({
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                name: a.filename,
+                contentType: a.contentType,
+                contentBytes: a.content.toString("base64"),
+              })),
+            }
+          : {}),
       },
       saveToSentItems: true,
     };
@@ -60,6 +72,8 @@ export class GraphTransport implements Transport {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      // fetch has no timeout of its own; a stalled request would hang the sender.
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!res.ok) {

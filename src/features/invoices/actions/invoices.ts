@@ -2,19 +2,34 @@
 
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
-import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
-import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { ADMIN_ROLES, isAdminRole } from "@/lib/auth/roles";
+import { loadAgencyBrand, type AgencyBrand } from "@/lib/branding/agency-brand";
 import { loadAgencyContactEmail } from "@/lib/email/contact";
-import { logEmailSendError } from "@/lib/email/error-log";
 import { notifyAgencyOfNewInvoice } from "@/lib/email/notify-creation";
+import { sendEmail } from "@/lib/email/send";
+import { getEmailProviderStatus } from "@/features/email-providers/data/provider";
 import { invoiceFromBonusesSchema, invoiceManualSchema } from "../domain/schemas";
+import {
+  INVOICE_EMAIL_TEMPLATE_KEY,
+  invoiceEmailSchema,
+  invoiceRecipientSchema,
+  isSendableStatus,
+  type InvoiceEmailValues,
+  type InvoiceRecipientValues,
+} from "../domain/email";
+import { getInvoiceEmailTemplate } from "../data/emailTemplate";
+import {
+  composeInvoiceEmail,
+  fillInvoiceTemplate,
+  invoiceMergeContext,
+  type InvoiceEmailSource,
+} from "../lib/compose";
 import { InvoicePdf } from "../pdf/InvoicePdf";
-import { formatGBP } from "@/lib/utils/formatters";
 
 type InvoiceItemInput = {
   description: string;
@@ -235,16 +250,38 @@ export async function createInvoiceFromBonuses(formData: FormData) {
   redirect(`/invoices/${invoice.id}`);
 }
 
-export async function submitInvoice(invoiceId: string) {
+/**
+ * Draft → "Ready to send" (status `submitted`). This is the only way out of
+ * draft, and drafts can never be emailed — finalising is the deliberate
+ * "this is done" step that replaced admin approval. The creator or an admin
+ * may finalise.
+ */
+export async function finaliseInvoice(invoiceId: string) {
   const supabase = createSupabaseServerClient();
   const profile = await requireUserProfile();
+  const { data: invoice, error: loadError } = await supabase
+    .from("invoices")
+    .select("id, status, created_by_user_id")
+    .eq("id", invoiceId)
+    .single();
+  if (loadError) throw new Error(loadError.message);
+  if (!isAdminRole(profile.role) && invoice.created_by_user_id !== profile.id) {
+    throw new Error("You can only finalise invoices you created.");
+  }
+  if (invoice.status !== "draft") {
+    throw new Error("Only draft invoices can be finalised.");
+  }
+
   const { error } = await supabase
     .from("invoices")
     .update({ status: "submitted", submitted_at: new Date().toISOString() })
     .eq("id", invoiceId)
-    .eq("created_by_user_id", profile.id);
+    .eq("status", "draft");
   if (error) throw new Error(error.message);
+
+  await refreshInvoicePdf(invoiceId);
   revalidatePath(`/invoices/${invoiceId}`);
+  revalidatePath("/invoices");
 }
 
 export async function updateInvoiceDraft(formData: FormData) {
@@ -265,7 +302,7 @@ export async function updateInvoiceDraft(formData: FormData) {
     .eq("id", invoiceId)
     .single();
   if (invoiceError) throw new Error(invoiceError.message);
-  const isAdmin = profile.role.toLowerCase() === "admin";
+  const isAdmin = isAdminRole(profile.role);
   const editableStatus = invoice.status === "draft" || (isAdmin && invoice.status === "submitted");
   if (!editableStatus) {
     throw new Error("Only draft invoices can be edited.");
@@ -293,20 +330,47 @@ export async function updateInvoiceDraft(formData: FormData) {
     .eq("id", invoiceId);
   if (error) throw new Error(error.message);
 
+  // The stored PDF is a cache of the invoice — rebuild it so View PDF and the
+  // email attachment match what was just saved.
+  await refreshInvoicePdf(invoiceId);
   revalidatePath(`/invoices/${invoiceId}`);
+}
+
+/**
+ * Rebuild the cached PDF after a change. A failure here must not undo the
+ * change itself, so instead of throwing it clears the cache pointer — the next
+ * View PDF or send then regenerates from scratch rather than serving a stale copy.
+ */
+async function refreshInvoicePdf(invoiceId: string) {
+  try {
+    await generateInvoicePdf(invoiceId);
+  } catch (err) {
+    console.error("[invoices] PDF refresh failed; clearing cached copy", { invoiceId, err });
+    const profile = await requireUserProfile();
+    await createSupabaseAdminClient()
+      .from("invoices")
+      .update({ pdf_storage_path: null })
+      .eq("id", invoiceId)
+      .eq("tenant_id", profile.tenant_id);
+  }
 }
 
 export async function deleteInvoice(invoiceId: string) {
   const supabase = createSupabaseServerClient();
-  await requireRole([...ADMIN_ROLES]);
+  const profile = await requireUserProfile();
   const { data: invoice, error: invoiceError } = await supabase
     .from("invoices")
-    .select("id, status")
+    .select("id, status, created_by_user_id")
     .eq("id", invoiceId)
     .single();
   if (invoiceError) throw new Error(invoiceError.message);
-  if (!["draft", "submitted"].includes(invoice.status)) {
-    throw new Error("Only draft or submitted invoices can be deleted.");
+  if (isAdminRole(profile.role)) {
+    if (!["draft", "submitted"].includes(invoice.status)) {
+      throw new Error("Only draft or ready-to-send invoices can be deleted.");
+    }
+  } else if (invoice.created_by_user_id !== profile.id || invoice.status !== "draft") {
+    // Mirrors the "invoices delete" RLS policy: agents may delete their own drafts.
+    throw new Error("You can only delete your own draft invoices.");
   }
 
   await supabase.from("invoice_bonus_links").delete().eq("invoice_id", invoiceId);
@@ -365,33 +429,22 @@ export async function bulkDeleteInvoicesAction(
   }
 }
 
-export async function approveInvoice(invoiceId: string) {
-  const supabase = createSupabaseServerClient();
-  const profile = await requireRole([...ADMIN_ROLES]);
-  const { error } = await supabase
-    .from("invoices")
-    .update({
-      status: "approved",
-      approved_at: new Date().toISOString(),
-      approved_by_user_id: profile.id
-    })
-    .eq("id", invoiceId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/invoices/${invoiceId}`);
-}
-
-export async function approveAndSendInvoice(invoiceId: string) {
-  await approveInvoice(invoiceId);
-  const formData = new FormData();
-  formData.set("invoice_id", invoiceId);
-  await sendInvoice(formData);
-}
-
 export async function generateInvoicePdf(invoiceId: string) {
+  const { path } = await renderAndStoreInvoicePdf(invoiceId);
+  return path;
+}
+
+/**
+ * Render the invoice PDF and overwrite the cached copy in storage. Access is
+ * proven by the RLS-scoped read (creator or admin); the pointer write then
+ * uses the admin client because agents cannot update a finalised invoice under
+ * RLS, and the cache must still refresh for them.
+ */
+async function renderAndStoreInvoicePdf(invoiceId: string): Promise<{ path: string; buffer: Buffer }> {
   const supabase = createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   const profile = await requireUserProfile();
-  const isAdmin = profile.role.toLowerCase() === "admin";
+  const isAdmin = isAdminRole(profile.role);
   const { data: invoice } = await supabase
     .from("invoices")
     .select("*, landlords(*), billing_profiles(*), created_by:user_profiles!invoices_created_by_user_id_fkey(display_name)")
@@ -429,14 +482,15 @@ export async function generateInvoicePdf(invoiceId: string) {
     .upload(path, pdfBuffer, { contentType: "application/pdf", upsert: true });
   if (uploadError) throw new Error(uploadError.message);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await admin
     .from("invoices")
     .update({ pdf_storage_path: path })
-    .eq("id", invoiceId);
+    .eq("id", invoiceId)
+    .eq("tenant_id", invoice.tenant_id);
   if (updateError) throw new Error(updateError.message);
 
   revalidatePath(`/invoices/${invoiceId}`);
-  return path;
+  return { path, buffer: Buffer.from(pdfBuffer) };
 }
 
 export async function generateInvoicePdfAndRedirect(invoiceId: string) {
@@ -454,8 +508,7 @@ export async function generateInvoicePdfAndRedirect(invoiceId: string) {
 export async function viewInvoicePdf(invoiceId: string) {
   const supabase = createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
-  const profile = await requireUserProfile();
-  const isAdmin = profile.role.toLowerCase() === "admin";
+  await requireUserProfile();
   const { data: invoice, error } = await supabase
     .from("invoices")
     .select("id, tenant_id, pdf_storage_path")
@@ -467,11 +520,7 @@ export async function viewInvoicePdf(invoiceId: string) {
 
   let path = invoice.pdf_storage_path;
   if (!path) {
-    if (!isAdmin) {
-      path = await generateInvoicePdf(invoiceId);
-    } else {
-      path = await generateInvoicePdf(invoiceId);
-    }
+    path = await generateInvoicePdf(invoiceId);
   }
 
   const { data, error: signedError } = await admin.storage
@@ -484,126 +533,320 @@ export async function viewInvoicePdf(invoiceId: string) {
   redirect(data.signedUrl);
 }
 
-function applyTemplate(input: string, variables: Record<string, string>) {
-  return Object.entries(variables).reduce(
-    (acc, [key, value]) => acc.replaceAll(`{{${key}}}`, value),
-    input
-  );
+// ─── Emailing an invoice ────────────────────────────────────────────────────
+//
+// Anyone who can manage the invoice (its creator, or an admin) can email it —
+// there is no approval step. Drafts are never sent: an invoice must be
+// finalised first. Mail goes through sendEmail, so it leaves from the agency's
+// connected mailbox (Microsoft 365 / Gmail / SMTP) when there is one, and from
+// the Harbor Ops mailer otherwise.
+
+const INVOICE_EMAIL_SELECT =
+  "*, landlords(id, name, email), billing_profiles(sender_company_name, sender_email)";
+
+type InvoiceForEmail = InvoiceEmailSource & {
+  id: string;
+  tenant_id: string;
+  status: string;
+  created_by_user_id: string;
+  landlord_id: string;
+  landlords: { id: string; name: string | null; email: string | null } | null;
+  billing_profiles: { sender_company_name: string | null; sender_email: string | null } | null;
+};
+
+export type InvoiceEmailDraft = {
+  /** Null when the landlord has no usable email — the dialog asks for one. */
+  to: string | null;
+  landlordName: string;
+  subject: string;
+  body: string;
+  previewHtml: string;
+  /** {{keys}} in the template with nothing to fill them. */
+  unknownKeys: string[];
+  /** Human description of the mailbox this will send from. */
+  sendingFrom: string;
+  /** True when the invoice has already been emailed once. */
+  isResend: boolean;
+  /** Only admins can change the agency-wide template. */
+  canEditTemplate: boolean;
+};
+
+export type InvoiceEmailDraftResult =
+  | { ok: true; draft: InvoiceEmailDraft }
+  | { ok: false; error: string };
+
+export type InvoiceEmailSendResult =
+  | { ok: true }
+  | { ok: false; error: string; code?: "missing_email" };
+
+/**
+ * Load an invoice for emailing and enforce who may send it and when. The read
+ * goes through the caller's RLS-scoped client, so an agent only ever sees
+ * their own invoices here.
+ */
+async function loadInvoiceForEmail(
+  invoiceId: string
+): Promise<
+  | { ok: true; invoice: InvoiceForEmail; profileId: string; tenantId: string; isAdmin: boolean }
+  | { ok: false; error: string }
+> {
+  const profile = await requireUserProfile();
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(INVOICE_EMAIL_SELECT)
+    .eq("id", invoiceId)
+    .eq("tenant_id", profile.tenant_id)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Invoice not found." };
+
+  const invoice = data as unknown as InvoiceForEmail;
+  const isAdmin = isAdminRole(profile.role);
+  if (!isAdmin && invoice.created_by_user_id !== profile.id) {
+    return { ok: false, error: "You can only send invoices you created." };
+  }
+  if (invoice.status === "draft") {
+    return { ok: false, error: "Finalise this invoice before sending it." };
+  }
+  if (!isSendableStatus(invoice.status)) {
+    return { ok: false, error: `A ${invoice.status} invoice can't be emailed.` };
+  }
+  return { ok: true, invoice, profileId: profile.id, tenantId: profile.tenant_id, isAdmin };
 }
 
-export async function sendInvoice(formData: FormData) {
-  const supabase = createSupabaseServerClient();
-  const profile = await requireRole([...ADMIN_ROLES]);
-  const invoiceId = String(formData.get("invoice_id") ?? "");
-  const subjectInput = String(formData.get("subject") ?? "");
-  const bodyInput = String(formData.get("body") ?? "");
+/** The landlord's email if it is present and valid, else null. */
+function recipientFor(invoice: InvoiceForEmail): string | null {
+  const parsed = invoiceRecipientSchema.safeParse({ email: invoice.landlords?.email ?? "" });
+  return parsed.success ? parsed.data.email : null;
+}
 
-  if (!invoiceId) throw new Error("Missing invoice id.");
-
-  const { data: invoice } = await supabase
-    .from("invoices")
-    .select("*, landlords(*), billing_profiles(*), created_by:user_profiles!invoices_created_by_user_id_fkey(display_name)")
-    .eq("id", invoiceId)
-    .single();
-  if (!invoice) throw new Error("Invoice not found.");
-
-  let pdfPath = invoice.pdf_storage_path;
-  if (!pdfPath) {
-    pdfPath = await generateInvoicePdf(invoiceId);
+async function describeSendingMailbox(tenantId: string): Promise<string> {
+  const provider = await getEmailProviderStatus(tenantId).catch(() => null);
+  if (provider?.status === "active" && provider.fromAddress) {
+    return `your mailbox (${provider.fromAddress})`;
   }
+  return "the shared Harbor Ops mailer";
+}
 
-  const { data: pdfFile } = await supabase.storage
-    .from("invoices-pdf")
-    .download(pdfPath);
-  if (!pdfFile) throw new Error("Unable to fetch invoice PDF.");
+type Branding = { brand: AgencyBrand; contactEmail: string | null };
 
-  const { data: template } = await supabase
-    .from("email_templates")
-    .select("subject, body")
-    .eq("key", "invoice_send")
-    .single();
+async function loadBranding(tenantId: string): Promise<Branding | null> {
+  const [brand, contactEmail] = await Promise.all([
+    loadAgencyBrand(tenantId),
+    loadAgencyContactEmail(tenantId).catch(() => null),
+  ]);
+  return brand ? { brand, contactEmail } : null;
+}
 
-  const variables = {
-    landlord_name: invoice.landlords?.name ?? "Landlord",
-    invoice_number: invoice.invoice_number,
-    balance_due: formatGBP(Number(invoice.balance_due)),
-    due_date: invoice.due_date,
-    billing_company: invoice.billing_profiles?.sender_company_name ?? ""
+function renderForInvoice(
+  invoice: InvoiceForEmail,
+  { brand, contactEmail }: Branding,
+  values: InvoiceEmailValues
+): { subject: string; html: string; text: string; unknownKeys: string[] } {
+  const context = invoiceMergeContext(invoice, brand.displayName);
+  const filled = fillInvoiceTemplate(values, context);
+  const { html, text } = composeInvoiceEmail({
+    brand,
+    contactEmail,
+    subject: filled.subject,
+    body: filled.body,
+    context,
+  });
+  return { subject: filled.subject, html, text, unknownKeys: filled.unknownKeys };
+}
+
+/**
+ * Build the email the send dialog opens with: the agency's template filled in
+ * for this invoice, plus a rendered preview. `to` is null when the landlord
+ * has no email, which the dialog turns into an "add an email" step.
+ */
+export async function buildInvoiceEmailDraft(invoiceId: string): Promise<InvoiceEmailDraftResult> {
+  const loaded = await loadInvoiceForEmail(invoiceId);
+  if (!loaded.ok) return loaded;
+  const { invoice, tenantId, isAdmin } = loaded;
+
+  const [template, branding, sendingFrom] = await Promise.all([
+    getInvoiceEmailTemplate(tenantId),
+    loadBranding(tenantId),
+    describeSendingMailbox(tenantId),
+  ]);
+  if (!branding) return { ok: false, error: "Agency not found." };
+
+  // The editable draft has the merge fields already filled for this invoice.
+  const filled = fillInvoiceTemplate(
+    template,
+    invoiceMergeContext(invoice, branding.brand.displayName)
+  );
+  const rendered = renderForInvoice(invoice, branding, filled);
+
+  return {
+    ok: true,
+    draft: {
+      to: recipientFor(invoice),
+      landlordName: invoice.landlords?.name?.trim() || "This landlord",
+      subject: filled.subject,
+      body: filled.body,
+      previewHtml: rendered.html,
+      unknownKeys: filled.unknownKeys,
+      sendingFrom,
+      isResend: invoice.status === "sent",
+      canEditTemplate: isAdmin,
+    },
   };
+}
 
-  const subject = applyTemplate(
-    subjectInput || template?.subject || `Invoice ${invoice.invoice_number}`,
-    variables
-  );
-  const body = applyTemplate(
-    bodyInput || template?.body || "Please find your invoice attached.",
-    variables
-  );
-
-  const resend = new Resend(process.env.RESEND_API_KEY ?? "");
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("Missing RESEND_API_KEY.");
+/** Re-render the preview after an edit in the dialog. */
+export async function previewInvoiceEmail(
+  invoiceId: string,
+  values: InvoiceEmailValues
+): Promise<{ ok: true; html: string } | { ok: false; error: string }> {
+  const parsed = invoiceEmailSchema.safeParse(values);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid email." };
   }
-  const fromDomain = process.env.EMAIL_FROM_DOMAIN;
-  if (!fromDomain) {
-    throw new Error("EMAIL_FROM_DOMAIN is not set");
+  const loaded = await loadInvoiceForEmail(invoiceId);
+  if (!loaded.ok) return loaded;
+
+  const branding = await loadBranding(loaded.tenantId);
+  if (!branding) return { ok: false, error: "Agency not found." };
+  return { ok: true, html: renderForInvoice(loaded.invoice, branding, parsed.data).html };
+}
+
+/**
+ * Save an email address onto the invoice's landlord (from the send dialog's
+ * "no email on file" step), then hand back a fresh draft addressed to it. The
+ * address is kept on the landlord record so future invoices just work.
+ */
+export async function saveLandlordEmailForInvoice(
+  invoiceId: string,
+  values: InvoiceRecipientValues
+): Promise<InvoiceEmailDraftResult> {
+  const parsed = invoiceRecipientSchema.safeParse(values);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Enter a valid email address." };
+  }
+  const loaded = await loadInvoiceForEmail(invoiceId);
+  if (!loaded.ok) return loaded;
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("landlords")
+    .update({ email: parsed.data.email })
+    .eq("id", loaded.invoice.landlord_id)
+    .eq("tenant_id", loaded.tenantId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/landlords");
+  return buildInvoiceEmailDraft(invoiceId);
+}
+
+/**
+ * Email the invoice to its landlord with a freshly rendered PDF attached.
+ * `values` is what was on screen in the dialog, so last-minute edits are
+ * honoured (and merge fields typed there still fill in).
+ */
+export async function sendInvoiceEmail(
+  invoiceId: string,
+  values: InvoiceEmailValues
+): Promise<InvoiceEmailSendResult> {
+  const parsed = invoiceEmailSchema.safeParse(values);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid email." };
   }
 
-  const replyTo = await loadAgencyContactEmail(invoice.tenant_id);
-  const recipient = invoice.landlords?.email ?? "";
+  const loaded = await loadInvoiceForEmail(invoiceId);
+  if (!loaded.ok) return loaded;
+  const { invoice, tenantId, profileId } = loaded;
 
-  const buffer = Buffer.from(await pdfFile.arrayBuffer());
+  const to = recipientFor(invoice);
+  if (!to) {
+    return {
+      ok: false,
+      code: "missing_email",
+      error: "This landlord has no email address on file.",
+    };
+  }
+
   try {
-    await resend.emails.send({
-      from: `Harbor Ops <noreply@${fromDomain}>`,
-      to: recipient,
-      reply_to: replyTo,
-      subject,
-      html: `<p>${body}</p>`,
+    // Always re-render the PDF: the attachment must match the invoice as it is
+    // now, never a cached copy from before an edit. Branding loads alongside.
+    const [{ buffer }, branding] = await Promise.all([
+      renderAndStoreInvoicePdf(invoiceId),
+      loadBranding(tenantId),
+    ]);
+    if (!branding) return { ok: false, error: "Agency not found." };
+    const rendered = renderForInvoice(invoice, branding, parsed.data);
+
+    await sendEmail(tenantId, {
+      to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      replyTo: invoice.billing_profiles?.sender_email?.trim() || undefined,
+      templateKey: INVOICE_EMAIL_TEMPLATE_KEY,
       attachments: [
         {
           filename: `${invoice.invoice_number}.pdf`,
-          content: buffer
-        }
-      ]
+          content: buffer,
+          contentType: "application/pdf",
+        },
+      ],
     });
   } catch (err) {
+    // sendEmail has already written email_log + the error log.
     const message = err instanceof Error ? err.message : String(err);
-    await logEmailSendError({
-      tenantId: invoice.tenant_id,
-      message,
-      context: { path: "invoice-send", invoiceId, to: recipient, subject }
-    });
-    throw err;
+    return { ok: false, error: `The email could not be sent: ${message}` };
   }
 
-  const { error: updateError } = await supabase
+  // Bookkeeping uses the admin client: agents may send their own invoices, but
+  // RLS (rightly) won't let them flip a finalised invoice or a bonus status
+  // directly. Access was proven by loadInvoiceForEmail above, and every write
+  // is pinned to this tenant and this invoice.
+  const admin = createSupabaseAdminClient();
+  const wasSent = invoice.status === "sent";
+
+  const { error: updateError } = await admin
     .from("invoices")
     .update({ status: "sent", sent_at: new Date().toISOString() })
-    .eq("id", invoiceId);
-  if (updateError) throw new Error(updateError.message);
+    .eq("id", invoiceId)
+    .eq("tenant_id", tenantId);
+  if (updateError) {
+    return { ok: false, error: `The email was sent, but the invoice status could not be updated: ${updateError.message}` };
+  }
 
-  await supabase
-    .from("bonuses")
-    .update({ status: "sent" })
-    .in(
-      "id",
-      (await supabase
-        .from("invoice_bonus_links")
-        .select("bonus_id")
-        .eq("invoice_id", invoiceId)).data?.map((link) => link.bonus_id) ?? []
-    );
+  const markBonusesSent = async () => {
+    const { data: links } = await admin
+      .from("invoice_bonus_links")
+      .select("bonus_id")
+      .eq("invoice_id", invoiceId)
+      .eq("tenant_id", tenantId);
+    const bonusIds = (links ?? []).map((link) => link.bonus_id as string);
+    if (bonusIds.length === 0) return;
+    await admin
+      .from("bonuses")
+      .update({ status: "sent" })
+      .in("id", bonusIds)
+      .eq("tenant_id", tenantId)
+      .in("status", ["pending", "approved", "sent"]);
+  };
 
-  await supabase.from("activity_log").insert({
-    tenant_id: invoice.tenant_id,
-    actor_user_id: profile.id,
-    action: "invoice_sent",
-    entity_type: "invoice",
-    entity_id: invoice.id,
-    metadata: { invoice_number: invoice.invoice_number }
-  });
+  await Promise.all([
+    markBonusesSent(),
+    admin.from("activity_log").insert({
+      tenant_id: tenantId,
+      actor_user_id: profileId,
+      action: wasSent ? "invoice_resent" : "invoice_sent",
+      entity_type: "invoice",
+      entity_id: invoice.id,
+      metadata: { invoice_number: invoice.invoice_number, to },
+    }),
+  ]);
 
   revalidatePath(`/invoices/${invoiceId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/bonuses");
+  return { ok: true };
 }
 
 export async function markInvoicePaid(invoiceId: string) {

@@ -73,6 +73,9 @@ export const RA_NAV_ITEMS: NavItem[] = [
   { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
   { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
+  // Shared with PM: connecting a mailbox here makes invoices (and every other
+  // agency email) send from the agency's own address.
+  { href: "/settings/email", label: "Email Sending", icon: Mail, allowedRoles: ADMIN_ROLES },
   { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
   // Deliberately NO allowedRoles: every agency user — not just admins — must be
   // able to reach us. Don't "fix" this to ADMIN_ROLES like its neighbours.

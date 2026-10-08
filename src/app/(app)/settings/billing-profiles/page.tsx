@@ -11,11 +11,16 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BillingProfilesTable } from "@/features/invoices/ui/BillingProfilesTable";
+import { InvoiceEmailTemplateCard } from "@/features/invoices/ui/InvoiceEmailTemplateCard";
+import { getInvoiceEmailTemplate } from "@/features/invoices/data/emailTemplate";
 
 export default async function BillingProfilesPage() {
   const profile = await requireRole([...ADMIN_ROLES]);
   const isAdmin = true; // page is admin-only
-  const profiles = await getBillingProfiles();
+  const [profiles, invoiceEmail] = await Promise.all([
+    getBillingProfiles(),
+    getInvoiceEmailTemplate(profile.tenant_id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -58,6 +63,11 @@ export default async function BillingProfilesPage() {
           />
         </CardContent>
       </Card>
+
+      <InvoiceEmailTemplateCard
+        initial={{ subject: invoiceEmail.subject, body: invoiceEmail.body }}
+        isDefault={invoiceEmail.isDefault}
+      />
     </div>
   );
 }

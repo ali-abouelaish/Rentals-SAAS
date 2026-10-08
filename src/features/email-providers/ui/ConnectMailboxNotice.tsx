@@ -13,7 +13,14 @@ const PROVIDER_LABELS: Record<string, string> = {
  * (or whose connection is broken) on the pages that send email on their
  * behalf. Renders nothing when a provider is connected and healthy.
  */
-export async function ConnectMailboxNotice({ tenantId }: { tenantId: string }) {
+export async function ConnectMailboxNotice({
+  tenantId,
+  emailKinds = "Reminders, rent emails, portal invites, and form links",
+}: {
+  tenantId: string;
+  /** What this page sends, opening the "no mailbox" copy, e.g. "Invoices". */
+  emailKinds?: string;
+}) {
   const provider = await getEmailProviderStatus(tenantId).catch(() => null);
 
   // Connected and healthy — nothing to say.
@@ -51,7 +58,7 @@ export async function ConnectMailboxNotice({ tenantId }: { tenantId: string }) {
           Emails currently send from the shared Harbor Ops mailer
         </p>
         <p className="mt-0.5">
-          Reminders, rent emails, portal invites, and form links will come from{" "}
+          {emailKinds} will come from{" "}
           <span className="font-mono">noreply@harborops</span> with replies going to your
           contact address. To send from your own agency mailbox instead, go to{" "}
           <Link href="/settings/email" className="underline font-medium hover:text-foreground">

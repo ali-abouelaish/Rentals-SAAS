@@ -1,4 +1,5 @@
 import { getResendClient } from "./resend-client";
+import type { EmailAttachment } from "./transport/types";
 
 export type CoreResendSendParams = {
   from: string;
@@ -8,6 +9,7 @@ export type CoreResendSendParams = {
   text: string;
   replyTo: string;
   headers?: Record<string, string>;
+  attachments?: EmailAttachment[];
 };
 
 /**
@@ -27,6 +29,7 @@ export async function coreResendSend({
   text,
   replyTo,
   headers,
+  attachments,
 }: CoreResendSendParams): Promise<{ messageId: string }> {
   const resend = getResendClient();
   const { data, error } = await resend.emails.send({
@@ -37,6 +40,15 @@ export async function coreResendSend({
     text,
     reply_to: replyTo,
     headers: headers ?? {},
+    ...(attachments?.length
+      ? {
+          attachments: attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+            content_type: a.contentType,
+          })),
+        }
+      : {}),
   });
   if (error) {
     throw new Error(`${error.name}: ${error.message}`);

@@ -8,7 +8,7 @@ export const emailSendingArticle: HelpArticle = {
   summary: "Connect your own mailbox so tenant-facing emails send from your agency's address.",
   content: `## What this page is for
 
-Email Sending lets you connect your agency's own mailbox so tenant-facing emails — including rent reminders — are sent from your address instead of the default Harbor Ops mailer. Three options are supported:
+Email Sending lets you connect your agency's own mailbox so the emails you send — rent reminders, tenant emails and invoices to landlords — are sent from your address instead of the default Harbor Ops mailer. Three options are supported:
 
 - **Microsoft 365 (Outlook)** — sign in with Microsoft and grant permission to send.
 - **Google Workspace (Gmail)** — sign in with Google and grant permission to send.
@@ -22,7 +22,7 @@ Email Sending lets you connect your agency's own mailbox so tenant-facing emails
 
 ## How it works
 
-- When a mailbox is connected and healthy, rent reminders and other tenant-facing mail send from it.
+- When a mailbox is connected and healthy, rent reminders, invoice emails (with the PDF attached) and other tenant- or landlord-facing mail send from it. With Microsoft 365, sent invoices also appear in your Sent Items.
 - **If a send fails, it automatically falls back to the default Harbor Ops mailer** so the email still goes out, and your connection is flagged so you can fix it.
 - A daily health check verifies each connection before the morning rent-reminder run and alerts you if it has stopped working, so token expiry never fails silently.
 

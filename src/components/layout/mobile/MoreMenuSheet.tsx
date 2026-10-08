@@ -18,6 +18,7 @@ import {
   RA_NAV_ITEMS,
   ADMIN_NAV_GROUPS,
   isAdminRoute,
+  isPmRoute,
   canSeeItem,
   type NavItem,
   type NavGroup,
@@ -57,7 +58,11 @@ export function MoreMenuSheet({
       module === "pm" &&
       hasBoth &&
       (item.href === "/dashboard" || item.href.startsWith("/settings"));
-    return needsViewParam ? `${item.href}?view=pm` : item.href;
+    if (needsViewParam) return `${item.href}?view=pm`;
+    // A settings page shared with PM (e.g. /settings/email) would otherwise
+    // flip an RA agency's nav into PM mode.
+    if (module === "ra" && hasBoth && isPmRoute(item.href)) return `${item.href}?view=ra`;
+    return item.href;
   };
 
   const Row = ({ item }: { item: NavItem }) => {
