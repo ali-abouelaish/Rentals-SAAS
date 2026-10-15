@@ -13,6 +13,13 @@ npm run create:superuser  # Create initial admin user (requires .env.local)
 
 No test framework is configured.
 
+**Build memory**
+
+- `npm run build` runs scripts/build.mjs, a cross-platform launcher that sets NODE_OPTIONS=--max-old-space-size=6144 so Next's build worker inherits it. The default 3 GB heap runs out of memory.
+- For more heap: `$env:BUILD_HEAP_MB=8192; npm run build` (PowerShell) or `BUILD_HEAP_MB=8192 npm run build` (bash).
+- Never put `NODE_OPTIONS=... next build` back in package.json, because it breaks on Windows.
+- .next.prev/ must stay gitignored and excluded in tsconfig.json.
+
 ## Architecture
 
 **Next.js 14 App Router** multi-tenant SaaS for rental agencies. TypeScript strict mode, Supabase (PostgreSQL + Auth), Tailwind CSS, React Hook Form + Zod.

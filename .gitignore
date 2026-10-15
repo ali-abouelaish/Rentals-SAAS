@@ -20,3 +20,6 @@ venv/
 
 # Scraper session cookies (mydeposits). Short-lived credentials, never committed.
 md_cookies.txt
+
+# Previous build kept by scripts/deploy.sh for rollback (multi-GB)
+.next.prev/
