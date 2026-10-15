@@ -27,7 +27,11 @@ const PUBLIC_PATHS = [
   "/preferences",
   "/portal",
   "/api/portal",
-  "/tenant-not-found"
+  "/tenant-not-found",
+  // Legal pages must be readable logged-out: Google's OAuth verification (and
+  // anyone following the footer links) fetches them without a session.
+  "/privacy",
+  "/terms"
 ];
 
 function getTenantFromHost(host: string | null): string | null {

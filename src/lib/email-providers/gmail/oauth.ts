@@ -2,8 +2,8 @@
 // leads inbound integration (src/lib/gmail/*, gmail.readonly, its own redirect
 // + tenant_gmail_connections table): this flow uses gmail.send and writes to
 // email_providers. Reuses the same Google client id/secret but a distinct
-// redirect URI (GOOGLE_SEND_REDIRECT_URI), which must be registered on the
-// OAuth client alongside the leads one.
+// redirect URI — GOOGLE_SEND_REDIRECT_URI, or derived from GOOGLE_REDIRECT_URI
+// when unset — which must be registered on the OAuth client alongside the leads one.
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -21,14 +21,38 @@ export type GmailOAuthConfig = {
   redirectUri: string;
 };
 
+const SEND_CALLBACK_PATH = "/api/email/gmail/callback";
+
+/**
+ * This flow's callback URL. GOOGLE_SEND_REDIRECT_URI wins when set; otherwise
+ * it is derived from the leads integration's GOOGLE_REDIRECT_URI — same Google
+ * client, same callback host, just this flow's own path — so the lead-sync
+ * keys alone are enough. (The derived URL must still be listed under the
+ * client's Authorized redirect URIs in Google Cloud.)
+ */
+function sendRedirectUri(): string | null {
+  const explicit = process.env.GOOGLE_SEND_REDIRECT_URI?.trim();
+  if (explicit) return explicit;
+  const leads = process.env.GOOGLE_REDIRECT_URI?.trim();
+  if (!leads) return null;
+  try {
+    return new URL(SEND_CALLBACK_PATH, leads).toString();
+  } catch {
+    return null;
+  }
+}
+
 export function gmailOAuthConfig(): GmailOAuthConfig {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_SEND_REDIRECT_URI;
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  const redirectUri = sendRedirectUri();
   if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error(
-      "Missing Google OAuth env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_SEND_REDIRECT_URI",
-    );
+    const missing = [
+      !clientId && "GOOGLE_CLIENT_ID",
+      !clientSecret && "GOOGLE_CLIENT_SECRET",
+      !redirectUri && "GOOGLE_SEND_REDIRECT_URI (or GOOGLE_REDIRECT_URI to derive it from)",
+    ].filter(Boolean);
+    throw new Error(`Missing Google OAuth env vars: ${missing.join(", ")}`);
   }
   return { clientId, clientSecret, redirectUri };
 }

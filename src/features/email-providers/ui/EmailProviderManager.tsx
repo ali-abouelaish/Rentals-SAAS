@@ -14,6 +14,8 @@ const ERROR_LABELS: Record<string, string> = {
   invalid_state: "Your connect session expired. Please try again.",
   graph_auth_failed: "Could not complete the Microsoft connection. Please try again.",
   gmail_auth_failed: "Could not complete the Gmail connection. Please try again.",
+  graph_unavailable: "Microsoft 365 sending isn't set up on this server yet. Please contact support.",
+  gmail_unavailable: "Gmail sending isn't set up on this server yet. Please contact support.",
 };
 
 const PROVIDER_LABELS: Record<string, string> = {

@@ -93,7 +93,7 @@ Required in `.env.local`:
 | `MICROSOFT_CLIENT_SECRET` | Azure AD client secret for the Graph email transport |
 | `MICROSOFT_REDIRECT_URI` | Graph OAuth callback URL (`https://<host>/api/email/graph/callback`) |
 | `MICROSOFT_TENANT_ID` | Optional Azure AD tenant id for a single-tenant app (defaults to `common`) |
-| `GOOGLE_SEND_REDIRECT_URI` | Gmail send-transport OAuth callback (`https://<host>/api/email/gmail/callback`); reuses `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` with the `gmail.send` scope |
+| `GOOGLE_SEND_REDIRECT_URI` | Optional. Gmail send-transport OAuth callback (`https://<host>/api/email/gmail/callback`); when unset it is derived from `GOOGLE_REDIRECT_URI`'s host, so the lead-sync keys (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`) cover both. The callback URL must still be added to the OAuth client's Authorized redirect URIs, with the `gmail.send` scope on the consent screen |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account key for landlord listing spreadsheets; needs the Sheets **and** Drive APIs enabled. Optional for Sheets (public sheets read credential-free); **required** for Drive room-photo import. Resolution order: this var → `GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON` → `GOOGLE_SERVICE_ACCOUNT_FILE` (path) → `./service_account.json` (gitignored, the usual setup). Base64-encode if using an env var |
 | `PORTAL_TOKEN_SECRET` | HMAC secret for renter portal magic-link + session tokens (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (shared; also used by `mydeposits-poll`) |

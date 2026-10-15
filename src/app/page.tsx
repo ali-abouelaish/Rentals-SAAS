@@ -945,13 +945,17 @@ export default function LandingPage() {
                 <ul>
                   <li><a href="#">HMO margin guide</a></li>
                   <li><a href="#">Zone-2 room rates</a></li>
-                  <li><a href="#">Data &amp; privacy</a></li>
+                  <li><a href="/privacy">Privacy policy</a></li>
+                  <li><a href="/terms">Terms</a></li>
                   <li><a href="#">Contact</a></li>
                 </ul>
               </div>
             </div>
             <div className="wrap foot-bottom" style={{ paddingLeft: 0, paddingRight: 0 }}>
-              <div>© 2026 Harbor Ops · London, UK</div>
+              <div>
+                © 2026 Harbor Ops · London, UK · <a href="/privacy">Privacy policy</a> ·{" "}
+                <a href="/terms">Terms</a>
+              </div>
               <div>v1.0 · built room-by-room</div>
             </div>
           </div>

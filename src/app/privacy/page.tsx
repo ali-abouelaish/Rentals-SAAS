@@ -13,15 +13,16 @@ const sections = [
   { id: "s2", title: "What data we collect" },
   { id: "s3", title: "How we use your data" },
   { id: "s4", title: "Data we process on your behalf" },
-  { id: "s5", title: "Sharing of data" },
-  { id: "s6", title: "International data transfers" },
-  { id: "s7", title: "Data retention" },
-  { id: "s8", title: "Cookies" },
-  { id: "s9", title: "Your rights under UK GDPR" },
-  { id: "s10", title: "Security" },
-  { id: "s11", title: "Children’s data" },
-  { id: "s12", title: "Changes to this policy" },
-  { id: "s13", title: "Contact us" },
+  { id: "s5", title: "Connected Google and Microsoft accounts" },
+  { id: "s6", title: "Sharing of data" },
+  { id: "s7", title: "International data transfers" },
+  { id: "s8", title: "Data retention" },
+  { id: "s9", title: "Cookies" },
+  { id: "s10", title: "Your rights under UK GDPR" },
+  { id: "s11", title: "Security" },
+  { id: "s12", title: "Children’s data" },
+  { id: "s13", title: "Changes to this policy" },
+  { id: "s14", title: "Contact us" },
 ];
 
 export default function PrivacyPage() {
@@ -88,7 +89,7 @@ export default function PrivacyPage() {
               <div className="cell">
                 <div className="k">Effective date</div>
                 <div className="v">
-                  <em>May</em> 2025
+                  <em>October</em> 2026
                 </div>
               </div>
               <div className="cell">
@@ -175,6 +176,10 @@ export default function PrivacyPage() {
                       <strong>Support and communications</strong> — information you
                       provide when contacting us for support.
                     </li>
+                    <li>
+                      <strong>Connected account data</strong> — if you connect a Google or
+                      Microsoft account, the limited data described in Section 5.
+                    </li>
                   </ul>
 
                   <h3>2.2 Data collected automatically</h3>
@@ -189,7 +194,7 @@ export default function PrivacyPage() {
                     </li>
                     <li>
                       <strong>Cookies and similar technologies</strong> — session cookies
-                      for authentication and analytics cookies (see Section 8).
+                      for authentication and analytics cookies (see Section 9).
                     </li>
                   </ul>
                 </div>
@@ -300,6 +305,170 @@ export default function PrivacyPage() {
               <section id="s5">
                 <div className="section-head">
                   <div className="section-num">05</div>
+                  <h2>Connected Google and Microsoft accounts</h2>
+                </div>
+                <div className="section-body">
+                  <p>
+                    Agencies can choose to connect a Google account (Gmail or Google
+                    Workspace) or a Microsoft 365 account to Harbor Ops. Connecting an
+                    account is optional, and is done by an administrator of the agency
+                    through Google&rsquo;s or Microsoft&rsquo;s own sign-in and consent
+                    screen. This section explains exactly what we access, why, and what we
+                    do with it.
+                  </p>
+
+                  <h3>5.1 What we access and why</h3>
+                  <div className="dtable">
+                    <div className="row h">
+                      <div>Feature</div>
+                      <div>What we do with it</div>
+                      <div>Permission requested</div>
+                    </div>
+                    <div className="row">
+                      <div>
+                        <strong>Send email from your Gmail address</strong>
+                      </div>
+                      <div>
+                        Send the emails you or your team choose to send in Harbor Ops (for
+                        example invoices to landlords, rent reminders and messages to
+                        tenants) from your own address, instead of from our shared mailer.
+                        This permission lets us send mail only. We cannot read, search,
+                        change or delete anything in your mailbox. We read your email
+                        address only to show which account is connected and to use it as
+                        the sender.
+                      </div>
+                      <div className="basis">
+                        gmail.send, plus your email address (userinfo.email, openid)
+                      </div>
+                    </div>
+                    <div className="row">
+                      <div>
+                        <strong>Send email from your Microsoft 365 address</strong>
+                      </div>
+                      <div>
+                        The same as above, for Outlook and Microsoft 365 mailboxes.
+                        Microsoft keeps a copy of each sent message in your Sent Items.
+                      </div>
+                      <div className="basis">Mail.Send, User.Read, offline_access</div>
+                    </div>
+                    <div className="row">
+                      <div>
+                        <strong>Import enquiries from your Gmail inbox</strong>
+                      </div>
+                      <div>
+                        Find enquiry emails sent to your inbox from the last 30 days by the
+                        property portals you list (for example Rightmove), and turn each one
+                        into a lead in Harbor Ops: the enquirer&rsquo;s name, email address
+                        and phone number, the property they asked about, their message, and
+                        the text of that enquiry email. We only request messages from those
+                        portals&rsquo; sender addresses. We do not process or store any
+                        other email in your mailbox.
+                      </div>
+                      <div className="basis">gmail.readonly</div>
+                    </div>
+                  </div>
+
+                  <h3>5.2 How we store and protect it</h3>
+                  <ul>
+                    <li>
+                      The access tokens Google or Microsoft issue to us are encrypted
+                      (AES-256-GCM) before they are stored on our servers. They are used
+                      only by the parts of Harbor Ops that send email or import enquiries,
+                      and they are never sent to your browser.
+                    </li>
+                    <li>
+                      We do not keep copies of the emails we send through your mailbox. We
+                      keep a delivery log (recipient, subject, time and whether it was
+                      delivered) so you can see what was sent and so we can fix problems.
+                    </li>
+                    <li>
+                      Leads created from enquiry emails are Customer Data. We hold them on
+                      your behalf as described in Section 4, and keep them as described in
+                      Section 8.
+                    </li>
+                  </ul>
+
+                  <h3>5.3 How we use and share it</h3>
+                  <ul>
+                    <li>
+                      We use Google and Microsoft account data only to provide the features
+                      described above, which you can see and control in Harbor Ops.
+                    </li>
+                    <li>
+                      We do not sell this data, use it for advertising, or use it to work
+                      out anyone&rsquo;s creditworthiness or for lending.
+                    </li>
+                    <li>
+                      We do not transfer it to anyone else except as needed to provide
+                      these features (for example our hosting infrastructure), to comply
+                      with the law, or as part of a merger or acquisition, with notice to
+                      you.
+                    </li>
+                    <li>
+                      Our staff do not read it unless you ask us to for a specific message
+                      (for example when you contact support), it is needed to investigate
+                      security issues or abuse, it is needed to comply with the law, or it
+                      has been aggregated and anonymised for running the service.
+                    </li>
+                    <li>
+                      We do not use data from Google or Microsoft accounts to develop,
+                      improve or train artificial intelligence or machine-learning models.
+                    </li>
+                  </ul>
+                  <div className="callout">
+                    <div className="ico">G</div>
+                    <div className="body">
+                      Harbor Ops&rsquo; use and transfer to any other app of information
+                      received from Google APIs will adhere to the{" "}
+                      <a
+                        className="inline"
+                        href="https://developers.google.com/terms/api-services-user-data-policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Google API Services User Data Policy
+                      </a>
+                      , including the Limited Use requirements.
+                    </div>
+                  </div>
+
+                  <h3>5.4 Disconnecting and deleting your data</h3>
+                  <ul>
+                    <li>
+                      An agency administrator can disconnect at any time: email sending under{" "}
+                      <strong>Settings → Email Sending → Disconnect</strong>, and enquiry
+                      import under <strong>Leads → Settings</strong>.
+                      Disconnecting deletes the stored tokens straight away, and we stop
+                      accessing the account.
+                    </li>
+                    <li>
+                      You can also remove our access from your side at any time, in your{" "}
+                      <a
+                        className="inline"
+                        href="https://myaccount.google.com/permissions"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Google Account permissions
+                      </a>{" "}
+                      or your Microsoft account&rsquo;s app permissions.
+                    </li>
+                    <li>
+                      Leads already imported stay in Harbor Ops as Customer Data until you
+                      delete them or your account is closed. To ask us to delete any data
+                      we hold from a connected account, email{" "}
+                      <a className="inline" href="mailto:legal@harborops.co.uk">
+                        legal@harborops.co.uk
+                      </a>
+                      .
+                    </li>
+                  </ul>
+                </div>
+              </section>
+
+              <section id="s6">
+                <div className="section-head">
+                  <div className="section-num">06</div>
                   <h2>Sharing of data</h2>
                 </div>
                 <div className="section-body">
@@ -339,6 +508,16 @@ export default function PrivacyPage() {
                     </div>
                     <div className="row">
                       <div>
+                        <strong>Your connected mailbox provider</strong>
+                      </div>
+                      <div>
+                        Send email from your own address when you connect one (see Section
+                        5).
+                      </div>
+                      <div className="basis">Google or Microsoft</div>
+                    </div>
+                    <div className="row">
+                      <div>
                         <strong>Analytics providers</strong>
                       </div>
                       <div>
@@ -366,9 +545,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s6">
+              <section id="s7">
                 <div className="section-head">
-                  <div className="section-num">06</div>
+                  <div className="section-num">07</div>
                   <h2>International data transfers</h2>
                 </div>
                 <div className="section-body">
@@ -381,9 +560,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s7">
+              <section id="s8">
                 <div className="section-head">
-                  <div className="section-num">07</div>
+                  <div className="section-num">08</div>
                   <h2>Data retention</h2>
                 </div>
                 <div className="section-body">
@@ -428,9 +607,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s8">
+              <section id="s9">
                 <div className="section-head">
-                  <div className="section-num">08</div>
+                  <div className="section-num">09</div>
                   <h2>Cookies</h2>
                 </div>
                 <div className="section-body">
@@ -451,9 +630,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s9">
+              <section id="s10">
                 <div className="section-head">
-                  <div className="section-num">09</div>
+                  <div className="section-num">10</div>
                   <h2>Your rights under UK GDPR</h2>
                 </div>
                 <div className="section-body">
@@ -533,9 +712,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s10">
+              <section id="s11">
                 <div className="section-head">
-                  <div className="section-num">10</div>
+                  <div className="section-num">11</div>
                   <h2>Security</h2>
                 </div>
                 <div className="section-body">
@@ -561,9 +740,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s11">
+              <section id="s12">
                 <div className="section-head">
-                  <div className="section-num">11</div>
+                  <div className="section-num">12</div>
                   <h2>Children’s data</h2>
                 </div>
                 <div className="section-body">
@@ -576,9 +755,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s12">
+              <section id="s13">
                 <div className="section-head">
-                  <div className="section-num">12</div>
+                  <div className="section-num">13</div>
                   <h2>Changes to this policy</h2>
                 </div>
                 <div className="section-body">
@@ -592,9 +771,9 @@ export default function PrivacyPage() {
                 </div>
               </section>
 
-              <section id="s13">
+              <section id="s14">
                 <div className="section-head">
-                  <div className="section-num">13</div>
+                  <div className="section-num">14</div>
                   <h2>Contact us</h2>
                 </div>
                 <div className="section-body">

@@ -1,5 +1,10 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
+
+/** @param {string} phase @returns {import('next').NextConfig} */
+const buildConfig = (phase) => ({
+  // `next dev` and `next build` both write to the dist dir; sharing it makes a
+  // build wipe the dev server's CSS/chunks (404s, broken layout). Keep dev separate.
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next",
   images: {
     remotePatterns: [
       {
@@ -27,6 +32,6 @@ const nextConfig = {
     ];
     return config;
   }
-};
+});
 
-export default nextConfig;
+export default buildConfig;
