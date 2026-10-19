@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatGBP } from "@/lib/utils/formatters";
 import { approveRentalCode } from "@/features/rentals/actions/rentals";
 import { toast } from "sonner";
+import { paymentFeeRate, vatRate } from "@/features/earnings/lib/money";
 
 type Props = {
   rentalId: string;
@@ -18,6 +19,8 @@ type Props = {
   assistedAgentId: string;
   marketingAgentId?: string | null;
   marketingAgentCount?: number;
+  /** rental_codes.vat_applies — see RentalPayoutSummary. */
+  vatApplies?: boolean | null;
 };
 
 export function RentalApprovalPanel({
@@ -28,14 +31,15 @@ export function RentalApprovalPanel({
   marketingFeeDefault,
   assistedAgentId,
   marketingAgentId,
-  marketingAgentCount = 1
+  marketingAgentCount = 1,
+  vatApplies = true
 }: Props) {
   const [overrideFee, setOverrideFee] = useState<string>("");
   const [overrideReason, setOverrideReason] = useState<string>("");
   const [showOverride, setShowOverride] = useState(false);
 
-  const paymentFee = paymentMethod === "card" ? 0.0175 : 0;
-  const vatDivisor = paymentMethod === "card" || paymentMethod === "transfer" ? 1.2 : 1;
+  const paymentFee = paymentFeeRate(paymentMethod);
+  const vatDivisor = 1 + vatRate(paymentMethod, vatApplies);
   const base = useMemo(
     () => (rentalAmount * (1 - paymentFee)) / vatDivisor,
     [rentalAmount, paymentFee, vatDivisor]
@@ -99,8 +103,18 @@ export function RentalApprovalPanel({
               <span className="text-foreground-secondary">Payment fee</span>
               <span className="font-semibold text-navy">{(paymentFee * 100).toFixed(2)}%</span>
             </div>
+            {vatDivisor > 1 && (
+              <div className="flex items-center justify-between">
+                <span className="text-foreground-secondary">VAT (20%)</span>
+                <span className="font-semibold text-navy">
+                  −{formatGBP(rentalAmount * (1 - paymentFee) - base)}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
-              <span className="text-foreground-secondary">Base after fee</span>
+              <span className="text-foreground-secondary">
+                {vatDivisor > 1 ? "Base after fee & VAT" : "Base after fee"}
+              </span>
               <span className="font-semibold text-navy">{formatGBP(base)}</span>
             </div>
           </div>

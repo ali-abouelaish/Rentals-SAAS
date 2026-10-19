@@ -18,7 +18,8 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { storeSignedArtifacts } from "./artifacts";
+import { contractDocumentRoute, isMissingColumnError } from "@/lib/storage/contractDocuments";
+import { SIGNED_DOCUMENTS_BUCKET, storeSignedArtifacts } from "./artifacts";
 import { boldSignErrorMessage } from "./client";
 import { planEventApplication } from "./statusMap";
 import type { BoldSignDocumentStatus, BoldSignEntityType } from "./types";
@@ -40,36 +41,90 @@ type DocumentRow = {
 /**
  * Mirror a coarse signing outcome onto the record the document was raised from.
  *
- * Only contracts are mirrored, and only on completion. The other two types keep
- * their signing state in boldsign_documents alone:
+ * Only contracts are mirrored. The other two types keep their signing state in
+ * boldsign_documents alone:
  *   - maintenance_jobs has no signing-related status to set; 'resolved' means
  *     the work is done, which a signature does not establish.
  *   - owner_statements.status is draft/approved/sent/void, where 'approved'
  *     means internally approved before sending. Reusing it for "the owner
  *     signed" would overload an existing meaning.
  * Inventing states for either is a product decision, not an integration one.
+ *
+ * Contract status only ever moves forward here. A tenancy the agency already
+ * activated (tenant moved in before the landlord countersigned) or put on
+ * notice must stay where it is: 'signed' means "queued, not yet live" in this
+ * app, and moving an active contract back to it dropped it out of the arrears
+ * and date automations, which only look at 'active'.
  */
 async function mirrorToHostRecord(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   document: DocumentRow,
-  status: BoldSignDocumentStatus
+  status: BoldSignDocumentStatus,
+  signedPdfPath: string | null
 ): Promise<void> {
-  if (document.entity_type !== "contract" || status !== "completed") return;
+  if (document.entity_type !== "contract") return;
 
-  const { error } = await admin
-    .from("property_contracts")
-    .update({ status: "signed", signing_method: "boldsign" })
-    .eq("id", document.entity_id)
-    .eq("tenant_id", document.tenant_id);
+  const now = new Date().toISOString();
 
-  if (error) {
-    // Non-fatal: the signing record is already correct and holds the artefacts.
-    // Surfacing this as a failure would make BoldSign retry an event that has
-    // otherwise been fully handled.
-    console.error("[boldsign] could not mirror status onto contract", {
-      contractId: document.entity_id,
-      error: error.message,
-    });
+  if (status === "completed") {
+    const { error } = await admin
+      .from("property_contracts")
+      .update({ status: "signed", updated_at: now })
+      .eq("id", document.entity_id)
+      .eq("tenant_id", document.tenant_id)
+      .in("status", ["draft", "sent"]);
+
+    // Whatever its status, record how it was signed.
+    const { error: methodError } = await admin
+      .from("property_contracts")
+      .update({ signing_method: "boldsign" })
+      .eq("id", document.entity_id)
+      .eq("tenant_id", document.tenant_id);
+
+    // The executed copy becomes the contract's document: "View contract"
+    // everywhere opens what was actually signed, not the unsigned draft.
+    let documentError: { code?: string; message?: string } | null = null;
+    if (signedPdfPath) {
+      ({ error: documentError } = await admin
+        .from("property_contracts")
+        .update({
+          document_bucket: SIGNED_DOCUMENTS_BUCKET,
+          document_path: signedPdfPath,
+          document_url: contractDocumentRoute(document.entity_id),
+        })
+        .eq("id", document.entity_id)
+        .eq("tenant_id", document.tenant_id));
+      if (isMissingColumnError(documentError)) documentError = null;
+    }
+
+    for (const err of [error, methodError, documentError]) {
+      if (!err) continue;
+      // Non-fatal: the signing record is already correct and holds the artefacts.
+      // Surfacing this as a failure would make BoldSign retry an event that has
+      // otherwise been fully handled.
+      console.error("[boldsign] could not mirror completion onto contract", {
+        contractId: document.entity_id,
+        error: err.message,
+      });
+    }
+    return;
+  }
+
+  // Declined, revoked or expired: nothing is out for signature any more, so a
+  // contract we marked 'sent' goes back to draft and can be fixed and re-sent.
+  if (status === "declined" || status === "revoked" || status === "expired") {
+    const { error } = await admin
+      .from("property_contracts")
+      .update({ status: "draft", updated_at: now })
+      .eq("id", document.entity_id)
+      .eq("tenant_id", document.tenant_id)
+      .eq("status", "sent");
+    if (error) {
+      console.error("[boldsign] could not return contract to draft", {
+        contractId: document.entity_id,
+        error: error.message,
+      });
+    }
   }
 }
 
@@ -156,7 +211,12 @@ export async function processBoldSignEvent(params: {
 
   if (updateError) return { ok: false, error: updateError.message };
 
-  await mirrorToHostRecord(admin, document, status);
+  await mirrorToHostRecord(
+    admin,
+    document,
+    status,
+    (update.signed_pdf_path as string | undefined) ?? document.signed_pdf_path
+  );
 
   return { ok: true, outcome: "applied" };
 }

@@ -9,6 +9,11 @@ import {
 } from "@/features/earnings/data/queries";
 import { getAgentById } from "@/features/agents/data/agents";
 import { getBonusesForAgent } from "@/features/bonuses/data/bonuses";
+import { getManagerCommission } from "@/features/manager-commission/data/queries";
+import { ManagerCommissionSection } from "@/features/manager-commission/ui/ManagerCommissionSection";
+import { lineTotals } from "@/features/manager-commission/lib/compute";
+import { trendBucketFor } from "@/features/earnings/lib/trend-buckets";
+import { isAdminRole } from "@/lib/auth/roles";
 import { ProfileHeader } from "@/features/me/ui/ProfileHeader";
 import { StatCard } from "@/features/me/ui/StatCard";
 import { MeDateRangeFilter } from "@/features/me/ui/MeDateRangeFilter";
@@ -25,7 +30,8 @@ import {
   ClipboardList,
   Gift,
   Percent,
-  Calculator
+  Calculator,
+  UserCheck
 } from "lucide-react";
 
 function getDefaultRange() {
@@ -54,13 +60,14 @@ export default async function MePage({
   const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
   const cardUrl = `${protocol}://${host}/public/card/${profile.id}`;
 
-  const [agentProfile, stats, trend, transactions, bonuses, entitlements] = await Promise.all([
+  const [agentProfile, stats, trend, transactions, bonuses, entitlements, managerCommission] = await Promise.all([
     getAgentById(profile.id).catch(() => null),
     getEarningsStatsForAgent(filters, profile.id),
     getEarningsTrendForAgent(filters, profile.id),
     getTransactions(filters, { agentId: profile.id }),
     getBonusesForAgent(profile.id, { from: start, to: end }),
     getEntitlements(),
+    getManagerCommission(profile.id, { from: start, to: end }),
   ]);
 
   const commissionPercent = agentProfile?.commission_percent ?? 50;
@@ -69,7 +76,16 @@ export default async function MePage({
   // Declined bonuses stay visible in the table but never count toward earnings
   const payableBonuses = bonuses.filter((b) => b.status !== "declined");
   const totalBonuses = payableBonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
-  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonuses;
+  // Managers are also owed their cut on their pool's deals.
+  const managerEarned = managerCommission.totals.earned;
+  // Same per-line amounts as the totals (paid lines at what was paid), dated
+  // by the deal so they chart alongside the user's own earnings.
+  const managerChartPoints = managerCommission.byAgent
+    .flatMap((a) => a.lines)
+    .map((line) => ({ date: line.date, amount: lineTotals(line).earned }))
+    .filter((p) => p.amount > 0);
+  const trendBucket = trendBucketFor(start, end);
+  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonuses + managerEarned;
   const avgPerRental =
     (stats.totalTransactions ?? 0) > 0
       ? (stats.totalEarnings ?? 0) / (stats.totalTransactions ?? 1)
@@ -116,7 +132,14 @@ export default async function MePage({
             <StatCard label="Conversion" value="—" icon={Percent} iconColor="text-amber-600" iconBg="bg-amber-50" />
             <StatCard label="Avg per Rental" value={formatGBP(avgPerRental)} icon={Calculator} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
           </div>
-          <MeTrendChart trend={trend} transactions={transactions} bonuses={payableBonuses} commissionPercent={commissionPercent} />
+          <MeTrendChart
+            trend={trend}
+            transactions={transactions}
+            bonuses={payableBonuses}
+            commissionPercent={commissionPercent}
+            managerEarnings={managerChartPoints}
+            bucket={trendBucket}
+          />
           <div className="rounded-bento bg-surface-card shadow-bento p-6">
             <h3 className="text-base font-semibold text-foreground mb-4">Transactions</h3>
             {transactions.length === 0 ? (
@@ -134,6 +157,15 @@ export default async function MePage({
             <h3 className="text-base font-semibold text-foreground mb-4">Bonuses</h3>
             <MeBonusesTable bonuses={bonuses} totalBonuses={totalBonuses} commissionPercent={commissionPercent} isAdmin={isAdmin} />
           </div>
+          {managerCommission.hasPlans && (
+            <div className="rounded-bento bg-surface-card shadow-bento p-6">
+              <h3 className="text-base font-semibold text-foreground mb-1">Manager commission</h3>
+              <p className="text-sm text-foreground-muted mb-4">
+                Your cut on deals closed by the agents you manage, by agent.
+              </p>
+              <ManagerCommissionSection result={managerCommission} isAdmin={isAdminRole(profile.role)} />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="earnings" className="space-y-8 mt-8">
@@ -141,8 +173,27 @@ export default async function MePage({
             <StatCard label="Total Earnings" value={formatGBP(totalCombinedEarnings)} icon={TrendingUp} />
             <StatCard label="Earnings (period)" value={formatGBP(totalCombinedEarnings)} icon={Receipt} iconColor="text-violet-600" iconBg="bg-violet-50" />
             <StatCard label="Avg per Rental" value={formatGBP(avgPerRental)} icon={Calculator} />
+            {managerCommission.hasPlans && (
+              <StatCard label="Manager commission" value={formatGBP(managerEarned)} icon={UserCheck} iconColor="text-teal-600" iconBg="bg-teal-50" />
+            )}
           </div>
-          <MeTrendChart trend={trend} transactions={transactions} bonuses={payableBonuses} commissionPercent={commissionPercent} />
+          <MeTrendChart
+            trend={trend}
+            transactions={transactions}
+            bonuses={payableBonuses}
+            commissionPercent={commissionPercent}
+            managerEarnings={managerChartPoints}
+            bucket={trendBucket}
+          />
+          {managerCommission.hasPlans && (
+            <div className="rounded-bento bg-surface-card shadow-bento p-6">
+              <h3 className="text-base font-semibold text-foreground mb-1">Manager commission</h3>
+              <p className="text-sm text-foreground-muted mb-4">
+                Your cut on deals closed by the agents you manage, by agent.
+              </p>
+              <ManagerCommissionSection result={managerCommission} isAdmin={isAdminRole(profile.role)} />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="rentals" className="space-y-8 mt-8">

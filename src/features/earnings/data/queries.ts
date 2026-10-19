@@ -8,35 +8,18 @@ import type {
   EarningsTransaction,
   PaymentRow,
 } from "../domain/types";
+import { computeRentalNet, paymentFeeRate, vatRate } from "../lib/money";
+import { trendBucketFor } from "../lib/trend-buckets";
+import { getManagerPaymentLines } from "@/features/manager-commission/data/queries";
 
 function getBucket(from: Date, to: Date) {
-  const diffDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
-  return diffDays <= 45 ? "day" : "week";
+  return trendBucketFor(from, to);
 }
 
 /** Turn a date-only string like "2026-04-10" into an end-of-day ISO string
  *  so that `.lte("date", ...)` includes records created during that day. */
 function endOfDay(dateStr: string): string {
   return `${dateStr}T23:59:59.999Z`;
-}
-
-/** Real processing cost of taking the money. Only card machines charge one;
- *  cash and bank transfers cost nothing to receive. VAT is separate — see vatRate. */
-function paymentFeeRate(method: string): number {
-  if (method === "card") return 0.0175;
-  return 0;
-}
-
-/** VAT deducted after the payment fee. Card-machine and transfer rentals
- *  are subject to VAT (20%). */
-function vatRate(method: string): number {
-  return method === "card" || method === "transfer" ? 0.2 : 0;
-}
-
-function computeRentalNet(amount: number, method: string): number {
-  const afterFee = amount * (1 - paymentFeeRate(method));
-  const divisor = method === "card" || method === "transfer" ? 1.2 : 1;
-  return Math.round((afterFee / divisor) * 100) / 100;
 }
 
 /** Fetch junction table data for a set of rental IDs.
@@ -76,7 +59,7 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
       .eq("is_disabled", false),
     supabase
       .from("rental_codes")
-      .select("consultation_fee_amount, payment_method, status")
+      .select("consultation_fee_amount, payment_method, vat_applies, status")
       .eq("tenant_id", profile.tenant_id)
       .in("status", ["pending", "approved", "paid"])
       .gte("date", from)
@@ -89,11 +72,11 @@ export async function getEarningsStats(filters: EarningsFilterValues): Promise<E
   const pending = (rentals ?? []).filter((r) => r.status === "pending");
 
   const totalEarnings = (rentals ?? []).reduce(
-    (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method),
+    (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method, r.vat_applies),
     0
   );
   const pendingEarnings = pending.reduce(
-    (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method),
+    (sum, r) => sum + computeRentalNet(r.consultation_fee_amount, r.payment_method, r.vat_applies),
     0
   );
   const totalTransactions = (rentals ?? []).length;
@@ -151,7 +134,7 @@ export async function getEarningsStatsForAgent(
       .single(),
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, status")
+      .select("id, consultation_fee_amount, payment_method, vat_applies, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, status")
       .or(agentOrFilter)
       .in("status", ["pending", "approved", "paid"])
       .gte("date", from)
@@ -197,7 +180,7 @@ export async function getEarningsStatsForAgent(
     let involved = false;
     if (rental.assisted_by_agent_id === agentId) {
       involved = true;
-      const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
+      const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method, rental.vat_applies);
       const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
       earned = Math.round((gross - totalMktFee) * 100) / 100;
     } else if (isMarketingAgent) {
@@ -249,7 +232,7 @@ export async function getEarningsTrend(filters: EarningsFilterValues): Promise<E
   // (same statuses + net formula) so the chart sums to "Total Agency Earnings".
   const { data: rentals } = await supabase
     .from("rental_codes")
-    .select("consultation_fee_amount, payment_method, date")
+    .select("consultation_fee_amount, payment_method, vat_applies, date")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["pending", "approved", "paid"])
     .gte("date", fromDate.toISOString())
@@ -264,7 +247,7 @@ export async function getEarningsTrend(filters: EarningsFilterValues): Promise<E
         : new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
     const key = bucketDate.toISOString().slice(0, 10);
     const current = buckets.get(key) ?? { bucket_date: key, total_earnings: 0, agent_earnings: 0 };
-    current.total_earnings += computeRentalNet(r.consultation_fee_amount, r.payment_method);
+    current.total_earnings += computeRentalNet(r.consultation_fee_amount, r.payment_method, r.vat_applies);
     buckets.set(key, current);
   });
 
@@ -292,7 +275,7 @@ export async function getEarningsTrendForAgent(
     supabase.from("agent_profiles").select("commission_percent, marketing_fee").eq("user_id", agentId).single(),
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
+      .select("id, consultation_fee_amount, payment_method, vat_applies, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
       .or([
         `assisted_by_agent_id.eq.${agentId}`,
         `marketing_agent_id.eq.${agentId}`,
@@ -339,7 +322,7 @@ export async function getEarningsTrendForAgent(
 
     let earned = 0;
     if (r.assisted_by_agent_id === agentId) {
-      const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
+      const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method, r.vat_applies);
       const gross = Math.round(rentalNet * selfCommissionPct / 100 * 100) / 100;
       earned = Math.round((gross - totalMktFee) * 100) / 100;
     } else if (isMarketingAgent) {
@@ -399,7 +382,7 @@ async function buildLeaderboard(
   const [{ data: rentals }, { data: agents }, { data: activities }, { data: bonuses }] = await Promise.all([
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
+      .select("id, consultation_fee_amount, payment_method, vat_applies, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id")
       .eq("tenant_id", tenantId)
       // Count every rental — approved and not-yet-approved (pending / need_more_info)
       // alike. Only refunded rentals are excluded, mirroring the declined-bonus rule below.
@@ -496,7 +479,7 @@ async function buildLeaderboard(
   };
 
   for (const rental of rentals ?? []) {
-    const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
+    const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method, rental.vat_applies);
     const commPct = commPctMap.get(rental.assisted_by_agent_id) ?? 0;
     const gross = Math.round(rentalNet * commPct / 100 * 100) / 100;
     const hasMarketing = rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
@@ -589,7 +572,7 @@ export async function getTransactions(
 
   let query = supabase
     .from("rental_codes")
-    .select("id, code, status, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, date")
+    .select("id, code, status, client_snapshot, assisted_by_agent_id, consultation_fee_amount, payment_method, vat_applies, marketing_fee_override_gbp, marketing_agent_id, date")
     .eq("tenant_id", profile.tenant_id)
     .in("status", ["pending", "approved", "paid"])
     .or(dateOrUnpaidParts.join(","))
@@ -649,7 +632,7 @@ export async function getTransactions(
   const out: EarningsTransaction[] = [];
 
   for (const rental of rentals) {
-    const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method);
+    const rentalNet = computeRentalNet(rental.consultation_fee_amount, rental.payment_method, rental.vat_applies);
     const commPct = agentProfileMap.get(rental.assisted_by_agent_id)?.commission_percent ?? 0;
     const gross = Math.round(rentalNet * Number(commPct) / 100 * 100) / 100;
     const hasMarketing = rental.marketing_agent_id && rental.marketing_agent_id !== rental.assisted_by_agent_id;
@@ -712,7 +695,7 @@ export async function getTransactions(
       payout: {
         rental_amount: Number(rental.consultation_fee_amount ?? 0),
         payment_fee_rate: paymentFeeRate(rental.payment_method),
-        vat_rate: vatRate(rental.payment_method),
+        vat_rate: vatRate(rental.payment_method, rental.vat_applies),
         base_after_fee_and_vat: rentalNet,
         commission_percent: Number(commPct),
         assisted_gross: gross,
@@ -758,7 +741,7 @@ export async function getEarningsTrendByAgents(
   const [{ data: rentals }, { data: agentProfiles }] = await Promise.all([
     supabase
       .from("rental_codes")
-      .select("id, consultation_fee_amount, payment_method, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
+      .select("id, consultation_fee_amount, payment_method, vat_applies, marketing_fee_override_gbp, marketing_agent_id, assisted_by_agent_id, date")
       .eq("tenant_id", profile.tenant_id)
       .or(orParts.join(","))
       .in("status", ["approved", "paid"])
@@ -818,7 +801,7 @@ export async function getEarningsTrendByAgents(
     const key = bucketDate.toISOString().slice(0, 10);
     const b = ensureBucket(key);
 
-    const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method);
+    const rentalNet = computeRentalNet(r.consultation_fee_amount, r.payment_method, r.vat_applies);
     const commPct = agentProfileMap.get(r.assisted_by_agent_id)?.commission_percent ?? 0;
     const gross = Math.round(rentalNet * Number(commPct) / 100 * 100) / 100;
     const hasMarketing = r.marketing_agent_id && r.marketing_agent_id !== r.assisted_by_agent_id;
@@ -868,7 +851,7 @@ export async function getPayments(
   // restricts paid rentals.
   let rentalQuery = supabase
     .from("rental_codes")
-    .select("id, code, client_name, assisted_by_agent_id, marketing_agent_id, consultation_fee_amount, date, status, agent_profiles!rental_codes_assisted_by_agent_id_fkey(user_profiles(display_name))");
+    .select("id, code, client_snapshot, assisted_by_agent_id, marketing_agent_id, consultation_fee_amount, date, status, user_profiles!rental_codes_assisted_by_agent_id_fkey(display_name)");
 
   if (statusFilter === "paid") {
     rentalQuery = rentalQuery.eq("status", "paid").gte("date", filters.from).lte("date", toEnd);
@@ -883,7 +866,8 @@ export async function getPayments(
 
   if (!isAdmin) rentalQuery = rentalQuery.eq("assisted_by_agent_id", profile.id);
 
-  const { data: rentals } = await rentalQuery;
+  const { data: rentals, error: rentalError } = await rentalQuery;
+  if (rentalError) throw new Error(rentalError.message);
 
   // Build per-rental marketing agent name list (primary + junction, excluding assisted)
   const rentalIds = (rentals ?? []).map((r: any) => r.id);
@@ -909,8 +893,8 @@ export async function getPayments(
     id: r.id,
     type: "rental" as const,
     code: r.code ?? "",
-    client_name: r.client_name ?? "",
-    agent_name: r.agent_profiles?.user_profiles?.display_name ?? "Unknown",
+    client_name: r.client_snapshot?.full_name ?? "",
+    agent_name: r.user_profiles?.display_name ?? "Unknown",
     agent_id: r.assisted_by_agent_id,
     marketing_agents: [...(mktIdsByRental.get(r.id) ?? [])]
       .map(id => mktNameMap.get(id))
@@ -925,7 +909,7 @@ export async function getPayments(
   // applies to paid bonuses.
   let bonusQuery = supabase
     .from("bonuses")
-    .select("id, client_name, amount_owed, bonus_date, status, agent_id, agent_profiles(user_profiles(display_name))");
+    .select("id, client_name, amount_owed, bonus_date, status, agent_id, user_profiles!bonuses_agent_id_fkey(display_name)");
 
   if (statusFilter === "paid") {
     bonusQuery = bonusQuery.eq("status", "paid").gte("bonus_date", filters.from).lte("bonus_date", toEnd);
@@ -940,21 +924,45 @@ export async function getPayments(
 
   if (!isAdmin) bonusQuery = bonusQuery.eq("agent_id", profile.id);
 
-  const { data: bonuses } = await bonusQuery;
+  const { data: bonuses, error: bonusError } = await bonusQuery;
+  if (bonusError) throw new Error(bonusError.message);
 
   const bonusRows: PaymentRow[] = (bonuses ?? []).map((b: any) => ({
     id: b.id,
     type: "bonus" as const,
     code: "",
     client_name: b.client_name ?? "",
-    agent_name: b.agent_profiles?.user_profiles?.display_name ?? "Unknown",
+    agent_name: b.user_profiles?.display_name ?? "Unknown",
     agent_id: b.agent_id,
     amount: Number(b.amount_owed ?? 0),
     date: b.bonus_date,
     status: b.status ?? "pending",
   }));
 
-  return [...rentalRows, ...bonusRows].sort(
+  // ── Manager commission ───────────────────────────────────────────────
+  // One row per manager line, paid independently of the deal itself.
+  const managerLines = await getManagerPaymentLines(filters, statusFilter);
+  const managerRows: PaymentRow[] = managerLines.map(({ line, manager_name }) => ({
+    id: line.key,
+    type: "manager" as const,
+    code: line.code,
+    client_name: line.client_name,
+    agent_name: manager_name,
+    agent_id: line.manager_id,
+    amount: line.paid?.amount ?? line.amount,
+    date: line.date,
+    status: line.paid ? "paid" : "approved",
+    manager: {
+      manager_id: line.manager_id,
+      source_type: line.source_type,
+      source_id: line.source_id,
+      deal_agent_name: line.agent_name,
+      state: line.state,
+      paid: line.paid,
+    },
+  }));
+
+  return [...rentalRows, ...bonusRows, ...managerRows].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 }

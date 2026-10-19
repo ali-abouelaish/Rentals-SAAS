@@ -8,6 +8,8 @@ import { rentalCodeSchema, type RentalCodeFormValues } from "../domain/schemas";
 import { requireUserProfile, requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { notifyAgencyOfNewRental } from "@/lib/email/notify-creation";
+import { computeRentalNet, effectiveVatApplies } from "@/features/earnings/lib/money";
+import { getCommissionVatSetting } from "@/features/agents/data/agents";
 
 export async function createRentalCode(values: RentalCodeFormValues) {
   const supabase = createSupabaseServerClient();
@@ -503,16 +505,20 @@ export async function approveRentalCode(formData: FormData): Promise<{ ok: boole
 
     const commissionPercent =
       assistedAgent?.commission_percent ?? 0;
-    // Only card carries a real processing cost (1.75% machine fee). Transfers
-    // and cash cost nothing to receive — transfer's former 0.2 was VAT applied
-    // as a fee, which double-counted once the ÷1.2 VAT divisor was added below.
-    const paymentFee = rental.payment_method === "card" ? 0.0175 : 0;
-    const vatDivisor =
-      rental.payment_method === "card" || rental.payment_method === "transfer" ? 1.2 : 1;
+    // A pending rental follows the agency's current VAT switch; approving it
+    // freezes that onto the rental so later switches never change it.
+    const vatSetting = await getCommissionVatSetting();
+    const vatApplies = effectiveVatApplies(rental.status, rental.vat_applies, vatSetting.enabled);
+    if (vatSetting.available && vatApplies !== rental.vat_applies) {
+      const { error: vatError } = await supabase
+        .from("rental_codes")
+        .update({ vat_applies: vatApplies })
+        .eq("id", rental.id);
+      if (vatError) return { ok: false, error: vatError.message };
+    }
 
-    const base = roundMoney(
-      (rental.consultation_fee_amount * (1 - paymentFee)) / vatDivisor
-    );
+    // Card fee and VAT rules live in computeRentalNet.
+    const base = computeRentalNet(rental.consultation_fee_amount, rental.payment_method, vatApplies);
     const assistedGross = roundMoney(base * (commissionPercent / 100));
     const defaultMarketingFee = marketingAgent?.marketing_fee ?? 0;
     const threshold = roundMoney(base * 0.45);

@@ -13,10 +13,12 @@ import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { canAccessRoute } from "@/lib/auth/roles";
 import { AvatarCircle } from "@/components/shared/AvatarCircle";
 import { formatGBP, formatDate } from "@/lib/utils/formatters";
-import { ArrowLeft, TrendingUp, Home, Gift, Clock } from "lucide-react";
+import { ArrowLeft, TrendingUp, Home, Gift, Clock, UserCheck } from "lucide-react";
 import { AgentProfileCharts } from "@/features/earnings/ui/AgentProfileCharts";
 import { AgentTransactionsTable } from "@/features/earnings/ui/AgentTransactionsTable";
 import { AgentBonusesTable } from "@/features/bonuses/ui/AgentBonusesTable";
+import { getManagerCommission } from "@/features/manager-commission/data/queries";
+import { ManagerCommissionSection } from "@/features/manager-commission/ui/ManagerCommissionSection";
 
 function getDefaultRange() {
   const to = new Date();
@@ -58,11 +60,12 @@ export default async function AgentEarningsPage({
   const minAmount = searchParams?.minAmount ? Number(searchParams.minAmount) : undefined;
   const displayName = agent.user_profiles?.display_name ?? "Agent";
 
-  const [stats, trend, transactions, bonuses] = await Promise.all([
+  const [stats, trend, transactions, bonuses, managerCommission] = await Promise.all([
     getEarningsStatsForAgent(filters, params.id),
     getEarningsTrendForAgent(filters, params.id),
     getTransactions(filters, { agentId: params.id }),
     getBonusesForAgent(params.id, filters),
+    getManagerCommission(params.id, filters),
   ]);
 
   const avgPerRental =
@@ -77,7 +80,9 @@ export default async function AgentEarningsPage({
   // Declined bonuses stay visible in the table but never count toward earnings
   const payableBonuses = bonuses.filter((b) => b.status !== "declined");
   const totalBonusAmount = payableBonuses.reduce((sum, b) => sum + bonusAgentShare(b), 0);
-  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonusAmount;
+  // A manager's cut on their pool's deals is part of what they're owed.
+  const managerEarned = managerCommission.totals.earned;
+  const totalCombinedEarnings = (stats.totalEarnings ?? 0) + totalBonusAmount + managerEarned;
   const totalBonusCount = payableBonuses.length;
   const pendingBonusAmount = bonuses
     .filter((b) => ["pending", "approved", "sent"].includes(b.status))
@@ -138,6 +143,12 @@ export default async function AgentEarningsPage({
                 {formatGBP(totalBonusAmount)} total bonuses
               </span>
             )}
+            {managerCommission.hasPlans && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1.5 text-sm font-medium text-teal-700">
+                <UserCheck className="h-3.5 w-3.5" />
+                {formatGBP(managerEarned)} manager commission
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -196,6 +207,29 @@ export default async function AgentEarningsPage({
           <AgentBonusesTable bonuses={bonuses} commissionPercent={commissionPercent} isAdmin={isAdmin} />
         </CardContent>
       </Card>
+
+      {/* ══ MANAGER COMMISSION SECTION ═════════════ */}
+      {managerCommission.hasPlans && (
+        <>
+          <div id="manager-commission" className="flex items-center gap-3 scroll-mt-24">
+            <div className="p-2 rounded-lg bg-teal-50">
+              <UserCheck className="h-4 w-4 text-teal-600" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">Manager commission</h2>
+            <div className="flex-1 h-px bg-border ml-2" />
+          </div>
+          <p className="text-sm text-foreground-muted -mt-3">
+            {displayName}&apos;s cut on deals closed by the agents they manage, by agent. Paid from the agency&apos;s
+            share, not the agents&apos;.
+          </p>
+
+          <Card>
+            <CardContent className="pt-6">
+              <ManagerCommissionSection result={managerCommission} isAdmin={isAdmin} />
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { requireRole, requireUserProfile } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { notifyAgencyOfNewBonus } from "@/lib/email/notify-creation";
+import { bonusAgentShare } from "@/features/earnings/lib/money";
 
 export async function submitBonus(values: BonusFormValues) {
   const supabase = createSupabaseServerClient();
@@ -151,8 +152,18 @@ export async function approveBonus(bonusId: string) {
     .single();
   if (error) throw new Error(error.message);
 
-  const agentEarning =
-    bonus.payout_mode === "full" ? bonus.amount_owed : bonus.amount_owed * 0.5;
+  // Standard bonuses pay the agent their commission %, the same rule the
+  // earnings pages use; "full" pays the whole amount.
+  const { data: agentProfile } = await supabase
+    .from("agent_profiles")
+    .select("commission_percent")
+    .eq("user_id", bonus.agent_id)
+    .maybeSingle();
+  const agentEarning = bonusAgentShare(
+    bonus.amount_owed,
+    bonus.payout_mode,
+    Number(agentProfile?.commission_percent ?? 0)
+  );
 
   await supabase
     .from("bonuses")

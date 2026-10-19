@@ -30,7 +30,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { createProperty, updateProperty } from "../actions/properties";
+import { createProperty, updateProperty, uploadPropertyContractDocument } from "../actions/properties";
 import { saveUnitPhoto } from "../actions/photos";
 import { propertySchema, propertyEditSchema, type PropertyFormValues } from "../domain/schemas";
 import { LONDON_AREAS } from "../domain/types";
@@ -565,14 +565,13 @@ export function CreatePropertyPage({
         if (isEditMode) {
           let contractUrl = values.contract_document_url ?? null;
           if (contractFile) {
-            const supabase = createSupabaseBrowserClient();
-            const path = `${initialProperty!.id}/${Date.now()}_${contractFile.name.replace(/\s+/g, "_")}`;
-            const { error: uploadError } = await supabase.storage
-              .from("property_contracts")
-              .upload(path, contractFile);
-            if (!uploadError) {
-              contractUrl = supabase.storage.from("property_contracts").getPublicUrl(path).data.publicUrl;
-            }
+            // Uploaded server-side into private storage; the stored URL is a
+            // stable route that signs a short-lived link per click.
+            const fd = new FormData();
+            fd.set("file", contractFile);
+            const uploaded = await uploadPropertyContractDocument(initialProperty!.id, fd);
+            if (uploaded.ok) contractUrl = uploaded.url;
+            else toast.error(uploaded.error);
           }
           await updateProperty(initialProperty!.id, { ...values, contract_document_url: contractUrl });
           toast.success("Property updated");
@@ -580,23 +579,16 @@ export function CreatePropertyPage({
           return;
         }
 
-        let contractUrl: string | null = null;
-        if (contractFile) {
-          try {
-            const supabase = createSupabaseBrowserClient();
-            const path = `tmp/${Date.now()}_${contractFile.name.replace(/\s+/g, "_")}`;
-            const { error: uploadError } = await supabase.storage
-              .from("property_contracts")
-              .upload(path, contractFile);
-            if (!uploadError) {
-              contractUrl = supabase.storage.from("property_contracts").getPublicUrl(path).data.publicUrl;
-            }
-          } catch {
-            // Non-blocking
-          }
-        }
+        const property = await createProperty({ ...values, contract_document_url: null });
 
-        const property = await createProperty({ ...values, contract_document_url: contractUrl });
+        // The contract is filed against the property, so it goes up once the
+        // property exists. Non-blocking: the property is saved either way.
+        if (contractFile) {
+          const fd = new FormData();
+          fd.set("file", contractFile);
+          const uploaded = await uploadPropertyContractDocument(property.id, fd);
+          if (!uploaded.ok) toast.error(`Property saved, but ${uploaded.error.charAt(0).toLowerCase()}${uploaded.error.slice(1)}`);
+        }
 
         // Upload staged photos (failures are non-blocking)
         if (stagedPhotos.length > 0) {

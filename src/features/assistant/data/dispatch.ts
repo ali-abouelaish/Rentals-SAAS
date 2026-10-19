@@ -135,18 +135,34 @@ function slimBooking(b: any) {
   };
 }
 
+/**
+ * Lead sources captured by Harbor Ops itself. Every other lead was imported
+ * from an agency's Gmail inbox (portal enquiry emails), so its details are
+ * Google user data — and Google's Limited Use rules, which our OAuth
+ * verification and privacy policy commit to, keep that out of third-party AI.
+ * The model therefore only sees status, portal and date for those leads.
+ * Don't widen this without re-reading privacy policy §5.
+ */
+const FIRST_PARTY_LEAD_SOURCES = new Set(["business_card"]);
+
 function slimLead(l: any) {
-  return {
+  const base = {
     id: l.id,
+    status: l.status ?? null,
+    source: l.source ?? null,
+    createdAt: l.created_at ?? null,
+    assignedAgent: l.assigned_agent?.display_name ?? null,
+  };
+  if (!FIRST_PARTY_LEAD_SOURCES.has(l.source)) {
+    return { ...base, details: "withheld: imported from Gmail — open it on the Leads page" };
+  }
+  return {
+    ...base,
     name: l.name ?? null,
     email: l.email ?? null,
     telephone: l.telephone ?? null,
-    status: l.status ?? null,
-    source: l.source ?? null,
     propertyRef: l.property_ref ?? null,
     isHot: l.is_hot ?? null,
-    createdAt: l.created_at ?? null,
-    assignedAgent: l.assigned_agent?.display_name ?? null,
   };
 }
 

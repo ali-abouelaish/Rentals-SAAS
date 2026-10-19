@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { DATA_KEY_OPTIONS, type DataKeyOption } from "../domain/data-keys";
+import { uuidSchema } from "../domain/schemas";
 
 export type BookingQuestionOption = {
   id: string;
@@ -36,7 +37,7 @@ export async function listBookingFormQuestionsForTemplate(
     .from("booking_forms")
     .select("id, name, portfolio_id")
     .eq("tenant_id", profile.tenant_id);
-  if (portfolioId) {
+  if (portfolioId && uuidSchema.safeParse(portfolioId).success) {
     formsQuery = formsQuery.or(`portfolio_id.is.null,portfolio_id.eq.${portfolioId}`);
   }
   const { data: forms, error: formsError } = await formsQuery;

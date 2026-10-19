@@ -3,6 +3,7 @@
 import { formatGBP, formatDate } from "@/lib/utils/formatters";
 import { PaidToggle } from "./PaidToggle";
 import { BonusPaidToggle } from "@/features/bonuses/ui/BonusPaidToggle";
+import { ManagerPaidToggle } from "@/features/manager-commission/ui/ManagerPaidToggle";
 import type { PaymentRow } from "../domain/types";
 
 type Props = {
@@ -71,15 +72,30 @@ export function PaymentsTracker({ payments, statusFilter, from, to, isAdmin }: P
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                           p.type === "rental"
                             ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                            : p.type === "bonus"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                              : "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300"
                         }`}
                       >
-                        {p.type === "rental" ? "Rental" : "Bonus"}
+                        {p.type === "rental"
+                          ? "Rental"
+                          : p.type === "bonus"
+                            ? "Bonus"
+                            : `Manager · ${p.manager?.source_type === "bonus" ? "bonus" : "rental"}`}
                       </span>
                     </td>
                     <td className="py-3 pr-4 font-medium">{p.code || "—"}</td>
                     <td className="py-3 pr-4">{p.client_name}</td>
-                    <td className="py-3 pr-4 text-foreground-muted">{p.agent_name}</td>
+                    <td className="py-3 pr-4 text-foreground-muted">
+                      {p.manager ? (
+                        <>
+                          {p.agent_name}
+                          <span className="block text-xs">on {p.manager.deal_agent_name}&apos;s deal</span>
+                        </>
+                      ) : (
+                        p.agent_name
+                      )}
+                    </td>
                     <td className="py-3 pr-4 text-foreground-muted">
                       {p.marketing_agents && p.marketing_agents.length > 0
                         ? p.marketing_agents.join(", ")
@@ -89,7 +105,9 @@ export function PaymentsTracker({ payments, statusFilter, from, to, isAdmin }: P
                       {formatGBP(p.amount)}
                     </td>
                     <td className="py-3 pl-4">
-                      {p.type === "rental" ? (
+                      {p.manager ? (
+                        <ManagerPaidToggle line={p.manager} isAdmin={isAdmin} />
+                      ) : p.type === "rental" ? (
                         <PaidToggle rentalId={p.id} status={p.status} isAdmin={isAdmin} />
                       ) : (
                         <BonusPaidToggle bonusId={p.id} status={p.status} isAdmin={isAdmin} />

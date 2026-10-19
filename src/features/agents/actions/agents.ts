@@ -5,8 +5,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   agentUpdateSchema,
   agentCreateSchema,
+  commissionVatSettingSchema,
   type AgentUpdateValues,
-  type AgentCreateValues
+  type AgentCreateValues,
+  type CommissionVatSettingValues
 } from "../domain/schemas";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
@@ -177,5 +179,42 @@ export async function setAgentDisabled(userId: string, disabled: boolean) {
 
   revalidatePath("/agents");
   revalidatePath(`/agents/${userId}`);
+  return { ok: true };
+}
+
+/**
+ * Agency-wide VAT switch for commission. Each rental records the setting when
+ * it is created (rental_codes.vat_applies, stamped by a DB trigger), so this
+ * only changes rentals created from now on — never past or paid earnings.
+ */
+export async function updateCommissionVatSetting(
+  values: CommissionVatSettingValues
+): Promise<{ ok: boolean; error?: string }> {
+  const profile = await requireRole([...ADMIN_ROLES]);
+  const parsed = commissionVatSettingSchema.safeParse(values);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid setting." };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from("tenants")
+    .update({ commission_vat_enabled: parsed.data.vat_enabled })
+    .eq("id", profile.tenant_id);
+  if (error) return { ok: false, error: error.message };
+
+  // Rentals still awaiting approval follow the switch straight away; approved
+  // and paid ones keep what they were approved with.
+  const { error: syncError } = await admin
+    .from("rental_codes")
+    .update({ vat_applies: parsed.data.vat_enabled })
+    .eq("tenant_id", profile.tenant_id)
+    .in("status", ["pending", "need_more_info"]);
+  if (syncError) return { ok: false, error: syncError.message };
+
+  revalidatePath("/agents");
+  revalidatePath("/rentals", "layout");
+  revalidatePath("/earnings", "layout");
+  revalidatePath("/me");
   return { ok: true };
 }

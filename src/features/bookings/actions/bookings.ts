@@ -1,12 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addDays, format } from "date-fns";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { generateContractFromTemplate } from "@/features/contracts/templates/actions/generate";
 import { listContractTemplatesForBookingAction } from "@/features/contracts/templates/actions/templates";
+import { contractTermsSchema } from "@/features/contracts/templates/domain/schemas";
+import type { ActionResult } from "@/features/contracts/templates/domain/types";
+import { addDaysIso, ukToday } from "@/features/contracts/templates/lib/resolver";
+import {
+  findGenerationTarget,
+  generationLockReason,
+} from "@/features/contracts/templates/lib/contract-lock";
 import type { BookingStatus } from "../domain/types";
 
 export type ConvertContractInput = {
@@ -154,7 +160,7 @@ export async function approveBooking(
         tenant_id: profile.tenant_id,
         unit_id: booking.unit_id,
         pm_tenant_id: pmTenant.id,
-        start_date: details?.start_date ?? format(new Date(), "yyyy-MM-dd"),
+        start_date: details?.start_date ?? ukToday(),
         expiry_date: details?.expiry_date ?? null,
         // Fall back to the terms already agreed (offer price, unit pricing) so a
         // conversion without explicit details never opens a £0 contract.
@@ -168,10 +174,9 @@ export async function approveBooking(
         status: contractStatus,
         // Statutory clock runs from the tenancy start, not from when the admin
         // happened to click convert.
-        deposit_protection_deadline: format(
-          addDays(details?.start_date ? new Date(details.start_date) : new Date(), 30),
-          "yyyy-MM-dd"
-        ),
+        // Pure calendar arithmetic — parsing the date as UTC and adding days in
+        // local time loses a day across the spring clock change.
+        deposit_protection_deadline: addDaysIso(details?.start_date ?? ukToday(), 30),
       })
       .select("id")
       .single();
@@ -186,87 +191,168 @@ export async function approveBooking(
   return { pmTenantId: pmTenant.id, contractId, contractStatus, unitStatus };
 }
 
-/**
- * Templates + unit-derived defaults for the convert-to-tenancy contract form.
- * rent/deposit are stored in pounds (same convention as property_contracts).
- */
-export async function getBookingContractSetup(bookingId: string): Promise<{
+export type BookingContractSetup = {
   templates: { id: string; name: string; page_count: number; portfolio_id: string | null }[];
-  defaults: { rent_pcm: number | null; deposit: number | null };
-}> {
+  /** Prefill for the terms. Money is whole pounds (same as property_contracts). */
+  defaults: {
+    start_date: string | null;
+    expiry_date: string | null;
+    rent_pcm: number | null;
+    deposit: number | null;
+  };
+  /** The contract a PDF would be stamped onto, once the booking is converted. */
+  contract: { id: string; status: string; hasPdf: boolean; lockedReason: string | null } | null;
+};
+
+/**
+ * Templates + defaults for the contract forms. Before conversion the terms come
+ * from the agreed offer and the unit; afterwards from the tenancy's contract,
+ * so re-generating never silently replaces its rent with a blank or a listing
+ * price — and the dialog can say up front when the contract can't be changed.
+ */
+export async function getBookingContractSetup(bookingId: string): Promise<BookingContractSetup> {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("portfolio_id, unit_id, offer_price_pcm")
+    .select("portfolio_id, unit_id, offer_price_pcm, status, converted_pm_tenant_id")
     .eq("id", bookingId)
     .eq("tenant_id", profile.tenant_id)
-    .single();
+    .maybeSingle();
 
   const templates = await listContractTemplatesForBookingAction(booking?.portfolio_id ?? null);
 
-  let defaults: { rent_pcm: number | null; deposit: number | null } = { rent_pcm: null, deposit: null };
-  if (booking?.unit_id) {
-    const { data: unit } = await supabase
-      .from("units")
-      .select("min_price_pcm, max_price_pcm, deposit")
-      .eq("id", booking.unit_id)
-      .eq("tenant_id", profile.tenant_id)
-      .single();
-    if (unit) {
-      defaults = {
-        // Prefer the agent's agreed offer (share bookings) over the unit's range.
-        rent_pcm: booking.offer_price_pcm ?? unit.min_price_pcm ?? unit.max_price_pcm ?? null,
-        deposit: unit.deposit ?? null,
+  const setup: BookingContractSetup = {
+    templates,
+    defaults: { start_date: null, expiry_date: null, rent_pcm: null, deposit: null },
+    contract: null,
+  };
+  if (!booking?.unit_id) return setup;
+
+  if (booking.status === "approved" && booking.converted_pm_tenant_id) {
+    const target = await findGenerationTarget(
+      supabase,
+      profile.tenant_id,
+      booking.unit_id,
+      booking.converted_pm_tenant_id
+    );
+    if (target) {
+      setup.defaults = {
+        start_date: target.start_date,
+        expiry_date: target.expiry_date,
+        rent_pcm: target.rent_pcm > 0 ? target.rent_pcm : null,
+        deposit: target.deposit,
       };
+      setup.contract = {
+        id: target.id,
+        status: target.status,
+        hasPdf: Boolean(target.generated_pdf_path),
+        lockedReason: await generationLockReason(supabase, target),
+      };
+      return setup;
     }
   }
 
-  return { templates, defaults };
+  const { data: unit } = await supabase
+    .from("units")
+    .select("min_price_pcm, max_price_pcm, deposit")
+    .eq("id", booking.unit_id)
+    .eq("tenant_id", profile.tenant_id)
+    .maybeSingle();
+  if (unit) {
+    setup.defaults = {
+      start_date: null,
+      expiry_date: null,
+      // Prefer the agent's agreed offer (share bookings) over the unit's range.
+      rent_pcm: booking.offer_price_pcm ?? unit.min_price_pcm ?? unit.max_price_pcm ?? null,
+      deposit: unit.deposit ?? null,
+    };
+  }
+  return setup;
 }
 
+export type ConvertResult = ActionResult<{
+  pmTenantId: string;
+  contractId: string | null;
+  generated: boolean;
+  /** Set when the booking converted but its PDF couldn't be generated. */
+  generateError: string | null;
+  warnings: string[];
+}>;
+
 /**
- * Approve a booking (create tenant + contract) and, when contract details are
- * supplied, immediately stamp the chosen template so the contract drawer opens
- * with a PDF already attached.
+ * Approve a booking (create tenant + contract) and, when a template is chosen,
+ * immediately stamp it so the contract drawer opens with a PDF attached.
+ *
+ * Conversion and generation are separate steps: if generation fails, the
+ * conversion has still happened, and the result says so rather than reporting
+ * a failure the agent would retry into "Booking is already approved".
  */
 export async function convertBookingToTenancy(
   bookingId: string,
   opts: { signedAndPaid: boolean; contract?: ConvertContractInput }
-): Promise<{ pmTenantId: string; contractId: string | null; generated: boolean }> {
-  const { pmTenantId, contractId } = await approveBooking(
-    bookingId,
-    opts.signedAndPaid,
-    opts.contract
-      ? {
-          start_date: opts.contract.start_date,
-          expiry_date: opts.contract.expiry_date ?? null,
-          rent_pcm: opts.contract.rent_pcm,
-          deposit: opts.contract.deposit,
-        }
-      : undefined
-  );
+): Promise<ConvertResult> {
+  await requireRole([...ADMIN_ROLES]);
+
+  if (opts.contract) {
+    const terms = contractTermsSchema.safeParse({
+      start_date: opts.contract.start_date,
+      expiry_date: opts.contract.expiry_date || null,
+      rent_pcm: opts.contract.rent_pcm,
+      deposit: opts.contract.deposit,
+      collection_date: null,
+      deposit_scheme: null,
+    });
+    if (!terms.success) {
+      return { ok: false, error: terms.error.issues[0]?.message ?? "Check the contract details." };
+    }
+  }
+
+  let approved: Awaited<ReturnType<typeof approveBooking>>;
+  try {
+    approved = await approveBooking(
+      bookingId,
+      opts.signedAndPaid,
+      opts.contract
+        ? {
+            start_date: opts.contract.start_date,
+            expiry_date: opts.contract.expiry_date ?? null,
+            rent_pcm: opts.contract.rent_pcm,
+            deposit: opts.contract.deposit,
+          }
+        : undefined
+    );
+  } catch (err) {
+    // Thrown messages are replaced in production before they reach the client.
+    return { ok: false, error: err instanceof Error ? err.message : "The booking couldn't be converted." };
+  }
+  const { pmTenantId, contractId } = approved;
 
   if (opts.contract?.templateId && contractId) {
-    await generateContractFromTemplate({
+    const gen = await generateContractFromTemplate({
       templateId: opts.contract.templateId,
       bookingId,
       contractId,
       manualValues: opts.contract.manualValues,
-      contractDefaults: {
+      terms: {
         start_date: opts.contract.start_date,
         expiry_date: opts.contract.expiry_date ?? null,
         rent_pcm: opts.contract.rent_pcm,
         deposit: opts.contract.deposit,
+        collection_date: null,
+        deposit_scheme: null,
       },
     });
     revalidatePath("/contracts");
     revalidatePath("/tenants");
-    return { pmTenantId, contractId, generated: true };
+    if (!gen.ok) {
+      return { ok: true, pmTenantId, contractId, generated: false, generateError: gen.error, warnings: [] };
+    }
+    return { ok: true, pmTenantId, contractId, generated: true, generateError: null, warnings: gen.warnings };
   }
 
-  return { pmTenantId, contractId, generated: false };
+  return { ok: true, pmTenantId, contractId, generated: false, generateError: null, warnings: [] };
 }
 
 export async function updateBookingNotes(id: string, notes: string) {

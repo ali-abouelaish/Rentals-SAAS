@@ -74,6 +74,7 @@ async function resolveParties(
       .from("units")
       .select("property_id")
       .eq("id", contract.unit_id)
+      .eq("tenant_id", tenantId)
       .maybeSingle<{ property_id: string | null }>();
 
     const { data: property } = unit?.property_id
@@ -81,6 +82,7 @@ async function resolveParties(
           .from("properties")
           .select("owner_landlord_id")
           .eq("id", unit.property_id)
+          .eq("tenant_id", tenantId)
           .maybeSingle<{ owner_landlord_id: string | null }>()
       : { data: null };
 
@@ -129,21 +131,39 @@ export async function sendContractForSignature(
 
   const admin = createSupabaseAdminClient();
 
+  // select("*"): generated_fields comes from a migration applied by hand, and
+  // naming it would fail the query until then.
   const { data: contract, error: contractError } = await admin
     .from("property_contracts")
-    .select("id, template_id, generated_pdf_path, pm_tenant_id, unit_id")
+    .select("*")
     .eq("id", contractId)
     .eq("tenant_id", profile.tenant_id)
     .maybeSingle<{
       id: string;
+      status: string;
       template_id: string | null;
       generated_pdf_path: string | null;
+      generated_fields?: TemplateSignatureField[] | null;
       pm_tenant_id: string | null;
       unit_id: string | null;
     }>();
 
   if (contractError) return { error: contractError.message };
   if (!contract) return { error: "Contract not found." };
+  if (contract.status === "terminated") return { error: "This contract has ended — there is nothing to sign." };
+
+  // An executed agreement isn't signed twice. Changed terms need a new contract.
+  const { data: completed } = await admin
+    .from("boldsign_documents")
+    .select("id")
+    .eq("tenant_id", profile.tenant_id)
+    .eq("entity_type", "contract")
+    .eq("entity_id", contract.id)
+    .eq("status", "completed")
+    .limit(1);
+  if ((completed ?? []).length > 0) {
+    return { error: "This contract has already been signed. Download the executed copy from this panel." };
+  }
 
   if (!contract.generated_pdf_path || !contract.template_id) {
     return {
@@ -153,17 +173,27 @@ export async function sendContractForSignature(
   }
 
   // ── The signature fields the agency placed on their template ─────
-  const { data: templateFields, error: fieldsError } = await admin
-    .from("contract_template_fields")
-    .select("field_kind, signer_role, page_index, x, y, width, height")
-    .eq("template_id", contract.template_id)
-    .eq("tenant_id", profile.tenant_id)
-    .neq("field_kind", "data")
-    .returns<TemplateSignatureField[]>();
+  // From the snapshot taken when this PDF was generated, so a template edited
+  // since can't move the boxes off the lines they were drawn on. Contracts
+  // generated before snapshots existed fall back to the live template.
+  let signatureFields: TemplateSignatureField[];
+  if (Array.isArray(contract.generated_fields)) {
+    signatureFields = contract.generated_fields;
+  } else {
+    const { data: templateFields, error: fieldsError } = await admin
+      .from("contract_template_fields")
+      .select("field_kind, signer_role, page_index, x, y, width, height")
+      .eq("template_id", contract.template_id)
+      .eq("tenant_id", profile.tenant_id)
+      .neq("field_kind", "data")
+      .returns<TemplateSignatureField[]>();
+    if (fieldsError) return { error: fieldsError.message };
+    signatureFields = templateFields ?? [];
+  }
 
-  if (fieldsError) return { error: fieldsError.message };
-
-  const groups = groupSignatureFieldsByRole(templateFields ?? []);
+  const groups = groupSignatureFieldsByRole(
+    signatureFields.map((f) => ({ ...f, x: Number(f.x), y: Number(f.y), width: Number(f.width), height: Number(f.height) }))
+  );
   if (groups.length === 0) {
     return {
       error:
@@ -222,6 +252,21 @@ export async function sendContractForSignature(
   // apart from every other kind — it opens the purchase dialog rather than
   // showing a toast, because it is the one the user can fix in place.
   if (!result.ok) return { error: result.error, code: result.code };
+
+  // Mirror "out for signature" onto the contract, but only forwards from draft:
+  // an active tenancy being re-papered stays active.
+  const { error: statusError } = await admin
+    .from("property_contracts")
+    .update({ status: "sent", updated_at: new Date().toISOString() })
+    .eq("id", contract.id)
+    .eq("tenant_id", profile.tenant_id)
+    .eq("status", "draft");
+  if (statusError) {
+    console.error("[contracts] sent for signature but could not mark contract sent", {
+      contractId: contract.id,
+      error: statusError.message,
+    });
+  }
 
   revalidatePath("/contracts");
   return { success: true, documentId: result.boldSignDocumentId };

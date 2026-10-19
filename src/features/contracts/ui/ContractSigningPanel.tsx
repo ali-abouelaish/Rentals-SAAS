@@ -34,8 +34,21 @@ export function ContractSigningPanel({ contractId, hasGeneratedDocument }: Props
       sendTooltip="Emails the tenancy agreement to the tenant to sign, then to the landlord to countersign. Each party signs in the boxes placed on your template."
       idleHint="Sends the generated tenancy agreement to the tenant and landlord to sign electronically."
       pendingHint="The tenant signs first, then the landlord countersigns; this updates automatically."
-      completedHint="The contract is marked signed, and the executed copy and audit trail are stored against it."
+      completedHint="The executed copy and audit trail are stored against the contract."
       successMessage="Tenancy agreement sent for signature"
+      completedLinks={[
+        {
+          label: "Signed copy",
+          href: `/api/contracts/${contractId}/document?file=signed`,
+          tooltip: "The executed agreement with every party's signature — the copy to keep and share.",
+        },
+        {
+          label: "Audit trail",
+          href: `/api/contracts/${contractId}/document?file=audit`,
+          tooltip: "BoldSign's certificate of who signed, when and from where. Keep it with the agreement as evidence.",
+        },
+      ]}
+      completedBlockedReason="This agreement has been signed. If the terms have changed, create a new contract rather than re-signing this one."
     />
   );
 }

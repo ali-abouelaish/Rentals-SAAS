@@ -13,6 +13,11 @@ import { AvatarCircle } from "@/components/shared/AvatarCircle";
 import { ArrowLeft, TrendingUp } from "lucide-react";
 import { AgentDisableToggle } from "@/features/agents/ui/AgentDisableToggle";
 import { BusinessCardModal } from "@/features/me/ui/BusinessCardModal";
+import { ManagerCommissionCard } from "@/features/manager-commission/ui/ManagerCommissionCard";
+import {
+  getManagerPlanHistory,
+  getPoolCandidates,
+} from "@/features/manager-commission/data/queries";
 
 export default async function AgentProfilePage({
   params,
@@ -41,7 +46,12 @@ export default async function AgentProfilePage({
     getEntitlements(),
   ]);
   const hasBusinessCard = entitlements.has("digital_business_card");
+  const hasManagerCommission = isAdmin && entitlements.has("manager_commission");
   const displayName = agent.user_profiles?.display_name ?? "Agent";
+
+  const [managerHistory, poolCandidates] = hasManagerCommission
+    ? await Promise.all([getManagerPlanHistory(params.id), getPoolCandidates(params.id)])
+    : [[], []];
 
   const roleLabel = (() => {
     const role = (agent.user_profiles?.role ?? "agent").toLowerCase();
@@ -138,6 +148,15 @@ export default async function AgentProfilePage({
               />
             </CardContent>
           </Card>
+
+          {hasManagerCommission && (
+            <ManagerCommissionCard
+              managerId={params.id}
+              managerName={displayName}
+              history={managerHistory}
+              candidates={poolCandidates}
+            />
+          )}
         </>
       )}
     </div>

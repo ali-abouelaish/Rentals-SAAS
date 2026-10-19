@@ -4,11 +4,13 @@ import OpenAI from "openai";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
+import { rateLimitCheck } from "@/features/property-shares/lib/rate-limit";
 import { extractTextWithPositions, capItemsPerPage } from "../lib/pdf-extract";
-import { DATA_KEY_OPTIONS, isValidDataKey } from "../domain/data-keys";
+import { DATA_KEY_OPTIONS, isDataKeySource, isValidDataKey } from "../domain/data-keys";
 import { listBookingFormQuestionsForTemplate } from "../data/lookups";
 import { getContractTemplate, TEMPLATE_SOURCE_BUCKET } from "../data/templates";
-import type { AiFieldProposal, FieldSource } from "../domain/types";
+import type { ActionResult, AiFieldProposal, FieldSource } from "../domain/types";
 
 let openaiClient: OpenAI | null = null;
 function getClient(): OpenAI {
@@ -29,28 +31,55 @@ type AllowedBinding =
   | { source: Exclude<FieldSource, "booking_response" | "manual">; data_key: string; label_hint: string }
   | { source: "manual"; manual_key: string; label_hint: string };
 
+// The tenancy's own terms (start, end, rent, deposit) are contract.* data keys,
+// filled from what the agent enters at generation — not manual keys, which made
+// the agent type the start date twice and let the PDF disagree with the record.
 const MANUAL_BINDINGS: AllowedBinding[] = [
-  { source: "manual", manual_key: "start_date", label_hint: "tenancy start date" },
-  { source: "manual", manual_key: "expiry_date", label_hint: "tenancy expiry date" },
-  { source: "manual", manual_key: "rent_pcm", label_hint: "monthly rent override" },
-  { source: "manual", manual_key: "deposit", label_hint: "deposit amount override" },
   { source: "manual", manual_key: "signing_date", label_hint: "date the contract is signed" },
   { source: "manual", manual_key: "witness_name", label_hint: "name of witness" },
 ];
 
-const SYSTEM_PROMPT = `You are a contract field detector for UK tenancy agreements. The user will give you positioned text extracted from a PDF (top-left origin, points) and a list of allowed bindings. For each blank or placeholder you find — underlines ("____"), tokens like "<<NAME>>", labelled blank boxes ("Tenant: ___"), date lines, signature blocks — emit one proposal that picks the most appropriate binding from the allowed list.
+// Each detection is a paid model call over the whole document.
+const AI_DETECT_WINDOW_MS = 60 * 60 * 1000;
+const AI_DETECT_MAX_PER_WINDOW = 20;
+
+const SYSTEM_PROMPT = `You are a contract field detector for UK tenancy agreements. The user will give you positioned text extracted from a PDF (top-left origin, points) and a list of allowed bindings. For each blank or placeholder you find — underlines ("____"), tokens like "<<NAME>>", labelled blank boxes ("Tenant: ___"), date lines — emit one proposal that picks the most appropriate binding from the allowed list.
 
 Binding guidance for common blanks:
 - The applicant's / tenant's name, email or phone number → prefer the booking applicant fields: booking.applicant_name, booking.applicant_email, booking.applicant_phone. These are collected on every booking form and are always available at generation time, so prefer them over the equivalent pm_tenant.* fields unless the blank clearly refers to a different person.
-- Property name/address, room or unit, rent, deposit → use the property.* and unit.* data keys.
-- Values the agent fills in at signing (tenancy start date, signing date, witness name) → use the matching manual bindings.
+- The agreed tenancy terms → use the contract.* data keys: contract.start_date, contract.expiry_date (end of the term), contract.rent_pcm (the monthly rent), contract.deposit (the deposit amount), contract.collection_date (the day of the month rent is due), contract.deposit_scheme. Never use unit.min_price_pcm, unit.max_price_pcm or unit.deposit for the rent or deposit — those are listing prices, not the agreed terms.
+- Property name/address and room or unit → use the property.* and unit.* data keys.
+- Values the agent fills in at signing (signing date, witness name) → use the matching manual bindings.
+- Do NOT propose signature, initials or "signed by" lines — those are placed separately as e-signature fields.
 
 If nothing obvious is a blank, do not emit anything. Return strictly JSON of the form {"proposals": [...]}. Each proposal has: page_index (0-based), x, y, width, height (PDF points, top-left origin), label (short human label), suggested_source (one of the allowed sources), suggested_key (the data_key OR manual_key — null if booking_response or unknown), suggested_question_id (the question id — null otherwise), and ai_confidence (0..1). Keep widths and heights to the visual extent of the blank, not the whole line.`;
 
-export async function aiDetectFields(input: { templateId: string }): Promise<{ proposals: AiFieldProposal[] }> {
+export async function aiDetectFields(input: {
+  templateId: string;
+}): Promise<ActionResult<{ proposals: AiFieldProposal[] }>> {
   const profile = await requireRole([...ADMIN_ROLES]);
-  const template = await getContractTemplate(input.templateId);
-  if (!template || template.tenant_id !== profile.tenant_id) {
+  if (!(await hasFeature("contract_templates"))) {
+    return { ok: false, error: "Contract templates aren't enabled on your account." };
+  }
+  const limit = rateLimitCheck(`contract-ai-detect:${profile.tenant_id}`, AI_DETECT_WINDOW_MS, AI_DETECT_MAX_PER_WINDOW);
+  if (!limit.allowed) {
+    return {
+      ok: false,
+      error: `AI suggestions are limited to ${AI_DETECT_MAX_PER_WINDOW} an hour. Try again in ${Math.ceil(limit.retryAfterSec / 60)} minutes, or mark fields by hand.`,
+    };
+  }
+
+  try {
+    return { ok: true, proposals: await detect(profile.tenant_id, input.templateId) };
+  } catch (err) {
+    console.error("[contract-templates] AI detection failed", err);
+    return { ok: false, error: "AI suggestions are unavailable right now. Mark fields by dragging on the PDF." };
+  }
+}
+
+async function detect(tenantId: string, templateId: string): Promise<AiFieldProposal[]> {
+  const template = await getContractTemplate(templateId);
+  if (!template || template.tenant_id !== tenantId) {
     throw new Error("Template not found");
   }
 
@@ -64,7 +93,7 @@ export async function aiDetectFields(input: { templateId: string }): Promise<{ p
   let pages = await extractTextWithPositions(bytes);
   pages = capItemsPerPage(pages, 80);
 
-  const questions = await listBookingFormQuestionsForTemplate(input.templateId);
+  const questions = await listBookingFormQuestionsForTemplate(templateId);
   const allowedBindings: AllowedBinding[] = [
     ...DATA_KEY_OPTIONS.map<AllowedBinding>((opt) => ({
       source: opt.source as Exclude<FieldSource, "booking_response" | "manual">,
@@ -107,7 +136,7 @@ export async function aiDetectFields(input: { templateId: string }): Promise<{ p
   try {
     parsed = JSON.parse(text);
   } catch {
-    return { proposals: [] };
+    return [];
   }
 
   const raw = (parsed as { proposals?: unknown[] }).proposals ?? [];
@@ -150,7 +179,7 @@ export async function aiDetectFields(input: { templateId: string }): Promise<{ p
       if (!suggestedQuestionId || !allowedQuestionIds.has(suggestedQuestionId)) continue;
     } else if (source === "manual") {
       if (!suggestedKey) continue;
-    } else if (["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"].includes(source)) {
+    } else if (isDataKeySource(source)) {
       if (!suggestedKey || !isValidDataKey(source, suggestedKey)) continue;
     } else {
       continue;
@@ -173,5 +202,5 @@ export async function aiDetectFields(input: { templateId: string }): Promise<{ p
     });
   }
 
-  return { proposals };
+  return proposals;
 }

@@ -10,7 +10,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FilterBar, FilterRow, FilterGroup, FilterActions } from "@/components/ui/filter-bar";
-import { getAgents, type AgentStatusFilter } from "@/features/agents/data/agents";
+import {
+  getAgents,
+  getCommissionVatSetting,
+  type AgentStatusFilter
+} from "@/features/agents/data/agents";
+import { getCurrentManagerIds } from "@/features/manager-commission/data/queries";
+import { CommissionSettingsCard } from "@/features/agents/ui/CommissionSettingsCard";
 import { getEarningsLeaderboardAll } from "@/features/earnings/data/queries";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
@@ -43,9 +49,11 @@ export default async function AgentsPage({
       ? searchParams.status
       : "active";
 
-  const [agents, leaderboard] = await Promise.all([
+  const [agents, leaderboard, vatSetting, managerIds] = await Promise.all([
     getAgents({ search, role, status }),
-    getEarningsLeaderboardAll(getDefaultRange())
+    getEarningsLeaderboardAll(getDefaultRange()),
+    getCommissionVatSetting(),
+    getCurrentManagerIds()
   ]);
 
   const leaderboardByAgentId = new Map(
@@ -63,6 +71,7 @@ export default async function AgentsPage({
     earnings: number;
     last_activity: string | null;
     is_disabled: boolean;
+    is_manager: boolean;
   };
 
   const rows: Row[] = agents.map((agent) => {
@@ -77,7 +86,8 @@ export default async function AgentsPage({
       rentals: lb?.transactions_count ?? 0,
       earnings: lb?.agent_earnings ?? 0,
       last_activity: lb?.last_activity ?? null,
-      is_disabled: agent.is_disabled ?? false
+      is_disabled: agent.is_disabled ?? false,
+      is_manager: managerIds.has(agent.user_id)
     };
   });
 
@@ -96,6 +106,8 @@ export default async function AgentsPage({
   return (
     <div className="space-y-5">
       <PageHeader title="Agents" subtitle="Agent profiles & earnings" />
+
+      <CommissionSettingsCard vatEnabled={vatSetting.enabled} available={vatSetting.available} />
 
       <FilterBar>
         <form method="get" className="flex flex-wrap items-end gap-3">

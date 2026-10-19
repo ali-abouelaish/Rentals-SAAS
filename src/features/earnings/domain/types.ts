@@ -66,7 +66,7 @@ export type EarningsTransaction = {
 /** Unified payment row for the outstanding payments tracker */
 export type PaymentRow = {
   id: string;
-  type: "rental" | "bonus";
+  type: "rental" | "bonus" | "manager";
   code: string;
   client_name: string;
   agent_name: string;
@@ -75,6 +75,16 @@ export type PaymentRow = {
   amount: number;
   date: string;
   status: string;
+  /** Set on type "manager": the manager's cut on one of their pool's deals.
+   *  agent_name/agent_id are the manager; deal_agent_name closed the deal. */
+  manager?: {
+    manager_id: string;
+    source_type: "rental" | "bonus";
+    source_id: string;
+    deal_agent_name: string;
+    state: "earned" | "pending" | "void";
+    paid: { amount: number; paid_at: string } | null;
+  };
 };
 
 /** Trend point with optional per-agent breakdown for Compare Agents chart */

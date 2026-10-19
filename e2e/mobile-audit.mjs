@@ -23,7 +23,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { openSession, url, ARTIFACTS, BASE_URL, E2E_ROOT, persistSession, autoLogin } from "./lib/harness.mjs";
+import { openSession, url, ARTIFACTS, BASE_URL, E2E_ROOT, persistSession, autoLogin, assertStylesheetIsLive } from "./lib/harness.mjs";
 
 /**
  * Routes addressed by id, slug or token.
@@ -413,41 +413,16 @@ async function assertSignedIn() {
   await persistSession(context);
 }
 
-/**
- * Confirm the stylesheet is actually being generated before trusting a single
- * measurement.
- *
- * A dev server left running across hundreds of edits served stale Tailwind
- * output: `h-11` generated no CSS, so every element on the page measured at
- * roughly 58% of its declared size and the audit reported a page full of
- * undersized targets that were fine. Worse, it reproduced perfectly across
- * runs, so it looked like a real regression rather than a broken toolchain.
- */
-async function assertStylesheetIsLive() {
-  const sizes = await page.evaluate(() => {
-    const probe = document.createElement("div");
-    probe.className = "h-11 w-11";
-    probe.style.position = "absolute";
-    probe.style.visibility = "hidden";
-    document.body.appendChild(probe);
-    const cs = getComputedStyle(probe);
-    const out = { h: cs.height, w: cs.width };
-    probe.remove();
-    return out;
-  });
-  if (sizes.h !== "44px" || sizes.w !== "44px") {
-    console.error(
-      `\n  Tailwind is not generating utilities (h-11 computed ${sizes.h} x ${sizes.w}, expected 44px).\n` +
-        "  Every measurement from this run would be wrong. Restart the dev server\n" +
-        "  (and clear .next/cache/webpack) before trusting the audit.\n"
-    );
+await assertSignedIn();
+{
+  // Every measurement is worthless if Tailwind is serving stale CSS; abort loudly.
+  const live = await assertStylesheetIsLive(page);
+  if (!live.ok) {
+    console.error(`\n  ${live.detail}\n  Every measurement from this run would be wrong.\n`);
     await browser.close();
     process.exit(3);
   }
 }
-
-await assertSignedIn();
-await assertStylesheetIsLive();
 
 const routes = explicitRoutes.length
   ? explicitRoutes

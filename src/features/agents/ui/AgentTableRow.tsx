@@ -16,6 +16,8 @@ export type AgentTableRowData = {
   earnings: number;
   last_activity: string | null;
   is_disabled: boolean;
+  /** Earns manager commission on a pool of agents today. */
+  is_manager?: boolean;
 };
 
 function formatRoleLabel(role: string): string {
@@ -69,9 +71,16 @@ export function AgentTableRow({ row }: { row: AgentTableRowData }) {
         </div>
       </TableCell>
       <TableCell>
-        <span className="px-2 py-1 rounded-md bg-surface-inset text-foreground-secondary text-xs font-medium capitalize">
-          {formatRoleLabel(row.role)}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="px-2 py-1 rounded-md bg-surface-inset text-foreground-secondary text-xs font-medium capitalize">
+            {formatRoleLabel(row.role)}
+          </span>
+          {row.is_manager && (
+            <span className="px-2 py-1 rounded-md bg-teal-50 text-teal-700 text-xs font-medium dark:bg-teal-900/30 dark:text-teal-300">
+              Manager
+            </span>
+          )}
+        </div>
       </TableCell>
       <TableCell className="text-right tabular-nums">{row.rentals}</TableCell>
       <TableCell className="text-right tabular-nums font-medium">

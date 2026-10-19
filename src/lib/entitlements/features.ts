@@ -7,6 +7,7 @@ export type FeatureKey =
   | "landlords"
   | "bonuses"
   | "earnings"
+  | "manager_commission"
   | "invoices"
   | "room_enhancer"
   | "billing_profiles"
@@ -50,6 +51,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "landlords",
   "bonuses",
   "earnings",
+  "manager_commission",
   "invoices",
   "room_enhancer",
   "billing_profiles",
@@ -123,6 +125,11 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   landlords: { label: "Landlords", description: "Landlord records, profiles, and related listings." },
   bonuses: { label: "Bonuses", description: "Bonus submission, review, and payout workflows." },
   earnings: { label: "Earnings", description: "Earnings analytics, charts, and leaderboards." },
+  manager_commission: {
+    label: "Manager Commission",
+    description:
+      "Lets an agency make any agent or admin a manager who earns a percentage on the rentals and/or bonuses of a pool of agents. Paid from the company's share, never from the agent's commission; terms are dated so changes only affect deals from then on. Manager lines are marked paid individually in Earnings → Payments."
+  },
   invoices: { label: "Invoices", description: "Invoice generation, approval, and payment tracking." },
   room_enhancer: {
     label: "Image Enhancer",

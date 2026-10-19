@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { bonusAgentShare, computeRentalNet, paymentFeeRate, vatRate } from "@/features/earnings/lib/money";
 
 export type CommissionRentalRow = {
   id: string;
@@ -43,13 +44,6 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-/** Real processing cost of taking the money — card machine only.
- *  VAT (÷1.2 for card and transfer) is applied separately. */
-function paymentFeeRate(method: string) {
-  if (method === "card") return 0.0175;
-  return 0;
-}
-
 export async function getCommissionFileData({
   agentId,
   fromIso,
@@ -80,7 +74,7 @@ export async function getCommissionFileData({
     supabase
       .from("rental_codes")
       .select(
-        "id, code, created_at, consultation_fee_amount, rental_amount_gbp, payment_method, property_address, client_snapshot, status, assisted_by_agent_id, marketing_agent_id, marketing_fee_override_gbp"
+        "id, code, created_at, consultation_fee_amount, rental_amount_gbp, payment_method, vat_applies, property_address, client_snapshot, status, assisted_by_agent_id, marketing_agent_id, marketing_fee_override_gbp"
       )
       .eq("tenant_id", profile.tenant_id)
       .or([
@@ -138,10 +132,8 @@ export async function getCommissionFileData({
     const rentalAmount = Number(rental.rental_amount_gbp ?? rental.consultation_fee_amount ?? 0);
     const feeRate = paymentFeeRate(rental.payment_method);
     const paymentFee = roundMoney(rentalAmount * feeRate);
-    const hasVat = rental.payment_method === "card" || rental.payment_method === "transfer";
-    const baseAmount = hasVat
-      ? roundMoney((rentalAmount - paymentFee) / 1.2)
-      : roundMoney(rentalAmount - paymentFee);
+    const hasVat = vatRate(rental.payment_method, rental.vat_applies) > 0;
+    const baseAmount = computeRentalNet(rentalAmount, rental.payment_method, rental.vat_applies);
     const vat = hasVat
       ? roundMoney(rentalAmount - paymentFee - baseAmount)
       : 0;
@@ -217,10 +209,7 @@ export async function getCommissionFileData({
         : (bonus.landlords as any)?.name) ?? "Landlord",
     amount_owed: Number(bonus.amount_owed ?? 0),
     payout_mode: bonus.payout_mode,
-    agent_earning:
-      bonus.payout_mode === "full"
-        ? Number(bonus.amount_owed ?? 0)
-        : roundMoney(Number(bonus.amount_owed ?? 0) * 0.5),
+    agent_earning: bonusAgentShare(Number(bonus.amount_owed ?? 0), bonus.payout_mode, selfCommissionPct),
     status: bonus.status,
     created_at: bonus.created_at
   }));

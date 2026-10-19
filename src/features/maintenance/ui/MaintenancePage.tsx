@@ -447,7 +447,7 @@ export function MaintenancePage({
         </button>
         <button
           onClick={() => setActiveTab("suppliers")}
-          title="Your preferred contractors — assign them to jobs"
+          title="Your preferred contractors — assign them to work orders"
           className={cn(
             "inline-flex min-h-11 sm:min-h-0 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
             activeTab === "suppliers"

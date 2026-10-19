@@ -19,6 +19,8 @@ import {
   getPayments,
 } from "@/features/earnings/data/queries";
 import { PaymentsTracker } from "@/features/earnings/ui/PaymentsTracker";
+import { getManagersOverview } from "@/features/manager-commission/data/queries";
+import { ManagersOverviewCard } from "@/features/manager-commission/ui/ManagersOverviewCard";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import {
   Users,
@@ -65,13 +67,14 @@ export default async function EarningsPage({
       : "all") as "all" | "paid" | "unpaid";
     const activeTab = searchParams?.tab ?? "overview";
 
-    const [stats, trend, leaderboard, leaderboardAll, transactions, payments] = await Promise.all([
+    const [stats, trend, leaderboard, leaderboardAll, transactions, payments, managersOverview] = await Promise.all([
       isAdmin ? getEarningsStats(filters) : getEarningsStatsForAgent(filters, profile.id),
       isAdmin ? getEarningsTrend(filters) : getEarningsTrendForAgent(filters, profile.id),
       getEarningsLeaderboard(filters),
       isAdmin ? getEarningsLeaderboardAll(filters) : Promise.resolve([]),
       isAdmin ? getTransactions(filters) : getTransactions(filters, { agentId: profile.id }),
-      getPayments(filters, statusFilter),
+      activeTab === "payments" ? getPayments(filters, statusFilter) : Promise.resolve([]),
+      isAdmin && activeTab === "overview" ? getManagersOverview(filters) : Promise.resolve([]),
     ]);
 
     const trendByAgents =
@@ -329,6 +332,9 @@ export default async function EarningsPage({
                     <AllAgentsTable rows={leaderboardAll} />
                   </div>
                 )}
+
+                {/* ── Manager commission (admin only) ─────────────── */}
+                {isAdmin && <ManagersOverviewCard rows={managersOverview} />}
               </>
             )}
           </>
@@ -349,10 +355,14 @@ export default async function EarningsPage({
       </div>
     );
   } catch (error) {
+    console.error("[earnings] failed to load", error);
+    // In development, show the real cause instead of only the generic message.
+    const detail =
+      process.env.NODE_ENV !== "production" && error instanceof Error ? ` (${error.message})` : "";
     return (
       <EmptyState
         title="Earnings unavailable"
-        description="We could not load earnings data. Please retry later."
+        description={`We could not load earnings data. Please retry later.${detail}`}
       />
     );
   }

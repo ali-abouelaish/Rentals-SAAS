@@ -434,6 +434,15 @@ function ActionsContent({
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  // The contract a new PDF would be stamped onto: the newest one still running.
+  // Once that is signed, active or on notice with a PDF, regenerating would
+  // replace the agreement the tenant signed — the server refuses, so don't offer it.
+  const currentContract = contracts.find((c) => c.status !== "terminated") ?? null;
+  const liveContractLocked =
+    !!currentContract &&
+    (currentContract.status === "notice_given" ||
+      ((currentContract.status === "signed" || currentContract.status === "active") &&
+        !!currentContract.generated_pdf_path));
 
   const isTerminal = booking.status === "approved" || booking.status === "rejected";
 
@@ -523,7 +532,16 @@ function ActionsContent({
           </div>
         )}
 
-        {booking.status === "approved" && booking.converted_pm_tenant_id && booking.unit_id && (
+        {booking.status === "approved" && booking.converted_pm_tenant_id && booking.unit_id && liveContractLocked && (
+          <div className="rounded-lg border border-border bg-surface-card p-4 space-y-1">
+            <h3 className="text-sm font-semibold text-foreground">Contract document</h3>
+            <p className="text-xs text-foreground-secondary">
+              This tenancy&apos;s contract is signed or in force, so its PDF can&apos;t be regenerated from here. Open the contract to view or download it; changed terms need a new contract.
+            </p>
+          </div>
+        )}
+
+        {booking.status === "approved" && booking.converted_pm_tenant_id && booking.unit_id && !liveContractLocked && (
           <div className="rounded-lg border border-border bg-surface-card p-4 space-y-2">
             <h3 className="text-sm font-semibold text-foreground">Generate contract from template</h3>
             <p className="text-xs text-foreground-secondary">

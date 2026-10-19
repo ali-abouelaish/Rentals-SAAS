@@ -12,6 +12,7 @@ import { BarChart2, TrendingUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatGBP } from "@/lib/utils/formatters";
 import type { EarningsTrendPoint, EarningsTransaction } from "@/features/earnings/domain/types";
+import { trendBucketKey, type TrendBucket } from "@/features/earnings/lib/trend-buckets";
 
 type BonusLike = {
   bonus_date: string;
@@ -40,35 +41,62 @@ function groupRentalsByDate(
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function mergeBonusesIntoTrend(
+/** A trend point split into what the user earned on their own deals and what
+ *  they earned as a manager. agent_earnings stays the total of both. */
+type ChartPoint = EarningsTrendPoint & { own_earnings: number; manager_earnings: number };
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Adds bonuses and manager commission to the rentals trend. Every amount is
+ * put in the same day/week bucket the server used for rentals, so long ranges
+ * don't sprout stray daily points between the weekly ones.
+ */
+function buildEarningsSeries(
   trend: EarningsTrendPoint[],
   bonuses: BonusLike[],
-  commissionPercent: number
-): EarningsTrendPoint[] {
-  const bonusByDate = new Map<string, number>();
-  bonuses.forEach((b) => {
-    const date = (b.bonus_date ?? b.created_at).slice(0, 10);
-    const share = b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
-    bonusByDate.set(date, (bonusByDate.get(date) ?? 0) + share);
-  });
-
-  // Clone trend and add bonus amounts
-  const merged = trend.map((p) => ({
-    ...p,
-    agent_earnings: p.agent_earnings + (bonusByDate.get(p.bucket_date) ?? 0),
-  }));
-
-  // Add bonus-only dates not present in rental trend
-  const trendDates = new Set(trend.map((p) => p.bucket_date));
-  bonusByDate.forEach((amount, date) => {
-    if (!trendDates.has(date)) {
-      merged.push({ bucket_date: date, total_earnings: 0, agent_earnings: amount });
+  commissionPercent: number,
+  managerEarnings: { date: string; amount: number }[],
+  bucket: TrendBucket
+): ChartPoint[] {
+  const points = new Map<string, ChartPoint>();
+  const at = (key: string) => {
+    let p = points.get(key);
+    if (!p) {
+      p = { bucket_date: key, total_earnings: 0, agent_earnings: 0, own_earnings: 0, manager_earnings: 0 };
+      points.set(key, p);
     }
+    return p;
+  };
+
+  trend.forEach((t) => {
+    const p = at(t.bucket_date);
+    p.total_earnings += t.total_earnings;
+    p.own_earnings += t.agent_earnings;
+  });
+  bonuses.forEach((b) => {
+    const share = b.payout_mode === "full" ? b.amount_owed : b.amount_owed * (commissionPercent / 100);
+    at(trendBucketKey(b.bonus_date ?? b.created_at, bucket)).own_earnings += share;
+  });
+  managerEarnings.forEach((m) => {
+    at(trendBucketKey(m.date, bucket)).manager_earnings += m.amount;
   });
 
-  merged.sort((a, b) => a.bucket_date.localeCompare(b.bucket_date));
-  return merged;
+  return [...points.values()]
+    .map((p) => ({
+      ...p,
+      own_earnings: round2(p.own_earnings),
+      manager_earnings: round2(p.manager_earnings),
+      agent_earnings: round2(p.own_earnings + p.manager_earnings),
+    }))
+    .sort((a, b) => a.bucket_date.localeCompare(b.bucket_date));
 }
+
+const SERIES_LABELS: Record<string, string> = {
+  own_earnings: "Your deals",
+  manager_earnings: "Manager commission",
+  agent_earnings: "Total",
+};
 
 function EmptyChart({ mode }: { mode: "earnings" | "rentals" }) {
   return (
@@ -107,20 +135,44 @@ type MeTrendChartProps = {
   transactions: EarningsTransaction[];
   bonuses?: BonusLike[];
   commissionPercent?: number;
+  /** Earned manager commission lines (manager users only). */
+  managerEarnings?: { date: string; amount: number }[];
+  /** The bucket the server used for `trend` — see trendBucketFor. */
+  bucket?: TrendBucket;
 };
+
+/** Manager commission series: a warm amber that reads apart from the brand
+ *  teal in both themes. */
+const MANAGER_COLOR = "#d97706";
 
 type DataMode = "earnings" | "rentals";
 type ChartType = "area" | "bar" | "line";
 
-export function MeTrendChart({ trend, transactions, bonuses, commissionPercent }: MeTrendChartProps) {
+export function MeTrendChart({
+  trend,
+  transactions,
+  bonuses,
+  commissionPercent,
+  managerEarnings,
+  bucket = "day",
+}: MeTrendChartProps) {
   const [mode, setMode] = useState<DataMode>("earnings");
   const [chartType, setChartType] = useState<ChartType>("area");
 
-  const trendWithBonuses = bonuses && bonuses.length > 0
-    ? mergeBonusesIntoTrend(trend, bonuses, commissionPercent ?? 50)
-    : trend;
-  const rentalsData = groupRentalsByDate(transactions, trend.length > 45 ? "week" : "day");
-  const hasData = mode === "earnings" ? trendWithBonuses.length > 0 : rentalsData.length > 0;
+  const earningsData = buildEarningsSeries(
+    trend,
+    bonuses ?? [],
+    commissionPercent ?? 50,
+    managerEarnings ?? [],
+    bucket
+  );
+  const showManager = earningsData.some((p) => p.manager_earnings > 0);
+  const rentalsData = groupRentalsByDate(transactions, bucket);
+  const hasData = mode === "earnings" ? earningsData.length > 0 : rentalsData.length > 0;
+  const earningsTooltip = (v: unknown, name: unknown) => [
+    formatGBP(Number(v)),
+    SERIES_LABELS[String(name)] ?? "Earnings",
+  ];
 
   const tooltipStyle = {
     backgroundColor: "var(--surface-elevated, #fff)",
@@ -139,6 +191,16 @@ export function MeTrendChart({ trend, transactions, bonuses, commissionPercent }
           <p className="text-xs text-foreground-muted mt-0.5">
             {mode === "earnings" ? "Your earnings trend" : "Rental activity"} for the selected period
           </p>
+          {mode === "earnings" && showManager && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-foreground-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-brand" /> Your deals
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MANAGER_COLOR }} /> Manager commission
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -197,31 +259,71 @@ export function MeTrendChart({ trend, transactions, bonuses, commissionPercent }
           <ResponsiveContainer width="100%" height="100%">
             {mode === "earnings" ? (
               chartType === "bar" ? (
-                <BarChart data={trendWithBonuses} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <BarChart data={earningsData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <XAxis dataKey="bucket_date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                   <YAxis tickFormatter={(v) => `£${v}`} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={48} />
-                  <Tooltip formatter={(v) => [formatGBP(Number(v)), "Earnings"]} contentStyle={tooltipStyle} />
-                  <Bar dataKey="agent_earnings" fill="var(--brand, #0d9488)" radius={[4, 4, 0, 0]} />
+                  <Tooltip formatter={earningsTooltip} contentStyle={tooltipStyle} />
+                  <Bar
+                    dataKey="own_earnings"
+                    stackId="earnings"
+                    fill="var(--brand, #0d9488)"
+                    radius={showManager ? [0, 0, 0, 0] : [4, 4, 0, 0]}
+                  />
+                  {showManager && (
+                    <Bar dataKey="manager_earnings" stackId="earnings" fill={MANAGER_COLOR} radius={[4, 4, 0, 0]} />
+                  )}
                 </BarChart>
               ) : chartType === "line" ? (
-                <LineChart data={trendWithBonuses} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <LineChart data={earningsData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <XAxis dataKey="bucket_date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                   <YAxis tickFormatter={(v) => `£${v}`} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={48} />
-                  <Tooltip formatter={(v) => [formatGBP(Number(v)), "Earnings"]} contentStyle={tooltipStyle} />
+                  <Tooltip formatter={earningsTooltip} contentStyle={tooltipStyle} />
+                  {/* Lines don't stack: show the total, plus the manager share on its own. */}
                   <Line type="monotone" dataKey="agent_earnings" stroke="var(--brand, #0d9488)" strokeWidth={2} dot={false} />
+                  {showManager && (
+                    <Line
+                      type="monotone"
+                      dataKey="manager_earnings"
+                      stroke={MANAGER_COLOR}
+                      strokeWidth={2}
+                      strokeDasharray="4 3"
+                      dot={false}
+                    />
+                  )}
                 </LineChart>
               ) : (
-                <AreaChart data={trendWithBonuses} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <AreaChart data={earningsData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <defs>
                     <linearGradient id="earningsGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--brand, #0d9488)" stopOpacity={0.25} />
                       <stop offset="95%" stopColor="var(--brand, #0d9488)" stopOpacity={0} />
                     </linearGradient>
+                    <linearGradient id="managerGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={MANAGER_COLOR} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={MANAGER_COLOR} stopOpacity={0.05} />
+                    </linearGradient>
                   </defs>
                   <XAxis dataKey="bucket_date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                   <YAxis tickFormatter={(v) => `£${v}`} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={48} />
-                  <Tooltip formatter={(v) => [formatGBP(Number(v)), "Earnings"]} contentStyle={tooltipStyle} />
-                  <Area type="monotone" dataKey="agent_earnings" stroke="var(--brand, #0d9488)" strokeWidth={2} fill="url(#earningsGrad)" />
+                  <Tooltip formatter={earningsTooltip} contentStyle={tooltipStyle} />
+                  <Area
+                    type="monotone"
+                    dataKey="own_earnings"
+                    stackId="earnings"
+                    stroke="var(--brand, #0d9488)"
+                    strokeWidth={2}
+                    fill="url(#earningsGrad)"
+                  />
+                  {showManager && (
+                    <Area
+                      type="monotone"
+                      dataKey="manager_earnings"
+                      stackId="earnings"
+                      stroke={MANAGER_COLOR}
+                      strokeWidth={2}
+                      fill="url(#managerGrad)"
+                    />
+                  )}
                 </AreaChart>
               )
             ) : chartType === "line" ? (

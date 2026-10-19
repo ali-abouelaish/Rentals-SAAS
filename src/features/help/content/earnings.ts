@@ -22,5 +22,20 @@ Earnings is your financial overview. Admins see **Agency Earnings** across all a
 ## Tips
 
 - Agents see only their own data plus a top-10 leaderboard; admins see full agency figures.
-- Earnings come from [Rentals](/rentals) and [Bonuses](/bonuses), so keep those accurate for correct totals.`,
+- Earnings come from [Rentals](/rentals) and [Bonuses](/bonuses), so keep those accurate for correct totals.
+
+## Manager commission
+
+If your agency has managers (set up from an agent's profile under [Agents](/agents)):
+
+- **Overview (admins):** a **Manager commission** card lists each manager's earned, paid and unpaid totals for the period, plus deals awaiting approval. Click a manager to open their breakdown.
+- **A manager's earnings page** has a **Manager commission** section grouped **by agent**. Expand an agent to see each rental or bonus, with:
+  - the base (rental net or bonus amount)
+  - the percentage
+  - the manager's cut
+  - for admins, what the agency keeps. A red figure means the agency lost money on that deal.
+- **Payments tab:** each manager line is its own row, marked "Manager · rental" or "Manager · bonus". It has its own paid toggle, separate from the agent's.
+  - When you mark a line paid, the amount at that moment is recorded, so later edits to the deal won't change what was paid.
+  - A line can only be paid once its deal is approved.
+- The manager's cut comes out of the agency's share, never the agent's commission. The leaderboard ranks sales only and doesn't include manager commission.`,
 };

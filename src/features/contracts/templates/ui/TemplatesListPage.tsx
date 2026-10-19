@@ -6,6 +6,7 @@ import { useTransition } from "react";
 import { ArrowLeft, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { deleteContractTemplate } from "../actions/templates";
 import type { ContractTemplate } from "../domain/types";
 import type { Portfolio } from "@/features/properties/domain/types";
@@ -24,13 +25,13 @@ export function TemplatesListPage({ templates, portfolios }: Props) {
   const handleDelete = (id: string, name: string) => {
     if (!confirm(`Delete template "${name}"? This cannot be undone.`)) return;
     startTransition(async () => {
-      try {
-        await deleteContractTemplate(id);
-        toast.success("Template deleted");
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Delete failed");
+      const res = await deleteContractTemplate(id);
+      if (!res.ok) {
+        toast.error(res.error, { duration: 8000 });
+        return;
       }
+      toast.success("Template deleted");
+      router.refresh();
     });
   };
 
@@ -99,15 +100,17 @@ export function TemplatesListPage({ templates, portfolios }: Props) {
                     </div>
                   </div>
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(t.id, t.name)}
-                  disabled={isPending}
-                  className="ml-3 inline-flex items-center justify-center h-11 w-11 md:h-8 md:w-8 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
-                  aria-label="Delete template"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <Tooltip content="Only templates no contract was generated from can be deleted. To retire one that has been used, open it and untick Active.">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(t.id, t.name)}
+                    disabled={isPending}
+                    className="ml-3 inline-flex items-center justify-center h-11 w-11 md:h-8 md:w-8 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
+                    aria-label="Delete template"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </Tooltip>
               </div>
             );
           })}

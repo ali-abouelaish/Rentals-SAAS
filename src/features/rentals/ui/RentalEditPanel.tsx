@@ -9,6 +9,7 @@ import { Trash2 } from "lucide-react";
 import { updateRentalCode } from "@/features/rentals/actions/rentals";
 import { formatGBP } from "@/lib/utils/formatters";
 import { toast } from "sonner";
+import { computeRentalNet } from "@/features/earnings/lib/money";
 
 type AgentOption = {
   id: string;
@@ -25,6 +26,8 @@ type RentalEditPanelProps = {
   commissionPercent: number;
   agents: AgentOption[];
   rentalDate: string;
+  /** rental_codes.vat_applies — see RentalPayoutSummary. */
+  vatApplies?: boolean | null;
 };
 
 export function RentalEditPanel({
@@ -37,6 +40,7 @@ export function RentalEditPanel({
   commissionPercent,
   agents,
   rentalDate,
+  vatApplies = true,
 }: RentalEditPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -49,11 +53,9 @@ export function RentalEditPanel({
 
   const hasMarketing = marketingAgentIds.some(Boolean);
 
-  const paymentFee = currentPaymentMethod === "card" ? 0.0175 : 0;
-  const vatDivisor = currentPaymentMethod === "card" || currentPaymentMethod === "transfer" ? 1.2 : 1;
   const base = useMemo(
-    () => Math.round((Number(currentFeeAmount) * (1 - paymentFee)) / vatDivisor * 100) / 100,
-    [currentFeeAmount, paymentFee, vatDivisor]
+    () => computeRentalNet(Number(currentFeeAmount), currentPaymentMethod, vatApplies),
+    [currentFeeAmount, currentPaymentMethod, vatApplies]
   );
   const gross = useMemo(() => Math.round(base * (commissionPercent / 100) * 100) / 100, [base, commissionPercent]);
   const overrideValue = overrideFee ? Number(overrideFee) : null;

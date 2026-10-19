@@ -7,9 +7,44 @@ export type FieldSource =
   | "booking"
   | "pm_tenant"
   | "manual"
-  | "computed";
+  | "computed"
+  | "contract";
 
 export type FieldFormat = "text" | "date" | "currency_gbp" | "number" | "multiline";
+
+/**
+ * Server-action result. Thrown errors lose their message in production builds
+ * (Next replaces it with a generic one), so every action the UI calls returns
+ * its failure instead.
+ */
+export type ActionResult<T = object> = ({ ok: true } & T) | { ok: false; error: string };
+
+/** The contract terms a PDF is generated with. Money is whole pounds. */
+export type ContractTerms = {
+  start_date: string;
+  expiry_date: string | null;
+  rent_pcm: number;
+  deposit: number;
+  collection_date: number | null;
+  deposit_scheme: "dps" | "mydeposits" | "tds" | "none" | null;
+};
+
+/** Stored on property_contracts.generation_inputs so regeneration is lossless. */
+export type GenerationInputs = {
+  template_id: string;
+  booking_id: string;
+  terms: ContractTerms;
+  manual_values: Record<string, string>;
+  generated_at: string;
+};
+
+/** A manual field as the generation form needs it — one entry per manual key. */
+export type ManualFieldPrompt = {
+  key: string;
+  label: string;
+  format: FieldFormat;
+  default_value: string | null;
+};
 
 /**
  * What a field on the template does.

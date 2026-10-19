@@ -20,6 +20,11 @@ import {
 } from "../domain/schemas";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { emitAutomationEvent } from "@/features/automations/lib/events";
+import {
+  CONTRACTS_BUCKET,
+  contractDocumentRoute,
+  isMissingColumnError,
+} from "@/lib/storage/contractDocuments";
 
 // Statuses where the contract is "live" — i.e. the tenant has actually moved in
 // (or will any moment). We only auto-record the move-in payments for these;
@@ -361,37 +366,61 @@ export async function giveNotice(id: string, values: GiveNoticeValues) {
   revalidatePath("/tenants");
 }
 
+const CONTRACT_DOCUMENT_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const CONTRACT_DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
+
 export async function uploadContractDocument(formData: FormData) {
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
   const contractId = String(formData.get("contract_id") ?? "");
-  const file = formData.get("file") as File;
+  const file = formData.get("file");
 
-  if (!contractId || !file?.size) {
+  if (!contractId || !(file instanceof File) || !file.size) {
     throw new Error("Missing required fields.");
   }
+  if (file.size > CONTRACT_DOCUMENT_MAX_BYTES) throw new Error("File too large (max 20MB).");
+  if (!CONTRACT_DOCUMENT_TYPES.includes(file.type)) throw new Error("Upload a PDF or Word document.");
 
-  const ext = file.name.split(".").pop() ?? "bin";
+  // Confirm the contract is this agency's before writing under its id.
+  const { data: owned } = await supabase
+    .from("property_contracts")
+    .select("id")
+    .eq("id", contractId)
+    .eq("tenant_id", profile.tenant_id)
+    .maybeSingle();
+  if (!owned) throw new Error("Contract not found.");
+
+  const ext = (file.name.split(".").pop() ?? "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
+  // Agency id first: the private bucket's policies read it off the prefix.
   const path = `${profile.tenant_id}/${contractId}/${crypto.randomUUID()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
-    .from("property_contracts")
-    .upload(path, file);
+    .from(CONTRACTS_BUCKET)
+    .upload(path, file, { contentType: file.type });
   if (uploadError) throw new Error(uploadError.message);
 
-  const { data: urlData } = supabase.storage
-    .from("property_contracts")
-    .getPublicUrl(path);
-
+  // A stable route, not a storage URL: the bucket is private, and the route
+  // signs a short-lived link on each click.
   const { data, error } = await supabase
     .from("property_contracts")
-    .update({ document_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+    .update({ document_url: contractDocumentRoute(contractId), updated_at: new Date().toISOString() })
     .eq("id", contractId)
     .eq("tenant_id", profile.tenant_id)
     .select("*")
     .single();
   if (error) throw new Error(error.message);
+
+  const { error: pathError } = await supabase
+    .from("property_contracts")
+    .update({ document_bucket: CONTRACTS_BUCKET, document_path: path })
+    .eq("id", contractId)
+    .eq("tenant_id", profile.tenant_id);
+  if (pathError && !isMissingColumnError(pathError)) throw new Error(pathError.message);
 
   revalidatePath("/contracts");
   revalidatePath("/tenants");

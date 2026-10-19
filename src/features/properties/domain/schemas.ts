@@ -61,7 +61,7 @@ export const propertySchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? undefined : val),
     z.coerce.number().int().positive().optional()
   ),
-  bills: z.enum(["all_included", "top_up_gas_elec", "top_up_elec", "top_up_gas"]).nullable().optional(),
+  bills: emptyToNull(z.enum(["all_included", "top_up_gas_elec", "top_up_elec", "top_up_gas"]).nullable().optional()),
   bills_notes: z.string().nullable().optional().or(z.literal("")),
   furnished: z.boolean().default(true),
   parking: z.boolean().default(false),
@@ -92,7 +92,7 @@ export const propertySchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? undefined : val),
     z.coerce.number().positive().optional()
   ),
-  payment_schedule: z.enum(["monthly", "quarterly", "biannual", "annual"]).nullable().optional(),
+  payment_schedule: emptyToNull(z.enum(["monthly", "quarterly", "biannual", "annual"]).nullable().optional()),
   contract_document_url: z.string().nullable().optional().or(z.literal("")),
 });
 export type PropertyFormValues = z.infer<typeof propertySchema>;

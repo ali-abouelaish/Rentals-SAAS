@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { formatGBP } from "@/lib/utils/formatters";
+import { paymentFeeRate, vatRate } from "@/features/earnings/lib/money";
 
 type Props = {
   rentalAmount: number;
@@ -13,6 +14,9 @@ type Props = {
   marketingFeeOverride?: number | null;
   marketingFeeOverrideReason?: string | null;
   marketingAgentCount?: number;
+  /** rental_codes.vat_applies — false when the rental was created with the
+   *  agency's "Deduct VAT from rentals" switch off. */
+  vatApplies?: boolean | null;
 };
 
 export function RentalPayoutSummary({
@@ -24,10 +28,11 @@ export function RentalPayoutSummary({
   marketingAgentId,
   marketingFeeOverride,
   marketingFeeOverrideReason,
-  marketingAgentCount = 1
+  marketingAgentCount = 1,
+  vatApplies = true
 }: Props) {
-  const paymentFee = paymentMethod === "card" ? 0.0175 : 0;
-  const hasVat = paymentMethod === "card" || paymentMethod === "transfer";
+  const paymentFee = paymentFeeRate(paymentMethod);
+  const hasVat = vatRate(paymentMethod, vatApplies) > 0;
   const afterFee = useMemo(() => rentalAmount * (1 - paymentFee), [rentalAmount, paymentFee]);
   const base = useMemo(() => (hasVat ? afterFee / 1.2 : afterFee), [afterFee, hasVat]);
   const vatAmount = useMemo(() => afterFee - base, [afterFee, base]);

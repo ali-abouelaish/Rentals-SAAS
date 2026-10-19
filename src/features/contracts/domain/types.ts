@@ -64,6 +64,10 @@ export type PropertyContract = {
   generated_from_booking_id: string | null;
   generated_pdf_path: string | null;
   last_generated_at: string | null;
+  /** Where the current document lives; document_url is the route that serves it. */
+  document_bucket?: string | null;
+  document_path?: string | null;
+  generation_inputs?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   // joined

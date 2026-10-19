@@ -508,13 +508,17 @@ function DocumentContent({ contract, isEditing, onSaved }: { contract: PropertyC
 
   const handleRegenerate = () => {
     startRegen(async () => {
-      try {
-        const { signedUrl } = await regenerateContractPdf(contract.id);
-        toast.success("Contract regenerated");
-        onSaved({ ...contract, document_url: signedUrl, last_generated_at: new Date().toISOString() });
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Regenerate failed");
+      const res = await regenerateContractPdf(contract.id);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
       }
+      if (res.warnings.length) {
+        toast.warning(`Contract regenerated — check it before sending: ${res.warnings.join(" ")}`, { duration: 10000 });
+      } else {
+        toast.success("Contract regenerated");
+      }
+      onSaved({ ...contract, document_url: res.documentUrl, last_generated_at: new Date().toISOString() });
     });
   };
 
@@ -544,7 +548,8 @@ function DocumentContent({ contract, isEditing, onSaved }: { contract: PropertyC
       {canRegenerate && (
         <div className="rounded-lg border border-border bg-surface-inset p-3 space-y-2">
           <p className="text-xs text-foreground-secondary">
-            This contract was generated from a template. Re-stamp it with the latest template fields and booking data.
+            This contract was generated from a template. Re-stamp it with the latest template fields and booking
+            data, using this contract&apos;s current terms and the template answers it was generated with.
           </p>
           <Button
             type="button"

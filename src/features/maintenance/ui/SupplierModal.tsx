@@ -160,7 +160,7 @@ export function SupplierModal({ supplier, onClose, onSuccess }: SupplierModalPro
               <select
                 id="supplier-trade"
                 {...register("trade")}
-                title="Used to suggest the right supplier for a job's category"
+                title="Used to suggest the right supplier for a work order's category"
                 className={inputClass(!!errors.trade)}
               >
                 {(Object.keys(JOB_CATEGORY_LABELS) as JobCategory[]).map((k) => (

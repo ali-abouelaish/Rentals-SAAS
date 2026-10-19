@@ -234,17 +234,29 @@ const results = [];
 export async function check(id, title, fn) {
   let pass = false;
   let detail = "";
+  let skipped = false;
   try {
     const outcome = await fn();
     if (outcome && typeof outcome === "object") {
-      pass = Boolean(outcome.pass);
       detail = outcome.detail ?? "";
+      // An explicit null/undefined pass (or {skip:true}) means "not applicable" —
+      // record it as a skip, not a failure, so conditional steps read correctly.
+      if (outcome.skip === true || outcome.pass === null || outcome.pass === undefined) {
+        skipped = true;
+      } else {
+        pass = Boolean(outcome.pass);
+      }
     } else {
       pass = Boolean(outcome);
     }
   } catch (err) {
     pass = false;
     detail = `threw: ${err instanceof Error ? err.message : String(err)}`;
+  }
+  if (skipped) {
+    results.push({ id, title, pass: null, detail });
+    console.log(`  [SKIP] ${id}. ${title}${detail ? ` — ${detail}` : ""}`);
+    return null;
   }
   results.push({ id, title, pass, detail });
   const mark = pass ? "PASS" : "FAIL";
@@ -276,4 +288,44 @@ export async function shot(page, name) {
   const file = path.join(ARTIFACTS, `${name}.png`);
   await page.screenshot({ path: file, fullPage: true });
   return file;
+}
+
+// ---------------------------------------------------------------------------
+// Toolchain sanity
+// ---------------------------------------------------------------------------
+
+/**
+ * Confirm the stylesheet is actually being generated before trusting a run.
+ *
+ * A dev server left running across hundreds of edits served stale Tailwind
+ * output: `h-11` generated no CSS, so every element on the page measured at
+ * roughly 58% of its declared size and the mobile audit reported a page full of
+ * undersized targets that were fine. Worse, it reproduced perfectly across
+ * runs, so it looked like a real regression rather than a broken toolchain.
+ *
+ * Returns a verdict rather than exiting, so each caller decides what to do: the
+ * mobile audit aborts, the PM preflight records it as a failed check. The page
+ * must already be on an app route (the probe needs the app's stylesheet loaded).
+ */
+export async function assertStylesheetIsLive(page) {
+  const sizes = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.className = "h-11 w-11";
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const out = { h: cs.height, w: cs.width };
+    probe.remove();
+    return out;
+  });
+  const ok = sizes.h === "44px" && sizes.w === "44px";
+  return {
+    ok,
+    ...sizes,
+    detail: ok
+      ? "Tailwind utilities are live (h-11 = 44px)"
+      : `Tailwind is NOT generating utilities (h-11 computed ${sizes.h} x ${sizes.w}, ` +
+        "expected 44px). Restart the dev server after clearing .next/cache/webpack.",
+  };
 }

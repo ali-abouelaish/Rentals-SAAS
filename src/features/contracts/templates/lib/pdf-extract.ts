@@ -73,11 +73,13 @@ export async function extractTextWithPositions(sourceBytes: Uint8Array | ArrayBu
       .filter((it) => typeof it.str === "string" && it.str.trim().length > 0)
       .map((it) => {
         const tx = it.transform; // [a, b, c, d, e, f]
-        const x = tx[4];
-        const yBaseline = tx[5];
+        // Through the viewport, not `pageHeight - y`: the viewport accounts for
+        // a crop box that is offset from the media box, which is the space the
+        // editor (and the stamper) measure fields in.
+        const [x, yBaseline] = viewport.convertToViewportPoint(tx[4], tx[5]) as [number, number];
         // Approximate visual height = font size component (|d|).
         const h = Math.max(Math.abs(tx[3]), it.height ?? 0) || 10;
-        const yTopLeft = pageHeight - yBaseline - h;
+        const yTopLeft = yBaseline - h;
         return {
           text: it.str,
           x,

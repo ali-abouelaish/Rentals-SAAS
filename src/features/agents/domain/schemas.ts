@@ -15,3 +15,11 @@ export const agentCreateSchema = z.object({
 });
 
 export type AgentCreateValues = z.infer<typeof agentCreateSchema>;
+
+/** Agency-wide: take VAT off card and transfer rentals before working out
+ *  agent and manager commission. */
+export const commissionVatSettingSchema = z.object({
+  vat_enabled: z.boolean({ required_error: "Choose whether VAT is deducted" })
+});
+
+export type CommissionVatSettingValues = z.infer<typeof commissionVatSettingSchema>;

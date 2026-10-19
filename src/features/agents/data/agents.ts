@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUserProfile } from "@/lib/auth/requireRole";
 
 export type AgentStatusFilter = "active" | "disabled" | "all";
 
@@ -52,4 +53,21 @@ export async function getAgentById(id: string) {
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * The agency's "Deduct VAT from rentals before commission" switch.
+ * `available` is false until migration 20261019000003 adds the column — the
+ * settings card then shows the switch read-only rather than failing the page.
+ */
+export async function getCommissionVatSetting(): Promise<{ enabled: boolean; available: boolean }> {
+  const profile = await requireUserProfile();
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("commission_vat_enabled")
+    .eq("id", profile.tenant_id)
+    .maybeSingle();
+  if (error || !data) return { enabled: true, available: false };
+  return { enabled: data.commission_vat_enabled !== false, available: true };
 }

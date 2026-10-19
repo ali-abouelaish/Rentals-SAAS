@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireUserProfile } from "@/lib/auth/requireRole";
+import { uuidSchema } from "../domain/schemas";
 import type {
   ContractTemplate,
   ContractTemplateField,
@@ -29,7 +30,8 @@ export async function listContractTemplates(filters?: {
   if (filters?.portfolioId !== undefined) {
     if (filters.portfolioId === null) {
       query = query.is("portfolio_id", null);
-    } else {
+    } else if (uuidSchema.safeParse(filters.portfolioId).success) {
+      // Validated before it goes into a PostgREST filter string.
       query = query.or(`portfolio_id.is.null,portfolio_id.eq.${filters.portfolioId}`);
     }
   }

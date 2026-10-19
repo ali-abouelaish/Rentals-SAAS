@@ -5,10 +5,17 @@ import { useRouter } from "next/navigation";
 import { Sparkles, Save, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { saveContractTemplateFields } from "../actions/fields";
 import { aiDetectFields } from "../actions/ai-detect";
 import { updateContractTemplateMeta } from "../actions/templates";
-import { DATA_KEY_GROUPS } from "../domain/data-keys";
+import {
+  DATA_KEY_GROUPS,
+  DATA_KEY_OPTIONS,
+  defaultFormatForKey,
+  isDataKeySource,
+  isTermManualKey,
+} from "../domain/data-keys";
 import type {
   FieldKind,
   SignerRole,
@@ -34,9 +41,28 @@ const SOURCE_LABELS: Record<FieldSource, string> = {
   landlord: "Landlord",
   agency: "Agency",
   computed: "Computed",
+  contract: "Contract terms",
 };
 
-const DATA_KEY_SOURCES = ["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"];
+/** First `field_N` key not already used — `fields.length + 1` collided after a delete. */
+function nextManualKey(fields: { manual_key: string | null }[]): string {
+  const used = new Set(fields.map((f) => f.manual_key));
+  let n = fields.length + 1;
+  while (used.has(`field_${n}`)) n++;
+  return `field_${n}`;
+}
+
+/** Share of the smaller box covered by the overlap — 1 means one sits inside the other. */
+function overlapRatio(
+  a: { page_index: number; x: number; y: number; width: number; height: number },
+  b: { page_index: number; x: number; y: number; width: number; height: number },
+): number {
+  if (a.page_index !== b.page_index) return 0;
+  const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+  if (w <= 0 || h <= 0) return 0;
+  return (w * h) / Math.min(a.width * a.height, b.width * b.height);
+}
 
 type EditableField = TemplateFieldInput & { localId: string };
 
@@ -60,7 +86,7 @@ function findIncompleteField(
     if (f.source === "booking_response" && !f.question_id) {
       return { localId: f.localId, message: `${name} is bound to "Booking form answer" — please choose which question it should read before saving.` };
     }
-    if (DATA_KEY_SOURCES.includes(f.source) && !f.data_key) {
+    if (isDataKeySource(f.source) && !f.data_key) {
       return { localId: f.localId, message: `${name} is bound to "${SOURCE_LABELS[f.source]}" — please choose which field it should read before saving.` };
     }
     if (f.source === "manual" && !f.manual_key?.trim()) {
@@ -108,6 +134,8 @@ interface Props {
 export function TemplateEditor({ template, questions, portfolios }: Props) {
   const router = useRouter();
   const [fields, setFields] = useState<EditableField[]>(template.fields.map(toEditable));
+  // Unsaved placements are easy to lose with one click on "Back to templates".
+  const [dirty, setDirty] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [proposals, setProposals] = useState<AiFieldProposal[]>([]);
   const [showProposals, setShowProposals] = useState(false);
@@ -122,13 +150,25 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
 
   const selectedField = fields.find((f) => f.localId === selectedId) ?? null;
 
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
   const updateField = (localId: string, patch: Partial<EditableField>) => {
     setFields((prev) => prev.map((f) => (f.localId === localId ? { ...f, ...patch } : f)));
+    setDirty(true);
   };
 
   const deleteField = (localId: string) => {
     setFields((prev) => prev.filter((f) => f.localId !== localId));
     if (selectedId === localId) setSelectedId(null);
+    setDirty(true);
   };
 
   const addField = (rect: { page_index: number; x: number; y: number; width: number; height: number }) => {
@@ -146,7 +186,7 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
       source: "manual",
       question_id: null,
       data_key: null,
-      manual_key: "field_" + (fields.length + 1),
+      manual_key: nextManualKey(fields),
       manual_default: null,
       format: "text",
       font_size: 10,
@@ -158,6 +198,7 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
     };
     setFields((prev) => [...prev, newField]);
     setSelectedId(localId);
+    setDirty(true);
   };
 
   const handleSave = () => {
@@ -168,33 +209,45 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
       return;
     }
     startSave(async () => {
-      try {
-        await saveContractTemplateFields({
-          templateId: template.id,
-          fields: fields.map(({ localId: _localId, ...rest }) => rest),
-        });
-        toast.success("Template saved");
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Save failed");
+      const res = await saveContractTemplateFields({
+        templateId: template.id,
+        fields: fields.map(({ localId: _localId, ...rest }) => rest),
+      });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
       }
+      setDirty(false);
+      toast.success("Template saved");
+      router.refresh();
     });
   };
 
   const handleAiSuggest = () => {
     startAi(async () => {
-      try {
-        const { proposals: ps } = await aiDetectFields({ templateId: template.id });
-        if (ps.length === 0) {
-          toast.message("No proposals returned. Mark fields manually by dragging on the PDF.");
-        } else {
-          toast.success(`${ps.length} proposal${ps.length === 1 ? "" : "s"} ready to review`);
-        }
-        setProposals(ps);
-        setShowProposals(true);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "AI detection failed");
+      const res = await aiDetectFields({ templateId: template.id });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
       }
+      // Re-running detection on a marked-up template would otherwise stack a
+      // second box on every field already placed.
+      const fresh = res.proposals.filter((p) => !fields.some((f) => overlapRatio(p, f) > 0.5));
+      const skipped = res.proposals.length - fresh.length;
+      if (fresh.length === 0) {
+        toast.message(
+          skipped > 0
+            ? "Every suggestion overlaps a field you've already placed — nothing new to add."
+            : "No proposals returned. Mark fields manually by dragging on the PDF.",
+        );
+      } else {
+        toast.success(
+          `${fresh.length} proposal${fresh.length === 1 ? "" : "s"} ready to review` +
+            (skipped > 0 ? ` (${skipped} skipped — already placed)` : ""),
+        );
+      }
+      setProposals(fresh);
+      setShowProposals(fresh.length > 0);
     });
   };
 
@@ -212,13 +265,11 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
       signer_role: null,
       source: p.suggested_source,
       question_id: p.suggested_source === "booking_response" ? p.suggested_question_id : null,
-      data_key:
-        ["property", "unit", "landlord", "agency", "booking", "pm_tenant", "computed"].includes(p.suggested_source)
-          ? p.suggested_key
-          : null,
+      data_key: isDataKeySource(p.suggested_source) ? p.suggested_key : null,
       manual_key: p.suggested_source === "manual" ? p.suggested_key : null,
       manual_default: null,
-      format: "text",
+      // Rent prints as "£650" and dates as "10 November 2026" without a manual tweak.
+      format: (isDataKeySource(p.suggested_source) && defaultFormatForKey(p.suggested_key)) || "text",
       font_size: 10,
       font_weight: "normal",
       text_align: "left",
@@ -229,24 +280,25 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
     setFields((prev) => [...prev, ...newFields]);
     setProposals([]);
     setShowProposals(false);
+    setDirty(true);
     toast.success(`Added ${newFields.length} field${newFields.length === 1 ? "" : "s"}`);
   };
 
   const handleMetaSave = () => {
     startMeta(async () => {
-      try {
-        await updateContractTemplateMeta({
-          id: template.id,
-          name: name.trim(),
-          description: template.description,
-          portfolio_id: portfolioId || null,
-          is_active: isActive,
-        });
-        toast.success("Updated");
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Update failed");
+      const res = await updateContractTemplateMeta({
+        id: template.id,
+        name: name.trim(),
+        description: template.description,
+        portfolio_id: portfolioId || null,
+        is_active: isActive,
+      });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
       }
+      toast.success("Updated");
+      router.refresh();
     });
   };
 
@@ -281,15 +333,26 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
           <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-6 w-6 md:h-4 md:w-4" />
           Active
         </label>
-        <Button variant="outline" size="sm" onClick={handleMetaSave} loading={isMetaPending}>
-          Update details
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleAiSuggest} loading={isAiPending}>
-          <Sparkles size={14} /> AI suggest fields
-        </Button>
-        <Button variant="secondary" size="sm" onClick={handleSave} loading={isSaving}>
-          <Save size={14} /> Save fields
-        </Button>
+        <Tooltip content="Saves the name, portfolio and Active switch. An inactive template stops appearing when generating contracts.">
+          <Button variant="outline" size="sm" onClick={handleMetaSave} loading={isMetaPending}>
+            Update details
+          </Button>
+        </Tooltip>
+        <Tooltip content="Reads the PDF and proposes fields for its blanks. You review each one before it's added; boxes you've already placed are skipped.">
+          <Button variant="outline" size="sm" onClick={handleAiSuggest} loading={isAiPending}>
+            <Sparkles size={14} /> AI suggest fields
+          </Button>
+        </Tooltip>
+        <Tooltip content="Field changes only apply once saved. Contracts already generated keep their PDF until you regenerate them.">
+          <Button variant="secondary" size="sm" onClick={handleSave} loading={isSaving}>
+            <Save size={14} /> Save fields
+          </Button>
+        </Tooltip>
+        {dirty && (
+          <span className="text-xs font-medium text-amber-700" role="status">
+            Unsaved changes
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
@@ -308,6 +371,16 @@ export function TemplateEditor({ template, questions, portfolios }: Props) {
             <FieldEditorPanel
               key={selectedField.localId}
               field={selectedField}
+              sharedKeyCount={
+                selectedField.source === "manual" && selectedField.manual_key
+                  ? fields.filter(
+                      (f) =>
+                        f.localId !== selectedField.localId &&
+                        f.source === "manual" &&
+                        f.manual_key === selectedField.manual_key,
+                    ).length
+                  : 0
+              }
               questions={questions}
               onChange={(patch) => updateField(selectedField.localId, patch)}
               onDelete={() => deleteField(selectedField.localId)}
@@ -657,12 +730,15 @@ function FieldOverlays({ container, fieldsByPage, pageSizes: _pageSizes, selecte
 
 interface FieldEditorProps {
   field: EditableField;
+  /** Other manual fields using the same key — they all print the same value. */
+  sharedKeyCount: number;
   questions: BookingQuestionOption[];
   onChange: (patch: Partial<EditableField>) => void;
   onDelete: () => void;
 }
 
-function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorProps) {
+function FieldEditorPanel({ field, sharedKeyCount, questions, onChange, onDelete }: FieldEditorProps) {
+  const selectedKeyHint = DATA_KEY_OPTIONS.find((o) => o.key === field.data_key)?.hint;
   return (
     <div className="rounded-xl border border-border bg-surface-card p-4 space-y-3">
       <div className="flex items-start justify-between">
@@ -756,6 +832,7 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
           }
           className="w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm"
         >
+          <option value="contract">Contract terms — rent, dates, deposit</option>
           <option value="manual">Manual entry at generation</option>
           <option value="booking_response">Booking form answer</option>
           <option value="pm_tenant">Tenant</option>
@@ -779,7 +856,9 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
               // Built-in applicant fields live on the booking, not as questions —
               // selecting one rebinds the field to the "Booking" source.
               if (v.startsWith("booking:")) {
-                onChange({ source: "booking", data_key: v.slice("booking:".length), question_id: null });
+                const key = v.slice("booking:".length);
+                const fmt = defaultFormatForKey(key);
+                onChange({ source: "booking", data_key: key, question_id: null, ...(fmt ? { format: fmt } : {}) });
               } else {
                 onChange({ question_id: v || null });
               }
@@ -818,7 +897,13 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
           <label className="text-xs font-medium text-foreground">Field</label>
           <select
             value={field.data_key ?? ""}
-            onChange={(e) => onChange({ data_key: e.target.value || null })}
+            onChange={(e) => {
+              const key = e.target.value || null;
+              // Pick the natural format with the key (rent → £, dates → long date);
+              // still overridable below.
+              const fmt = defaultFormatForKey(key);
+              onChange({ data_key: key, ...(fmt ? { format: fmt } : {}) });
+            }}
             className="w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm"
           >
             <option value="">Select a field…</option>
@@ -828,18 +913,39 @@ function FieldEditorPanel({ field, questions, onChange, onDelete }: FieldEditorP
               </option>
             ))}
           </select>
+          {field.source === "contract" && !selectedKeyHint && (
+            <p className="text-[11px] text-foreground-muted">
+              Filled from the terms entered when the contract is generated, so the PDF always matches the contract record.
+            </p>
+          )}
+          {selectedKeyHint && <p className="text-[11px] text-foreground-muted">{selectedKeyHint}</p>}
         </div>
       )}
 
       {field.source === "manual" && (
         <>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-foreground">Field key (e.g. start_date)</label>
+            <label className="text-xs font-medium text-foreground">Field key (e.g. witness_name)</label>
             <input
               value={field.manual_key ?? ""}
               onChange={(e) => onChange({ manual_key: e.target.value || null })}
               className="w-full rounded-lg border border-border bg-surface-inset px-2 py-1.5 text-sm"
             />
+            {isTermManualKey(field.manual_key) ? (
+              <p className="text-[11px] text-amber-700">
+                This key is filled automatically from the contract terms, so the agent isn&apos;t asked for it. Binding to
+                &ldquo;Contract terms&rdquo; does the same thing more clearly.
+              </p>
+            ) : sharedKeyCount > 0 ? (
+              <p className="text-[11px] text-amber-700">
+                {sharedKeyCount} other field{sharedKeyCount === 1 ? " uses" : "s use"} this key, so they print the same
+                value. Give this one a different key if it should be filled in separately.
+              </p>
+            ) : (
+              <p className="text-[11px] text-foreground-muted">
+                Asked for once when the contract is generated. Fields sharing a key print the same value.
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">Default value (optional)</label>

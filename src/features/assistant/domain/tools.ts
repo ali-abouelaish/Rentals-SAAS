@@ -274,7 +274,8 @@ export const ASSISTANT_TOOLS = [
     type: "function",
     function: {
       name: "list_leads",
-      description: "List inbound portal leads. Filter by status, source or search. Returns one page (15) at a time.",
+      description:
+        "List inbound portal leads. Filter by status, source or search. Returns one page (15) at a time. Leads imported from Gmail come back with status, source and date only — their names, contact details and messages are deliberately withheld from you; tell the user to open the lead on the Leads page for those.",
       parameters: {
         type: "object",
         properties: {

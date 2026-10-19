@@ -20,16 +20,21 @@ import { MarketingClaimsList, type MarketingClaimItem } from "@/features/rentals
 import { BackButton } from "@/components/shared/BackButton";
 import { isAdminRole } from "@/lib/auth/roles";
 import { PoundSterling } from "lucide-react";
+import { getCommissionVatSetting } from "@/features/agents/data/agents";
+import { effectiveVatApplies } from "@/features/earnings/lib/money";
 
 export default async function RentalDetailPage({
   params
 }: {
   params: { id: string };
 }) {
-  const [rental, profile] = await Promise.all([
+  const [rental, profile, vatSetting] = await Promise.all([
     getRentalCodeById(params.id),
-    requireUserProfile()
+    requireUserProfile(),
+    getCommissionVatSetting()
   ]);
+  // Unapproved rentals follow the agency's VAT switch; approved ones keep theirs.
+  const vatApplies = effectiveVatApplies(rental.status, rental.vat_applies, vatSetting.enabled);
   const supabase = createSupabaseServerClient();
 
   const [{ data: documentSets }, { data: assistedAgent }, { data: marketingAgent }, { data: agents }, { data: rentalMarketingAgents }, { data: marketingClaims }] =
@@ -309,6 +314,7 @@ export default async function RentalDetailPage({
               assistedAgentId={rental.assisted_by_agent_id}
               marketingAgentId={rental.marketing_agent_id}
               marketingAgentCount={marketingAgentCount}
+              vatApplies={vatApplies}
             />
           </CardContent>
         </Card>
@@ -329,6 +335,7 @@ export default async function RentalDetailPage({
               commissionPercent={assistedAgent?.commission_percent ?? 0}
               agents={agents ?? []}
               rentalDate={rental.date}
+              vatApplies={vatApplies}
             />
           </CardContent>
         </Card>
@@ -352,6 +359,7 @@ export default async function RentalDetailPage({
               marketingFeeOverride={rental.marketing_fee_override_gbp}
               marketingFeeOverrideReason={rental.marketing_fee_override_reason}
               marketingAgentCount={marketingAgentCount}
+              vatApplies={vatApplies}
             />
           </CardContent>
         </Card>

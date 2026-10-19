@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Lock, Mail, PenLine, RefreshCw } from "lucide-react";
+import { Download, Lock, Mail, PenLine, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,16 @@ type Props = {
   /** Shown while out for signature. */
   pendingHint: string;
   successMessage: string;
+  /**
+   * Downloads offered once signed — the executed copy and the audit trail.
+   * Without them the artefacts were stored but unreachable from the app.
+   */
+  completedLinks?: { label: string; href: string; tooltip: string }[];
+  /**
+   * When set, a completed request can't be sent again and the button explains
+   * why. An executed tenancy agreement isn't signed twice.
+   */
+  completedBlockedReason?: string;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -110,6 +120,8 @@ export function SigningPanel({
   completedHint,
   pendingHint,
   successMessage,
+  completedLinks,
+  completedBlockedReason,
 }: Props) {
   const [state, setState] = useState<SigningPanelState | null>(null);
   const [balance, setBalance] = useState<EnvelopeBalance | null>(null);
@@ -168,11 +180,14 @@ export function SigningPanel({
 
   const outOfEnvelopes = balance !== null && balance.remaining === 0;
 
+  const completed = status === "completed";
   const disabledReason =
     blockedReason ??
     (inFlight
       ? "This is already out for signature. Wait for it to be signed, or revoke it in BoldSign first."
-      : null);
+      : completed && completedBlockedReason
+        ? completedBlockedReason
+        : null);
 
   // Deliberately not folded into `disabledReason`: the button stays clickable
   // and becomes the way to buy. Disabling it would leave someone stuck with an
@@ -284,6 +299,24 @@ export function SigningPanel({
               </Button>
             </span>
           </Tooltip>
+
+          {completed && completedLinks && completedLinks.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              {completedLinks.map((link) => (
+                <Tooltip key={link.href} content={link.tooltip}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-brand hover:underline md:min-h-0"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {link.label}
+                  </a>
+                </Tooltip>
+              ))}
+            </div>
+          )}
 
           <p className="text-[11px] text-foreground-muted mt-1.5">
             {completedAt

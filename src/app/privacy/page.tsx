@@ -414,6 +414,15 @@ export default function PrivacyPage() {
                       We do not use data from Google or Microsoft accounts to develop,
                       improve or train artificial intelligence or machine-learning models.
                     </li>
+                    <li>
+                      Harbor Ops&rsquo; optional AI features use OpenAI&rsquo;s API (see
+                      Section 6). Names, contact details, property references and message
+                      content from enquiries imported from your Gmail inbox are never sent to
+                      it: our AI assistant sees only an imported enquiry&rsquo;s status, the
+                      portal it came from and the date it arrived. Your connected
+                      account&rsquo;s access tokens and email address are never sent to any AI
+                      service.
+                    </li>
                   </ul>
                   <div className="callout">
                     <div className="ico">G</div>
@@ -515,6 +524,18 @@ export default function PrivacyPage() {
                         5).
                       </div>
                       <div className="basis">Google or Microsoft</div>
+                    </div>
+                    <div className="row">
+                      <div>
+                        <strong>AI service provider</strong>
+                      </div>
+                      <div>
+                        Power optional AI features such as the assistant, maintenance triage
+                        and image enhancement. Under its API terms, the provider does not use
+                        this data to train its models. Personal details and content from
+                        connected Google accounts are never sent (see Section 5).
+                      </div>
+                      <div className="basis">OpenAI (API)</div>
                     </div>
                     <div className="row">
                       <div>

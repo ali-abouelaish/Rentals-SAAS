@@ -50,9 +50,21 @@ export async function updatePmTenant(id: string, values: Partial<PmTenantFormVal
   const profile = await requireRole([...ADMIN_ROLES]);
   const supabase = createSupabaseServerClient();
 
+  // The edit form sends raw strings from its inputs/selects. Date and number
+  // columns reject an empty string ("invalid input syntax"), and boolean columns
+  // reject the "true"/"false" strings a <select> yields — so coerce the same way
+  // the create schema does (empty → null; "true"/"false" → boolean) before the
+  // update. Without this, every drawer edit fails with "Failed to update".
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(values)) {
+    if (v === "") cleaned[k] = null;
+    else if (k === "right_to_rent_verified") cleaned[k] = v === true || v === "true";
+    else cleaned[k] = v;
+  }
+
   const { data, error } = await supabase
     .from("pm_tenants")
-    .update({ ...values, updated_at: new Date().toISOString() })
+    .update({ ...cleaned, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id)
     .select("*")

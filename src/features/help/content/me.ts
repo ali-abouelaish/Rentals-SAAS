@@ -21,5 +21,6 @@ My Profile is your personal home: your headline stats, your earnings and rentals
 ## Tips
 
 - Bonus figures here apply your commission percentage, so they reflect your actual share.
-- For agency-wide earnings and the leaderboard (admins), use [Earnings](/earnings) instead.`,
+- For agency-wide earnings and the leaderboard (admins), use [Earnings](/earnings) instead.
+- **If you're a manager**, the **Overview** and **Earnings** tabs include a **Manager commission** section. It shows your cut on deals closed by the agents you manage, grouped by agent, and whether each line has been paid. Your total earnings include it. Deals still awaiting approval are shown separately until they're approved.`,
 };
