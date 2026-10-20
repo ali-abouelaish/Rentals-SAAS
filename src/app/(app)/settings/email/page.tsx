@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { requireModule } from "@/modules/guards";
 import { getEmailProviderStatus, getSmtpConfigForEdit } from "@/features/email-providers/data/provider";
 import { EmailProviderManager } from "@/features/email-providers/ui/EmailProviderManager";
 
 export default async function EmailSettingsPage() {
   const profile = await requireRole([...ADMIN_ROLES]);
+  await requireModule("email_sending");
   const [provider, smtpConfig] = await Promise.all([
     getEmailProviderStatus(profile.tenant_id).catch(() => null),
     getSmtpConfigForEdit(profile.tenant_id).catch(() => null),

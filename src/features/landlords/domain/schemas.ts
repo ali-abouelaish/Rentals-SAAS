@@ -30,3 +30,33 @@ export const landlordSchema = z.object({
 });
 
 export type LandlordFormValues = z.infer<typeof landlordSchema>;
+
+/**
+ * Listings-map filters. Kept as the raw form strings: they travel in the URL
+ * (?budget=900&double=1), so the same schema validates the form on the client
+ * and the query string on the server.
+ */
+export const mapFilterSchema = z.object({
+  budget: z
+    .string()
+    .trim()
+    .regex(/^\d*$/, "Whole pounds only, e.g. 900")
+    .refine((v) => v === "" || (Number(v) >= 1 && Number(v) <= 100000), "Enter between £1 and £100,000"),
+  double: z.boolean(),
+});
+
+export type MapFilterValues = z.infer<typeof mapFilterSchema>;
+
+/** Server side: a hand-edited or stale URL that fails validation means no filter, not an error. */
+export function parseMapFilters(params: { budget?: string; double?: string }): {
+  budget: number | null;
+  double: boolean;
+} {
+  // Field by field, so a bad budget doesn't also throw away a valid double flag.
+  const budget = mapFilterSchema.shape.budget.safeParse(params.budget ?? "");
+  return {
+    budget: budget.success && budget.data ? Number(budget.data) : null,
+    // "on" is what the form sends if it is submitted natively, before hydration.
+    double: params.double === "1" || params.double === "on",
+  };
+}

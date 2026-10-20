@@ -13,13 +13,15 @@ import { Input } from "@/components/ui/input";
 import { BillingProfilesTable } from "@/features/invoices/ui/BillingProfilesTable";
 import { InvoiceEmailTemplateCard } from "@/features/invoices/ui/InvoiceEmailTemplateCard";
 import { getInvoiceEmailTemplate } from "@/features/invoices/data/emailTemplate";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
 
 export default async function BillingProfilesPage() {
   const profile = await requireRole([...ADMIN_ROLES]);
   const isAdmin = true; // page is admin-only
-  const [profiles, invoiceEmail] = await Promise.all([
+  const [profiles, invoiceEmail, emailSendingOn] = await Promise.all([
     getBillingProfiles(),
     getInvoiceEmailTemplate(profile.tenant_id),
+    hasFeature("email_sending"),
   ]);
 
   return (
@@ -67,6 +69,7 @@ export default async function BillingProfilesPage() {
       <InvoiceEmailTemplateCard
         initial={{ subject: invoiceEmail.subject, body: invoiceEmail.body }}
         isDefault={invoiceEmail.isDefault}
+        canConnectMailbox={emailSendingOn}
       />
     </div>
   );

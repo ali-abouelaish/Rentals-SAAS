@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, Mail } from "lucide-react";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
 import { getEmailProviderStatus } from "../data/provider";
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -21,7 +22,13 @@ export async function ConnectMailboxNotice({
   /** What this page sends, opening the "no mailbox" copy, e.g. "Invoices". */
   emailKinds?: string;
 }) {
-  const provider = await getEmailProviderStatus(tenantId).catch(() => null);
+  const [emailSendingOn, provider] = await Promise.all([
+    hasFeature("email_sending").catch(() => true),
+    getEmailProviderStatus(tenantId).catch(() => null),
+  ]);
+
+  // Switched off for this agency — Settings → Email Sending isn't theirs to open.
+  if (!emailSendingOn) return null;
 
   // Connected and healthy — nothing to say.
   if (provider?.status === "active") return null;

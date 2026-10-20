@@ -13,6 +13,9 @@ import { formatDate, formatGBP } from "@/lib/utils/formatters";
 import { formatAge, isStale, STALE_AFTER_DAYS } from "@/lib/utils/freshness";
 import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
 import { RunScraperButton } from "@/features/landlords/ui/RunScraperButton";
+import { ListingsMapPanel } from "@/features/landlords/ui/ListingsMapPanel";
+import { toListingMapPoint } from "@/features/landlords/domain/map-points";
+import type { ListingMapPoint } from "@/features/landlords/domain/types";
 import { LandlordSheetCard } from "@/features/listing-feeds/ui/LandlordSheetCard";
 import { ListingDetailsDrawer } from "@/features/listing-feeds/ui/ListingDetailsDrawer";
 import { requireUserProfile } from "@/lib/auth/requireRole";
@@ -41,6 +44,9 @@ export default async function LandlordDetailPage({
   if (!landlordResult) notFound();
   const { landlord, rentalsCount, listings, scrapedListings, sheetRuns, sheetListingCount } =
     landlordResult;
+  const mapPoints = scrapedListings
+    .map((row) => toListingMapPoint(row, landlord))
+    .filter((point): point is ListingMapPoint => point !== null);
 
   return (
     <div className="space-y-6">
@@ -185,6 +191,13 @@ export default async function LandlordDetailPage({
                 </p>
               )}
             </div>
+            {scrapedListings.length > 0 && (
+              <ListingsMapPanel
+                variant="landlord"
+                points={mapPoints}
+                unlocatedCount={scrapedListings.length - mapPoints.length}
+              />
+            )}
             {scrapedListings.length > 0 ? (
               <DataTable
                 columns={["Title", "Location", "Price", "Source", "Scraped", "Rooms", "Available", "Link"]}

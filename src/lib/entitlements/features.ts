@@ -40,6 +40,7 @@ export type FeatureKey =
   | "e_signing"
   | "listing_feeds"
   | "support_tickets"
+  | "email_sending"
   | "admin";
 
 export const ALL_FEATURES: FeatureKey[] = [
@@ -84,6 +85,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "e_signing",
   "listing_feeds",
   "support_tickets",
+  "email_sending",
   "admin",
 ];
 
@@ -261,6 +263,11 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
     label: "Contact Support",
     description:
       "Lets any agency user raise a support ticket with Harbor Ops, attach screenshots, and follow the reply thread. Tickets land in the super admin Support Tickets queue. Switching this off removes the agency's in-app route to us — leave it on."
+  },
+  email_sending: {
+    label: "Email Sending",
+    description:
+      "Lets the agency connect its own mailbox (Microsoft 365, Gmail or SMTP) under Settings → Email Sending so tenant, landlord and invoice emails come from their address. Switching this off hides the page and ignores any mailbox already connected: every email still goes out, from the shared Harbor Ops mailer instead. The connection is kept, so switching it back on resumes sending from their mailbox (after a long time off they may be asked to reconnect it)."
   },
   admin: { label: "Admin", description: "Internal super admin functionality." }
 };

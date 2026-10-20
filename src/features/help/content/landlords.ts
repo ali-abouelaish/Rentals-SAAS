@@ -17,6 +17,21 @@ Landlords holds your landlord partners — their contacts, listings, and whether
 2. **Search and filter.** Search by name, contact, or email, and filter by **Paying** / **Not Paying** commission.
 3. **Open a landlord.** Click a row to view and edit the landlord's full record and listings.
 4. **See commission at a glance.** Each row shows whether they pay commission and the agreed amount or terms.
+5. **See where your stock is.** The **Map** above the list plots every landlord's listings.
+
+## Map
+
+The **Map** on the Landlords page shows where all your landlords' listings are — every landlord, not just the page of the list you're on. It follows the search box and the **Paying** / **Not Paying** filter, so filtering to paying landlords shows only their stock.
+
+- **Budget (£ pcm)** — enter a monthly budget and press **Apply** to hide listings priced above it. Listings with no price are hidden too, since they can't be confirmed as affordable.
+- **Double occupancy** — tick it to show only listings marked as accepting couples (SpareRoom's "Couples OK"). Listings that don't say either way are hidden.
+- These two filter listings, not landlords, so they change the map but not the landlord list. **Clear** removes them.
+- **Tap a pin** for the listing's title, price, when it was last seen, the landlord, and a link to the advert. Several ads at the same address share one slightly larger pin, and its popup lists them all.
+- **Zoom** with the **+ / −** buttons, by pinching on a trackpad or phone, or with Ctrl + mouse wheel while over the map. Plain scrolling scrolls the page, not the map, so you can't get stuck in it.
+
+Each landlord's own page has a smaller map of just their listings, above the **Listings** table.
+
+**Why is a listing missing from the map?** It has no location. SpareRoom listings get exact coordinates automatically when scraped. Spreadsheet listings only have a location if the sheet has **latitude** and **longitude** columns mapped in **Review columns** — an address or postcode alone isn't enough yet. A note under the map says how many listings couldn't be placed.
 
 ## Getting a landlord's listings in
 

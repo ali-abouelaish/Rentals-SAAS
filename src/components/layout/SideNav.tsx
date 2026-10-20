@@ -18,6 +18,7 @@ import {
   isAdminRoute,
   isPmRoute,
   brandInitials,
+  canSeeItem,
   type NavItem,
 } from "./navConfig";
 
@@ -108,12 +109,10 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
 
   const isActive = (href: string) => href === bestMatch;
 
-  const hasEntitlement = (key: string) => (entitlements ?? []).includes(key);
+  const canSee = (item: NavItem) => canSeeItem(item, profile.role, entitlements ?? []);
 
   const renderLink = (item: NavItem) => {
-    if (item.allowedRoles && !canAccessRoute(profile.role, item.allowedRoles)) return null;
-    if (item.entitlement && !hasEntitlement(item.entitlement)) return null;
-    if (item.entitlementAny && !item.entitlementAny.some(hasEntitlement)) return null;
+    if (!canSee(item)) return null;
     const active = isActive(item.href);
     // For shared routes (dashboard + settings), carry ?view=pm so the sidebar
     // stays in PM mode for tenants with both modules enabled.
@@ -309,7 +308,7 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
       {/* Footer: Ask AI Assistant pill (PM) + user area */}
       <div className="p-3 pt-2">
         {isPm &&
-          canAccessRoute(profile.role, PM_ASSISTANT_ITEM.allowedRoles ?? []) && (
+          canSee(PM_ASSISTANT_ITEM) && (
             <Link
               href={PM_ASSISTANT_ITEM.href}
               prefetch={false}

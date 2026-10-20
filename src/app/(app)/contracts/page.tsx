@@ -2,6 +2,7 @@ import { FileSignature } from "lucide-react";
 import { requireRole } from "@/lib/auth/requireRole";
 import { requireModuleAccess } from "@/lib/auth/requireModuleAccess";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { requireModule } from "@/modules/guards";
 import { getContracts } from "@/features/contracts/data/contracts";
 import { getPortfolios } from "@/features/properties/data/portfolios";
 import { getPmTenants } from "@/features/pm-tenants/data/pm-tenants";
@@ -11,6 +12,9 @@ import { ContractsPage } from "@/features/contracts/ui/ContractsPage";
 export default async function ContractsRoute() {
   await requireRole([...ADMIN_ROLES]);
   await requireModuleAccess("property_management");
+  // On the page rather than a /contracts layout: /contracts/templates sits under
+  // this segment but has its own switch (contract_templates).
+  await requireModule("contracts");
 
   try {
     const [contracts, portfolios, pmTenants, unitsResult] = await Promise.all([

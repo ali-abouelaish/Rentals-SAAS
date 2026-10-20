@@ -1,7 +1,14 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
-import { getLandlords } from "@/features/landlords/data/landlords";
+import { getLandlords, getListingMapPoints } from "@/features/landlords/data/landlords";
+import {
+  ListingsMapPanel,
+  ListingsMapPanelSkeleton,
+} from "@/features/landlords/ui/ListingsMapPanel";
+import { MapFilters } from "@/features/landlords/ui/MapFilters";
+import { parseMapFilters } from "@/features/landlords/domain/schemas";
 import {
   Building,
   Check,
@@ -12,14 +19,53 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+/** Streamed separately so the landlord list never waits on the map query. */
+async function LandlordsMapSection({
+  search,
+  paying,
+  budget,
+  double,
+}: {
+  search: string;
+  paying: string;
+  budget: number | null;
+  double: boolean;
+}) {
+  const data = await getListingMapPoints({ search, paying, budget, double });
+  return (
+    <ListingsMapPanel
+      variant="all"
+      {...data}
+      showHeading={false}
+      filtered={budget !== null || double}
+    />
+  );
+}
+
 export default async function LandlordsPage({
   searchParams
 }: {
-  searchParams?: { q?: string; paying?: string; page?: string };
+  searchParams?: { q?: string; paying?: string; page?: string; budget?: string; double?: string };
 }) {
   const search = searchParams?.q ?? "";
   const paying = searchParams?.paying ?? "all";
   const currentPage = Math.max(1, parseInt(searchParams?.page ?? "1", 10) || 1);
+  // Re-validated here with the form's schema: the URL is user-editable.
+  const { budget, double } = parseMapFilters({
+    budget: searchParams?.budget,
+    double: searchParams?.double,
+  });
+  // Carried through every link this page builds, so changing the list's
+  // search, filter or page doesn't silently reset the map.
+  const mapParams = {
+    budget: budget !== null ? String(budget) : undefined,
+    double: double ? "1" : undefined,
+  };
+  const withMapParams = (params: URLSearchParams) => {
+    if (mapParams.budget) params.set("budget", mapParams.budget);
+    if (mapParams.double) params.set("double", mapParams.double);
+    return params;
+  };
 
   const { landlords, total, page, totalPages } = await getLandlords({
     search,
@@ -38,14 +84,14 @@ export default async function LandlordsPage({
     if (search) params.set("q", search);
     if (paying !== "all") params.set("paying", paying);
     params.set("page", String(p));
-    return `/landlords?${params.toString()}`;
+    return `/landlords?${withMapParams(params).toString()}`;
   };
 
   const buildPayingUrl = (payingValue: string) => {
     const params = new URLSearchParams();
     if (search) params.set("q", search);
     if (payingValue && payingValue !== "all") params.set("paying", payingValue);
-    const qs = params.toString();
+    const qs = withMapParams(params).toString();
     return `/landlords${qs ? `?${qs}` : ""}`;
   };
 
@@ -54,6 +100,7 @@ export default async function LandlordsPage({
     if (search) backParams.set("q", search);
     if (paying !== "all") backParams.set("paying", paying);
     if (currentPage > 1) backParams.set("page", String(currentPage));
+    withMapParams(backParams);
     const back = `/landlords${backParams.toString() ? `?${backParams.toString()}` : ""}`;
     return `/landlords/${id}?back=${encodeURIComponent(back)}`;
   };
@@ -93,6 +140,7 @@ export default async function LandlordsPage({
             placeholder="Name, contact, email..."
             initialQuery={search}
             preservePaying={paying !== "all" ? paying : undefined}
+            preserveParams={mapParams}
           />
 
           <div className="flex gap-2">
@@ -110,6 +158,22 @@ export default async function LandlordsPage({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── Listings Map — Bento card ─────── */}
+      <div className="rounded-bento bg-surface-card shadow-bento p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-foreground">Map</h2>
+        {/* Outside the Suspense boundary, so the filters stay put while the
+            map reloads under them. */}
+        <MapFilters budget={mapParams.budget ?? ""} double={double} />
+        {/* Keyed on the filters so a new search shows the skeleton instead of
+            leaving the previous search's pins under the new list. */}
+        <Suspense
+          key={`${search}|${paying}|${budget ?? ""}|${double}`}
+          fallback={<ListingsMapPanelSkeleton />}
+        >
+          <LandlordsMapSection search={search} paying={paying} budget={budget} double={double} />
+        </Suspense>
       </div>
 
       {/* ── Results Count ─────────────────── */}

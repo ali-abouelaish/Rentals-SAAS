@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { encryptProviderCredentials, decryptProviderCredentials } from "@/lib/email-providers/encrypt";
 import { verifySmtp } from "@/lib/email-providers/smtp/verify";
@@ -20,6 +21,9 @@ type SaveResult = { ok: true } | { ok: false; error: string };
 export async function saveSmtpProvider(input: SmtpProviderValues): Promise<SaveResult> {
   const profile = await requireRole([...ADMIN_ROLES]);
   const tenantId = profile.tenant_id;
+  if (!(await hasFeature("email_sending"))) {
+    return { ok: false, error: "Email Sending isn't enabled for your agency." };
+  }
 
   const parsed = smtpProviderSchema.safeParse(input);
   if (!parsed.success) {

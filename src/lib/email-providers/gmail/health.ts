@@ -3,6 +3,7 @@ import { decryptProviderCredentials } from "../encrypt";
 import { failEmailProvider } from "../alert";
 import { getValidGmailAccessToken, GmailAuthError } from "./tokens";
 import { fetchEmailAddress } from "./oauth";
+import { tenantsWithFeatureDisabled } from "@/lib/entitlements/tenantFeature";
 import type { OAuthCredentials } from "@/lib/email/transport/types";
 
 export type GmailHealthSummary = { checked: number; ok: number; failed: number };
@@ -17,7 +18,10 @@ export async function runGmailHealthCheck(): Promise<GmailHealthSummary> {
     .eq("status", "active");
 
   if (error) throw new Error(error.message);
-  const rows = data ?? [];
+  // Same as the Graph check: a switched-off agency's mailbox isn't used, so
+  // don't probe it or alert them about it.
+  const disabled = await tenantsWithFeatureDisabled("email_sending");
+  const rows = (data ?? []).filter((row) => !disabled.has(row.tenant_id as string));
   const summary: GmailHealthSummary = { checked: rows.length, ok: 0, failed: 0 };
 
   for (const row of rows) {

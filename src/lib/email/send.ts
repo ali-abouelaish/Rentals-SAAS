@@ -5,6 +5,7 @@ import { getTransport } from "./transport/factory";
 import { ResendTransport } from "./transport/resend";
 import { getEmailProvider } from "@/lib/email-providers/data";
 import { failEmailProvider } from "@/lib/email-providers/alert";
+import { isFeatureEnabledForTenant } from "@/lib/entitlements/tenantFeature";
 import type { Agency } from "./branding";
 import type { EmailMessage, EmailProviderType } from "./transport/types";
 
@@ -48,7 +49,14 @@ export async function sendEmail(
   const agency = ctx?.agency ?? (await loadAgency(tenantId));
   if (!agency) throw new Error(`Agency ${tenantId} not found`);
 
-  const config = await getEmailProvider(tenantId);
+  // A super admin can switch Email Sending off. The connected mailbox is then
+  // ignored — not deleted — and mail goes out exactly as if none were connected,
+  // so nothing stops sending and switching it back on resumes the mailbox.
+  const [emailSendingOn, provider] = await Promise.all([
+    isFeatureEnabledForTenant(tenantId, "email_sending"),
+    getEmailProvider(tenantId),
+  ]);
+  const config = emailSendingOn ? provider : null;
   const transport = getTransport(agency, config);
 
   try {

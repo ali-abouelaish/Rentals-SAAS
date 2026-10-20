@@ -5,12 +5,14 @@ import { generateCodeVerifier, challengeFromVerifier } from "@/lib/mydeposits/pk
 import { buildAuthorizeUrl } from "@/lib/email-providers/gmail/oauth";
 import { createOAuthState } from "@/lib/email-providers/oauth-state";
 import { buildEmailSettingsUrl } from "@/lib/email-providers/oauth-redirect";
+import { requireModule } from "@/modules/guards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const profile = await requireRole([...ADMIN_ROLES]);
+  await requireModule("email_sending");
 
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = challengeFromVerifier(codeVerifier);

@@ -38,9 +38,12 @@ const KNOWN_KEYS = new Set(INVOICE_MERGE_FIELDS.map((f) => f.key));
 export function InvoiceEmailTemplateCard({
   initial,
   isDefault,
+  canConnectMailbox,
 }: {
   initial: InvoiceEmailValues;
   isDefault: boolean;
+  /** False when Email Sending is switched off — no mailbox, no link to one. */
+  canConnectMailbox: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -136,11 +139,18 @@ export function InvoiceEmailTemplateCard({
           <p className="text-xs text-foreground-secondary">
             The email landlords receive with their invoice PDF. Your logo, colours and the
             invoice details panel are added automatically.{" "}
-            {isDefault ? "You're using the built-in default." : null} Emails send from{" "}
-            <Link href="/settings/email" className="underline hover:text-foreground">
-              your connected mailbox
-            </Link>{" "}
-            when you have one.
+            {isDefault ? "You're using the built-in default." : null}{" "}
+            {canConnectMailbox ? (
+              <>
+                Emails send from{" "}
+                <Link href="/settings/email" className="underline hover:text-foreground">
+                  your connected mailbox
+                </Link>{" "}
+                when you have one.
+              </>
+            ) : (
+              "Emails send from the shared Harbor Ops mailer."
+            )}
           </p>
         </div>
 

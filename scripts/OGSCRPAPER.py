@@ -146,6 +146,21 @@ except Exception:
 PROFILE_PATH_RE = re.compile(r"^/(u\d+|pro/[\w-]+)/?$")
 
 
+def canonical_spareroom_url(url):
+    """Point any SpareRoom host (m., bare domain, http) at https://www.spareroom.co.uk.
+
+    m.spareroom.co.uk — what a link shared from a phone gives you — serves different
+    markup: no listing-sidebar-box and no photo-gallery wrappers. Read as-is, the ad
+    yields no "More from" links and zero photos, so it is skipped, the landlord
+    counts as read cleanly with nothing live, and the sweep clears their rows.
+    """
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if host == "spareroom.co.uk" or host.endswith(".spareroom.co.uk"):
+        return parsed._replace(scheme="https", netloc="www.spareroom.co.uk").geturl()
+    return url
+
+
 def classify_url(url):
     """Classify a stored landlord URL.
 
@@ -160,6 +175,7 @@ def classify_url(url):
     if not url:
         return ("unknown", url)
     try:
+        url = canonical_spareroom_url(url)
         parsed = urlparse(url)
 
         # Already a profile path
@@ -393,7 +409,7 @@ for raw_url, paying_flag, property_flag, landlord_id in zip(
     # ----- PROFILE URL: NORMAL PAGINATION -----
     profile_url = resolved
     if profile_url != raw_url:
-        print(f"\n🔧 Promoted listing search_results → profile: {profile_url}")
+        print(f"\n🔧 Resolved {raw_url} → profile: {profile_url}")
     print(f"\n🔍 Scraping profile: {profile_url}")
     if property_flag:
         print(f"   📌 Will apply flag: {property_flag}")

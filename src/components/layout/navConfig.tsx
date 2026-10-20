@@ -41,17 +41,25 @@ import {
   LifeBuoy,
 } from "lucide-react";
 import { ADMIN_ROLES, canAccessRoute } from "@/lib/auth/roles";
+import type { FeatureKey } from "@/lib/entitlements/features";
 import type { PublishedModuleConfig } from "@/features/admin/domain/types";
 
+/**
+ * Every item whose page belongs to a feature in the super-admin features manager
+ * must carry that feature's key. An item without one always renders, so switching
+ * the feature off leaves a link in the sidebar that only leads to /upgrade or a
+ * redirect. Typed as FeatureKey so a misspelt key fails the build instead of
+ * hiding the link for everyone.
+ */
 export type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
   allowedRoles?: readonly string[];
   /** When set, the item only renders if the tenant has this feature entitlement. */
-  entitlement?: string;
+  entitlement?: FeatureKey;
   /** When set, the item renders if the tenant has ANY of these entitlements. */
-  entitlementAny?: readonly string[];
+  entitlementAny?: readonly FeatureKey[];
 };
 
 export type NavGroup = {
@@ -60,23 +68,23 @@ export type NavGroup = {
 };
 
 export const RA_NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/me", label: "My Profile", icon: User },
-  { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/leads", label: "Leads", icon: Inbox },
-  { href: "/rentals", label: "Rentals", icon: ClipboardList },
-  { href: "/landlords", label: "Landlords", icon: Building2 },
-  { href: "/bonuses", label: "Bonuses", icon: Gift },
-  { href: "/invoices", label: "Invoices", icon: FileText },
-  { href: "/room-enhancer", label: "Room Enhancer", icon: Sparkles },
-  { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, entitlement: "dashboard" },
+  { href: "/me", label: "My Profile", icon: User, entitlement: "my_profile" },
+  { href: "/earnings", label: "Earnings", icon: BadgePercent, allowedRoles: ADMIN_ROLES, entitlement: "earnings" },
+  { href: "/clients", label: "Clients", icon: Users, entitlement: "clients" },
+  { href: "/leads", label: "Leads", icon: Inbox, entitlement: "leads" },
+  { href: "/rentals", label: "Rentals", icon: ClipboardList, entitlement: "rentals" },
+  { href: "/landlords", label: "Landlords", icon: Building2, entitlement: "landlords" },
+  { href: "/bonuses", label: "Bonuses", icon: Gift, entitlement: "bonuses" },
+  { href: "/invoices", label: "Invoices", icon: FileText, entitlement: "invoices" },
+  { href: "/room-enhancer", label: "Room Enhancer", icon: Sparkles, entitlement: "room_enhancer" },
+  { href: "/agents", label: "Agents", icon: Home, allowedRoles: ADMIN_ROLES, entitlement: "agents" },
+  { href: "/settings/billing-profiles", label: "Billing", icon: Settings, allowedRoles: ADMIN_ROLES, entitlement: "billing_profiles" },
+  { href: "/settings/billing-info", label: "Billing info", icon: CreditCard, allowedRoles: ADMIN_ROLES, entitlement: "billing_info" },
   // Shared with PM: connecting a mailbox here makes invoices (and every other
   // agency email) send from the agency's own address.
-  { href: "/settings/email", label: "Email Sending", icon: Mail, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/email", label: "Email Sending", icon: Mail, allowedRoles: ADMIN_ROLES, entitlement: "email_sending" },
+  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES, entitlement: "public_api_access" },
   // Deliberately NO allowedRoles: every agency user — not just admins — must be
   // able to reach us. Don't "fix" this to ADMIN_ROLES like its neighbours.
   { href: "/helpdesk", label: "Contact Support", icon: LifeBuoy, entitlement: "support_tickets" },
@@ -85,32 +93,32 @@ export const RA_NAV_ITEMS: NavItem[] = [
 export const PM_NAV_GROUPS: NavGroup[] = [
   {
     title: "Overview",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, entitlement: "dashboard" }],
   },
   {
     title: "Lettings",
     items: [
-      { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES },
+      { href: "/properties", label: "Properties", icon: Warehouse, allowedRoles: ADMIN_ROLES, entitlement: "properties" },
       // Property OWNERS (owner_landlords) — not the rental-agency /landlords page.
       { href: "/owners", label: "Landlords", icon: Building2, allowedRoles: ADMIN_ROLES, entitlement: "owner_statements" },
-      { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES },
-      { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES },
-      { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES },
+      { href: "/tenants", label: "Tenants", icon: Users2, allowedRoles: ADMIN_ROLES, entitlement: "pm_tenants" },
+      { href: "/bookings", label: "Bookings", icon: CalendarCheck, allowedRoles: ADMIN_ROLES, entitlement: "bookings" },
+      { href: "/contracts", label: "Contracts", icon: FileSignature, allowedRoles: ADMIN_ROLES, entitlement: "contracts" },
     ],
   },
   {
     title: "Finance",
     items: [
-      { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES },
-      { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES },
-      { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES },
+      { href: "/rent-collection", label: "Rent Collection", icon: Banknote, allowedRoles: ADMIN_ROLES, entitlement: "rent_collection" },
+      { href: "/finances", label: "Finances", icon: Wallet, allowedRoles: ADMIN_ROLES, entitlement: "finances" },
+      { href: "/profitability", label: "Profitability", icon: TrendingUp, allowedRoles: ADMIN_ROLES, entitlement: "profitability" },
       { href: "/deposits", label: "Deposit Protection", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlementAny: ["mydeposits", "tds", "dps"] },
     ],
   },
   {
     title: "Growth",
     items: [
-      { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES },
+      { href: "/shares", label: "Property Shares", icon: Share2, allowedRoles: ADMIN_ROLES, entitlement: "property_shares" },
     ],
   },
   {
@@ -123,7 +131,7 @@ export const PM_NAV_GROUPS: NavGroup[] = [
   {
     title: "Tools",
     items: [
-      { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES },
+      { href: "/maintenance", label: "Maintenance", icon: Wrench, allowedRoles: ADMIN_ROLES, entitlement: "maintenance" },
       { href: "/compliance", label: "Compliance", icon: ShieldCheck, allowedRoles: ADMIN_ROLES, entitlement: "certificates" },
       { href: "/reminders", label: "Reminders", icon: Bell, allowedRoles: ADMIN_ROLES, entitlement: "automations" },
       { href: "/automations", label: "Automations", icon: Zap, allowedRoles: ADMIN_ROLES, entitlement: "automations" },
@@ -137,11 +145,11 @@ export const PM_NAV_GROUPS: NavGroup[] = [
 export const PM_SETTINGS_ITEMS: NavItem[] = [
   { href: "/settings/team", label: "Team", icon: Users2, allowedRoles: ADMIN_ROLES },
   { href: "/settings/bank-details", label: "Bank Details", icon: Landmark, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/email", label: "Email Sending", icon: Mail, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/api-keys", label: "API Keys", icon: KeyIcon, allowedRoles: ADMIN_ROLES, entitlement: "public_api_access" },
+  { href: "/settings/email", label: "Email Sending", icon: Mail, allowedRoles: ADMIN_ROLES, entitlement: "email_sending" },
   { href: "/settings/messaging", label: "Messaging", icon: Bell, allowedRoles: ADMIN_ROLES, entitlement: "automations" },
   { href: "/settings/integrations", label: "Integrations", icon: Plug, allowedRoles: ADMIN_ROLES },
-  { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES },
+  { href: "/settings/billing-info", label: "General", icon: Settings, allowedRoles: ADMIN_ROLES, entitlement: "billing_info" },
 ];
 
 export const PM_ASSISTANT_ITEM: NavItem = {
@@ -149,6 +157,7 @@ export const PM_ASSISTANT_ITEM: NavItem = {
   label: "Ask AI Assistant",
   icon: Sparkles,
   allowedRoles: ADMIN_ROLES,
+  entitlement: "ai_assistant",
 };
 
 /**

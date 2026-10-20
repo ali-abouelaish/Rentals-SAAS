@@ -243,7 +243,7 @@ export function SendInvoiceDialog({
               <p className={cn(hintCls, "flex items-center gap-1 flex-wrap")}>
                 <Mail className="h-3 w-3" />
                 Sends from {draft.sendingFrom} with the invoice PDF attached.
-                {draft.canEditTemplate ? (
+                {draft.canChangeMailbox ? (
                   <Link href="/settings/email" className="underline hover:text-foreground">
                     Change mailbox
                   </Link>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ADMIN_ROLES } from "@/lib/auth/roles";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { loadAgency } from "@/lib/email/agency-context";
 import { sendEmail } from "@/lib/email/send";
@@ -17,6 +18,11 @@ import { getEmailProviderStatus } from "../data/provider";
  */
 export async function sendProviderTestEmail(): Promise<{ ok: true } | { ok: false; error: string }> {
   const profile = await requireRole([...ADMIN_ROLES]);
+  // Checked first: with the switch off, sendEmail uses the default mailer and
+  // the fallback check below would wrongly blame the connection.
+  if (!(await hasFeature("email_sending"))) {
+    return { ok: false, error: "Email Sending isn't enabled for your agency." };
+  }
 
   const provider = await getEmailProviderStatus(profile.tenant_id);
   if (!provider || provider.status !== "active") {

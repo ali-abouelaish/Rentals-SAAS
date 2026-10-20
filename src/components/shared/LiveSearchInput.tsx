@@ -24,6 +24,8 @@ type Props = {
   preserveStart?: string;
   /** Preserve date range end (rentals page). */
   preserveEnd?: string;
+  /** Any other params to carry over, e.g. the landlords map's budget/double. Empty values are dropped. */
+  preserveParams?: Record<string, string | undefined>;
 };
 
 export function LiveSearchInput({
@@ -36,10 +38,14 @@ export function LiveSearchInput({
   preserveMethod,
   preserveStart,
   preserveEnd,
+  preserveParams,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [value, setValue] = useState(initialQuery);
+  // A server-passed object is a new identity on every render; key the effect
+  // on its contents so it doesn't re-arm the debounce for nothing.
+  const preservedKey = JSON.stringify(preserveParams ?? {});
 
   // Sync from URL when initialQuery changes (e.g. server re-render after navigation)
   useEffect(() => {
@@ -61,13 +67,16 @@ export function LiveSearchInput({
       if (preserveMethod) params.set("method", preserveMethod);
       if (preserveStart) params.set("start", preserveStart);
       if (preserveEnd) params.set("end", preserveEnd);
+      for (const [key, val] of Object.entries(JSON.parse(preservedKey) as Record<string, string | undefined>)) {
+        if (val) params.set(key, val);
+      }
       params.set("page", "1");
       const qs = params.toString();
       const url = qs ? `${pathname}?${qs}` : pathname;
       router.push(url);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [value, pathname, preserveStatus, preserveLandlord, preservePaying, preserveAgent, preserveMethod, preserveStart, preserveEnd, router, initialQuery]);
+  }, [value, pathname, preserveStatus, preserveLandlord, preservePaying, preserveAgent, preserveMethod, preserveStart, preserveEnd, preservedKey, router, initialQuery]);
 
   return (
     <div className="relative flex-1 max-w-sm">

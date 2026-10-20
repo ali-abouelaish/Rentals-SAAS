@@ -40,9 +40,12 @@ import { IntegrationLogo } from "./IntegrationLogo";
 
 export function IntegrationsManager({
   subscriptions,
+  hidden = [],
 }: {
   /** Serialised from the server component — a Map doesn't cross the boundary. */
   subscriptions: Record<string, IntegrationSubscription>;
+  /** Integrations a super admin has switched off for this agency. */
+  hidden?: string[];
 }) {
   const router = useRouter();
   const [activating, setActivating] = useState<Integration | null>(null);
@@ -52,9 +55,9 @@ export function IntegrationsManager({
     () =>
       CATEGORY_ORDER.map((category) => ({
         category,
-        items: INTEGRATIONS.filter((i) => i.category === category),
+        items: INTEGRATIONS.filter((i) => i.category === category && !hidden.includes(i.key)),
       })).filter((group) => group.items.length > 0),
-    []
+    [hidden]
   );
 
   return (

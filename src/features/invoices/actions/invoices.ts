@@ -13,6 +13,7 @@ import { loadAgencyContactEmail } from "@/lib/email/contact";
 import { notifyAgencyOfNewInvoice } from "@/lib/email/notify-creation";
 import { sendEmail } from "@/lib/email/send";
 import { getEmailProviderStatus } from "@/features/email-providers/data/provider";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
 import { invoiceFromBonusesSchema, invoiceManualSchema } from "../domain/schemas";
 import {
   INVOICE_EMAIL_TEMPLATE_KEY,
@@ -569,6 +570,8 @@ export type InvoiceEmailDraft = {
   isResend: boolean;
   /** Only admins can change the agency-wide template. */
   canEditTemplate: boolean;
+  /** An admin, and Email Sending is switched on — the "Change mailbox" link. */
+  canChangeMailbox: boolean;
 };
 
 export type InvoiceEmailDraftResult =
@@ -621,7 +624,9 @@ function recipientFor(invoice: InvoiceForEmail): string | null {
   return parsed.success ? parsed.data.email : null;
 }
 
-async function describeSendingMailbox(tenantId: string): Promise<string> {
+async function describeSendingMailbox(tenantId: string, emailSendingOn: boolean): Promise<string> {
+  // Switched off, sendEmail ignores the connected mailbox — so must this.
+  if (!emailSendingOn) return "the shared Harbor Ops mailer";
   const provider = await getEmailProviderStatus(tenantId).catch(() => null);
   if (provider?.status === "active" && provider.fromAddress) {
     return `your mailbox (${provider.fromAddress})`;
@@ -666,10 +671,11 @@ export async function buildInvoiceEmailDraft(invoiceId: string): Promise<Invoice
   if (!loaded.ok) return loaded;
   const { invoice, tenantId, isAdmin } = loaded;
 
+  const emailSendingOn = await hasFeature("email_sending");
   const [template, branding, sendingFrom] = await Promise.all([
     getInvoiceEmailTemplate(tenantId),
     loadBranding(tenantId),
-    describeSendingMailbox(tenantId),
+    describeSendingMailbox(tenantId, emailSendingOn),
   ]);
   if (!branding) return { ok: false, error: "Agency not found." };
 
@@ -692,6 +698,7 @@ export async function buildInvoiceEmailDraft(invoiceId: string): Promise<Invoice
       sendingFrom,
       isResend: invoice.status === "sent",
       canEditTemplate: isAdmin,
+      canChangeMailbox: isAdmin && emailSendingOn,
     },
   };
 }

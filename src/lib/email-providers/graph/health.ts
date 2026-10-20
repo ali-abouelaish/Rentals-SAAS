@@ -3,6 +3,7 @@ import { decryptProviderCredentials } from "../encrypt";
 import { getValidGraphAccessToken, GraphAuthError } from "./tokens";
 import { failEmailProvider } from "../alert";
 import { fetchMailboxAddress } from "./oauth";
+import { tenantsWithFeatureDisabled } from "@/lib/entitlements/tenantFeature";
 import type { OAuthCredentials } from "@/lib/email/transport/types";
 
 export type GraphHealthSummary = { checked: number; ok: number; failed: number };
@@ -22,7 +23,10 @@ export async function runGraphHealthCheck(): Promise<GraphHealthSummary> {
     .eq("status", "active");
 
   if (error) throw new Error(error.message);
-  const rows = data ?? [];
+  // With Email Sending switched off the mailbox isn't used, and a failure alert
+  // would send the agency to a settings page they can no longer open.
+  const disabled = await tenantsWithFeatureDisabled("email_sending");
+  const rows = (data ?? []).filter((row) => !disabled.has(row.tenant_id as string));
   const summary: GraphHealthSummary = { checked: rows.length, ok: 0, failed: 0 };
 
   for (const row of rows) {

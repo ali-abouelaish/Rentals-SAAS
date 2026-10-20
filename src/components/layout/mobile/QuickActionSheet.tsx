@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { Wrench, Banknote, Bell, Inbox, Users, ClipboardList, ChevronRight, type LucideIcon } from "lucide-react";
 import { canAccessRoute, ADMIN_ROLES } from "@/lib/auth/roles";
+import type { FeatureKey } from "@/lib/entitlements/features";
 import { MobileSheet, MobileSheetContent } from "./MobileSheet";
 
 type QuickAction = {
@@ -20,7 +21,7 @@ type QuickAction = {
   icon: LucideIcon;
   tint: string;
   allowedRoles?: readonly string[];
-  entitlement?: string;
+  entitlement?: FeatureKey;
 };
 
 const PM_ACTIONS: QuickAction[] = [
@@ -31,6 +32,7 @@ const PM_ACTIONS: QuickAction[] = [
     icon: Wrench,
     tint: "bg-blue-50 text-blue-600",
     allowedRoles: ADMIN_ROLES,
+    entitlement: "maintenance",
   },
   {
     label: "Record rent payment",
@@ -39,6 +41,7 @@ const PM_ACTIONS: QuickAction[] = [
     icon: Banknote,
     tint: "bg-emerald-50 text-emerald-600",
     allowedRoles: ADMIN_ROLES,
+    entitlement: "rent_collection",
   },
   {
     label: "Send reminder",
@@ -52,9 +55,9 @@ const PM_ACTIONS: QuickAction[] = [
 ];
 
 const RA_ACTIONS: QuickAction[] = [
-  { label: "Add lead", sub: "Capture a new enquiry", href: "/leads", icon: Inbox, tint: "bg-blue-50 text-blue-600" },
-  { label: "Add client", sub: "Go to clients", href: "/clients", icon: Users, tint: "bg-violet-50 text-violet-600", allowedRoles: ADMIN_ROLES },
-  { label: "New rental", sub: "Go to rentals", href: "/rentals", icon: ClipboardList, tint: "bg-emerald-50 text-emerald-600" },
+  { label: "Add lead", sub: "Capture a new enquiry", href: "/leads", icon: Inbox, tint: "bg-blue-50 text-blue-600", entitlement: "leads" },
+  { label: "Add client", sub: "Go to clients", href: "/clients", icon: Users, tint: "bg-violet-50 text-violet-600", allowedRoles: ADMIN_ROLES, entitlement: "clients" },
+  { label: "New rental", sub: "Go to rentals", href: "/rentals", icon: ClipboardList, tint: "bg-emerald-50 text-emerald-600", entitlement: "rentals" },
 ];
 
 export function QuickActionSheet({

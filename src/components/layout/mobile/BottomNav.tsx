@@ -45,15 +45,15 @@ type Props = {
 type Tab = NavItem & { short: string };
 
 const PM_TAB_CANDIDATES: Tab[] = [
-  { href: "/maintenance", label: "Maintenance", short: "Maint", icon: Wrench, allowedRoles: ADMIN_ROLES },
-  { href: "/rent-collection", label: "Rent Collection", short: "Rent", icon: Banknote, allowedRoles: ADMIN_ROLES },
-  { href: "/properties", label: "Properties", short: "Props", icon: Warehouse, allowedRoles: ADMIN_ROLES },
+  { href: "/maintenance", label: "Maintenance", short: "Maint", icon: Wrench, allowedRoles: ADMIN_ROLES, entitlement: "maintenance" },
+  { href: "/rent-collection", label: "Rent Collection", short: "Rent", icon: Banknote, allowedRoles: ADMIN_ROLES, entitlement: "rent_collection" },
+  { href: "/properties", label: "Properties", short: "Props", icon: Warehouse, allowedRoles: ADMIN_ROLES, entitlement: "properties" },
 ];
 
 const RA_TAB_CANDIDATES: Tab[] = [
-  { href: "/leads", label: "Leads", short: "Leads", icon: Inbox },
-  { href: "/clients", label: "Clients", short: "Clients", icon: Users, allowedRoles: ADMIN_ROLES },
-  { href: "/rentals", label: "Rentals", short: "Rentals", icon: ClipboardList },
+  { href: "/leads", label: "Leads", short: "Leads", icon: Inbox, entitlement: "leads" },
+  { href: "/clients", label: "Clients", short: "Clients", icon: Users, allowedRoles: ADMIN_ROLES, entitlement: "clients" },
+  { href: "/rentals", label: "Rentals", short: "Rentals", icon: ClipboardList, entitlement: "rentals" },
 ];
 
 /**

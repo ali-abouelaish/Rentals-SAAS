@@ -140,13 +140,18 @@ export function MoreMenuSheet({
               <Group key={group.title} group={group} />
             ))}
             <Group group={{ title: "Settings", items: PM_SETTINGS_ITEMS }} />
-            <div className="mb-1">
-              <div className="px-2 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground-muted">
-                Assistant
+            {/* Hand-built rather than <Group> because the super-admin row isn't a
+                config item. Same rule as Group, though: no visible rows, no header. */}
+            {(canSeeItem(PM_ASSISTANT_ITEM, role, entitlements) ||
+              canAccessRoute(role, SUPER_ADMIN_ROLES)) && (
+              <div className="mb-1">
+                <div className="px-2 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground-muted">
+                  Assistant
+                </div>
+                <Row item={PM_ASSISTANT_ITEM} />
+                {canAccessRoute(role, SUPER_ADMIN_ROLES) && <Row item={superAdmin} />}
               </div>
-              <Row item={PM_ASSISTANT_ITEM} />
-              {canAccessRoute(role, SUPER_ADMIN_ROLES) && <Row item={superAdmin} />}
-            </div>
+            )}
           </>
         ) : (
           <div className="pt-1">

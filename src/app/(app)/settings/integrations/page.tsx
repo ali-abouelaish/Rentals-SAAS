@@ -5,6 +5,7 @@ import { getIntegration } from "@/lib/integrations/catalog";
 import { IntegrationsManager } from "@/features/integrations/ui/IntegrationsManager";
 import { getMyPlatformInvoices } from "@/features/integrations/data/platformInvoices";
 import { MyInvoicesCard } from "@/features/integrations/ui/MyInvoicesCard";
+import { hasFeature } from "@/lib/entitlements/requireFeature";
 
 export const metadata = { title: "Integrations" };
 
@@ -19,12 +20,15 @@ export default async function IntegrationsSettingsPage() {
   // deployed and the table is not. An empty list renders every integration as
   // "not subscribed", which is honest and still usable, rather than a 500 on a
   // settings page.
-  const [rows, invoices] = await Promise.all([
+  const [rows, invoices, emailSendingOn] = await Promise.all([
     getTenantSubscriptions(profile.tenant_id).catch(() => [] as IntegrationSubscription[]),
     // Scoped by RLS, not by this call — see getMyPlatformInvoices. Renders
     // nothing at all until an invoice has actually been issued to this agency.
-    getMyPlatformInvoices().catch(() => [])
+    getMyPlatformInvoices().catch(() => []),
+    hasFeature("email_sending"),
   ]);
+  // The card's setup step is /settings/email, which is blocked while it's off.
+  const hidden = emailSendingOn ? [] : ["email_sending"];
 
   const subscriptions = Object.fromEntries(
     rows
@@ -43,7 +47,7 @@ export default async function IntegrationsSettingsPage() {
         </p>
       </div>
 
-      <IntegrationsManager subscriptions={subscriptions} />
+      <IntegrationsManager subscriptions={subscriptions} hidden={hidden} />
 
       <MyInvoicesCard invoices={invoices} />
     </div>

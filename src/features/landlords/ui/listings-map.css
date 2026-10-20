@@ -1,0 +1,56 @@
+/* Overrides for the landlords listings map (ListingsMap.tsx). Scoped to
+   .listings-map so nothing leaks onto any other Leaflet map added later. */
+
+.listings-map.leaflet-container {
+  font-family: inherit;
+  background: var(--surface-inset);
+}
+
+/* Mute OSM's full-colour street map to a quiet grey base so the pins carry
+   the colour. Only the tile pane: pins and popups stay untouched. */
+.listings-map .leaflet-tile-pane {
+  filter: grayscale(1) contrast(0.85) brightness(1.08);
+}
+
+/* On a phone-width map the zoom buttons sit on top of any open popup's text,
+   and z-index cannot fix it: popups live inside the map pane's own stacking
+   context, so controls are above all of it or below the tiles too. Phones
+   pinch- and double-tap-zoom instead. */
+@media (max-width: 639px) {
+  .listings-map .leaflet-control-zoom {
+    display: none;
+  }
+}
+
+/* Leaflet's zoom buttons are 30px; the mobile audit (and fingers) want 44. */
+.listings-map .leaflet-bar a,
+.listings-map.leaflet-touch .leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  font-size: 20px;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}
+
+.listings-map .leaflet-popup-content-wrapper,
+.listings-map .leaflet-popup-tip {
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.listings-map .leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.listings-map .leaflet-popup-content p {
+  margin: 0;
+}
+
+/* `.leaflet-container a` outranks a single Tailwind `text-brand` class. */
+.listings-map .leaflet-popup-content a {
+  color: var(--brand-primary);
+}
