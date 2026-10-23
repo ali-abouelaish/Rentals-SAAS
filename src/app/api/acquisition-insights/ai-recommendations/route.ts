@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { geocodePostcode } from "@/lib/geo/postcodes";
 import type { RoomConfig, ComparableProperty, PropertyType, RoomType } from "@/features/acquisition-insights/domain/types";
 
 export const runtime = "nodejs";
@@ -102,27 +103,6 @@ function haversineMiles(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * EARTH_RADIUS_MILES * Math.asin(Math.min(1, Math.sqrt(a)));
-}
-
-async function geocodePostcode(
-  postcode: string
-): Promise<{ latitude: number; longitude: number } | null> {
-  try {
-    const res = await fetch(
-      `https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      result?: { latitude?: number; longitude?: number };
-    };
-    if (data.result?.latitude != null && data.result?.longitude != null) {
-      return { latitude: data.result.latitude, longitude: data.result.longitude };
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 export async function POST(request: NextRequest) {

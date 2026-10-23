@@ -35,6 +35,21 @@ export const SCRAPER_ONE_LANDLORD_TIMEOUT_MS = 120_000;
  */
 export const SCRAPER_TENANT_TIMEOUT_MS = 45 * 60_000;
 
+/**
+ * How long a scheduled run waits for the lock before giving up. The lock is
+ * server-wide, not per tenant, so without this an admin's "Scrape all now"
+ * still going at 09:00 failed the daily run for every agency it reached in
+ * turn. Manual runs never wait — they fail fast and say the scraper is busy.
+ */
+export const SCRAPER_LOCK_WAIT_MS = 30 * 60_000;
+
+/**
+ * A run still marked running after this cannot still be going: it has outlived
+ * the longest lock wait plus the tenant timeout. It died with the process (a
+ * deploy or PM2 restart) and never reported back.
+ */
+export const STALE_RUN_AFTER_MS = SCRAPER_LOCK_WAIT_MS + SCRAPER_TENANT_TIMEOUT_MS + 5 * 60_000;
+
 export type SpareroomScriptResult = {
   stdout: string;
   stderr: string;
@@ -77,9 +92,14 @@ export async function runSpareroomScript(options: {
   tenantId: string;
   landlordId?: string;
   timeoutMs?: number;
+  /**
+   * Queue behind a run already holding the lock for up to this long, instead
+   * of failing at once. Counted on top of the run timeout.
+   */
+  waitForLockMs?: number;
 }): Promise<SpareroomScriptResult> {
-  const { tenantId, landlordId } = options;
-  const timeout =
+  const { tenantId, landlordId, waitForLockMs } = options;
+  const runTimeout =
     options.timeoutMs ??
     (landlordId ? SCRAPER_ONE_LANDLORD_TIMEOUT_MS : SCRAPER_TENANT_TIMEOUT_MS);
 
@@ -92,6 +112,11 @@ export async function runSpareroomScript(options: {
   );
   const scriptPath = path.join(process.cwd(), "scripts", "OGSCRPAPER.py");
   const useFlock = !isWindows;
+  const lockWait = useFlock && waitForLockMs ? waitForLockMs : 0;
+  const timeout = runTimeout + lockWait;
+  // -w N waits up to N seconds for the lock; -n gives up immediately. Both exit
+  // 1 with no output of their own when they don't get it.
+  const flockArgs = lockWait ? ["-w", String(Math.ceil(lockWait / 1000))] : ["-n"];
 
   const env: NodeJS.ProcessEnv = { ...process.env, TENANT_ID: tenantId };
   if (landlordId) {
@@ -106,7 +131,7 @@ export async function runSpareroomScript(options: {
 
   try {
     const res = useFlock
-      ? await execFileAsync("flock", ["-n", SCRAPER_LOCK_FILE, pythonBin, scriptPath], runOpts)
+      ? await execFileAsync("flock", [...flockArgs, SCRAPER_LOCK_FILE, pythonBin, scriptPath], runOpts)
       : await execFileAsync(pythonBin, [scriptPath], runOpts);
     return { stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
   } catch (err: unknown) {
@@ -137,7 +162,7 @@ export async function runSpareroomScript(options: {
         stderr,
       });
     }
-    // `flock -n` exits 1 with no output of its own when the lock is already held.
+    // `flock -n` / `-w` exit 1 with no output of their own when the lock is held.
     if (useFlock && !stdout && !stderr) {
       throw new SpareroomScriptError({
         kind: "lock-held",
@@ -172,5 +197,62 @@ export function parseScraperSummary(stdout: string): {
   return {
     posted: posted ? Number(posted[1]) : null,
     swept: swept ? Number(swept[1]) : null,
+  };
+}
+
+export type ScrapedLandlordRef = { id: string; name: string };
+
+export type ScraperRunDetails = {
+  posted: number | null;
+  swept: number | null;
+  /** Profiles the run loaded — printed before any scraping, so present even when it bails. */
+  landlordsTotal: number | null;
+  landlordsRefreshed: number | null;
+  /** Not read end-to-end: their listings were left untouched and will age. */
+  unreadable: ScrapedLandlordRef[];
+  /** Read cleanly with nothing live: their old listings were removed. */
+  cleared: ScrapedLandlordRef[];
+};
+
+/** "      - Some Landlord (3f2a…-uuid)" — the name may itself contain brackets. */
+const LANDLORD_LINE = /^\s*- (.*) \(([0-9a-f-]{36})\)\s*$/i;
+
+/**
+ * Everything a full-roster run reports about itself, for the agency-facing run
+ * history. Reads the lines OGSCRPAPER.py prints at the end of main(); the
+ * landlord lists follow their headers one per line until anything else.
+ */
+export function parseScraperRunDetails(stdout: string): ScraperRunDetails {
+  const { posted, swept } = parseScraperSummary(stdout);
+  const loaded = stdout.match(/Loaded (\d+) landlord profiles/);
+  const refreshed = stdout.match(/Landlords refreshed: (\d+) of (\d+)/);
+
+  const unreadable: ScrapedLandlordRef[] = [];
+  const cleared: ScrapedLandlordRef[] = [];
+  let section: ScrapedLandlordRef[] | null = null;
+  for (const line of stdout.split(/\r?\n/)) {
+    if (/landlords could not be read/.test(line)) {
+      section = unreadable;
+      continue;
+    }
+    if (/landlords read cleanly with 0 live listings/.test(line)) {
+      section = cleared;
+      continue;
+    }
+    const item = section ? LANDLORD_LINE.exec(line) : null;
+    if (section && item) {
+      section.push({ name: item[1], id: item[2] });
+    } else {
+      section = null;
+    }
+  }
+
+  return {
+    posted,
+    swept,
+    landlordsTotal: refreshed ? Number(refreshed[2]) : loaded ? Number(loaded[1]) : null,
+    landlordsRefreshed: refreshed ? Number(refreshed[1]) : null,
+    unreadable,
+    cleared,
   };
 }

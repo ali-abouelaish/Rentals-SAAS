@@ -1,4 +1,7 @@
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
+// The build wrapper has its own entry in @sentry/nextjs v11; the package root
+// no longer exports it.
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 /** @param {string} phase @returns {import('next').NextConfig} */
 const buildConfig = (phase) => ({
@@ -34,4 +37,31 @@ const buildConfig = (phase) => ({
   }
 });
 
-export default buildConfig;
+// Sentry build step: injects src/instrumentation-client.ts and uploads source
+// maps. Builds run on the deploy machine (scripts/deploy.sh), so SENTRY_ORG,
+// SENTRY_PROJECT and SENTRY_AUTH_TOKEN live there — in .env.local or
+// .env.sentry-build-plugin, which the plugin reads itself. Without a token the
+// build still succeeds; it just skips the upload.
+export default withSentryConfig(buildConfig, {
+  // Browser events go through our own server so ad-blockers don't drop them.
+  // Excluded from the middleware matcher, or logged-out pages would bounce it to /login.
+  tunnelRoute: "/monitoring",
+  widenClientFileUpload: true,
+  sourcemaps: {
+    // Otherwise the client .map files are rsynced to the VPS and served publicly.
+    deleteSourcemapsAfterUpload: true
+  },
+  // No Session Replay, so none of its code ships. Tracing code is left in: the
+  // server's per-request scope isolation (which keeps one request's user/tenant
+  // off another's events) is built on it.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true
+  },
+  // We don't trace navigations, so the hook this warns about is not needed.
+  suppressOnRouterTransitionStartWarning: true,
+  silent: !process.env.SENTRY_DEBUG,
+  telemetry: false
+});

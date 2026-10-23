@@ -72,7 +72,6 @@ export default async function CardEnquiryPage({
 
           <CardEnquiryForm
             agentId={data.agentId}
-            tenantId={data.tenantId}
             agentName={data.displayName}
             agentAvatarUrl={data.avatarUrl}
             brandName={data.branding.brandName}

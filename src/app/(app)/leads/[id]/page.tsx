@@ -1,7 +1,7 @@
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { isAdminRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getLeadById, markLeadClicked } from "@/features/leads/data/leads";
+import { getApiKeyLabels, getLeadById, markLeadClicked } from "@/features/leads/data/leads";
 import { LeadDetailsCard } from "@/features/leads/ui/LeadDetailsCard";
 import { DeleteLeadButton } from "@/features/leads/ui/DeleteLeadButton";
 import Link from "next/link";
@@ -15,6 +15,9 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   if (!lead.clicked_at) {
     await markLeadClicked(lead.id);
   }
+
+  const keyLabels = await getApiKeyLabels([lead.api_key_id]);
+  const viaLabel = lead.api_key_id ? keyLabels[lead.api_key_id] ?? null : null;
 
   let agents: { id: string; display_name: string | null }[] = [];
   if (isAdminRole(profile.role)) {
@@ -43,7 +46,12 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
         <h1 className="text-2xl font-bold text-foreground">{lead.name}</h1>
       </div>
 
-      <LeadDetailsCard lead={lead} agents={agents} isAdmin={isAdminRole(profile.role)} />
+      <LeadDetailsCard
+        lead={lead}
+        agents={agents}
+        isAdmin={isAdminRole(profile.role)}
+        viaLabel={viaLabel}
+      />
 
       {isAdminRole(profile.role) && (
         <div className="flex">

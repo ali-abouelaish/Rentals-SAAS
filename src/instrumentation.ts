@@ -1,6 +1,7 @@
 /**
  * Runs once when the Node server boots (i.e. each PM2 process on the VPS).
- * Bootstraps the in-process background work that used to depend on external
+ * Initialises Sentry for the Node and Edge runtimes (src/lib/sentry/), then
+ * bootstraps the in-process background work that used to depend on external
  * schedulers:
  *   1. Drains the email_outbox queue so queued mail — form links, invoice
  *      sends, maintenance/support notifications — is actually delivered.
@@ -19,6 +20,9 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Error monitoring first, so failures in the jobs below are reported.
+    await import("./lib/sentry/server");
+
     // Recurring jobs (rent reminders, deposit polling).
     const { startCronScheduler } = await import("./lib/cron/scheduler");
     startCronScheduler();
@@ -39,10 +43,8 @@ export async function register() {
             console.log("[email-worker] drained", res);
           }
         } catch (err) {
-          console.error(
-            "[email-worker] drain failed",
-            err instanceof Error ? err.message : err
-          );
+          // The Error itself, not its message, so Sentry gets the stack trace.
+          console.error("[email-worker] drain failed", err);
         } finally {
           running = false;
         }
@@ -52,5 +54,9 @@ export async function register() {
       setTimeout(tick, 5000);
       setInterval(tick, intervalMs);
     }
+  }
+
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./lib/sentry/edge");
   }
 }

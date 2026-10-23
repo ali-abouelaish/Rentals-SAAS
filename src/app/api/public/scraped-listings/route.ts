@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyPublicApiKey } from "@/lib/api-keys/verify";
-import { ageInDays, isStale } from "@/lib/utils/freshness";
+import { ageInDays, isListingStale } from "@/lib/utils/freshness";
 
 const REQUIRED_SCOPE = "scraped_listings:read";
 
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   // Apply the same filter set to any query builder so the row query and the
   // distinct-landlord query stay in sync.
   type Q = ReturnType<typeof supabase.from<"scraped_listings", never>>["select"] extends (...a: never[]) => infer R ? R : never;
-  const applyFilters = <T extends { eq: Function; gte: Function; lte: Function; ilike: Function }>(q: T): T => {
+  const applyFilters = <T extends { eq: Function; gte: Function; lte: Function; ilike: Function; or: Function }>(q: T): T => {
     let qq: any = q.eq("tenant_id", auth.tenant_id);
     const status = sp.get("status");
     if (status) qq = qq.eq("status", status);
@@ -71,8 +71,10 @@ export async function GET(request: NextRequest) {
       const cutoff = new Date(Date.now() - Number(maxAgeDays) * 24 * 60 * 60 * 1000);
       // Rows predating freshness tracking have a null last_seen_at and are of
       // unknown age; a max-age filter excludes them, since the caller has asked
-      // for listings they can vouch for.
-      qq = qq.gte("last_seen_at", cutoff.toISOString());
+      // for listings they can vouch for. Manual rows pass regardless: the agency
+      // entered them and they're live until deleted — their last_seen_at is
+      // only their last edit, so ageing them out would silently hide them.
+      qq = qq.or(`last_seen_at.gte.${cutoff.toISOString()},source.eq.manual`);
     }
     return qq as T;
   };
@@ -121,7 +123,7 @@ export async function GET(request: NextRequest) {
       ...rest,
       landlord_name: rel?.name ?? null,
       age_days: ageInDays(rest.last_seen_at),
-      stale: isStale(rest.last_seen_at),
+      stale: isListingStale(rest),
     };
   });
 

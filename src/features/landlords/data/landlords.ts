@@ -1,6 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUserProfile } from "@/lib/auth/requireRole";
+import { STALE_RUN_AFTER_MS } from "@/lib/scrapers/runSpareroomScript";
 import { MAP_POINT_COLUMNS, toListingMapPoint } from "@/features/landlords/domain/map-points";
-import type { ListingMapPoint } from "@/features/landlords/domain/types";
+import type { ListingMapPoint, ScrapeRun, ScrapeRunsState } from "@/features/landlords/domain/types";
 
 const PAGE_SIZE = 10;
 
@@ -135,6 +137,74 @@ export async function getListingMapPoints({
     unlocatedCount: (unlocated.count ?? 0) + unusable,
     truncated: rows.length === MAP_POINT_LIMIT,
     error: null,
+  };
+}
+
+export type SpareroomScheduleSetting = {
+  enabled: boolean;
+  /** False until migration 20261022000001 adds the column — the switch is then read-only. */
+  available: boolean;
+  /** Landlords with a SpareRoom profile URL, i.e. who the daily run would read. */
+  rosterCount: number;
+};
+
+/** The agency's "Daily SpareRoom scraping" switch (tenants.spareroom_scrape_enabled). */
+export async function getSpareroomScheduleSetting(): Promise<SpareroomScheduleSetting> {
+  const profile = await requireUserProfile();
+  const supabase = createSupabaseServerClient();
+  const [setting, roster] = await Promise.all([
+    supabase
+      .from("tenants")
+      .select("spareroom_scrape_enabled")
+      .eq("id", profile.tenant_id)
+      .maybeSingle(),
+    supabase
+      .from("landlords")
+      .select("id", { count: "exact", head: true })
+      .not("spareroom_profile_url", "is", null),
+  ]);
+  const rosterCount = roster.count ?? 0;
+  // Missing column (or row) means nobody can have switched it off: the daily run
+  // treats the agency as on, so the card must say the same.
+  if (setting.error || !setting.data) return { enabled: true, available: false, rosterCount };
+  return { enabled: setting.data.spareroom_scrape_enabled !== false, available: true, rosterCount };
+}
+
+/**
+ * The agency's latest full SpareRoom scrapes, for the Daily SpareRoom scraping
+ * card. A run still "running" past the longest possible run died with its
+ * process; it is shown as failed here (and closed for real by the next run's
+ * start — agency users have no write access to this table).
+ */
+export async function getLatestScrapeRuns(): Promise<ScrapeRunsState> {
+  await requireUserProfile();
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("spareroom_scrape_runs")
+    .select("*")
+    .order("started_at", { ascending: false })
+    .limit(5);
+  // Missing table until the migration is applied: hide the run section rather
+  // than failing the Landlords page.
+  if (error) return { available: false, current: null, last: null };
+
+  const staleBefore = Date.now() - STALE_RUN_AFTER_MS;
+  const runs = (data ?? []).map((row): ScrapeRun => {
+    const run = row as ScrapeRun;
+    if (run.status === "running" && new Date(run.started_at).getTime() < staleBefore) {
+      return {
+        ...run,
+        status: "failed",
+        error_message: "This run never reported back — the server may have restarted during it.",
+      };
+    }
+    return run;
+  });
+
+  return {
+    available: true,
+    current: runs.find((run) => run.status === "running") ?? null,
+    last: runs.find((run) => run.status !== "running") ?? null,
   };
 }
 

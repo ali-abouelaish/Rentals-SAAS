@@ -22,7 +22,8 @@ export function rateLimitCheck(key: string, windowMs: number, max: number): {
   return { allowed: true, remaining: max - record.count, retryAfterSec: 0 };
 }
 
-export function clientIpFromHeaders(req: Request): string {
+/** Takes a Request, or `{ headers: headers() }` from inside a server action. */
+export function clientIpFromHeaders(req: { headers: Pick<Headers, "get"> }): string {
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0]!.trim();
   const real = req.headers.get("x-real-ip");

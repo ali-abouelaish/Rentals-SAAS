@@ -3,6 +3,7 @@
 import "./harbor-landing.css";
 import "./harbor-error.css";
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { PublicErrorShell } from "@/components/landing/PublicErrorShell";
 
 /**
@@ -22,6 +23,7 @@ export default function RootError({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

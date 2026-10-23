@@ -6,22 +6,33 @@ export async function getPublicCardData(agentId: string): Promise<PublicCardData
 
   const { data: agent } = await supabase
     .from("agent_profiles")
-    .select("user_id, tenant_id, avatar_url, phone, contact_email, facebook_url, instagram_url, linkedin_url, user_profiles(display_name, role)")
+    .select("user_id, avatar_url, phone, contact_email, facebook_url, instagram_url, linkedin_url, user_profiles!inner(display_name, role, tenant_id)")
     .eq("user_id", agentId)
     .single();
 
   if (!agent) return null;
 
+  // The agency comes from the agent's user profile, not agent_profiles.tenant_id,
+  // which can drift from it. This is also the tenant card enquiries are filed
+  // under, so it must be the authoritative one.
+  const up = agent.user_profiles as {
+    display_name?: string | null;
+    role?: string | null;
+    tenant_id?: string | null;
+  } | null;
+  const tenantId = up?.tenant_id;
+  if (!tenantId) return null;
+
   const [brandingResult, entitlementResult] = await Promise.all([
     supabase
       .from("tenant_branding_settings")
       .select("brand_name, logo_url, primary_color, secondary_color")
-      .eq("tenant_id", agent.tenant_id)
+      .eq("tenant_id", tenantId)
       .single(),
     supabase
       .from("tenant_feature_entitlements")
       .select("is_enabled")
-      .eq("tenant_id", agent.tenant_id)
+      .eq("tenant_id", tenantId)
       .eq("feature_key", "digital_business_card")
       .single(),
   ]);
@@ -29,7 +40,6 @@ export async function getPublicCardData(agentId: string): Promise<PublicCardData
   const entitlement = entitlementResult.data;
   if (entitlement && entitlement.is_enabled === false) return null;
 
-  const up = agent.user_profiles as { display_name?: string | null; role?: string | null } | null;
   const branding = brandingResult.data;
 
   return {
@@ -42,7 +52,7 @@ export async function getPublicCardData(agentId: string): Promise<PublicCardData
     facebookUrl: agent.facebook_url ?? null,
     instagramUrl: agent.instagram_url ?? null,
     linkedinUrl: agent.linkedin_url ?? null,
-    tenantId: agent.tenant_id,
+    tenantId,
     branding: {
       brandName: branding?.brand_name ?? null,
       logoUrl: branding?.logo_url ?? null,

@@ -13,6 +13,7 @@ export type FeatureKey =
   | "billing_profiles"
   | "billing_info"
   | "leads"
+  | "website_leads"
   | "digital_business_card"
   | "properties"
   | "bookings"
@@ -58,6 +59,7 @@ export const ALL_FEATURES: FeatureKey[] = [
   "billing_profiles",
   "billing_info",
   "leads",
+  "website_leads",
   "digital_business_card",
   "properties",
   "bookings",
@@ -147,7 +149,13 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   },
   leads: {
     label: "Leads",
-    description: "Inbound leads from property portals via Gmail parsing."
+    description:
+      "Inbound leads from property portals (parsed from a connected Gmail inbox), the agency's own website and agent business cards."
+  },
+  website_leads: {
+    label: "Website Lead Capture",
+    description:
+      "Lets the agency connect its own website under Leads → Settings, so enquiry-form submissions arrive as leads with source \"Website\" through a key that can only add leads. Requires Leads. Switching this off makes the endpoint refuse new enquiries (HTTP 403) and hides the settings card; connected keys are kept, so switching it back on resumes capture without the agency re-pasting anything."
   },
   digital_business_card: {
     label: "Digital Business Card",

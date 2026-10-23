@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { cleanTelephone, isHotText } from "@/lib/leads/enrich";
 import { tidyMessageText } from "../tidyText";
 
 export type ZooplaLeadData = {
@@ -66,8 +67,6 @@ function extractAdLink(html: string): string | null {
   return generic?.href ?? null;
 }
 
-const HOT_KEYWORDS = ["urgent", "asap", "immediately", "call me", "today", "tomorrow"];
-
 export function extractZooplaLead(rawBody: string): ZooplaLeadData | null {
   // Step 1: Remove soft line breaks and decode quoted-printable
   const decoded = decodeQuotedPrintable(rawBody);
@@ -115,11 +114,10 @@ export function extractZooplaLead(rawBody: string): ZooplaLeadData | null {
   if (!email || !name) return null;
 
   // Step 9: Clean telephone
-  const telephone_clean = telephone ? telephone.replace(/[^\d+]/g, "") : null;
+  const telephone_clean = cleanTelephone(telephone);
 
   // Step 10: Enrichment
-  const lowerText = text.toLowerCase();
-  const is_hot = HOT_KEYWORDS.some((kw) => lowerText.includes(kw));
+  const is_hot = isHotText(text);
   const has_phone = !!telephone;
 
   return {

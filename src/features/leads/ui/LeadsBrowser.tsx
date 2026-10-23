@@ -19,9 +19,11 @@ interface Props {
   leads: LeadWithRelations[];
   agents: { id: string; display_name: string | null }[];
   isAdmin: boolean;
+  /** Connected-website labels by API key id, for "via <website>" on website leads. */
+  keyLabels: Record<string, string>;
 }
 
-export function LeadsBrowser({ leads, agents, isAdmin }: Props) {
+export function LeadsBrowser({ leads, agents, isAdmin, keyLabels }: Props) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -63,7 +65,12 @@ export function LeadsBrowser({ leads, agents, isAdmin }: Props) {
                 <SheetDescription>Lead details</SheetDescription>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <LeadDetailsCard lead={selected} agents={agents} isAdmin={isAdmin} />
+                <LeadDetailsCard
+                  lead={selected}
+                  agents={agents}
+                  isAdmin={isAdmin}
+                  viaLabel={selected.api_key_id ? keyLabels[selected.api_key_id] : null}
+                />
                 {isAdmin && (
                   <div className="flex">
                     <DeleteLeadButton leadId={selected.id} leadName={selected.name} />

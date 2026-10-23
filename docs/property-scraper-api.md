@@ -156,11 +156,14 @@ external_ref       text                  raw_row            jsonb
 ```
 
 Notes:
-- `source` is `'spareroom'` (scraper) or `'spreadsheet'` (landlord sheet importer).
-  Both write to this table; always set it explicitly and always scope deletes by it.
+- `source` is `'spareroom'` (scraper), `'spreadsheet'` (landlord sheet importer) or
+  `'manual'` (typed in on the landlord page; `external_ref` is `manual:<id>`). All three
+  write to this table; always set it explicitly and always scope deletes by it.
 - `last_seen_at` is when the listing was last confirmed live at its source. It is the
   only real liveness signal on the row — `status` is hardcoded `'available'` by the
   scraper and means nothing. Null = predates freshness tracking, i.e. unknown age.
+  For `'manual'` rows it is only the last edit: nothing re-checks them, and they are
+  live until the agency deletes them.
 - `references` is a reserved SQL word — quote it (`"references"`) in raw SQL.
 - Most fields are loosely typed `text` to tolerate SpareRoom's free-form values;
   only prices/counts/coords are numeric.
@@ -188,8 +191,8 @@ Requires the key to hold the `scraped_listings:read` scope. Tenant is derived fr
 | `limit` | int | 50 | clamped 1–200 |
 | `offset` | int | 0 | pagination offset |
 | `sort` | `col.dir` | `created_at.desc` | col ∈ `created_at, updated_at, last_seen_at, price, available_date, min_room_price_pcm, max_room_price_pcm`; dir `asc`/`desc` |
-| `max_age_days` | int | — | **only listings confirmed live within N days.** Excludes rows with a null `last_seen_at` (unknown age) |
-| `source` | string | — | `spareroom` or `spreadsheet` |
+| `max_age_days` | int | — | **only listings confirmed live within N days.** Excludes rows with a null `last_seen_at` (unknown age). `manual` rows always pass |
+| `source` | string | — | `spareroom`, `spreadsheet` or `manual` |
 | `status` | string | — | exact match — **not a liveness signal**, see below |
 | `landlord_id` | uuid | — | exact match |
 | `property_type` | string | — | exact match |
@@ -214,7 +217,7 @@ Each row is a full `scraped_listings` row plus three derived fields:
 |---|---|
 | `landlord_name` | text, or `null` if the listing has no linked landlord, resolved from `landlord_id` |
 | `age_days` | whole days since `last_seen_at`; `null` if never recorded |
-| `stale` | `true` if `age_days > 7` **or** `last_seen_at` is null |
+| `stale` | `true` if `age_days > 7` **or** `last_seen_at` is null. Always `false` for `manual` rows |
 
 ### Freshness — read this before trusting a listing
 
@@ -233,7 +236,11 @@ GET /api/public/scraped-listings?max_age_days=7
 
 Both write pipelines refresh daily, so `max_age_days=7` means the source has been
 confirmed within the last six-ish reads. Anything older indicates a landlord whose
-source has stopped being readable — the listing may well be dead.
+source has stopped being readable — the listing may well be dead — or an agency that
+has paused daily SpareRoom scraping on its Landlords page.
+
+Listings an agency typed in by hand (`source = 'manual'`) have no source to re-check.
+They are never `stale` and always pass `max_age_days`; they stay live until deleted.
 
 **Errors:** `401` missing/invalid key · `403` key lacks `scraped_listings:read` scope · `500` DB error.
 

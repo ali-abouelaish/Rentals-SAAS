@@ -198,7 +198,10 @@ export const config = {
   // GET /harbor-logo.png run through the auth gate and get redirected to /login
   // for logged-out visitors — so the logo (and every public asset) fails to
   // load on the auth pages.
+  //
+  // `monitoring` is the Sentry tunnel (next.config.mjs tunnelRoute). Browser
+  // error reports from logged-out pages would otherwise be redirected to /login.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|pdf)$).*)"
+    "/((?!_next/static|_next/image|favicon.ico|monitoring|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|mjs|map|woff|woff2|ttf|eot|pdf)$).*)"
   ]
 };

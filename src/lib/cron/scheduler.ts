@@ -16,6 +16,7 @@
 // CRON_DISABLED=1.
 
 import cron from "node-cron";
+import * as Sentry from "@sentry/nextjs";
 import { CRON_JOBS } from "./jobCatalogue";
 import { recordSkippedJobRun, withJobRun } from "./jobRuns";
 
@@ -45,7 +46,13 @@ function guarded(name: string, fn: () => Promise<unknown>): () => Promise<void> 
       const result = await withJobRun(name, "schedule", fn);
       console.log(`[cron] ${name} ok`, result);
     } catch (err) {
-      console.error(`[cron] ${name} failed`, err instanceof Error ? err.message : err);
+      // Logged as the Error itself (for the stack trace) inside a scope tagged
+      // with the job: Sentry's console capture fires synchronously here, so the
+      // event carries `cron_job` without a second, duplicate captureException.
+      Sentry.withScope((scope) => {
+        scope.setTag("cron_job", name);
+        console.error(`[cron] ${name} failed`, err);
+      });
     } finally {
       running = false;
     }

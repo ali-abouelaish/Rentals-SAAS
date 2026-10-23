@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { createSupabaseServerClient } from "../supabase/server";
 import { getUserFromAccessTokenCookie } from "./jwt";
 import { ensureTenantSetup } from "@/features/tenants/actions/tenants";
@@ -44,6 +45,13 @@ export const requireUserProfile = cache(async () => {
     await supabase.auth.signOut();
     redirect("/login?disabled=1");
   }
+
+  // Every protected page and action passes through here, so this is where
+  // Sentry learns whose request failed. Scoped to the current request; id only,
+  // never the email.
+  Sentry.setUser({ id: profile.id });
+  Sentry.setTag("tenant_id", profile.tenant_id);
+  Sentry.setTag("role", profile.role);
 
   return profile;
 });

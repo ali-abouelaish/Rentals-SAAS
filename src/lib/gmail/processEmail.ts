@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { matchListingForLead } from "@/lib/leads/matchListing";
 import { type GmailMessage } from "./apiClient";
 import { getExtractor } from "./extractors";
 
@@ -61,27 +62,10 @@ export async function processEmail(
   }
 
   // 5. Listing match — try property_ref first, then property_url
-  let listingId: string | null = null;
-
-  if (leadData.property_ref) {
-    const { data: byRef } = await admin
-      .from("scraped_listings")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .ilike("title", `%${leadData.property_ref}%`)
-      .maybeSingle();
-    listingId = byRef?.id ?? null;
-  }
-
-  if (!listingId && leadData.property_url) {
-    const { data: byUrl } = await admin
-      .from("scraped_listings")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .ilike("url", `%${leadData.property_url}%`)
-      .maybeSingle();
-    listingId = byUrl?.id ?? null;
-  }
+  const { listingId } = await matchListingForLead(admin, tenantId, {
+    propertyRef: leadData.property_ref,
+    propertyUrl: leadData.property_url,
+  });
 
   // 6. Persist lead
   const { data: inserted, error } = await admin

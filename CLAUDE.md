@@ -109,6 +109,9 @@ Required in `.env.local`:
 | `BOLDSIGN_ENV` | BoldSign environment (`sandbox` \| `live`); defaults to `sandbox` |
 | `BOLDSIGN_WEBHOOK_SECRET` | HMAC secret for verifying inbound BoldSign webhooks |
 | `PLATFORM_INVOICE_PAYMENT_NOTE` | Optional payment instructions printed on platform invoice PDFs and emails; omitted entirely when unset |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN (EU region) for client, server and edge. Inlined at build, so it goes in the **build machine's** `.env.local`, not the VPS. Sentry is off in `next dev` and whenever this is unset |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | Build-time source-map upload (Organization Auth Token). Build machine only, in `.env.local` or the gitignored `.env.sentry-build-plugin`. Without the token the build skips the upload and still succeeds |
+| `SENTRY_ENVIRONMENT` | Optional server-side environment tag (defaults to `production`); set `local` for a local `npm start` smoke test |
 | `PLATFORM_SUPPORT_EMAIL` | Harbor Ops support inbox; receives new-ticket and agency-reply notifications from `/helpdesk`. Tickets still save when unset — only the email is skipped |
 
 For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`, and optionally `DEV_TENANT_NAME`.

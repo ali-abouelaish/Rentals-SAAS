@@ -2,7 +2,15 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LiveSearchInput } from "@/components/shared/LiveSearchInput";
-import { getLandlords, getListingMapPoints } from "@/features/landlords/data/landlords";
+import {
+  getLandlords,
+  getLatestScrapeRuns,
+  getListingMapPoints,
+  getSpareroomScheduleSetting,
+} from "@/features/landlords/data/landlords";
+import { ScraperScheduleCard } from "@/features/landlords/ui/ScraperScheduleCard";
+import { requireUserProfile } from "@/lib/auth/requireRole";
+import { isAdminRole } from "@/lib/auth/roles";
 import {
   ListingsMapPanel,
   ListingsMapPanelSkeleton,
@@ -67,11 +75,12 @@ export default async function LandlordsPage({
     return params;
   };
 
-  const { landlords, total, page, totalPages } = await getLandlords({
-    search,
-    paying,
-    page: currentPage,
-  });
+  const [profile, { landlords, total, page, totalPages }, schedule, scrapeRuns] = await Promise.all([
+    requireUserProfile(),
+    getLandlords({ search, paying, page: currentPage }),
+    getSpareroomScheduleSetting(),
+    getLatestScrapeRuns(),
+  ]);
 
   const payingFilters = [
     { value: "all", label: "All" },
@@ -125,6 +134,15 @@ export default async function LandlordsPage({
           </Button>
         </Link>
       </div>
+
+      {/* ── Daily scrape switch ──────────── */}
+      <ScraperScheduleCard
+        enabled={schedule.enabled}
+        available={schedule.available}
+        rosterCount={schedule.rosterCount}
+        canEdit={isAdminRole(profile.role)}
+        runs={scrapeRuns}
+      />
 
       {/* ── Search & Filter — Bento card ──── */}
       <div className="rounded-bento bg-surface-card shadow-bento p-5">

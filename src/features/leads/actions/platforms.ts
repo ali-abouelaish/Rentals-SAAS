@@ -23,10 +23,12 @@ export async function createPlatformConfig(values: PlatformConfigValues) {
 export async function updatePlatformConfig(id: string, values: Partial<PlatformConfigValues>) {
   const supabase = createSupabaseServerClient();
   const profile = await requireRole([...ADMIN_ROLES]);
+  // Validated like a create, so a rename can't claim a reserved source name.
+  const payload = platformConfigSchema.partial().parse(values);
 
   const { error } = await supabase
     .from("tenant_platform_configs")
-    .update(values)
+    .update(payload)
     .eq("id", id)
     .eq("tenant_id", profile.tenant_id);
 

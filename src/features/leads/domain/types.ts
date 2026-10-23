@@ -20,6 +20,8 @@ export type Lead = {
   is_hot: boolean;
   has_phone: boolean;
   raw_body: string | null;
+  /** The connected-website key that delivered this lead (website leads only). */
+  api_key_id: string | null;
   clicked_at: string | null;
   created_at: string;
   updated_at: string;
@@ -37,6 +39,22 @@ export type TenantGmailConnection = {
   history_id: string | null;
   last_synced_at: string | null;
   created_at: string;
+};
+
+/**
+ * A connected website: a `leads:write` API key plus what it has delivered.
+ * `lead_count` is null when the count couldn't be read (shown as "—").
+ */
+export type WebsiteConnection = {
+  id: string;
+  label: string;
+  key_prefix: string;
+  created_at: string;
+  /** Last accepted request of any kind, test mode included. */
+  last_used_at: string | null;
+  revoked_at: string | null;
+  lead_count: number | null;
+  last_lead_at: string | null;
 };
 
 export type TenantPlatformConfig = {

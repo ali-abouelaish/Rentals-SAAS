@@ -2,6 +2,8 @@ node_modules
 .next
 .next-dev
 .env.local
+# Sentry source-map upload token (read by the Sentry build plugin)
+.env.sentry-build-plugin
 # Google service account (scraper)
 credentials/
 **/google-credentials.json

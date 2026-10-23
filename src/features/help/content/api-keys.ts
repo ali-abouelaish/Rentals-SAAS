@@ -12,12 +12,13 @@ API Keys lets you issue and manage keys that allow external platforms to read yo
 
 ## Key tasks
 
-1. **Issue a key.** Create a new API key for an integration or partner platform.
-2. **Manage keys.** Review your existing keys and revoke any you no longer trust or need.
+1. **Issue a key.** Create a new API key for an integration or partner platform. Keys created here can read your listings.
+2. **Manage keys.** Review your existing keys, see when each was last used, and revoke any you no longer trust or need.
 
 ## Tips
 
-- Treat keys like passwords — share them only with platforms you trust, and revoke immediately if one is exposed.
+- Treat keys like passwords: share them only with platforms you trust, and revoke one immediately if it's exposed.
+- To send enquiries from **your own website** into Leads, don't create a key here. Connect the website under [Leads → Settings](/leads/settings) instead; those keys can only add leads and show here as "Send website leads".
 - This feature requires the **Public API** entitlement; without it the page redirects to the dashboard.
 - This page is admin-only.`,
 };

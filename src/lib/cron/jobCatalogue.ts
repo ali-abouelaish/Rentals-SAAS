@@ -121,7 +121,7 @@ export const CRON_JOBS: CronJob[] = [
     cron: "0 9 * * *",
     cadence: "daily",
     staleAfterHours: 30,
-    description: `Re-scrapes every agency's SpareRoom roster daily at 09:00 ${TIMEZONE_NOTE}. This is the time it has actually been running at, so it is kept here deliberately rather than moved overnight. It is long-running (it paces itself between advert pages) and shares the 09:00 slot with rent-reminders; both are started in the same tick, and the scraper then runs on well past it.`,
+    description: `Re-scrapes every agency's SpareRoom roster daily at 09:00 ${TIMEZONE_NOTE}, skipping agencies that have paused daily scraping on their Landlords page (counted as "paused" in the run result). Each agency's run is also recorded in spareroom_scrape_runs and shown on its Landlords page; an agency whose admin already started "Scrape all now" is skipped ("skippedRunning"), and a run holding the server-wide lock makes this one wait up to 30 minutes rather than fail. This is the time it has actually been running at, so it is kept here deliberately rather than moved overnight. It is long-running (it paces itself between advert pages) and shares the 09:00 slot with rent-reminders; both are started in the same tick, and the scraper then runs on well past it.`,
     run: runSpareroomScraper,
   },
   {

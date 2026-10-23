@@ -15,6 +15,12 @@ import { listTenantCharges } from "@/features/finances/data/tenant-charges";
 import { getCloseInfoForMonth } from "@/features/finances/data/closes";
 import { getBookings, getBookingById } from "@/features/bookings/data/bookings";
 import { getLeads, getLeadStats } from "@/features/leads/data/leads";
+import {
+  BUSINESS_CARD_SOURCE,
+  WEBSITE_MESSAGE_ID_PREFIX,
+  WEBSITE_SOURCE,
+  isPlaceholderEmail,
+} from "@/features/leads/domain/sources";
 import type { ToolName } from "../domain/tools";
 
 const MAX_ROWS = 20;
@@ -136,14 +142,27 @@ function slimBooking(b: any) {
 }
 
 /**
- * Lead sources captured by Harbor Ops itself. Every other lead was imported
- * from an agency's Gmail inbox (portal enquiry emails), so its details are
- * Google user data — and Google's Limited Use rules, which our OAuth
- * verification and privacy policy commit to, keep that out of third-party AI.
- * The model therefore only sees status, portal and date for those leads.
- * Don't widen this without re-reading privacy policy §5.
+ * Whether a lead was captured by Harbor Ops itself — an agent's business card
+ * or the agency's own website. Every other lead was imported from an agency's
+ * Gmail inbox (portal enquiry emails), so its details are Google user data —
+ * and Google's Limited Use rules, which our OAuth verification and privacy
+ * policy commit to, keep that out of third-party AI. The model therefore only
+ * sees status, portal and date for those leads.
+ *
+ * Source alone isn't trusted: platform names are reserved against these
+ * values, and the dedupe key must also have the shape only Harbor's own
+ * capture writes (website: "web:…", business card: a random UUID), so a
+ * Gmail lead can never pass as first-party. Don't widen this without
+ * re-reading privacy policy §5.
  */
-const FIRST_PARTY_LEAD_SOURCES = new Set(["business_card"]);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isFirstPartyLead(l: any): boolean {
+  const messageId = typeof l.message_id === "string" ? l.message_id : "";
+  if (l.source === WEBSITE_SOURCE) return messageId.startsWith(WEBSITE_MESSAGE_ID_PREFIX);
+  if (l.source === BUSINESS_CARD_SOURCE) return UUID_RE.test(messageId);
+  return false;
+}
 
 function slimLead(l: any) {
   const base = {
@@ -153,13 +172,14 @@ function slimLead(l: any) {
     createdAt: l.created_at ?? null,
     assignedAgent: l.assigned_agent?.display_name ?? null,
   };
-  if (!FIRST_PARTY_LEAD_SOURCES.has(l.source)) {
+  if (!isFirstPartyLead(l)) {
     return { ...base, details: "withheld: imported from Gmail — open it on the Leads page" };
   }
   return {
     ...base,
     name: l.name ?? null,
-    email: l.email ?? null,
+    // Phone-only leads carry a placeholder address; it's not a real contact.
+    email: isPlaceholderEmail(l.email) ? null : l.email,
     telephone: l.telephone ?? null,
     propertyRef: l.property_ref ?? null,
     isHot: l.is_hot ?? null,

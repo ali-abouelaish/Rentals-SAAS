@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { sanitizeFilterTerm } from "@/lib/utils/search";
+import { FIRST_PARTY_SOURCES } from "../domain/sources";
 import type { LeadWithRelations } from "../domain/types";
 
 const PAGE_SIZE = 15;
@@ -94,6 +95,37 @@ export async function getLeadById(id: string) {
 
   if (error) throw new Error(error.message);
   return data as LeadWithRelations;
+}
+
+/**
+ * The first-party sources (website, business card) the tenant actually has
+ * leads from, for the source filter. Portal sources come from platform
+ * configs, which only admins can read, so these are probed on the leads
+ * themselves — one single-row query each.
+ */
+export async function getPresentFirstPartySources(): Promise<string[]> {
+  const supabase = createSupabaseServerClient();
+  await requireUserProfile();
+
+  const probes = await Promise.all(
+    FIRST_PARTY_SOURCES.map((source) => supabase.from("leads").select("id").eq("source", source).limit(1))
+  );
+  return FIRST_PARTY_SOURCES.filter((_, i) => (probes[i].data?.length ?? 0) > 0);
+}
+
+/**
+ * Labels of the connected websites (API keys) that delivered these leads, by
+ * key id. A separate query rather than a join on getLeads, so the Leads page
+ * keeps working even before the migration adding leads.api_key_id is applied.
+ */
+export async function getApiKeyLabels(ids: Array<string | null | undefined>): Promise<Record<string, string>> {
+  const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  if (unique.length === 0) return {};
+
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase.from("public_api_keys").select("id, label").in("id", unique);
+  if (error) return {};
+  return Object.fromEntries((data ?? []).map((key) => [key.id as string, key.label as string]));
 }
 
 export type LeadStats = {

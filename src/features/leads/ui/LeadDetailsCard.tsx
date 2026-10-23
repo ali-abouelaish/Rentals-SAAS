@@ -4,15 +4,22 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LeadStatusSelect } from "./LeadStatusSelect";
 import { LeadAssignSelect } from "./LeadAssignSelect";
 import { tidyMessageText } from "@/lib/gmail/tidyText";
+import { WEBSITE_SOURCE, isPlaceholderEmail, leadSourceLabel } from "../domain/sources";
 import type { LeadWithRelations } from "../domain/types";
 
 interface Props {
   lead: LeadWithRelations;
   agents: { id: string; display_name: string | null }[];
   isAdmin: boolean;
+  /** The connected website that delivered it, for website leads. */
+  viaLabel?: string | null;
 }
 
-export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
+export function LeadDetailsCard({ lead, agents, isAdmin, viaLabel }: Props) {
+  const hasEmail = !isPlaceholderEmail(lead.email);
+  const fromWebsite = lead.source === WEBSITE_SOURCE;
+  const sourceLabel = leadSourceLabel(lead.source);
+
   return (
     <div className="rounded-bento bg-surface-card shadow-bento p-6 space-y-6">
       {/* Header */}
@@ -26,7 +33,7 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
               <h2 className="text-lg font-semibold text-foreground">{lead.name}</h2>
               {lead.is_hot && <Flame className="h-4 w-4 text-orange-500" />}
             </div>
-            <p className="text-sm text-foreground-muted">{lead.email}</p>
+            <p className="text-sm text-foreground-muted">{hasEmail ? lead.email : lead.telephone}</p>
           </div>
         </div>
         <StatusBadge status={lead.status} />
@@ -34,7 +41,7 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
 
       {/* Contact */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {!lead.email.includes("@noreply.local") && (
+        {hasEmail && (
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground-muted">Email</label>
             <p className="text-sm text-foreground">{lead.email}</p>
@@ -67,22 +74,28 @@ export function LeadDetailsCard({ lead, agents, isAdmin }: Props) {
         )}
         {lead.property_url && (
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-foreground-muted">Listing link</label>
+            <label className="block text-xs font-medium text-foreground-muted">
+              {fromWebsite ? "Enquiry page" : "Listing link"}
+            </label>
             <a
               href={lead.property_url}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
             >
-              View on {lead.source} <ExternalLink className="h-3 w-3" />
+              {fromWebsite ? "View page on website" : `View on ${sourceLabel}`}{" "}
+              <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         )}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-foreground-muted">Source</label>
-          <span className="inline-block capitalize text-sm rounded-full bg-surface-inset border border-border px-2 py-0.5">
-            {lead.source}
-          </span>
+          <label className="block text-xs font-medium text-foreground-muted">Source</label>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-block text-sm rounded-full bg-surface-inset border border-border px-2 py-0.5">
+              {sourceLabel}
+            </span>
+            {viaLabel && <span className="text-xs text-foreground-muted">via {viaLabel}</span>}
+          </div>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground-muted">Received</label>

@@ -5,14 +5,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/shared/DataTable";
 import { ConfirmDeleteForm } from "@/components/shared/ConfirmDeleteForm";
-import { getLandlordById } from "@/features/landlords/data/landlords";
+import { getLandlordById, getSpareroomScheduleSetting } from "@/features/landlords/data/landlords";
 import { deleteLandlord } from "@/features/landlords/actions/landlords";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { InvoiceStatusBadge } from "@/features/invoices/ui/InvoiceStatusBadge";
 import { formatDate, formatGBP } from "@/lib/utils/formatters";
-import { formatAge, isStale, STALE_AFTER_DAYS } from "@/lib/utils/freshness";
+import { formatAge, isListingStale, isStale, STALE_AFTER_DAYS } from "@/lib/utils/freshness";
+import { isAdminRole } from "@/lib/auth/roles";
 import { EditLandlordForm } from "@/features/landlords/ui/EditLandlordForm";
 import { RunScraperButton } from "@/features/landlords/ui/RunScraperButton";
+import { ManualListingDialog } from "@/features/landlords/ui/ManualListingDialog";
+import { DeleteManualListingButton } from "@/features/landlords/ui/DeleteManualListingButton";
+import { rowToManualListingValues } from "@/features/landlords/domain/manual-listing";
+import { listingSourceLabel } from "@/features/listing-feeds/domain/sources";
 import { ListingsMapPanel } from "@/features/landlords/ui/ListingsMapPanel";
 import { toListingMapPoint } from "@/features/landlords/domain/map-points";
 import type { ListingMapPoint } from "@/features/landlords/domain/types";
@@ -32,14 +37,17 @@ export default async function LandlordDetailPage({
   const backHref = searchParams?.back ?? "/landlords";
   const profile = await requireUserProfile();
   const isAdmin = profile.role.toLowerCase() === "admin";
+  // Same roles deleteManualListing accepts.
+  const canDeleteListings = isAdminRole(profile.role);
   const supabase = createSupabaseServerClient();
-  const [landlordResult, { data: invoices }] = await Promise.all([
+  const [landlordResult, { data: invoices }, schedule] = await Promise.all([
     getLandlordById(params.id),
     supabase
       .from("invoices")
       .select("id, invoice_number, status, total, due_date")
       .eq("landlord_id", params.id)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    getSpareroomScheduleSetting(),
   ]);
   if (!landlordResult) notFound();
   const { landlord, rentalsCount, listings, scrapedListings, sheetRuns, sheetListingCount } =
@@ -47,6 +55,9 @@ export default async function LandlordDetailPage({
   const mapPoints = scrapedListings
     .map((row) => toListingMapPoint(row, landlord))
     .filter((point): point is ListingMapPoint => point !== null);
+  // Manual rows are out of both counts: nothing re-checks them.
+  const checkedCount = scrapedListings.filter((row) => row.source !== "manual").length;
+  const staleCount = scrapedListings.filter((row) => isListingStale(row)).length;
 
   return (
     <div className="space-y-6">
@@ -140,7 +151,7 @@ export default async function LandlordDetailPage({
             <div>
               <p className="text-xs uppercase text-foreground-muted">Last scraped</p>
               <p
-                className={isStale(landlord.last_scraped_at) ? "font-medium text-destructive" : undefined}
+                className={isStale(landlord.last_scraped_at) ? "font-medium text-error" : undefined}
                 title={
                   landlord.last_scraped_at
                     ? `Last successful read: ${formatDate(landlord.last_scraped_at)}`
@@ -150,6 +161,13 @@ export default async function LandlordDetailPage({
                 {formatAge(landlord.last_scraped_at)}
                 {landlord.last_scraped_at ? ` · ${formatDate(landlord.last_scraped_at)}` : ""}
               </p>
+              {/* Explains a date that has stopped moving: the agency switched the
+                  daily run off on the Landlords page. */}
+              {!schedule.enabled && (
+                <p className="text-xs text-foreground-muted">
+                  Daily scraping is paused for your agency — use Run scraper to refresh.
+                </p>
+              )}
             </div>
           )}
           <div className="md:col-span-3">
@@ -173,53 +191,73 @@ export default async function LandlordDetailPage({
         </CardContent>
       </Card>
 
-      {(scrapedListings.length > 0 || listings.length > 0) && (
-        <Card>
-          <CardContent className="space-y-4">
+      {/* Always rendered, so a landlord with no source yet can still have
+          listings added by hand. */}
+      <Card>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-navy">
-                Listings {scrapedListings.length > 0 ? `(${scrapedListings.length} from scraper)` : ""}
+                Listings {scrapedListings.length > 0 ? `(${scrapedListings.length})` : ""}
               </p>
               {/* Stale rows are served by the public API exactly like fresh ones,
                   so the count has to be visible here or nobody finds out until a
-                  partner complains about dead links. */}
-              {scrapedListings.filter((row) => isStale(row.last_seen_at)).length > 0 && (
-                <p className="text-xs text-destructive">
-                  {scrapedListings.filter((row) => isStale(row.last_seen_at)).length} of{" "}
-                  {scrapedListings.length} not confirmed in the last {STALE_AFTER_DAYS} days — these
+                  partner complains about dead links. Manual rows are never
+                  stale — nothing re-checks them, they're live until deleted. */}
+              {staleCount > 0 && (
+                <p className="text-xs text-error">
+                  {staleCount} of {checkedCount} not confirmed in the last {STALE_AFTER_DAYS} days — these
                   may no longer be live.
                 </p>
               )}
             </div>
-            {scrapedListings.length > 0 && (
-              <ListingsMapPanel
-                variant="landlord"
-                points={mapPoints}
-                unlocatedCount={scrapedListings.length - mapPoints.length}
-              />
-            )}
-            {scrapedListings.length > 0 ? (
-              <DataTable
-                columns={["Title", "Location", "Price", "Source", "Scraped", "Rooms", "Available", "Link"]}
-                rows={scrapedListings.map((row) => [
-                  <span key={`${row.id}-title`} className="max-w-[200px] truncate block" title={row.title ?? undefined}>
-                    {row.title ?? "—"}
-                  </span>,
-                  <span key={`${row.id}-loc`} className="text-foreground-secondary">{row.location ?? "—"}</span>,
-                  <span key={`${row.id}-price`}>{row.price != null ? formatGBP(Number(row.price)) : "—"}</span>,
-                  // Which pipeline put this row here. The two refresh
-                  // independently, so a stale row means different things
-                  // depending on the source and they must not read alike.
-                  <span key={`${row.id}-source`} className="text-foreground-secondary">
-                    {row.source === "spreadsheet" ? "Spreadsheet" : "SpareRoom"}
-                  </span>,
-                  // Replaces the old Status column, which was useless here:
-                  // the scraper hardcodes 'available' on every row, so a listing
-                  // dead for months still claimed to be available. Age is the
-                  // only honest liveness signal we have.
+            <ManualListingDialog mode="create" landlordId={landlord.id} />
+          </div>
+          {scrapedListings.length === 0 && listings.length === 0 && (
+            <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-foreground-muted">
+              No listings yet — add one by hand, or add a SpareRoom profile or listings spreadsheet to the landlord
+              above.
+            </p>
+          )}
+          {scrapedListings.length > 0 && (
+            <ListingsMapPanel
+              variant="landlord"
+              points={mapPoints}
+              unlocatedCount={scrapedListings.length - mapPoints.length}
+            />
+          )}
+          {scrapedListings.length > 0 ? (
+            <DataTable
+              columns={["Title", "Location", "Price", "Source", "Last confirmed", "Rooms", "Available", "Link", "Actions"]}
+              rows={scrapedListings.map((row) => [
+                <span key={`${row.id}-title`} className="max-w-[200px] truncate block" title={row.title ?? undefined}>
+                  {row.title ?? "—"}
+                </span>,
+                <span key={`${row.id}-loc`} className="text-foreground-secondary">{row.location ?? "—"}</span>,
+                <span key={`${row.id}-price`}>{row.price != null ? formatGBP(Number(row.price)) : "—"}</span>,
+                // Which pipeline put this row here. Each refreshes
+                // independently, so a stale row means different things
+                // depending on the source and they must not read alike.
+                <span key={`${row.id}-source`} className="text-foreground-secondary">
+                  {listingSourceLabel(row.source)}
+                </span>,
+                // Replaces the old Status column, which was useless here:
+                // the scraper hardcodes 'available' on every row, so a listing
+                // dead for months still claimed to be available. Age is the
+                // only honest liveness signal we have. Manual rows have none —
+                // their age only says when someone last edited them.
+                row.source === "manual" ? (
                   <span
                     key={`${row.id}-seen`}
-                    className={isStale(row.last_seen_at) ? "font-medium text-destructive" : undefined}
+                    className="text-foreground-secondary"
+                    title="Added by hand — not re-checked automatically. It stays live until you delete it."
+                  >
+                    Updated {formatAge(row.updated_at ?? row.last_seen_at).toLowerCase()}
+                  </span>
+                ) : (
+                  <span
+                    key={`${row.id}-seen`}
+                    className={isListingStale(row) ? "font-medium text-error" : undefined}
                     title={
                       row.last_seen_at
                         ? `Last confirmed at source: ${formatDate(row.last_seen_at)}`
@@ -227,38 +265,60 @@ export default async function LandlordDetailPage({
                     }
                   >
                     {formatAge(row.last_seen_at)}
-                  </span>,
-                  <span key={`${row.id}-rooms`}>{row.room_count ?? row.total_rooms ?? "—"}</span>,
-                  <span key={`${row.id}-avail`}>{row.available_date ? formatDate(row.available_date) : "—"}</span>,
-                  // Only link out for absolute http(s) URLs. A relative href
-                  // here (e.g. stray text imported from a spreadsheet) would
-                  // resolve against /landlords/<id> and navigate to a bogus
-                  // landlord route. Listings with no advert — the normal case
-                  // for spreadsheet imports — open a drawer instead, so their
-                  // data and photos are reachable.
-                  /^https?:\/\//i.test(row.url ?? "") ? (
-                    <a key={`${row.id}-link`} href={row.url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
-                      View
-                    </a>
-                  ) : (
-                    <ListingDetailsDrawer key={`${row.id}-link`} listing={row} />
-                  ),
-                ])}
-              />
-            ) : (
-              <DataTable
-                columns={["Title", "Price", "Postcode", "Active"]}
-                rows={listings.map((listing) => [
-                  <span key={`${listing.id}-title`}>{listing.title}</span>,
-                  <span key={`${listing.id}-price`}>£{listing.price}</span>,
-                  <span key={`${listing.id}-postcode`}>{listing.postcode}</span>,
-                  <span key={`${listing.id}-active`}>{listing.is_active ? "Yes" : "No"}</span>
-                ])}
-              />
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  </span>
+                ),
+                <span key={`${row.id}-rooms`}>{row.room_count ?? row.total_rooms ?? "—"}</span>,
+                <span key={`${row.id}-avail`}>{row.available_date ? formatDate(row.available_date) : "—"}</span>,
+                // Only link out for absolute http(s) URLs. A relative href
+                // here (e.g. stray text imported from a spreadsheet) would
+                // resolve against /landlords/<id> and navigate to a bogus
+                // landlord route. Listings with no advert — the normal case
+                // for spreadsheet imports — open a drawer instead, so their
+                // data and photos are reachable.
+                /^https?:\/\//i.test(row.url ?? "") ? (
+                  <a key={`${row.id}-link`} href={row.url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+                    View
+                  </a>
+                ) : (
+                  <ListingDetailsDrawer key={`${row.id}-link`} listing={row} />
+                ),
+                // Only manual rows: a scraped or imported row would be
+                // overwritten or re-created by its source's next run.
+                row.source === "manual" ? (
+                  <div key={`${row.id}-actions`} className="flex items-center gap-1.5">
+                    <ManualListingDialog
+                      mode="edit"
+                      listingId={row.id}
+                      initial={rowToManualListingValues(row)}
+                    />
+                    {canDeleteListings && (
+                      <DeleteManualListingButton listingId={row.id} title={row.title ?? null} />
+                    )}
+                  </div>
+                ) : (
+                  <span
+                    key={`${row.id}-actions`}
+                    className="text-foreground-muted"
+                    title="Change this listing at its source — the next run would overwrite an edit made here."
+                  >
+                    —
+                  </span>
+                ),
+              ])}
+            />
+          ) : listings.length > 0 ? (
+            <DataTable
+              columns={["Title", "Price", "Postcode", "Active"]}
+              rows={listings.map((listing) => [
+                <span key={`${listing.id}-title`}>{listing.title}</span>,
+                <span key={`${listing.id}-price`}>£{listing.price}</span>,
+                <span key={`${listing.id}-postcode`}>{listing.postcode}</span>,
+                <span key={`${listing.id}-active`}>{listing.is_active ? "Yes" : "No"}</span>
+              ])}
+            />
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="space-y-4">

@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { Search, Tag } from "lucide-react";
+import { leadSourceLabel } from "../domain/sources";
 
 const STATUS_OPTIONS = ["all", "new", "contacted", "viewing", "offer", "closed"];
 
@@ -85,13 +86,13 @@ export function LeadFilters({ sources }: Props) {
               <button
                 key={s}
                 onClick={() => updateParam("source", s)}
-                className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors capitalize ${
+                className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
                   currentSource === s
                     ? "bg-accent text-accent-fg border-accent"
                     : "bg-surface-inset text-foreground-secondary border-border hover:border-accent/50"
                 }`}
               >
-                {s}
+                {s === "all" ? "All" : leadSourceLabel(s)}
               </button>
             ))}
           </div>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2, Copy, KeyRound, Ban, Check } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { scopeLabel } from "@/lib/api-keys/scopes";
 import {
   createPublicApiKey,
   revokePublicApiKey,
@@ -113,7 +114,7 @@ export function ApiKeysPanel({ keys }: Props) {
                       )}
                     </div>
                     <div className="text-xs text-foreground-muted">
-                      <code>{k.key_prefix}…</code> · scopes: {k.scopes.join(", ") || "—"}
+                      <code>{k.key_prefix}…</code> · can: {k.scopes.map(scopeLabel).join(", ") || "—"}
                     </div>
                     <div className="text-xs text-foreground-muted">
                       Created {new Date(k.created_at).toLocaleString()}
@@ -163,6 +164,14 @@ Authorization: Bearer hopk_…`}
             <code>paying</code>, <code>min_price</code>, <code>max_price</code>,{" "}
             <code>location</code> (ILIKE), <code>available_from</code> (YYYY-MM-DD).
             Sort: <code>?sort=price.asc</code> or <code>created_at.desc</code> (default).
+          </p>
+          <p className="text-foreground-muted">
+            Keys created here can read listings. To send enquiries from your own website into Leads,
+            connect the website under{" "}
+            <a href="/leads/settings" className="text-accent hover:underline">
+              Leads → Settings
+            </a>{" "}
+            instead — those keys can only add leads, and appear in the list above as &quot;Send website leads&quot;.
           </p>
         </CardContent>
       </Card>

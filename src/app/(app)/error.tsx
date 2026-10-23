@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, LayoutDashboard, LifeBuoy, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,7 @@ export default function AppError({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   /**

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +14,12 @@ export default function RoomEnhancerError({
   reset: () => void;
 }) {
   const router = useRouter();
+
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    Sentry.captureException(error);
+  }, [error]);
 
   const isPayloadTooLarge =
     error.message?.includes("413") ||

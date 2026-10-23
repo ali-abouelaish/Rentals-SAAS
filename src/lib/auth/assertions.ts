@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasFeature } from "@/lib/entitlements/requireFeature";
+import { isNextControlFlow } from "@/lib/next-control-flow";
 import { requireUserProfile } from "./requireRole";
 import { ADMIN_ROLES } from "./roles";
 
@@ -219,11 +220,7 @@ export async function assertRoomEnhancerAccess(): Promise<{ tenantId: string }> 
  * first in an API route's catch, before any `instanceof AssertionError` test.
  */
 export function rethrowIfNextControlFlow(err: unknown): void {
-  const digest = (err as { digest?: unknown } | null)?.digest;
-  if (
-    typeof digest === "string" &&
-    (digest === "NEXT_NOT_FOUND" || digest.startsWith("NEXT_REDIRECT"))
-  ) {
+  if (isNextControlFlow(err)) {
     throw err;
   }
 }

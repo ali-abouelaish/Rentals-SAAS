@@ -14,6 +14,32 @@ export type Landlord = {
   created_at: string;
 };
 
+/** One full-roster SpareRoom scrape, from spareroom_scrape_runs. */
+export type ScrapeRun = {
+  id: string;
+  trigger: "schedule" | "manual";
+  started_by_name: string | null;
+  status: "running" | "success" | "failed";
+  started_at: string;
+  finished_at: string | null;
+  landlords_total: number | null;
+  landlords_refreshed: number | null;
+  listings_posted: number | null;
+  listings_swept: number | null;
+  unreadable: { id: string; name: string }[];
+  cleared: { id: string; name: string }[];
+  error_message: string | null;
+};
+
+export type ScrapeRunsState = {
+  /** False until migration 20261023000001 creates the table; the run section is hidden. */
+  available: boolean;
+  /** The run in progress, if any. */
+  current: ScrapeRun | null;
+  /** The most recent finished run. */
+  last: ScrapeRun | null;
+};
+
 /** One scraped listing as plotted on the landlords map — only what a pin and its popup need. */
 export type ListingMapPoint = {
   id: string;

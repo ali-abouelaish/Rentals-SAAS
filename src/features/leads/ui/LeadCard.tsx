@@ -2,6 +2,7 @@
 
 import { ArrowRight, Flame, Phone } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { isPlaceholderEmail, leadSourceLabel } from "../domain/sources";
 import type { LeadWithRelations } from "../domain/types";
 
 interface Props {
@@ -56,25 +57,25 @@ export function LeadCard({ lead, onOpen }: Props) {
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            {!lead.email.includes("@noreply.local") && (
+            {!isPlaceholderEmail(lead.email) && (
               <>
                 <span className="text-xs text-foreground-muted truncate">{lead.email}</span>
                 <span className="text-foreground-muted">·</span>
               </>
             )}
-            {lead.email.includes("@noreply.local") && lead.telephone && (
+            {isPlaceholderEmail(lead.email) && lead.telephone && (
               <>
                 <span className="text-xs text-foreground-muted truncate">{lead.telephone}</span>
                 <span className="text-foreground-muted">·</span>
               </>
             )}
-            <span className="text-xs capitalize text-foreground-secondary shrink-0 rounded-full bg-surface-inset px-2 py-0.5 border border-border">
-              {lead.source}
+            <span className="text-xs text-foreground-secondary shrink-0 rounded-full bg-surface-inset px-2 py-0.5 border border-border">
+              {leadSourceLabel(lead.source)}
             </span>
             {lead.property_ref && (
               <span
                 className="text-xs text-blue-600 shrink-0 rounded-full bg-blue-50 px-2 py-0.5 border border-blue-200"
-                title="Property reference from the enquiry email"
+                title="Property reference from the enquiry"
               >
                 Ref: {lead.property_ref}
               </span>

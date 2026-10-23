@@ -3,7 +3,12 @@ import { Settings } from "lucide-react";
 import { requireUserProfile } from "@/lib/auth/requireRole";
 import { isAdminRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getLeads, getLeadStats } from "@/features/leads/data/leads";
+import {
+  getApiKeyLabels,
+  getLeads,
+  getLeadStats,
+  getPresentFirstPartySources,
+} from "@/features/leads/data/leads";
 import { getGmailConnection, getPlatformConfigs } from "@/features/leads/data/gmail";
 import { LeadsBrowser } from "@/features/leads/ui/LeadsBrowser";
 import { LeadFilters } from "@/features/leads/ui/LeadFilters";
@@ -18,20 +23,23 @@ export default async function LeadsPage({
   const profile = await requireUserProfile();
   const currentPage = Math.max(1, parseInt(searchParams?.page ?? "1", 10) || 1);
 
-  const [{ leads, total, totalPages }, stats, connection, platformConfigs] = await Promise.all([
-    getLeads({
-      search: searchParams?.q,
-      status: searchParams?.status,
-      source: searchParams?.source,
-      ref: searchParams?.ref,
-      page: currentPage,
-    }),
-    getLeadStats(),
-    getGmailConnection(),
-    getPlatformConfigs(),
-  ]);
+  const [{ leads, total, totalPages }, stats, connection, platformConfigs, firstPartySources] =
+    await Promise.all([
+      getLeads({
+        search: searchParams?.q,
+        status: searchParams?.status,
+        source: searchParams?.source,
+        ref: searchParams?.ref,
+        page: currentPage,
+      }),
+      getLeadStats(),
+      getGmailConnection(),
+      getPlatformConfigs(),
+      getPresentFirstPartySources(),
+    ]);
 
-  const sources = [...new Set(platformConfigs.map((c) => c.platform_name))];
+  const sources = [...new Set([...platformConfigs.map((c) => c.platform_name), ...firstPartySources])];
+  const keyLabels = await getApiKeyLabels(leads.map((l) => l.api_key_id));
 
   // Agents list powers the assignment dropdown inside the lead drawer.
   let agents: { id: string; display_name: string | null }[] = [];
@@ -61,7 +69,9 @@ export default async function LeadsPage({
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Leads</h1>
-          <p className="text-sm text-foreground-muted mt-0.5">Inbound from property portals</p>
+          <p className="text-sm text-foreground-muted mt-0.5">
+            Enquiries from property portals, your website and business cards
+          </p>
         </div>
         {isAdminRole(profile.role) && (
           <div className="flex items-center gap-2">
@@ -96,14 +106,19 @@ export default async function LeadsPage({
 
       {/* Lead list */}
       {leads.length > 0 ? (
-        <LeadsBrowser leads={leads} agents={agents} isAdmin={isAdminRole(profile.role)} />
+        <LeadsBrowser
+          leads={leads}
+          agents={agents}
+          isAdmin={isAdminRole(profile.role)}
+          keyLabels={keyLabels}
+        />
       ) : (
         <div className="rounded-bento bg-surface-card shadow-bento py-16 text-center">
           <p className="text-sm text-foreground-muted">No leads found.</p>
           {!connection && isAdminRole(profile.role) && (
             <p className="text-sm text-foreground-muted mt-1">
               <Link href="/leads/settings" className="text-accent hover:underline">
-                Connect Gmail
+                Connect Gmail or your website
               </Link>{" "}
               to start capturing leads.
             </p>

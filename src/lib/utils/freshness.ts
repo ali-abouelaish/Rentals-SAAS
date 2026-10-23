@@ -44,6 +44,19 @@ export function isStale(
   return age === null || age > thresholdDays;
 }
 
+/**
+ * Staleness for a listing row. Manual listings (`source = 'manual'`) are never
+ * stale: nothing re-confirms them, so their age only says when someone last
+ * edited them. They are live until the agency deletes them.
+ */
+export function isListingStale(row: {
+  source?: string | null;
+  last_seen_at?: string | Date | null;
+}): boolean {
+  if (row.source === "manual") return false;
+  return isStale(row.last_seen_at);
+}
+
 /** Compact relative age for display: "Never", "Today", "3 days ago", "4 months ago". */
 export function formatAge(value: string | Date | null | undefined): string {
   const days = ageInDays(value);

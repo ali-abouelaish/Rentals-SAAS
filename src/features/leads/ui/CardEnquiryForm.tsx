@@ -1,62 +1,96 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { ThankYouDialog } from "@/components/shared/ThankYouDialog";
+import { cardEnquirySchema, type CardEnquiryValues } from "../domain/schemas";
 import { submitCardEnquiry } from "../actions/cardEnquiry";
 
-type State = { ok?: boolean; error?: string };
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-2xl py-4 text-base font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-60"
-      style={{
-        background: "rgba(255,255,255,0.18)",
-        border: "1px solid rgba(255,255,255,0.35)",
-        backdropFilter: "blur(8px)",
-      }}
-    >
-      {pending ? "Submitting…" : "Send Enquiry"}
-    </button>
-  );
-}
+const FIELDS: Array<{
+  name: keyof CardEnquiryValues;
+  label: string;
+  hint: string;
+  placeholder: string;
+  type?: "text" | "tel";
+}> = [
+  {
+    name: "name",
+    label: "Full Name",
+    hint: "Required. How the agent should address you.",
+    placeholder: "Your name",
+  },
+  {
+    name: "phone",
+    label: "Phone Number",
+    hint: "Required. Include the country code if you're outside the UK.",
+    placeholder: "+44 7700 900000",
+    type: "tel",
+  },
+  {
+    name: "pref_area",
+    label: "Preferred Area",
+    hint: "Optional. An area, postcode or station.",
+    placeholder: "e.g. City Centre, Zone 2…",
+  },
+  {
+    name: "budget",
+    label: "Budget",
+    hint: "Optional. Roughly what you'd like to spend each month.",
+    placeholder: "e.g. £1,200 / month",
+  },
+  {
+    name: "occupation",
+    label: "Occupation",
+    hint: "Optional. Helps the agent suggest the right places.",
+    placeholder: "e.g. Software Engineer",
+  },
+];
 
 export function CardEnquiryForm({
   agentId,
-  tenantId,
   agentName,
   agentAvatarUrl,
   brandName,
   brandLogoUrl,
 }: {
   agentId: string;
-  tenantId: string;
   agentName: string;
   agentAvatarUrl?: string | null;
   brandName?: string | null;
   brandLogoUrl?: string | null;
 }) {
-  const [state, formAction] = useFormState(submitCardEnquiry, {});
+  const [isPending, startTransition] = useTransition();
+  const [sent, setSent] = useState(false);
   const [showThanks, setShowThanks] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (state?.error) {
-      // inline error display — no toast needed on public page
-    }
-  }, [state?.error]);
+  const form = useForm<CardEnquiryValues>({
+    resolver: zodResolver(cardEnquirySchema),
+    defaultValues: { name: "", phone: "", pref_area: "", budget: "", occupation: "" },
+  });
+  const { errors } = form.formState;
 
-  // Pop the confirmation the moment the action succeeds. The inline panel
-  // below stays as well, so dismissing the popup doesn't drop the enquirer
-  // back onto a live form they might submit a second time.
-  useEffect(() => {
-    if (state?.ok) setShowThanks(true);
-  }, [state?.ok]);
+  const onSubmit = (values: CardEnquiryValues) => {
+    setFormError(null);
+    startTransition(async () => {
+      const result = await submitCardEnquiry(agentId, values);
+      if (result.ok) {
+        // Pop the confirmation straight away. The inline panel below stays
+        // too, so dismissing the popup doesn't drop the enquirer back onto a
+        // live form they might submit a second time.
+        setSent(true);
+        setShowThanks(true);
+        return;
+      }
+      setFormError(result.error);
+      for (const [field, message] of Object.entries(result.fields ?? {})) {
+        if (message) form.setError(field as keyof CardEnquiryValues, { message });
+      }
+    });
+  };
 
   const inputStyle: React.CSSProperties = {
     background: "rgba(255,255,255,0.12)",
@@ -70,7 +104,7 @@ export function CardEnquiryForm({
     outline: "none",
   };
 
-  if (state?.ok) {
+  if (sent) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -101,10 +135,7 @@ export function CardEnquiryForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 px-9 pt-8 pb-10">
-      <input type="hidden" name="agent_id"  value={agentId} />
-      <input type="hidden" name="tenant_id" value={tenantId} />
-
+    <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4 px-9 pt-8 pb-10">
       {/* Header */}
       <div className="flex flex-col items-center text-center mb-2 gap-2">
         {brandLogoUrl && (
@@ -129,43 +160,57 @@ export function CardEnquiryForm({
       </div>
 
       {/* Error */}
-      {state?.error && (
-        <p className="text-sm text-red-300 text-center -mt-1">{state.error}</p>
+      {formError && (
+        <p role="alert" className="text-sm text-red-300 text-center -mt-1">
+          {formError}
+        </p>
       )}
 
       {/* Fields */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-white/70 uppercase tracking-wider">Full Name</label>
-        <input name="name" required placeholder="Your name" style={inputStyle}
-          className="placeholder:text-white/35" />
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-white/70 uppercase tracking-wider">Phone Number</label>
-        <input name="phone" type="tel" required placeholder="+44 7700 900000" style={inputStyle}
-          className="placeholder:text-white/35" />
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-white/70 uppercase tracking-wider">Preferred Area</label>
-        <input name="pref_area" placeholder="e.g. City Centre, Zone 2…" style={inputStyle}
-          className="placeholder:text-white/35" />
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-white/70 uppercase tracking-wider">Budget</label>
-        <input name="budget" placeholder="e.g. £1,200 / month" style={inputStyle}
-          className="placeholder:text-white/35" />
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-white/70 uppercase tracking-wider">Occupation</label>
-        <input name="occupation" placeholder="e.g. Software Engineer" style={inputStyle}
-          className="placeholder:text-white/35" />
-      </div>
+      {FIELDS.map((field) => {
+        const id = `card-enquiry-${field.name}`;
+        const error = errors[field.name]?.message;
+        return (
+          <div key={field.name} className="space-y-1">
+            <label htmlFor={id} className="block text-xs font-medium text-white/70 uppercase tracking-wider">
+              {field.label}
+            </label>
+            <p id={`${id}-hint`} className="text-[11px] text-white/55">
+              {field.hint}
+            </p>
+            <input
+              id={id}
+              type={field.type ?? "text"}
+              placeholder={field.placeholder}
+              autoComplete={field.name === "name" ? "name" : field.name === "phone" ? "tel" : "off"}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
+              style={inputStyle}
+              className="placeholder:text-white/35"
+              {...form.register(field.name)}
+            />
+            {error && (
+              <p id={`${id}-error`} className="text-xs text-red-300">
+                {error}
+              </p>
+            )}
+          </div>
+        );
+      })}
 
       <div className="pt-1">
-        <SubmitButton />
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full rounded-2xl py-4 text-base font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-60"
+          style={{
+            background: "rgba(255,255,255,0.18)",
+            border: "1px solid rgba(255,255,255,0.35)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          {isPending ? "Submitting…" : "Send Enquiry"}
+        </button>
       </div>
     </form>
   );

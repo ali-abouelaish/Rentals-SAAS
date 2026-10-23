@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { cleanTelephone, isHotText } from "@/lib/leads/enrich";
 
 export type RightmoveLeadData = {
   name: string;
@@ -31,8 +32,6 @@ function stripHtml(html: string): string {
   return $.root().text();
 }
 
-const HOT_KEYWORDS = ["urgent", "asap", "immediately", "call me", "today", "tomorrow"];
-
 /**
  * Rightmove lead extractor — stub pending a real Rightmove email sample.
  * Field label patterns will need adjusting once a sample is available.
@@ -63,10 +62,9 @@ export function extractRightmoveLead(rawBody: string): RightmoveLeadData | null 
 
   if (!email || !name) return null;
 
-  const telephone_clean = telephone ? telephone.replace(/[^\d+]/g, "") : null;
+  const telephone_clean = cleanTelephone(telephone);
 
-  const lowerText = text.toLowerCase();
-  const is_hot = HOT_KEYWORDS.some((kw) => lowerText.includes(kw));
+  const is_hot = isHotText(text);
   const has_phone = !!telephone;
 
   return {

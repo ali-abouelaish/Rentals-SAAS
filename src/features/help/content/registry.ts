@@ -9,6 +9,7 @@ import { helpdeskArticle } from "./helpdesk";
 import { earningsArticle } from "./earnings";
 import { clientsArticle } from "./clients";
 import { leadsArticle } from "./leads";
+import { leadsSettingsArticle } from "./leads-settings";
 import { rentalsArticle } from "./rentals";
 import { landlordsArticle } from "./landlords";
 import { bonusesArticle } from "./bonuses";
@@ -72,6 +73,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   earningsArticle,
   clientsArticle,
   leadsArticle,
+  leadsSettingsArticle,
   rentalsArticle,
   landlordsArticle,
   bonusesArticle,

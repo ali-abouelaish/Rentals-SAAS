@@ -275,7 +275,7 @@ export const ASSISTANT_TOOLS = [
     function: {
       name: "list_leads",
       description:
-        "List inbound portal leads. Filter by status, source or search. Returns one page (15) at a time. Leads imported from Gmail come back with status, source and date only — their names, contact details and messages are deliberately withheld from you; tell the user to open the lead on the Leads page for those.",
+        "List inbound leads. Filter by status, source (e.g. \"website\", \"business_card\", or a portal such as \"zoopla\") or search. Returns one page (15) at a time. Website and business-card leads include the person's name, email, phone and property ref. Leads imported from Gmail (portal enquiries) come back with status, source and date only — their names, contact details and messages are deliberately withheld from you; tell the user to open the lead on the Leads page for those.",
       parameters: {
         type: "object",
         properties: {

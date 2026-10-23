@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { FIELD_GROUPS, LISTING_FIELDS } from "../domain/fields";
+import { listingSource, listingSourceDescription } from "../domain/sources";
 
 /**
  * Full detail view for a scraped listing, for rows that have no advert link to
@@ -135,6 +136,7 @@ export function ListingDetailsDrawer({ listing }: { listing: Listing }) {
   const title = text(listing.title) ?? text(listing.room_label) ?? text(listing.location) ?? "Listing";
   const price = listing.price != null ? `£${Number(listing.price).toLocaleString("en-GB")}` : null;
   const driveFolder = listing.drive_folder_url;
+  const source = listingSource(listing.source);
 
   return (
     <>
@@ -156,7 +158,8 @@ export function ListingDetailsDrawer({ listing }: { listing: Listing }) {
             <SheetTitle>{title}</SheetTitle>
             <SheetDescription>
               {text(listing.location) ?? "No address recorded"}
-              {text(listing.source) === "spreadsheet" ? " · imported from spreadsheet" : ""}
+              {source === "spreadsheet" ? " · imported from spreadsheet" : ""}
+              {source === "manual" ? " · added by hand" : ""}
             </SheetDescription>
           </SheetHeader>
 
@@ -224,9 +227,11 @@ export function ListingDetailsDrawer({ listing }: { listing: Listing }) {
                 <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-foreground-muted">
                   <ImageOff className="h-4 w-4 shrink-0" />
                   <span>
-                    {isAbsoluteUrl(driveFolder)
-                      ? "No photos imported from the Drive folder yet — run the import from the spreadsheet panel."
-                      : "No photos for this listing. Map a Google Drive photo folder column to import them."}
+                    {source === "manual"
+                      ? "No photos for this listing. Edit it and add photo links to show them here."
+                      : isAbsoluteUrl(driveFolder)
+                        ? "No photos imported from the Drive folder yet — run the import from the spreadsheet panel."
+                        : "No photos for this listing. Map a Google Drive photo folder column to import them."}
                   </span>
                 </div>
               )}
@@ -274,15 +279,15 @@ export function ListingDetailsDrawer({ listing }: { listing: Listing }) {
             <section className="space-y-1">
               <h3 className="text-sm font-semibold text-foreground">Record</h3>
               <dl>
-                <Row label="Source">
-                  {text(listing.source) === "spreadsheet" ? "Spreadsheet import" : "SpareRoom scraper"}
-                </Row>
+                <Row label="Source">{listingSourceDescription(listing.source)}</Row>
                 {text(listing.external_ref) && (
                   <Row label="Row identity">
                     <code className="break-all text-xs">{text(listing.external_ref)}</code>
                   </Row>
                 )}
-                {text(listing.last_seen_at) && (
+                {/* A manual row's last_seen_at is just its last save — the
+                    Updated row below already says that. */}
+                {source !== "manual" && text(listing.last_seen_at) && (
                   <Row label="Last seen in sheet">
                     {new Date(String(listing.last_seen_at)).toLocaleString("en-GB")}
                   </Row>
