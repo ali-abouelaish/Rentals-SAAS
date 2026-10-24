@@ -196,8 +196,9 @@ export async function runLandlordScraper(landlordId: string) {
     // Same failures, said in terms of this landlord and this button.
     switch (err.kind) {
       case "runtime-missing":
+        console.error("[landlords] Run scraper:", err.message);
         throw new Error(
-          "Scraper runtime not available here. On-demand scraping needs Python and the project venv on the host running the app — it works on the production server, but not in local dev without a local Python venv."
+          "The scraper isn't installed on the server (its Python environment is missing), so nothing was scraped. Existing listings were left as they were."
         );
       case "timeout":
         throw new Error(

@@ -177,6 +177,41 @@ else
   ok "package-lock.json unchanged, skipping npm ci"
 fi
 
+step "Syncing the SpareRoom scraper and its Python environment"
+# The app runs scripts/OGSCRPAPER.py with <app>/venv/bin/python (see
+# src/lib/scrapers/runSpareroomScript.ts). Neither used to be deployed: the venv
+# never existed on the VPS, and every daily scrape failed from 30 Sep to 24 Oct
+# while the job log said ok. Shipped and checked on every deploy now;
+# requirements are reinstalled only when requirements.txt changes. A failure
+# here warns rather than aborts — the web app itself is unaffected.
+rsync -az requirements.txt "${SSH_TARGET}:${REMOTE_PATH}/"
+rsync -az scripts/OGSCRPAPER.py "${SSH_TARGET}:${REMOTE_PATH}/scripts/"
+if VENV_RESULT="$(ssh "$SSH_TARGET" "
+  set -e
+  cd '${REMOTE_PATH}'
+  # --clear also repairs a venv whose python symlink dangles after a system
+  # Python upgrade, which fails exactly like a missing one.
+  if ! venv/bin/python -c 'import sys' >/dev/null 2>&1; then
+    python3 -m venv --clear venv
+    echo 'venv created'
+  fi
+  REQ_SUM=\$(sha256sum requirements.txt | awk '{print \$1}')
+  if [ \"\$(cat venv/.requirements.sha256 2>/dev/null)\" != \"\$REQ_SUM\" ]; then
+    venv/bin/python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+    echo \"\$REQ_SUM\" > venv/.requirements.sha256
+    echo 'requirements installed'
+  fi
+  venv/bin/python -c 'import requests, bs4, dotenv, supabase'
+  command -v flock >/dev/null || { echo 'flock not installed'; exit 1; }
+" 2>&1)"; then
+  [ -n "$VENV_RESULT" ] && printf '%s\n' "$VENV_RESULT" | sed 's/^/     /'
+  ok "Scraper runtime ready"
+else
+  printf '%s\n' "$VENV_RESULT" | sed 's/^/     /'
+  warn "Scraper runtime setup FAILED — the app is deployed, but SpareRoom scraping will not run."
+  warn "Usual cause: no venv support. On the VPS: apt install python3-venv, then deploy again."
+fi
+
 step "Reloading PM2 process: ${PM2_NAME}"
 ssh "$SSH_TARGET" "pm2 reload '${PM2_NAME}' --update-env"
 ok "PM2 reloaded"

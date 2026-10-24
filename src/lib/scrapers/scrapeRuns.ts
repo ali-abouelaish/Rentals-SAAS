@@ -88,7 +88,7 @@ function failureMessage(err: unknown): string {
   }
   switch (err.kind) {
     case "runtime-missing":
-      return "The scraper can't run on this server — it needs Python and the project venv. This is expected in local development.";
+      return "The scraper isn't installed on the server (its Python environment is missing), so nothing was scraped. Existing listings were left as they were.";
     case "timeout":
       return "The run took too long and was stopped before saving. Existing listings were left as they were.";
     case "lock-held":
@@ -140,6 +140,9 @@ export async function completeScrapeRun(
   options: { waitForLock?: boolean } = {}
 ): Promise<CompleteScrapeRunResult> {
   let result: CompleteScrapeRunResult;
+  // What went wrong in operator terms (paths, exit output), for the logs and
+  // Sentry. The run row gets the agency-facing wording instead.
+  let detail: string | undefined;
   try {
     const { stdout } = await runSpareroomScript({
       tenantId,
@@ -160,6 +163,7 @@ export async function completeScrapeRun(
         : { ok: true, details };
   } catch (err) {
     const stdout = err instanceof SpareroomScriptError ? err.stdout : "";
+    detail = err instanceof Error ? err.message : String(err);
     result = {
       ok: false,
       details: stdout ? parseScraperRunDetails(stdout) : null,
@@ -168,7 +172,7 @@ export async function completeScrapeRun(
   }
 
   if (!result.ok) {
-    console.error(`[scrape-runs] tenant ${tenantId} run failed:`, result.error);
+    console.error(`[scrape-runs] tenant ${tenantId} run failed:`, detail ?? result.error);
   }
   if (runId) {
     await finishRun(runId, result.ok ? "success" : "failed", result.details, result.error);

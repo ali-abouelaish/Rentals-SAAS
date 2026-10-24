@@ -23,6 +23,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const summary = await runSpareroomScraper();
-  return NextResponse.json(summary);
+  try {
+    const summary = await runSpareroomScraper();
+    return NextResponse.json(summary);
+  } catch (err) {
+    // Every agency failed (or the roster couldn't be read) — say why.
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[cron] spareroom-scraper (http) failed", message);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }

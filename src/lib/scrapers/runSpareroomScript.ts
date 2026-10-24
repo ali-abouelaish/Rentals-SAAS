@@ -12,6 +12,7 @@
  */
 
 import { execFile } from "node:child_process";
+import { access, constants as fsConstants } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -129,6 +130,27 @@ export async function runSpareroomScript(options: {
 
   const runOpts = { cwd: process.cwd(), env, timeout, maxBuffer: 10 * 1024 * 1024 } as const;
 
+  // Checked up front because, through flock, a missing interpreter is not an
+  // ENOENT but a generic exit 1 ("flock: failed to execute …"). That read as an
+  // ordinary scrape error and hid, for weeks, a server that had no venv at all.
+  const required: [string, number][] = [
+    [pythonBin, fsConstants.X_OK],
+    // Run through the interpreter, so it only has to be readable.
+    [scriptPath, fsConstants.R_OK],
+  ];
+  for (const [file, mode] of required) {
+    try {
+      await access(file, mode);
+    } catch {
+      throw new SpareroomScriptError({
+        kind: "runtime-missing",
+        message: `Scraper runtime missing on this host: ${file} not found. Set it up from the app directory with \`python3 -m venv venv && venv/bin/python -m pip install -r requirements.txt\` — scripts/deploy.sh does this on every deploy.`,
+        stdout: "",
+        stderr: "",
+      });
+    }
+  }
+
   try {
     const res = useFlock
       ? await execFileAsync("flock", [...flockArgs, SCRAPER_LOCK_FILE, pythonBin, scriptPath], runOpts)
@@ -145,11 +167,14 @@ export async function runSpareroomScript(options: {
     const stdout = (e.stdout ?? "").trim();
     const stderr = (e.stderr ?? "").trim();
 
-    if (e.code === "ENOENT") {
+    // ENOENT: flock itself is missing. "failed to execute": flock is there but
+    // the interpreter vanished between the check above and the spawn.
+    if (e.code === "ENOENT" || /flock: failed to execute/.test(stderr)) {
       throw new SpareroomScriptError({
         kind: "runtime-missing",
-        message:
-          "Scraper runtime not available here. It needs Python and the project venv on the host running the app — present on the production server, absent in local dev without a venv.",
+        message: `Scraper runtime missing on this host: ${
+          e.code === "ENOENT" ? (useFlock ? "flock" : pythonBin) : stderr
+        }. It needs flock, Python and the project venv (scripts/deploy.sh sets up the venv).`,
         stdout,
         stderr,
       });

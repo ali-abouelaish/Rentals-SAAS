@@ -77,6 +77,7 @@ async function pausedTenants(
   return new Set((data ?? []).map((row) => row.id as string));
 }
 
+/** Throws when every agency attempted failed — see the end of the function. */
 export async function runSpareroomScraper(): Promise<SpareroomScraperSummary> {
   const startedAt = Date.now();
   const admin = createSupabaseAdminClient();
@@ -121,7 +122,7 @@ export async function runSpareroomScraper(): Promise<SpareroomScraperSummary> {
     });
   }
 
-  return {
+  const summary: SpareroomScraperSummary = {
     ok: true,
     tenants: tenantIds.length,
     paused: roster.length - tenantIds.length,
@@ -133,4 +134,17 @@ export async function runSpareroomScraper(): Promise<SpareroomScraperSummary> {
     durationMs: Date.now() - startedAt,
     results,
   };
+
+  // Every agency failing is an outage, not a mixed day: throw so the job is
+  // recorded as failed in /admin/health and reaches Sentry. Returning ok here
+  // is how a server with no Python venv logged 25 green days (30 Sep–24 Oct)
+  // without scraping anything. Partial failures stay ok — the summary and each
+  // agency's own run history carry them.
+  if (summary.failed > 0 && summary.succeeded === 0 && summary.skippedRunning === 0) {
+    const reasons = [...new Set(results.filter((r) => !r.ok).map((r) => r.error ?? "unknown error"))];
+    throw new Error(
+      `SpareRoom scrape failed for all ${summary.failed} agenc${summary.failed === 1 ? "y" : "ies"}: ${reasons.join(" | ")}`
+    );
+  }
+  return summary;
 }
