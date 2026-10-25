@@ -72,7 +72,7 @@ export function TdsDepositsPanel({
         </div>
         <p className="text-sm font-semibold text-foreground mb-2">TDS is not configured</p>
         <p className="text-xs text-foreground-secondary max-w-sm mx-auto leading-relaxed">
-          Your agency&apos;s TDS Custodial credentials have not been set up yet. Ask your Harbor Ops
+          Your agency&apos;s TDS Custodial credentials have not been set up yet. Ask your Harbor
           administrator to add them, then set a contract&apos;s deposit scheme to TDS to register a
           deposit.
         </p>

@@ -87,7 +87,7 @@ export function DpsDepositsPanel({
         </div>
         <p className="text-sm font-semibold text-foreground mb-2">DPS is not configured</p>
         <p className="text-xs text-foreground-secondary max-w-sm mx-auto leading-relaxed">
-          Your agency&apos;s DPS API credentials have not been set up yet. Ask your Harbor Ops
+          Your agency&apos;s DPS API credentials have not been set up yet. Ask your Harbor
           administrator to add them, then set a contract&apos;s deposit scheme to DPS to register a
           deposit.
         </p>

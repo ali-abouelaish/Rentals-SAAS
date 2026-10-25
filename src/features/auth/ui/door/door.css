@@ -1,0 +1,432 @@
+/* =========================================================================
+   Harbor — sign-in and demo request: "The front door"
+   The page is Harbor's deep-green Georgian front door. Signing in happens on an enamel
+   sign fixed to the door, and a successful sign-in swings the door open onto the hallway.
+   The demo request is a card you post through the brass letterbox.
+   Brass fittings: rendered images in public/site/door/. Paint and panels: CSS.
+
+   Ported from the designer's stand-alone site (css/auth.css). Every rule is scoped under the
+   wrapper <div class="harbor-door"> rendered by the (auth) layout, so it can share the app's root
+   layout without leaking either way:
+   - the designer's :root and body rules sit on the wrapper;
+   - .is-js (set before first paint) and .is-open (the door swings open) live on the wrapper too;
+   - keyframes carry an hs- prefix so they can't collide with the app's.
+   ========================================================================= */
+
+.harbor-door {
+  --cream: #FDF9F2;
+  --deep: #19363A;
+  --teal: #215B5D;
+  --sage: #A7B4B0;
+  --sand: #D4BE97;
+  --ink: #13201F;
+  --tone-2: #7D8B88;          /* second tone, large text */
+  --tone-2-small: #5D6966;    /* small text on enamel (4.9:1) */
+  --enamel: #F7F1E5;
+  --paper: #FBF7EF;
+  --field: #FFFDF8;
+  --field-line: #7F8E8C;      /* field borders, 3:1 on enamel */
+  --placeholder: #66716E;
+  --error: #A3402E;
+
+  /* the door */
+  --paint: #19363A;           /* Deep Harbour */
+  --paint-hi: #21454A;
+  --paint-lo: #112729;
+  --frame-w: clamp(10px, 2vw, 30px);
+  --stile: clamp(16px, 8.5vw, 124px);
+  --muntin: clamp(12px, 7vw, 104px);
+  --rail: clamp(16px, 2.6vw, 40px);
+
+  --sans: var(--font-urbanist), ui-sans-serif, sans-serif;   /* stand-in for Sharp Sans (next/font, src/features/site/fonts.ts) */
+  --ease: cubic-bezier(.2, .7, .1, 1);
+  --swing: cubic-bezier(.6, .04, .22, 1);
+}
+
+/* The design was written against browser defaults; the app's root layout loads Tailwind's preflight
+   and globals.css @layer base, which reset some of them (heading sizes and weights, margins, list
+   styles, borders, image heights, form-control fonts). Revert exactly those inside the page.
+   :where() keeps these at the wrapper's own weight (0,1,0), so every design rule below wins. */
+.harbor-door :where(*), .harbor-door :where(*)::before, .harbor-door :where(*)::after { border-width: revert; border-style: revert; border-color: revert; }
+.harbor-door :where(h1, h2, h3, h4, h5, h6) { font-size: revert; font-weight: revert; font-family: revert; color: revert; }
+.harbor-door :where(blockquote, dl, dd, h1, h2, h3, h4, h5, h6, hr, figure, p, pre, fieldset, ol, ul, menu) { margin: revert; }
+.harbor-door :where(fieldset, legend, ol, ul, menu, dialog) { padding: revert; }
+.harbor-door :where(ol, ul, menu) { list-style: revert; }
+.harbor-door :where(a) { text-decoration: revert; }
+.harbor-door :where(button, input, optgroup, select, textarea) { font: revert; letter-spacing: revert; color: revert; margin: revert; padding: revert; }
+.harbor-door :where(button, [type="button"], [type="reset"], [type="submit"]) { background-color: revert; background-image: revert; }
+.harbor-door :where(button, [role="button"]) { cursor: revert; }
+.harbor-door :where(img, svg, video, canvas, audio, iframe, embed, object) { display: revert; vertical-align: revert; }
+.harbor-door :where(img, video) { max-width: revert; height: revert; }
+.harbor-door :where(input, textarea)::placeholder { opacity: revert; color: revert; }
+.harbor-door :where(textarea) { resize: revert; }
+
+.harbor-door *, .harbor-door *::before, .harbor-door *::after { box-sizing: border-box; }
+html:has(.harbor-door) { -webkit-text-size-adjust: 100%; background: #0C1D1F; }
+body:has(.harbor-door) { background: #0C1D1F; }   /* the overscroll behind the door, not the app's grey */
+/* overflow-x: clip, not the original body's hidden: on a div, hidden would make it a scroll container */
+.harbor-door { margin: 0; min-height: 100svh; color: var(--cream); font: 500 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overflow-x: clip; }
+.harbor-door img { display: block; max-width: 100%; height: auto; }
+.harbor-door a { color: inherit; }
+.harbor-door button, .harbor-door input, .harbor-door select, .harbor-door textarea { font: inherit; color: inherit; }
+.harbor-door :focus-visible { outline: 2px solid var(--sand); outline-offset: 3px; border-radius: 4px; }
+.harbor-door .plate :focus-visible, .harbor-door .card :focus-visible { outline-color: var(--teal); }
+.harbor-door ::selection { background: rgba(212, 190, 151, .55); color: var(--ink); }
+.harbor-door .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.harbor-door [hidden] { display: none !important; }
+
+/* ---------- Behind the door: the hallway, and the frame around the doorway ---------- */
+.harbor-door .hall { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: #2C2A24; }
+.harbor-door .hall img { width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 58% 50%; filter: brightness(.5) saturate(.85); transform: scale(1.04); transition: filter 1.8s var(--ease) .25s, transform 2.4s var(--ease) .2s; }
+.harbor-door.is-open .hall img { filter: none; transform: none; }
+.harbor-door .frame {
+  position: fixed; top: 0; bottom: 0; z-index: 5; width: var(--frame-w); pointer-events: none;
+  background: linear-gradient(90deg, #CFC7B6 0%, #EFE9DD 22%, #FAF6EE 46%, #E6DFD1 70%, #C8BFAD 100%);   /* a rounded moulding */
+}
+.harbor-door .frame--l { left: 0; box-shadow: 5px 0 12px rgba(0, 0, 0, .4); }
+.harbor-door .frame--r { right: 0; box-shadow: -5px 0 12px rgba(0, 0, 0, .4); }
+
+/* ---------- The door ---------- */
+.harbor-door .stage { position: relative; z-index: 1; padding: 0 var(--frame-w); perspective: 2400px; perspective-origin: 50% 45vh; }
+.harbor-door .door {
+  position: relative; display: flex; flex-direction: column; min-height: 100svh;
+  transform-origin: 0 50%;
+  background:
+    radial-gradient(120% 70% at 14% 0%, rgba(255, 255, 255, .05), transparent 62%),
+    linear-gradient(180deg, var(--paint-hi) 0%, var(--paint) 34%, var(--paint-lo) 100%);
+  box-shadow: inset 0 24px 48px -28px rgba(0, 0, 0, .55);
+}
+.harbor-door .door::before {   /* paint grain and faint brush strokes, over the panels too */
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: .55; mix-blend-mode: soft-light;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .32' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23b)'/%3E%3C/svg%3E");
+}
+.harbor-door .door::after {   /* a window reflected in the gloss */
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(108deg, transparent 14%, rgba(255, 255, 255, .025) 22%, rgba(255, 255, 255, .06) 27%, rgba(255, 255, 255, .02) 32%, transparent 40%);
+}
+
+/* raised-and-fielded panels, lit from the upper left */
+.harbor-door .door__upper, .harbor-door .door__lower { position: relative; }
+.harbor-door .panel {
+  position: absolute; top: var(--rail); bottom: var(--rail);
+  width: calc((100% - 2 * var(--stile) - var(--muntin)) / 2);
+  border: 3px solid; border-color: #0A1B1D #2A5458 #2E5A5E #0C2123;   /* the recess: shaded top and left walls, lit bottom and right */
+  background: var(--paint);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12);
+}
+.harbor-door .panel--l { left: var(--stile); }
+.harbor-door .panel--r { right: var(--stile); }
+.harbor-door .panel > i {   /* the raised field and its bevel */
+  position: absolute; inset: clamp(7px, 1.1vw, 15px);
+  border: clamp(12px, 2.1vw, 30px) solid; border-color: #274F54 #10282B #0D2325 #20474C;
+  background: linear-gradient(165deg, #1F4246 0%, #1A393D 45%, #15302F 100%);
+}
+.harbor-door .panel > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 32%, rgba(255, 255, 255, .045) 44%, transparent 56%); }
+
+.harbor-door .door__top {
+  position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 18px calc(var(--stile) * .55) 0; font-size: 14.5px;
+}
+.harbor-door .back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 600; text-decoration: none; color: var(--cream); }
+.harbor-door .back svg { width: 14px; height: 14px; transition: transform .35s var(--ease); }
+.harbor-door .back:hover svg { transform: translateX(-3px); }
+.harbor-door .switch { margin: 0; color: var(--sage); text-align: right; }
+.harbor-door .switch a { display: inline-flex; align-items: center; min-height: 44px; color: var(--cream); font-weight: 600; text-decoration: underline; text-decoration-color: rgba(253, 249, 242, .4); text-underline-offset: 4px; transition: text-decoration-color .3s; }
+.harbor-door .switch a:hover { text-decoration-color: currentColor; }
+
+.harbor-door .door__upper { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; padding: calc(var(--rail) + 14px) calc(var(--stile) + 8px) calc(var(--rail) + 30px); }
+.harbor-door .door__lock { position: relative; z-index: 3; display: grid; place-items: center; height: clamp(108px, 15vh, 150px); }
+.harbor-door .door__lower { min-height: clamp(96px, 16vh, 200px); }
+.harbor-door .door__foot {
+  position: relative; z-index: 3; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px;
+  padding: 0 calc(var(--stile) * .55) 10px; font-size: 13px; color: var(--sage);
+}
+.harbor-door .door__foot p { margin: 0; display: flex; align-items: center; min-height: 44px; }
+.harbor-door .door__foot nav { display: flex; gap: 18px; }
+.harbor-door .door__foot a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; }
+.harbor-door .door__foot a:hover { color: var(--cream); text-decoration: underline; text-underline-offset: 3px; }
+
+/* brass */
+.harbor-door .knocker { position: relative; z-index: 3; width: clamp(58px, 5.6vw, 80px); margin-bottom: 8px; transform-origin: 50% 12%; cursor: pointer; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .15)); }
+.harbor-door .letterbox { position: relative; width: clamp(214px, 23vw, 316px); aspect-ratio: 1008 / 378; perspective: 500px; }
+.harbor-door .letterbox img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.harbor-door .letterbox__flap { transform-origin: 50% 28%; transition: transform .45s var(--ease); }
+.harbor-door .letterbox.is-open .letterbox__flap { transform: rotateX(72deg); }
+.harbor-door .knob { position: absolute; top: 50%; right: calc(var(--stile) + 3%); width: clamp(42px, 4.2vw, 62px); transform: translateY(-50%); }
+
+/* ---------- The enamel sign (sign-in) and the postcard (demo request) ---------- */
+.harbor-door .plate, .harbor-door .card { position: relative; z-index: 4; width: 100%; color: var(--ink); }
+.harbor-door .plate {
+  max-width: 448px; padding: 38px clamp(24px, 4vw, 42px) 34px; border-radius: 16px;
+  background: radial-gradient(120% 75% at 28% 0%, #FFFCF5 0%, var(--enamel) 55%, #EEE6D5 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 -2px 0 rgba(110, 90, 60, .14),
+    0 2px 3px rgba(3, 12, 13, .4), 0 26px 50px -14px rgba(3, 12, 13, .7);
+  transform-origin: 50% 0;
+}
+.harbor-door .plate::before {   /* the enamel sign's double line */
+  content: ""; position: absolute; inset: 9px; border-radius: 10px; pointer-events: none;
+  border: 1.5px solid rgba(33, 91, 93, .8); box-shadow: inset 0 0 0 3px transparent, inset 0 0 0 4px rgba(33, 91, 93, .32);
+}
+.harbor-door .screw {
+  position: absolute; width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #F6E7C1 0%, #CFAE6A 42%, #8A6A2F 85%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .35), inset 0 0 0 .5px rgba(80, 58, 20, .5);
+}
+.harbor-door .screw::after { content: ""; position: absolute; left: 2px; right: 2px; top: 50%; height: 1.3px; margin-top: -.65px; background: rgba(76, 54, 18, .7); transform: rotate(var(--r, 35deg)); }
+.harbor-door .screw--tl { top: 17px; left: 17px; } .harbor-door .screw--tr { top: 17px; right: 17px; --r: -20deg; }
+.harbor-door .screw--bl { bottom: 17px; left: 17px; --r: 70deg; } .harbor-door .screw--br { bottom: 17px; right: 17px; --r: 10deg; }
+
+.harbor-door .plate__mark { width: 118px; height: auto; margin: 0 auto 20px; }
+.harbor-door .plate__title { margin: 0; text-align: center; font-size: clamp(27px, 2.3vw, 32px); font-weight: 600; line-height: 1.08; letter-spacing: -.03em; color: var(--deep); }
+.harbor-door .plate__sub { margin: 8px 0 0; text-align: center; font-size: 15.5px; color: var(--tone-2-small); text-wrap: balance; }
+
+.harbor-door .card {
+  max-width: 1000px; padding: 26px clamp(20px, 3.2vw, 38px) 26px; border-radius: 6px;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(3, 12, 13, .35), 0 30px 56px -16px rgba(3, 12, 13, .72);
+  transform-origin: 50% 0;
+}
+.harbor-door .card::before {   /* a little paper tooth */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: .5; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .2 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+.harbor-door .stamp {   /* a stamp in the corner, perforated */
+  position: absolute; top: 14px; right: 16px; width: 52px; height: 62px; padding: 9px 8px;
+  background: var(--deep); outline: 3px dotted var(--paper); outline-offset: -2px; transform: rotate(3deg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+}
+.harbor-door .stamp img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) invert(.95) sepia(.15); }
+.harbor-door .eyebrow { margin: 0 0 18px; font-size: 14px; font-weight: 600; color: var(--teal); }
+.harbor-door .card__title { margin: 0; font-size: clamp(26px, 2.3vw, 34px); font-weight: 600; line-height: 1.05; letter-spacing: -.035em; color: var(--deep); text-wrap: balance; }
+.harbor-door .card__title .t1 { display: block; }
+.harbor-door .card__title .t2 { color: var(--tone-2); }
+.harbor-door .lede { margin: 12px 0 0; max-width: 30em; font-size: 15.5px; color: var(--tone-2-small); }
+
+/* the postcard: message on the left, address on the right, a line between, the stamp top right */
+.harbor-door .door__upper--card { padding-top: calc(var(--rail) + 4px); padding-bottom: calc(var(--rail) + 16px); }
+.harbor-door .card__grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); column-gap: clamp(22px, 3vw, 40px); row-gap: 16px;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "head rule fields" "note rule fields" "note rule send";
+  text-align: left;
+}
+.harbor-door .card__head { grid-area: head; }
+.harbor-door .card__rule { grid-area: rule; background: rgba(19, 32, 31, .16); }
+.harbor-door .card__fields { grid-area: fields; display: grid; gap: 12px; align-content: start; padding-top: 54px; }   /* clear of the stamp */
+.harbor-door .card__grid .note { grid-area: note; grid-template-rows: auto minmax(0, 1fr); }
+.harbor-door .card__send { grid-area: send; display: grid; gap: 12px; }
+.harbor-door .card__send .alert { margin: 0; }
+.harbor-door .card .input { height: 44px; border-radius: 10px; }
+.harbor-door .card .field { gap: 6px; }
+.harbor-door .card .field label, .harbor-door .card .field legend { font-size: 13.5px; }
+.harbor-door .card .field legend { margin-bottom: 8px; }
+.harbor-door .card .row2 { gap: 12px; }
+.harbor-door .card .chips { gap: 6px; }
+.harbor-door .card .chip span { height: 38px; padding: 0 13px; font-size: 14px; }
+.harbor-door .card .check { font-size: 14px; }
+.harbor-door .card .submit { height: 50px; margin-top: 0; }
+.harbor-door .card textarea.input {   /* ruled like the message side of a postcard */
+  height: 100%; min-height: 120px; padding: 4px 14px; line-height: 28px;
+  background-image: repeating-linear-gradient(180deg, transparent 0 27px, rgba(19, 32, 31, .1) 27px 28px);
+  background-position: 0 4px; background-attachment: local;
+}
+.harbor-door .card__back {   /* the picture side, shown when the card flips over to be posted */
+  position: absolute; inset: 0; z-index: 1; padding: 12px; border-radius: inherit; background: var(--paper); opacity: 0; pointer-events: none;
+}
+.harbor-door .card__back img { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; }
+.harbor-door .card.is-sealed > *:not(.stamp):not(.card__back) { opacity: 0; }
+.harbor-door .card.is-sealed .card__back { opacity: 1; }
+.harbor-door .card.is-sealed .stamp { opacity: 0; }
+
+/* ---------- Form ---------- */
+.harbor-door .form { display: grid; gap: 18px; margin-top: 28px; text-align: left; }
+.harbor-door .row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+.harbor-door .field { display: grid; gap: 7px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.harbor-door .field label, .harbor-door .field legend { padding: 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+.harbor-door .field legend { margin-bottom: 9px; }
+.harbor-door .field__row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.harbor-door .field__link { padding: 11px 0; margin: -11px 0; font-size: 14px; font-weight: 600; color: var(--teal); text-decoration: underline; text-decoration-color: rgba(33, 91, 93, .35); text-underline-offset: 4px; }
+.harbor-door .field__link:hover { text-decoration-color: currentColor; }
+.harbor-door .optional { margin-left: 6px; font-weight: 500; color: var(--tone-2-small); }
+.harbor-door .input {
+  width: 100%; height: 50px; padding: 0 15px;
+  background: var(--field); border: 1px solid var(--field-line); border-radius: 11px;
+  font-size: 16px; font-weight: 500; color: var(--ink);
+  transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
+  -webkit-appearance: none; appearance: none;
+}
+.harbor-door textarea.input { height: auto; min-height: 96px; padding: 13px 15px; line-height: 1.45; resize: vertical; }
+.harbor-door .input::placeholder { color: var(--placeholder); opacity: 1; }
+.harbor-door .input:hover { border-color: var(--deep); }
+.harbor-door .input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(33, 91, 93, .2); }
+.harbor-door .input[aria-invalid="true"] { border-color: var(--error); }
+.harbor-door .input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(163, 64, 46, .18); }
+.harbor-door .field__control { position: relative; }
+.harbor-door .field__control .input { padding-right: 56px; }
+.harbor-door .reveal { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 44px; height: 44px; background: none; border: 0; border-radius: 10px; cursor: pointer; color: var(--tone-2-small); }
+.harbor-door .reveal:hover { color: var(--deep); }
+.harbor-door .reveal svg { width: 20px; height: 20px; }
+.harbor-door .reveal .eye-off, .harbor-door .reveal[aria-pressed="true"] .eye-on { display: none; }
+.harbor-door .reveal[aria-pressed="true"] .eye-off { display: block; }
+.harbor-door .field__hint, .harbor-door .field__error { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13.5px; line-height: 1.35; }
+.harbor-door .field__hint { color: var(--tone-2-small); }
+.harbor-door .field__error { color: var(--error); font-weight: 600; }
+.harbor-door .field__error::before { content: "!"; flex: none; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--error); color: var(--cream); font-size: 11px; font-weight: 700; line-height: 1; }
+
+.harbor-door .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.harbor-door .chip { position: relative; }
+.harbor-door .chip input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.harbor-door .chip span { display: inline-flex; align-items: center; height: 44px; padding: 0 17px; border: 1px solid var(--field-line); border-radius: 999px; background: var(--field); font-size: 15px; font-weight: 600; color: var(--deep); white-space: nowrap; transition: background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease); }
+.harbor-door .chip:hover span { border-color: var(--deep); }
+.harbor-door .chip input:checked + span { background: var(--deep); border-color: var(--deep); color: var(--cream); }
+.harbor-door .chip input:focus-visible + span { outline: 2px solid var(--teal); outline-offset: 3px; }
+.harbor-door .chips[aria-invalid="true"] .chip span { border-color: var(--error); }
+
+.harbor-door .check { position: relative; display: flex; align-items: flex-start; gap: 11px; font-size: 15px; line-height: 1.45; color: var(--ink); cursor: pointer; }
+.harbor-door .check input { position: absolute; opacity: 0; width: 22px; height: 22px; margin: 0; }
+.harbor-door .check__box { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--field-line); border-radius: 6px; background: var(--field); transition: background .2s var(--ease), border-color .2s var(--ease); }
+.harbor-door .check__box svg { width: 13px; height: 13px; color: var(--cream); opacity: 0; transform: scale(.6); transition: opacity .2s, transform .25s var(--ease); }
+.harbor-door .check input:checked + .check__box { background: var(--deep); border-color: var(--deep); }
+.harbor-door .check input:checked + .check__box svg { opacity: 1; transform: none; }
+.harbor-door .check input:focus-visible + .check__box { outline: 2px solid var(--teal); outline-offset: 3px; }
+.harbor-door .check input[aria-invalid="true"] + .check__box { border-color: var(--error); }
+.harbor-door .check a { color: var(--deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.harbor-door .check-group { display: grid; gap: 7px; }
+
+.harbor-door .submit {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; height: 54px; margin-top: 4px; padding: 0 28px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--deep); color: var(--cream); font-size: 16.5px; font-weight: 600; letter-spacing: .005em; text-decoration: none;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 6px 14px -6px rgba(3, 12, 13, .5);
+  transition: background .3s var(--ease);
+}
+.harbor-door .submit:hover { background: var(--teal); }
+.harbor-door .submit svg { width: 14px; height: 14px; color: var(--sand); transition: transform .35s var(--ease); }
+.harbor-door .submit:hover svg { transform: translateX(3px); }
+.harbor-door .submit .spin { display: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(253, 249, 242, .3); border-top-color: var(--cream); animation: hs-spin .8s linear infinite; }
+.harbor-door .submit[aria-busy="true"] { cursor: progress; background: var(--teal); }
+.harbor-door .submit[aria-busy="true"] .spin { display: block; }
+.harbor-door .submit[aria-busy="true"] svg { display: none; }
+
+.harbor-door .alert { display: flex; gap: 12px; margin: 22px 0 0; padding: 13px 15px; border-radius: 11px; border: 1px solid rgba(163, 64, 46, .35); background: rgba(163, 64, 46, .07); font-size: 15px; line-height: 1.45; color: var(--ink); text-align: left; }
+.harbor-door .alert::before { content: "!"; flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; background: var(--error); color: var(--cream); font-size: 13px; font-weight: 700; }
+.harbor-door .alert p { margin: 0; }
+.harbor-door .alert a { color: var(--deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+
+/* request received: an enamel sign where the card was */
+.harbor-door .done { text-align: center; outline: none; }
+.harbor-door .done__mark { width: 52px; height: 52px; margin: 0 auto 4px; color: var(--teal); }
+.harbor-door .done__mark circle, .harbor-door .done__mark path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.harbor-door .done h2 { margin: 14px 0 8px; font-size: clamp(26px, 2.4vw, 32px); font-weight: 600; line-height: 1.1; letter-spacing: -.03em; color: var(--deep); }
+.harbor-door .done p { margin: 0 auto 24px; max-width: 26em; font-size: 16px; color: var(--tone-2-small); }
+.harbor-door .done p strong { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+.harbor-door .done .submit { width: auto; }
+
+/* after signing in: the door is open and the hall says hello */
+.harbor-door .welcome {
+  position: fixed; left: 50%; bottom: max(28px, 7vh); z-index: 7; display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px 12px 20px; border-radius: 999px; background: var(--enamel); color: var(--ink);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, .55); font-weight: 600; white-space: nowrap;
+  opacity: 0; transform: translate(-50%, 14px); pointer-events: none; transition: opacity .6s var(--ease), transform .6s var(--ease);
+}
+.harbor-door.is-open .welcome { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; transition-delay: 1.3s; }
+.harbor-door .welcome .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(25, 54, 58, .25); border-top-color: var(--deep); animation: hs-spin .9s linear infinite; }
+.harbor-door .welcome button { height: 36px; padding: 0 14px; border: 1px solid var(--field-line); border-radius: 999px; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--deep); }
+.harbor-door .welcome button:hover { background: var(--deep); color: var(--cream); border-color: var(--deep); }
+.harbor-door .welcome button:focus-visible { outline-color: var(--teal); }
+
+/* the window's light at the end of the hall, which becomes the app's background (motion.ts walkIn) */
+.harbor-door .arrive { position: fixed; inset: 0; z-index: 6; background: var(--surface-app, #F4F6FA); opacity: 0; pointer-events: none; }
+
+@keyframes hs-spin { to { transform: rotate(1turn); } }
+
+/* ---------- Motion ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .harbor-door .door { transition: transform 1.8s var(--swing), filter 1.8s var(--swing); }
+  .harbor-door.is-open .door { transform: rotateY(87deg); filter: brightness(.62); }
+  .harbor-door.is-js .rise { animation: hs-rise .9s var(--ease) calc(var(--d, 0) * 80ms + .1s) both; }
+  .harbor-door.is-js .knocker { animation: hs-knock-settle 1.6s var(--ease) .5s both; }
+  .harbor-door .knocker.is-knocking { animation: hs-knock 0.7s var(--ease) both; }
+  .harbor-door .plate.is-rattling { animation: hs-rattle .55s var(--ease); }
+  .harbor-door .letterbox.is-clacking { animation: hs-clack .35s var(--ease); }
+  .harbor-door .alert { animation: hs-nudge .45s var(--ease); }
+  .harbor-door .done__mark circle { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hs-draw .7s var(--ease) .1s forwards; }
+  .harbor-door .done__mark path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hs-draw .45s var(--ease) .55s forwards; }
+  .harbor-door .done { animation: hs-rise .7s var(--ease) both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .harbor-door .door { transition: opacity .6s ease; }
+  .harbor-door.is-open .door { opacity: 0; }
+  .harbor-door .submit .spin, .harbor-door .welcome .spin { animation-duration: 2.4s; }
+}
+@keyframes hs-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes hs-knock-settle { 0% { transform: perspective(300px) rotateX(-28deg); } 45% { transform: perspective(300px) rotateX(10deg); } 75% { transform: perspective(300px) rotateX(-3deg); } 100% { transform: none; } }
+@keyframes hs-knock { 0% { transform: none; } 30% { transform: perspective(300px) rotateX(-34deg); } 55% { transform: perspective(300px) rotateX(6deg); } 80% { transform: perspective(300px) rotateX(-2deg); } 100% { transform: none; } }
+@keyframes hs-rattle { 0%, 100% { transform: none; } 20% { transform: rotate(-.9deg); } 40% { transform: rotate(.7deg); } 60% { transform: rotate(-.4deg); } 80% { transform: rotate(.2deg); } }
+@keyframes hs-clack { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px); } }
+@keyframes hs-nudge { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes hs-draw { to { stroke-dashoffset: 0; } }
+
+/* ---------- Phones ---------- */
+@media (max-width: 860px) {
+  .harbor-door .card__grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "head" "fields" "note" "send"; row-gap: 14px; }
+  .harbor-door .card__rule { display: none; }
+  .harbor-door .card__fields { padding-top: 4px; }
+  .harbor-door .card textarea.input { height: 88px; min-height: 0; }
+  .harbor-door .card__back img { object-fit: contain; }   /* a tall card keeps the whole picture */
+}
+@media (max-width: 640px) {
+  .harbor-door .door__top { padding-top: 10px; font-size: 14px; }
+  .harbor-door .switch span { display: none; }   /* the link alone on small screens */
+  .harbor-door .door__upper { padding-left: calc(var(--stile) + 4px); padding-right: calc(var(--stile) + 4px); }
+  .harbor-door .stamp { width: 40px; height: 48px; top: 12px; right: 12px; padding: 7px 6px; }
+  .harbor-door .door__foot { flex-direction: column; }
+  .harbor-door .card .lede { font-size: 15px; }
+  .harbor-door .door__upper--card { padding-top: 10px; padding-bottom: 22px; }
+}
+@media (max-height: 820px) and (min-width: 641px) {
+  .harbor-door .knocker { width: 54px; }
+  .harbor-door .door__upper { padding-top: calc(var(--rail) + 6px); }
+}
+
+/* =========================================================================
+   Additions for the app's other sign-in screens (not in the designer's file)
+   ========================================================================= */
+/* the agency, on its own subdomain: under the Harbor mark */
+.harbor-door .plate__brand { margin: -8px 0 14px; text-align: center; font-size: 14.5px; font-weight: 600; color: var(--teal); }
+/* a plate's actions, stacked; a quieter second action (e.g. "Don't allow") */
+.harbor-door .plate__actions { display: grid; gap: 10px; margin-top: 24px; }
+.harbor-door .plate__actions .submit { margin-top: 0; }
+.harbor-door .submit--quiet { background: transparent; color: var(--deep); box-shadow: inset 0 0 0 1px var(--field-line); }
+.harbor-door .submit--quiet:hover { background: rgba(25, 54, 58, .07); }
+.harbor-door .submit--quiet svg { color: var(--teal); }
+.harbor-door .submit:disabled:not([aria-busy="true"]) { cursor: default; opacity: .72; }
+/* a plain list on a plate, e.g. what an application will be able to do */
+.harbor-door .plate__list { margin: 22px 0 0; padding: 14px 16px 14px 34px; border-radius: 11px; background: rgba(33, 91, 93, .06); text-align: left; font-size: 15px; line-height: 1.45; color: var(--ink); }
+.harbor-door .plate__list li + li { margin-top: 6px; }
+/* small print under a plate's form */
+.harbor-door .plate__note { margin: 18px 0 0; text-align: center; font-size: 14px; line-height: 1.45; color: var(--tone-2-small); }
+.harbor-door .plate__note a { color: var(--deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.harbor-door .plate__note strong { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+/* a calm notice rather than an error, e.g. "check your inbox" */
+.harbor-door .alert--ok { border-color: rgba(33, 91, 93, .35); background: rgba(33, 91, 93, .07); }
+.harbor-door .alert--ok::before { content: "\2713"; background: var(--teal); }
+/* the spinner on a plate while something happens on its own (signing in from an email link) */
+.harbor-door .plate__wait { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 24px; font-size: 15px; font-weight: 600; color: var(--tone-2-small); }
+.harbor-door .plate__wait .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(25, 54, 58, .2); border-top-color: var(--deep); animation: hs-spin .8s linear infinite; }
+/* a field only bots fill in: off-screen, out of the tab order */
+.harbor-door .hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+/* password strength: four short bars under the new-password field */
+.harbor-door .strength { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 2px; }
+.harbor-door .strength i { height: 4px; border-radius: 2px; background: rgba(19, 32, 31, .12); transition: background .3s var(--ease); }
+.harbor-door .strength.s1 i:nth-child(-n+1) { background: var(--error); }
+.harbor-door .strength.s2 i:nth-child(-n+2) { background: #B7863A; }
+.harbor-door .strength.s3 i:nth-child(-n+3) { background: var(--teal); }
+.harbor-door .strength.s4 i { background: var(--teal); }
+/* a button that reads as a link (an action in running text, e.g. "Switch account") */
+.harbor-door .plate__link { display: inline; padding: 0; border: 0; background: none; font: inherit; color: var(--deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.harbor-door .plate__link:hover { color: var(--teal); }

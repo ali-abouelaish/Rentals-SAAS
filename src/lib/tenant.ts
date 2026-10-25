@@ -1,45 +1,10 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getTenantFromHost } from "@/lib/tenant-host";
 
-/**
- * Derive the tenant slug from a host name.
- *
- * Examples (portal domain = harborops.co.uk):
- * - "truehold.harborops.co.uk" -> "truehold"
- * - "www.harborops.co.uk"      -> null
- * - "harborops.co.uk"          -> null
- * - "localhost"                -> null
- */
-export function getTenantFromHost(host: string): string | null {
-  const hostname = host.split(":")[0].toLowerCase();
-
-  // Portal domain: everything that's exactly this host (or its www.) is apex.
-  const portalRaw = process.env.APP_PORTAL_DOMAIN;
-  const portal = portalRaw
-    ? portalRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
-    : null;
-
-  if (portal) {
-    if (hostname === portal || hostname === `www.${portal}`) return null;
-    if (hostname.endsWith(`.${portal}`)) {
-      const sub = hostname.slice(0, -1 - portal.length);
-      if (!sub || sub === "www") return null;
-      // Only the leftmost label is the tenant slug.
-      return sub.split(".")[0] || null;
-    }
-    // Host isn't under the portal domain (local dev, preview URLs, IPs) — treat as apex.
-    return null;
-  }
-
-  // Fallback heuristic when APP_PORTAL_DOMAIN isn't set:
-  // treat anything with 3+ labels (excluding leading www) as a subdomain.
-  const parts = hostname.split(".");
-  if (parts.length > 2) {
-    const [first] = parts;
-    if (first && first !== "www") return first;
-  }
-  return null;
-}
+// The host → slug logic lives in tenant-host.ts so middleware (Edge) can share it.
+export { getTenantFromHost } from "@/lib/tenant-host";
 
 export interface TenantBrandingForMetadata {
   tenantId: string;
@@ -56,8 +21,9 @@ export interface TenantBrandingForMetadata {
  * Returns null on the apex domain or when the slug doesn't match a tenant.
  * Safe to call from server components / generateMetadata — uses the admin
  * client because this runs for unauthenticated visitors (e.g. social bots).
+ * Cached per request: the root metadata and the sign-in door both ask.
  */
-export async function getTenantBrandingByHost(): Promise<TenantBrandingForMetadata | null> {
+export const getTenantBrandingByHost = cache(async (): Promise<TenantBrandingForMetadata | null> => {
   const host = headers().get("host");
   if (!host) return null;
 
@@ -82,5 +48,5 @@ export async function getTenantBrandingByHost(): Promise<TenantBrandingForMetada
     logoUrl: (branding?.logo_url as string | undefined) ?? null,
     primaryColor: (branding?.primary_color as string | undefined) ?? null,
   };
-}
+});
 

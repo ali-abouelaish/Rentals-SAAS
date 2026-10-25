@@ -103,7 +103,7 @@ export function NewTicketDialog({ triggerLabel = "New ticket" }: { triggerLabel?
 
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Contact Harbor Ops Support</DialogTitle>
+          <DialogTitle>Contact Harbor Support</DialogTitle>
           <DialogDescription>
             Tell us what's going on. You'll get an email when we reply, and you can follow up on the ticket page.
           </DialogDescription>

@@ -29,6 +29,15 @@ The Dashboard is your landing overview. What it shows depends on your module and
 - Overdue and soonest-due tasks sort to the top; tasks you tick off drop to a **Completed** section on the board.
 - **Completed tasks clear off the board automatically each day** (around 3 AM). You can also clear them immediately with **Clear done**. Cleared tasks aren't deleted — they move to **Completed history**, a read-only audit you can expand at the bottom of the list showing what was done, when, and (for team tasks) by whom.
 
+## Useful Resources (pinned websites)
+
+- The **Useful Resources** cards are websites pinned for the whole team. Admins add, edit, reorder (drag the handle) and delete them with **Manage links**.
+- **Website sign-in.** Use this for your agency's own website: your team open it already signed in with their Harbor account, so the website needs no login page of its own. To set it up, edit the link, tick **Sign my team in to this website**, and enter the website's **Sign-in URL**. On WordPress that's your site address followed by \`/wp-admin/admin-post.php?action=harbor_sign_in\`.
+- Then click the **key** icon next to the link. **Show secret** gives you the website secret, and the tabs have a ready-made sign-in handler for WordPress or Node.js. Your web developer adds both to the website once. Never put the secret in a page.
+- Cards with sign-in show **Signs you in**. Harbor tells the website each person's name, email, role and whether they're an admin, and the website decides what they can do there. Each sign-in is valid for 60 seconds and works once.
+- **Replace secret** if the secret was exposed or a developer who had it has left. The website rejects sign-ins until it has the new secret.
+- Only turn sign-in on for websites you control, because they receive your team's names and emails.
+
 ## Tips
 
 - Agents see a personal view scoped to their own rentals and earnings; admins see agency-wide totals.

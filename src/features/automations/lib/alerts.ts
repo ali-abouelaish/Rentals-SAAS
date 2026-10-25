@@ -17,6 +17,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { loadAgency } from "@/lib/email/agency-context";
 import { sendAgencyEmail } from "@/lib/email/agency-send";
 import { getTenantAppUrl } from "@/lib/email/app-url";
+import { button, esc, harborEmail, note, paragraph, strong } from "@/lib/email/harbor";
 import { londonStartOfDay } from "./london";
 
 type Admin = ReturnType<typeof createSupabaseAdminClient>;
@@ -150,9 +151,6 @@ async function resolveEmailRecipients(
   return [...out];
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 export async function notifyAutomationFailure(alert: AutomationAlert): Promise<void> {
   const admin = createSupabaseAdminClient();
@@ -234,10 +232,17 @@ export async function notifyAutomationFailure(alert: AutomationAlert): Promise<v
           agency,
           to,
           subject: `Action needed: ${subject}`,
-          html: `<p>${escapeHtml(subject)} for ${escapeHtml(agency.name)}.</p>
-<p>${escapeHtml(tip)}</p>
-<p><a href="${url}">Review in Harbor Ops</a></p>
-<p style="color:#64748b;font-size:12px">Reason: ${escapeHtml(reason)}</p>`,
+          html: harborEmail({
+            title: `Action needed: ${subject}`,
+            preheader: tip,
+            eyebrow: "Automations",
+            headline: [`${subject}.`, "Here’s what to check."],
+            html:
+              paragraph(`In the ${strong(agency.name)} workspace. ${esc(tip)}`) +
+              button(url, "Review in Harbor") +
+              note(`Reason: ${esc(reason)}`),
+            footnote: "Sent to your agency contact email and the person who set up this automation.",
+          }),
           text: `${subject} for ${agency.name}.\n\n${tip}\n\nReview: ${url}\n\nReason: ${reason}`,
           templateKey: `automation_alert:${alert.kind}`,
           // The agency may have no contact_email; don't let that block the alert.

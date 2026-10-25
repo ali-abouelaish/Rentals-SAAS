@@ -1,10 +1,16 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AuthShell } from "@/components/auth/AuthShell";
+import { switchAccount } from "@/features/auth/actions/auth";
+import { DoorShell } from "@/features/auth/ui/door/DoorShell";
+import { Plate } from "@/features/auth/ui/door/Plate";
 import { ConsentForm } from "./ConsentForm";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Authorize access",
+};
 
 // Human-readable explanations for the OAuth/OIDC scopes a client can request.
 // Unknown scopes fall back to the raw scope name so nothing is hidden.
@@ -17,25 +23,19 @@ const SCOPE_DESCRIPTIONS: Record<string, string> = {
 
 function ConsentError({ message }: { message: string }) {
   return (
-    <AuthShell
-      pill="Authorize access"
-      heading={
-        <>
-          This sign-in request <em>can&apos;t continue</em>.
-        </>
-      }
-      lede={message}
-      foot={
-        <>
-          Came here by accident? <Link href="/login">Go to sign in</Link>
-        </>
-      }
-    >
-      <div className="alert warn">
-        Close this tab and start signing in again from the application you came
-        from. If it keeps failing, contact the application&apos;s support.
-      </div>
-    </AuthShell>
+    <DoorShell knocker>
+      <Plate title="This sign-in request can’t continue." sub={message}>
+        <div className="alert" role="alert">
+          <p>
+            Close this tab and start signing in again from the application you came
+            from. If it keeps failing, contact the application&apos;s support.
+          </p>
+        </div>
+        <p className="plate__note">
+          Came here by accident? <a href="/login">Go to sign in</a>
+        </p>
+      </Plate>
+    </DoorShell>
   );
 }
 
@@ -94,57 +94,43 @@ export default async function OAuthConsentPage({
     }
   })();
 
+  const switchTo = switchAccount.bind(null, `/oauth/consent?authorization_id=${authorizationId}`);
+
   return (
-    <AuthShell
-      pill="Authorize access"
-      heading={
-        <>
-          Connect <em>{details.client.name}</em> to your Harbor Ops account.
-        </>
-      }
-      lede={
-        <>
-          {details.client.name} is asking to sign you in with Harbor Ops. You
-          are signed in as <strong>{details.user.email}</strong> — not you?{" "}
-          <Link href={`/login?next=${encodeURIComponent(`/oauth/consent?authorization_id=${authorizationId}`)}`}>
-            Switch account
-          </Link>
-          .
-        </>
-      }
-      foot={
-        clientHost ? (
+    <DoorShell knocker>
+      <Plate
+        title={`Connect ${details.client.name} to Harbor.`}
+        sub={
           <>
-            You will be returned to <strong>{clientHost}</strong> after you
-            decide.
+            {details.client.name} is asking to sign you in with Harbor. You are signed in as{" "}
+            <strong>{details.user.email}</strong>.
           </>
-        ) : undefined
-      }
-    >
-      <div className="field">
-        <span className="lab">This application will be able to</span>
-        <ul
-          style={{
-            margin: "6px 0 0",
-            paddingLeft: 18,
-            display: "grid",
-            gap: 6
-          }}
-        >
+        }
+      >
+        <ul className="plate__list" aria-label="This application will be able to">
           {(scopes.length > 0 ? scopes : ["openid"]).map((scope) => (
             <li key={scope}>{SCOPE_DESCRIPTIONS[scope] ?? scope}</li>
           ))}
         </ul>
-        <p className="hint">
-          It will never see your Harbor Ops password, and it only gets the
-          permissions listed above.
+        <p className="plate__note">
+          It will never see your Harbor password, and it only gets the permissions listed above.
+          {clientHost ? (
+            <>
+              {" "}
+              You’ll return to <strong>{clientHost}</strong> after you decide.
+            </>
+          ) : null}
         </p>
-      </div>
 
-      <ConsentForm
-        authorizationId={authorizationId}
-        clientName={details.client.name}
-      />
-    </AuthShell>
+        <ConsentForm authorizationId={authorizationId} clientName={details.client.name} />
+
+        <form action={switchTo} className="plate__note">
+          Not you?{" "}
+          <button type="submit" className="plate__link">
+            Switch account
+          </button>
+        </form>
+      </Plate>
+    </DoorShell>
   );
 }

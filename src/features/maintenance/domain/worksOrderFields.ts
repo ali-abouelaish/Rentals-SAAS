@@ -25,7 +25,7 @@
 //
 // Coordinate systems:
 //   - react-pdf positions from the BOTTOM of the page (`bottom: N`).
-//   - BoldSign form fields use a TOP-LEFT origin, the same as Harbor Ops'
+//   - BoldSign form fields use a TOP-LEFT origin, the same as Harbor's
 //     contract_template_fields (confirmed against the sandbox).
 // The conversion happens in one place, below.
 

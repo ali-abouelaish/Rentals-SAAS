@@ -296,7 +296,7 @@ export async function sendOwnerStatement(statementId: string) {
   // Same brand resolution the PDF uses, so the covering email and the
   // attachment carry the same logo and colours.
   const brand = await loadAgencyBrand(st.tenant_id as string);
-  const fromName = brand?.displayName || "Harbor Ops";
+  const fromName = brand?.displayName || "Harbor";
   const replyTo = await loadAgencyContactEmail(st.tenant_id as string);
 
   const periodLabel = monthLabel(st.period_year as number, st.period_month as number);

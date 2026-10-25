@@ -7,7 +7,14 @@ import { hasFeature } from "@/lib/entitlements/requireFeature";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { loadAgency } from "@/lib/email/agency-context";
 import { sendEmail } from "@/lib/email/send";
+import { esc, harborEmail, paragraph } from "@/lib/email/harbor";
 import { getEmailProviderStatus } from "../data/provider";
+
+const PROVIDER_LABELS: Record<string, string> = {
+  graph: "Microsoft 365",
+  gmail: "Gmail",
+  smtp: "SMTP",
+};
 
 /**
  * Send a test email through the agency's configured provider to verify the
@@ -41,9 +48,17 @@ export async function sendProviderTestEmail(): Promise<{ ok: true } | { ok: fals
       profile.tenant_id,
       {
         to: recipient,
-        subject: "Harbor Ops test email",
-        html: `<p>This is a test email from Harbor Ops confirming your ${provider.type} email connection is working.</p>`,
-        text: `This is a test email from Harbor Ops confirming your ${provider.type} email connection is working.`,
+        subject: "Harbor test email",
+        html: harborEmail({
+          title: "Harbor test email",
+          eyebrow: "Email sending",
+          headline: ["Your connection works.", "This came through it."],
+          html: paragraph(
+            `This is a test email from Harbor confirming your ${esc(PROVIDER_LABELS[provider.type] ?? provider.type)} email connection is working.`
+          ),
+          footnote: "Sent to your connected mailbox from Settings › Email.",
+        }),
+        text: `This is a test email from Harbor confirming your ${PROVIDER_LABELS[provider.type] ?? provider.type} email connection is working.`,
         templateKey: "provider_test",
       },
       { agency },

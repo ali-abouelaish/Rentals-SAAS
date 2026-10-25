@@ -11,7 +11,7 @@
  *   tenants.branding (jsonb)  — the older store, read by the email layer
  *                               (loadAgency / normalizeBranding). For most
  *                               tenants it is empty, so callers silently fall
- *                               back to Harbor Ops defaults.
+ *                               back to Harbor defaults.
  *
  * Documents read the live store first and fall back to the jsonb one, so an
  * agency that branded itself through the admin screen actually sees its own

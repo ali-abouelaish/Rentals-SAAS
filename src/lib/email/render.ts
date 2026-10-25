@@ -3,6 +3,9 @@ import path from "path";
 import Handlebars from "handlebars";
 import { signPreferenceToken } from "@/lib/preferences/token";
 import type { AgencyBranding } from "./branding";
+import { renderPlatformInvoiceEmail } from "./templates/platform-invoice";
+
+export type { PlatformInvoiceEmailContext } from "./templates/platform-invoice";
 
 Handlebars.registerHelper("eq", (a: unknown, b: unknown) => a === b);
 
@@ -58,22 +61,6 @@ export type OwnerStatementEmailContext = {
 };
 
 /**
- * Platform invoice — Harbor Ops billing an agency.
- *
- * Note the direction: every other template here is an AGENCY writing to its
- * tenants, landlords or contractors, and carries agency branding. This one is
- * us writing to the agency, so it carries ours.
- */
-export type PlatformInvoiceEmailContext = {
-  agencyName: string;
-  invoiceNumber: string | null;
-  periodLabel: string;
-  totalAmount: string;
-  lineSummary: { description: string; amount: string }[];
-  paymentNote: string | null;
-};
-
-/**
  * The shell for agency-authored messages (welcome packs and anything else an
  * agency writes itself). Unlike the templates above, the copy is not in the
  * .hbs file — the agency types it, `renderMessageBody` turns their markup into
@@ -109,7 +96,6 @@ let dueTpl: HandlebarsTemplateDelegate<RentEmailContext> | null = null;
 let overdueTpl: HandlebarsTemplateDelegate<RentEmailContext> | null = null;
 let commTpl: HandlebarsTemplateDelegate<CommunicationRequestEmailContext> | null = null;
 let ownerStatementTpl: HandlebarsTemplateDelegate<OwnerStatementEmailContext> | null = null;
-let platformInvoiceTpl: HandlebarsTemplateDelegate<PlatformInvoiceEmailContext> | null = null;
 let agencyMessageTpl: HandlebarsTemplateDelegate<AgencyMessageEmailContext> | null = null;
 
 function loadDue() {
@@ -129,13 +115,6 @@ function loadOwnerStatement() {
   return ownerStatementTpl;
 }
 
-function loadPlatformInvoice() {
-  if (!platformInvoiceTpl) {
-    platformInvoiceTpl = compile<PlatformInvoiceEmailContext>("platform-invoice.hbs");
-  }
-  return platformInvoiceTpl;
-}
-
 function loadAgencyMessage() {
   if (!agencyMessageTpl) {
     agencyMessageTpl = compile<AgencyMessageEmailContext>("agency-message.hbs");
@@ -148,7 +127,9 @@ export const templates = {
   rentOverdue: (ctx: RentEmailContext) => loadOverdue()(ctx),
   communicationRequest: (ctx: CommunicationRequestEmailContext) => loadCommunication()(ctx),
   ownerStatement: (ctx: OwnerStatementEmailContext) => loadOwnerStatement()(ctx),
-  platformInvoice: (ctx: PlatformInvoiceEmailContext) => loadPlatformInvoice()(ctx),
+  // Harbor writing to an agency, so it's built on Harbor's own shell rather
+  // than an agency-branded .hbs file.
+  platformInvoice: renderPlatformInvoiceEmail,
   agencyMessage: (ctx: AgencyMessageEmailContext) => loadAgencyMessage()(ctx),
 };
 

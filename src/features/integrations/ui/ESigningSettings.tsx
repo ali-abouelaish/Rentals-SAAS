@@ -156,7 +156,7 @@ export function ESigningSettings({
 
         <Row
           label="Completion updates"
-          hint="Tells Harbor Ops when someone has signed, so records update themselves."
+          hint="Tells Harbor when someone has signed, so records update themselves."
         >
           <Pill tone={platform.webhookConfigured ? "ok" : "warn"}>
             {platform.webhookConfigured ? "Receiving" : "Not connected"}

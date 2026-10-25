@@ -557,7 +557,7 @@ export async function exportInvoicePdfAction(input: {
  * Sent via raw Resend rather than the `sendEmail` dispatcher, matching the
  * owner-statement send: `EmailMessage` has no attachments field, so nothing
  * with a PDF can go through the per-tenant transports yet. That is also
- * correct here for a second reason — this is Harbor Ops writing to the agency,
+ * correct here for a second reason — this is Harbor writing to the agency,
  * so it should NOT go out through the agency's own mailbox.
  */
 export async function emailInvoiceAction(input: {
@@ -622,15 +622,15 @@ export async function emailInvoiceAction(input: {
   });
 
   const subject = loaded.record.invoiceNumber
-    ? `Harbor Ops invoice ${loaded.record.invoiceNumber} — ${loaded.record.periodLabel}`
-    : `Harbor Ops invoice — ${loaded.record.periodLabel}`;
+    ? `Harbor invoice ${loaded.record.invoiceNumber} — ${loaded.record.periodLabel}`
+    : `Harbor invoice — ${loaded.record.periodLabel}`;
 
   const admin = createSupabaseAdminClient();
 
   try {
     const resend = new Resend(apiKey);
     await resend.emails.send({
-      from: `Harbor Ops <billing@${fromDomain}>`,
+      from: `Harbor <billing@${fromDomain}>`,
       to: recipient,
       subject,
       html,

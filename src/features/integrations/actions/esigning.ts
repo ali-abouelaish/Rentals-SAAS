@@ -47,7 +47,7 @@ async function requireESigningAdmin(): Promise<Gate> {
 }
 
 /**
- * Push the agency's Harbor Ops branding to BoldSign, and record that they
+ * Push the agency's Harbor branding to BoldSign, and record that they
  * asked for it.
  *
  * The click IS the consent — an agency admin pressing "Apply my branding" is

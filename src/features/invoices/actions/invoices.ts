@@ -540,7 +540,7 @@ export async function viewInvoicePdf(invoiceId: string) {
 // there is no approval step. Drafts are never sent: an invoice must be
 // finalised first. Mail goes through sendEmail, so it leaves from the agency's
 // connected mailbox (Microsoft 365 / Gmail / SMTP) when there is one, and from
-// the Harbor Ops mailer otherwise.
+// the Harbor mailer otherwise.
 
 const INVOICE_EMAIL_SELECT =
   "*, landlords(id, name, email), billing_profiles(sender_company_name, sender_email)";
@@ -626,12 +626,12 @@ function recipientFor(invoice: InvoiceForEmail): string | null {
 
 async function describeSendingMailbox(tenantId: string, emailSendingOn: boolean): Promise<string> {
   // Switched off, sendEmail ignores the connected mailbox — so must this.
-  if (!emailSendingOn) return "the shared Harbor Ops mailer";
+  if (!emailSendingOn) return "the shared Harbor mailer";
   const provider = await getEmailProviderStatus(tenantId).catch(() => null);
   if (provider?.status === "active" && provider.fromAddress) {
     return `your mailbox (${provider.fromAddress})`;
   }
-  return "the shared Harbor Ops mailer";
+  return "the shared Harbor mailer";
 }
 
 type Branding = { brand: AgencyBrand; contactEmail: string | null };

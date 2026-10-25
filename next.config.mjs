@@ -17,6 +17,16 @@ const buildConfig = (phase) => ({
       }
     ]
   },
+  // The public website's images (public/site/): cached for a week, as the designer specified. The
+  // pages link them with a ?v= version, so a replaced image shows once its ?v= is changed.
+  async headers() {
+    return [
+      {
+        source: "/site/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800" }]
+      }
+    ];
+  },
   experimental: {
     // Enables src/instrumentation.ts (required on Next 14; default on 15+).
     instrumentationHook: true,

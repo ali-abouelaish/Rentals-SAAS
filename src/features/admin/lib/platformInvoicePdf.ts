@@ -133,7 +133,7 @@ export async function loadInvoiceForPdf(
 
 export function invoiceFilename(record: InvoicePdfRecord): string {
   const base = record.invoiceNumber ?? record.periodLabel.replace(/\s+/g, "-").toLowerCase();
-  return `harbor-ops-invoice-${base}.pdf`;
+  return `harbor-invoice-${base}.pdf`;
 }
 
 /**

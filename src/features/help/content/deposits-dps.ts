@@ -26,7 +26,7 @@ Registering the tenancy does **not** move any money. Two ways to pay:
 
 ## Confirming protection
 
-DPS does not tell Harbor Ops when the money lands, so once the deposit shows as protected in the DPS portal, click **Confirm protected** on the card. This records the protection date on the contract and completes the compliance trail.
+DPS does not tell Harbor when the money lands, so once the deposit shows as protected in the DPS portal, click **Confirm protected** on the card. This records the protection date on the contract and completes the compliance trail.
 
 ## Statuses
 
@@ -38,7 +38,7 @@ DPS does not tell Harbor Ops when the money lands, so once the deposit shows as 
 
 ## Tips
 
-- DPS credentials (client ID, client secret, and the agency's 7-digit Agent/Landlord ID) are configured once per agency by your Harbor Ops administrator under Deposit Schemes. If the DPS subtab says *not configured*, ask them to add the keys.
+- DPS credentials (client ID, client secret, and the agency's 7-digit Agent/Landlord ID) are configured once per agency by your Harbor administrator under Deposit Schemes. If the DPS subtab says *not configured*, ask them to add the keys.
 - Registration is safe to retry — a tenancy that already has a DPS deposit ID will not be duplicated.
 - The date the deposit was paid must be **before the tenancy start date** and cannot be in the future — DPS enforces both.
 - DPS only accepts tenancies in **England and Wales** (the postcode is validated). Scottish or Northern Irish properties need a different scheme.`,

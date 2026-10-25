@@ -18,7 +18,7 @@ export type OAuthConsentState = { error?: string };
 
 /**
  * Approves or denies a pending OAuth 2.1 authorization request ("Log in with
- * Harbor Ops"). Supabase Auth redirects third-party users to /oauth/consent
+ * Harbor"). Supabase Auth redirects third-party users to /oauth/consent
  * with an authorization_id; this action records the signed-in user's decision
  * and sends them back to the requesting application.
  */

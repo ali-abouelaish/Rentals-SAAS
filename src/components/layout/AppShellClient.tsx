@@ -66,11 +66,11 @@ export function AppShellClient({
                 <img src={branding.logo_url} alt="" className="h-7 w-7 rounded-lg object-contain" />
               ) : (
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-[11px] font-semibold text-brand-fg">
-                  {brandInitials(branding?.brand_name ?? "Harbor Ops")}
+                  {brandInitials(branding?.brand_name ?? "Harbor")}
                 </div>
               )}
               <span className="truncate text-sm font-semibold text-foreground">
-                {branding?.brand_name ?? "Harbor Ops"}
+                {branding?.brand_name ?? "Harbor"}
               </span>
             </div>
             <div className="flex items-center gap-3">

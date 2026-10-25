@@ -1,0 +1,184 @@
+/* =========================================================================
+   Harbor — legal pages (privacy, terms)
+   A Deep Harbour band for the title, then plain, readable text on cream.
+
+   Ported from the designer's stand-alone site (css/legal.css) and scoped under the page's own
+   wrapper, <div class="harbor-legal">, so it can share the app's root layout. The second half
+   styles the content blocks the policies already use (data tables, definitions, callouts…),
+   which the designer's placeholder pages didn't have.
+   ========================================================================= */
+
+.harbor-legal {
+  --cream: #FDF9F2;
+  --deep: #19363A;
+  --teal: #215B5D;
+  --sage: #A7B4B0;
+  --sand: #D4BE97;
+  --ink: #13201F;
+  --text: #2B3836;
+  --tone-2-small: #626D6A;
+  --line: rgba(19, 32, 31, .14);
+  --sans: var(--font-urbanist), ui-sans-serif, sans-serif;   /* stand-in for Sharp Sans (next/font, src/features/site/fonts.ts) */
+  --gutter: clamp(20px, 5.2vw, 75px);
+}
+
+/* The design was written against browser defaults; the app's root layout loads Tailwind's preflight
+   and globals.css @layer base, which reset some of them (heading sizes and weights, margins, list
+   styles, borders, image heights). Revert exactly those inside the page.
+   :where() keeps these at the wrapper's own weight (0,1,0), so every design rule below wins. */
+.harbor-legal :where(*), .harbor-legal :where(*)::before, .harbor-legal :where(*)::after { border-width: revert; border-style: revert; border-color: revert; }
+.harbor-legal :where(h1, h2, h3, h4, h5, h6) { font-size: revert; font-weight: revert; font-family: revert; color: revert; }
+.harbor-legal :where(blockquote, dl, dd, h1, h2, h3, h4, h5, h6, hr, figure, p, pre, fieldset, ol, ul, menu) { margin: revert; }
+.harbor-legal :where(fieldset, legend, ol, ul, menu, dialog) { padding: revert; }
+.harbor-legal :where(ol, ul, menu) { list-style: revert; }
+.harbor-legal :where(a) { text-decoration: revert; }
+.harbor-legal :where(button, input, optgroup, select, textarea) { font: revert; letter-spacing: revert; color: revert; margin: revert; padding: revert; }
+.harbor-legal :where(button, [type="button"], [type="reset"], [type="submit"]) { background-color: revert; background-image: revert; }
+.harbor-legal :where(img, svg, video, canvas, audio, iframe, embed, object) { display: revert; vertical-align: revert; }
+.harbor-legal :where(img, video) { max-width: revert; height: revert; }
+.harbor-legal :where(table) { border-collapse: revert; border-color: revert; text-indent: revert; }
+
+.harbor-legal *, .harbor-legal *::before, .harbor-legal *::after { box-sizing: border-box; }
+html:has(.harbor-legal) { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body:has(.harbor-legal) { background: #FDF9F2; }   /* the overscroll behind the page, not the app's grey */
+.harbor-legal { margin: 0; background: var(--cream); color: var(--text); font: 500 17px/1.65 var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.harbor-legal img { display: block; max-width: 100%; height: auto; }
+.harbor-legal a { color: inherit; }
+.harbor-legal :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 4px; }
+.harbor-legal .legal__band :focus-visible, .harbor-legal .legal__foot :focus-visible { outline-color: var(--sand); }
+.harbor-legal ::selection { background: rgba(212, 190, 151, .55); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { html:has(.harbor-legal) { scroll-behavior: auto; } }
+
+.harbor-legal .skip { position: absolute; left: 16px; top: -64px; z-index: 10; padding: 10px 16px; border-radius: 999px; background: var(--cream); color: var(--deep); font-weight: 600; text-decoration: none; }
+.harbor-legal .skip:focus { top: 12px; }
+
+.harbor-legal .legal__wrap { width: min(100% - 2 * var(--gutter), 760px); margin: 0 auto; }
+
+/* title band */
+.harbor-legal .legal__band {
+  color: var(--cream); padding-bottom: clamp(40px, 6vw, 76px);
+  background: radial-gradient(110% 120% at 12% 0%, #21454A 0%, var(--deep) 55%, #142D30 100%);
+}
+.harbor-legal .legal__top { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(100% - 2 * var(--gutter), 1200px); min-height: 76px; margin: 0 auto; }
+.harbor-legal .legal__logo { position: relative; display: block; line-height: 0; }
+.harbor-legal .legal__logo::before { content: ""; position: absolute; inset: -8px -6px; }   /* tap area */
+.harbor-legal .legal__logo img { height: 28px; width: auto; }
+.harbor-legal .back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14.5px; font-weight: 600; text-decoration: none; color: var(--cream); }
+.harbor-legal .back svg { width: 14px; height: 14px; transition: transform .35s ease; }
+.harbor-legal .back:hover svg { transform: translateX(-3px); }
+.harbor-legal .legal__head { padding-top: clamp(28px, 6vw, 76px); }
+.harbor-legal .eyebrow { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--sand); }
+.harbor-legal .legal__head h1 { margin: 0; font-size: clamp(38px, 5vw, 64px); font-weight: 600; line-height: 1.02; letter-spacing: -.04em; color: var(--cream); }
+.harbor-legal .updated { margin: 14px 0 0; font-size: 14px; color: var(--sage); }
+
+/* text */
+.harbor-legal .legal__body { padding: clamp(36px, 5vw, 64px) 0 clamp(56px, 8vw, 100px); }
+.harbor-legal .notice { margin: 0 0 30px; padding: 14px 18px; border-radius: 12px; background: #F4EADA; border: 1px solid rgba(212, 190, 151, .95); font-size: 15px; line-height: 1.5; color: var(--ink); }
+.harbor-legal .toc { margin: 0 0 12px; padding: 18px 22px; border: 1px solid var(--line); border-radius: 12px; }
+.harbor-legal .toc p { margin: 0 0 8px; font-size: 13.5px; font-weight: 600; color: var(--tone-2-small); }
+.harbor-legal .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 36px; font-size: 15px; line-height: 1.5; }
+.harbor-legal .toc li { margin: 0; }   /* both columns start level */
+.harbor-legal .toc a { display: inline-block; padding: 9px 0; color: var(--deep); font-weight: 600; text-decoration: none; }
+.harbor-legal .toc a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.harbor-legal .legal__body section { scroll-margin-top: 20px; }
+.harbor-legal .legal__body h2 { margin: 40px 0 8px; font-size: 22px; font-weight: 600; line-height: 1.25; letter-spacing: -.02em; color: var(--deep); }
+.harbor-legal .legal__body p { margin: 0 0 14px; }
+.harbor-legal .legal__body ul { margin: 0 0 14px; padding-left: 22px; }
+.harbor-legal .legal__body li { margin: 4px 0; }
+.harbor-legal .legal__body section a { color: var(--deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.harbor-legal .ph { padding: 0 4px; border-radius: 4px; background: rgba(212, 190, 151, .32); color: var(--ink); }   /* still to confirm */
+
+/* footer */
+.harbor-legal .legal__foot { background: var(--deep); color: rgba(253, 249, 242, .72); font-size: 13.5px; }
+.harbor-legal .legal__foot .legal__wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; width: min(100% - 2 * var(--gutter), 1200px); min-height: 72px; }
+.harbor-legal .legal__foot p { margin: 0; }
+.harbor-legal .legal__foot nav { display: flex; flex-wrap: wrap; gap: 4px 22px; }
+.harbor-legal .legal__foot a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; }
+.harbor-legal .legal__foot a:hover, .harbor-legal .legal__foot a[aria-current] { color: var(--cream); text-decoration: underline; text-underline-offset: 4px; }
+
+@media (max-width: 600px) {
+  .harbor-legal { font-size: 16px; }
+  .harbor-legal .toc ol { columns: 1; }
+  .harbor-legal .legal__foot .legal__wrap { padding: 12px 0 18px; }
+}
+
+/* =========================================================================
+   The policies' own content (not in the designer's placeholder pages):
+   the band's introduction and facts, numbered sections, data tables,
+   definitions, callouts, the rights grid and the contact box.
+   ========================================================================= */
+.harbor-legal .legal__head h1 em { font-style: normal; color: var(--sand); }
+.harbor-legal .legal__head .lede { margin: 18px 0 0; max-width: 40em; font-size: 17px; line-height: 1.55; color: rgba(253, 249, 242, .82); }
+.harbor-legal .legal__docs { display: flex; flex-wrap: wrap; gap: 8px; margin: 26px 0 0; }
+.harbor-legal .legal__docs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid rgba(253, 249, 242, .3); color: var(--cream); font-size: 14.5px; font-weight: 600; text-decoration: none; transition: border-color .25s ease, background-color .25s ease; }
+.harbor-legal .legal__docs a:hover { border-color: var(--cream); }
+.harbor-legal .legal__docs a[aria-current="page"] { background: var(--cream); border-color: var(--cream); color: var(--deep); }
+.harbor-legal .meta-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 24px; margin: 30px 0 0; padding-top: 22px; border-top: 1px solid rgba(253, 249, 242, .16); }
+.harbor-legal .meta-strip .k { font-size: 12.5px; font-weight: 600; color: var(--sand); }
+.harbor-legal .meta-strip .v { margin-top: 4px; font-size: 15px; line-height: 1.4; color: var(--cream); }
+.harbor-legal .meta-strip .v em { font-style: normal; }
+@media (max-width: 760px) { .harbor-legal .meta-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* numbered sections */
+.harbor-legal .section-head { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: baseline; gap: 12px; margin: 44px 0 10px; }
+.harbor-legal .section-head h2 { margin: 0; }
+.harbor-legal .section-num { font-size: 13px; font-weight: 600; color: var(--tone-2-small); font-variant-numeric: tabular-nums; }
+.harbor-legal .section-body { padding-left: 56px; }
+.harbor-legal .article h3 { margin: 26px 0 8px; font-size: 18px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; color: var(--deep); }
+@media (max-width: 600px) {
+  .harbor-legal .section-head { grid-template-columns: 1fr; gap: 2px; }
+  .harbor-legal .section-body { padding-left: 0; }
+}
+
+/* data tables (what we use, why, on what basis) */
+.harbor-legal .dtable { margin: 18px 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #FFFDF9; }
+.harbor-legal .dtable .row { display: grid; grid-template-columns: 1.2fr 1.5fr 1fr; font-size: 15px; line-height: 1.5; }
+.harbor-legal .dtable .row + .row { border-top: 1px solid var(--line); }
+.harbor-legal .dtable .row > div { padding: 12px 16px; }
+.harbor-legal .dtable .row.h > div { background: #F4EADA; font-size: 13px; font-weight: 600; color: var(--deep); }
+.harbor-legal .dtable .basis { font-size: 14px; font-weight: 600; color: var(--teal); }
+.harbor-legal .dtable strong { font-weight: 600; color: var(--ink); }
+@media (max-width: 640px) {
+  .harbor-legal .dtable .row { grid-template-columns: 1fr; }
+  .harbor-legal .dtable .row.h { display: none; }
+  .harbor-legal .dtable .row > div { padding: 4px 16px; }
+  .harbor-legal .dtable .row > div:first-child { padding-top: 14px; }
+  .harbor-legal .dtable .row > div:last-child { padding-bottom: 14px; }
+  .harbor-legal .dtable .row + .row { border-top: 1px solid var(--line); }
+}
+
+/* definitions and contact details */
+.harbor-legal .defs { margin: 18px 0; border-top: 1px solid var(--line); }
+.harbor-legal .def { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.harbor-legal .def .term { font-size: 15px; font-weight: 600; color: var(--deep); }
+.harbor-legal .def .desc { font-size: 15.5px; line-height: 1.55; }
+@media (max-width: 600px) { .harbor-legal .def { grid-template-columns: 1fr; gap: 2px; } }
+
+/* callouts */
+.harbor-legal .callout { display: flex; align-items: flex-start; gap: 14px; margin: 20px 0; padding: 16px 18px; border-radius: 14px; background: #F4EADA; border: 1px solid rgba(212, 190, 151, .95); font-size: 15.5px; line-height: 1.55; color: var(--ink); }
+.harbor-legal .callout .ico { flex: none; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 1px; border-radius: 50%; background: var(--deep); color: var(--cream); font-size: 13px; font-weight: 700; }
+.harbor-legal .callout strong { font-weight: 600; }
+.harbor-legal .callout.dark { background: var(--deep); border-color: transparent; color: rgba(253, 249, 242, .88); }
+.harbor-legal .callout.dark .ico { background: var(--sand); color: var(--deep); }
+.harbor-legal .callout.dark strong { color: var(--cream); }
+.harbor-legal .callout.dark a { color: var(--cream); }
+
+/* your rights */
+.harbor-legal .rights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #FFFDF9; }
+.harbor-legal .rights .r { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.harbor-legal .rights .r:nth-child(odd) { border-right: 1px solid var(--line); }
+.harbor-legal .rights .r:nth-last-child(-n+2) { border-bottom: 0; }
+.harbor-legal .rights .k { font-size: 15.5px; font-weight: 600; color: var(--deep); }
+.harbor-legal .rights .v { margin-top: 2px; font-size: 14.5px; line-height: 1.5; color: var(--tone-2-small); }
+@media (max-width: 600px) {
+  .harbor-legal .rights { grid-template-columns: 1fr; }
+  .harbor-legal .rights .r:nth-child(odd) { border-right: 0; }
+  .harbor-legal .rights .r:nth-last-child(2) { border-bottom: 1px solid var(--line); }
+}
+
+/* "Need a DPA, SAR, or data export?" */
+.harbor-legal .contact { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin: 26px 0 0; padding: 22px 24px; border-radius: 16px; background: var(--deep); color: rgba(253, 249, 242, .85); }
+.harbor-legal .contact h4 { margin: 0 0 4px; font-size: 17px; font-weight: 600; color: var(--cream); }
+.harbor-legal .contact p { margin: 0; font-size: 15px; }
+.harbor-legal .contact .cbtn { display: inline-flex; align-items: center; min-height: 46px; padding: 0 20px; border-radius: 999px; background: var(--cream); color: var(--deep); font-size: 15px; font-weight: 600; text-decoration: none; transition: background-color .25s ease; }
+.harbor-legal .contact .cbtn:hover { background: var(--sand); }

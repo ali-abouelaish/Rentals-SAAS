@@ -252,7 +252,7 @@ export function PreferencesView({ ctx, requests, token, doneCode, errorCode }: P
               Contact: <a href={`mailto:${branding.reply_to_email}`} className="underline">{branding.reply_to_email}</a>
             </div>
           )}
-          <div className="pt-2 text-[11px] text-slate-400">Powered by Harbor Ops</div>
+          <div className="pt-2 text-[11px] text-slate-400">Powered by Harbor</div>
         </footer>
       </div>
     </main>

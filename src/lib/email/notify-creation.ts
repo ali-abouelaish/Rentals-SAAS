@@ -3,6 +3,7 @@ import { loadAgency } from "./agency-context";
 import { sendAgencyEmail } from "./agency-send";
 import { loadAgencyContactEmail, MissingContactEmailError } from "./contact";
 import { getTenantAppUrl } from "./app-url";
+import { button, facts, harborEmail } from "./harbor";
 
 const GBP = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 const DATE_FMT = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -20,38 +21,18 @@ function fmtDate(s: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? "—" : DATE_FMT.format(d);
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string)
-  );
-}
-
 type SummaryRow = readonly [label: string, value: string];
 
 function renderHtml(title: string, rows: SummaryRow[], ctaUrl: string, ctaLabel: string): string {
-  const body = rows
-    .map(
-      ([label, value]) => `
-        <tr>
-          <td style="padding:6px 12px 6px 0;color:#666;font-size:13px;vertical-align:top;">${escapeHtml(label)}</td>
-          <td style="padding:6px 0;color:#111;font-size:13px;font-weight:500;">${escapeHtml(value)}</td>
-        </tr>`
-    )
-    .join("");
-  return `<!doctype html>
-<html><body style="margin:0;padding:24px;background:#f6f7f9;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">
-  <table cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;">
-    <tr><td style="padding:28px 28px 8px;">
-      <h1 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111;">${escapeHtml(title)}</h1>
-      <p style="margin:0 0 16px;color:#555;font-size:14px;">A new record was created in your agency workspace.</p>
-      <table cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;margin:8px 0 20px;">${body}</table>
-      <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#111;color:#fff;text-decoration:none;font-size:13px;font-weight:500;">${escapeHtml(ctaLabel)}</a>
-    </td></tr>
-    <tr><td style="padding:16px 28px 28px;color:#999;font-size:12px;border-top:1px solid #f0f0f0;">
-      You're receiving this because this address is set as your agency contact email. To change it, open Settings &rsaquo; Billing info.
-    </td></tr>
-  </table>
-</body></html>`;
+  return harborEmail({
+    title,
+    preheader: rows.map(([, value]) => value).filter((v) => v !== "—").slice(0, 2).join(" · "),
+    eyebrow: "Your workspace",
+    headline: [`${title}.`, "Here are the details."],
+    html: facts(rows) + button(ctaUrl, ctaLabel),
+    footnote:
+      "You’re receiving this because this address is set as your agency contact email. To change it, open Settings › Billing info.",
+  });
 }
 
 function renderText(title: string, rows: SummaryRow[], ctaUrl: string): string {

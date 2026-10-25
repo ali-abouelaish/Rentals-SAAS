@@ -29,7 +29,7 @@ const FIELD_TYPES: Record<SignatureFieldType, FormField.FieldTypeEnum> = {
 };
 
 /**
- * Harbor Ops stores field boxes in PDF points with the origin at the page's
+ * Harbor stores field boxes in PDF points with the origin at the page's
  * TOP-LEFT (contract_template_fields), and BoldSign's bounds use the same
  * convention — confirmed visually against the sandbox — so coordinates map
  * straight through with no y-flip.

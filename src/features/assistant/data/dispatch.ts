@@ -142,7 +142,7 @@ function slimBooking(b: any) {
 }
 
 /**
- * Whether a lead was captured by Harbor Ops itself — an agent's business card
+ * Whether a lead was captured by Harbor itself — an agent's business card
  * or the agency's own website. Every other lead was imported from an agency's
  * Gmail inbox (portal enquiry emails), so its details are Google user data —
  * and Google's Limited Use rules, which our OAuth verification and privacy

@@ -9,7 +9,7 @@ import {
 import { formatPence } from "@/lib/utils/formatters";
 
 /**
- * A platform invoice — Harbor Ops billing an agency.
+ * A platform invoice — Harbor billing an agency.
  *
  * Deliberately NOT agency-branded, unlike `OwnerStatementPdf`. That document is
  * the agency writing to its landlord and carries the agency's logo; this one is
@@ -226,12 +226,12 @@ export function PlatformInvoicePdf(props: PlatformInvoicePdfProps) {
   return (
     <Document
       title={`Invoice ${invoiceNumber ?? periodLabel} — ${billTo.agencyName}`}
-      author="Harbor Ops"
+      author="Harbor"
     >
       <Page size="A4" style={styles.page}>
         <View style={styles.headerRow}>
           <View style={styles.issuerBlock}>
-            <Text style={styles.issuerName}>Harbor Ops</Text>
+            <Text style={styles.issuerName}>Harbor</Text>
             <Text style={styles.issuerLine}>harborops.co.uk</Text>
           </View>
 
@@ -353,7 +353,7 @@ export function PlatformInvoicePdf(props: PlatformInvoicePdfProps) {
 
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>
-            Harbor Ops · {periodLabel} · {formatDay(periodStart)} to {formatDay(periodEnd)}
+            Harbor · {periodLabel} · {formatDay(periodStart)} to {formatDay(periodEnd)}
           </Text>
           <Text
             style={styles.footerText}

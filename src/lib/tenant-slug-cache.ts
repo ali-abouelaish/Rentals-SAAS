@@ -14,7 +14,8 @@
 const TTL_MS = 60_000;
 
 type SlugEntry = { tenantId: string | null; expiresAt: number };
-type UserEntry = { tenantId: string | null; slug: string | null; expiresAt: number };
+type UserTenant = { tenantId: string | null; slug: string | null; isSuperAdmin: boolean };
+type UserEntry = UserTenant & { expiresAt: number };
 
 const slugToTenant = new Map<string, SlugEntry>();
 const userToTenant = new Map<string, UserEntry>();
@@ -52,22 +53,23 @@ export async function getTenantIdBySlug(slug: string): Promise<string | null> {
   }
 }
 
-export async function getUserTenant(userId: string): Promise<{ tenantId: string | null; slug: string | null }> {
+export async function getUserTenant(userId: string): Promise<UserTenant> {
   const now = Date.now();
   const cached = userToTenant.get(userId);
   if (cached && cached.expiresAt > now) {
-    return { tenantId: cached.tenantId, slug: cached.slug };
+    return { tenantId: cached.tenantId, slug: cached.slug, isSuperAdmin: cached.isSuperAdmin };
   }
 
+  const none: UserTenant = { tenantId: null, slug: null, isSuperAdmin: false };
   const url = restUrl(
     `/user_profiles?id=eq.${encodeURIComponent(userId)}&select=tenant_id,role,tenants(slug)&limit=1`
   );
   const headers = restHeaders();
-  if (!url || !headers) return { tenantId: null, slug: null };
+  if (!url || !headers) return none;
 
   try {
     const resp = await fetch(url, { headers, cache: "no-store" });
-    if (!resp.ok) return { tenantId: null, slug: null };
+    if (!resp.ok) return none;
     const rows = (await resp.json()) as Array<{
       tenant_id: string | null;
       role: string | null;
@@ -82,15 +84,17 @@ export async function getUserTenant(userId: string): Promise<{ tenantId: string 
     // Super admins are not tied to a tenant subdomain; treat them as having no slug
     // so they aren't redirected when inspecting tenant subdomains.
     const role = (row?.role ?? "").toLowerCase();
-    const effectiveSlug = role === "super_admin" ? null : slug;
-    const effectiveTenantId = role === "super_admin" ? null : tenantId;
+    const isSuperAdmin = role === "super_admin";
+    const effectiveSlug = isSuperAdmin ? null : slug;
+    const effectiveTenantId = isSuperAdmin ? null : tenantId;
     userToTenant.set(userId, {
       tenantId: effectiveTenantId,
       slug: effectiveSlug,
+      isSuperAdmin,
       expiresAt: now + TTL_MS,
     });
-    return { tenantId: effectiveTenantId, slug: effectiveSlug };
+    return { tenantId: effectiveTenantId, slug: effectiveSlug, isSuperAdmin };
   } catch {
-    return { tenantId: null, slug: null };
+    return none;
   }
 }

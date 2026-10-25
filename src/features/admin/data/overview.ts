@@ -47,9 +47,13 @@ export type AttentionItem = {
   severity: "info" | "warning";
 };
 
+/** Demo requests from the public website (/admin/demo-requests). Null when the table is missing. */
+export type DemoRequestSummary = { new: number; lastWeek: number } | null;
+
 export type AdminOverview = {
   revenue: RevenueSummary;
   attention: AttentionItem[];
+  demoRequests: DemoRequestSummary;
   /** Tables that could not be read — migrations are applied by hand here. */
   unavailable: string[];
 };
@@ -67,7 +71,9 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     Date.now() - OVERDUE_AFTER_DAYS * 86_400_000
   ).toISOString();
 
-  const [subscriptions, charges, invoices, envelopes, mailboxes, brands] = await Promise.all([
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+
+  const [subscriptions, charges, invoices, envelopes, mailboxes, brands, newDemos, weekDemos] = await Promise.all([
     admin
       .from("tenant_integration_subscriptions")
       .select(
@@ -93,8 +99,18 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     // signal that an identity is actually usable.
     admin
       .from("boldsign_agency_brands")
-      .select("tenant_id, sender_identity_verified_at, sender_identity_status")
+      .select("tenant_id, sender_identity_verified_at, sender_identity_status"),
+    // The website's demo requests: unanswered ones, and how many came in this week.
+    admin.from("demo_requests").select("id", { count: "exact", head: true }).eq("status", "new"),
+    admin.from("demo_requests").select("id", { count: "exact", head: true }).gte("created_at", weekAgo)
   ]);
+
+  let demoRequests: DemoRequestSummary = null;
+  if (newDemos.error || weekDemos.error) {
+    unavailable.push("demo_requests");
+  } else {
+    demoRequests = { new: newDemos.count ?? 0, lastWeek: weekDemos.count ?? 0 };
+  }
 
   // ---------------------------------------------------------
   // MRR
@@ -282,7 +298,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   }
 
   // E-signing subscribers with no verified sender identity. Not blocking — those
-  // agencies still send, under the default Harbor Ops identity — so this is
+  // agencies still send, under the default Harbor identity — so this is
   // informational. It matters because a paying agency's contracts are going out
   // under our name rather than theirs, which they will eventually ask about.
   if (!subscriptions.error && !brands.error) {
@@ -303,7 +319,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
       attention.push({
         key: "esigning_identity",
         label: "E-signing without a verified sender",
-        detail: "Sending under the default Harbor Ops identity, not their own.",
+        detail: "Sending under the default Harbor identity, not their own.",
         count: esigningWithoutIdentity.length,
         href: "/admin/e-signing",
         severity: "info"
@@ -311,5 +327,5 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     }
   }
 
-  return { revenue, attention, unavailable: Array.from(new Set(unavailable)) };
+  return { revenue, attention, demoRequests, unavailable: Array.from(new Set(unavailable)) };
 }

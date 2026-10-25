@@ -41,7 +41,7 @@ export default async function IntegrationsSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">Integrations</h1>
         <p className="text-xs text-foreground-secondary">
-          Connect Harbor Ops to the services your agency already uses. Turn one on
+          Connect Harbor to the services your agency already uses. Turn one on
           and it works straight away — nothing is charged today, and anything paid
           goes on your next monthly invoice.
         </p>

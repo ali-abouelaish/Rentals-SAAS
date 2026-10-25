@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       isFeatureEnabledForTenant(key.tenant_id, "website_leads"),
     ]);
     if (tenantStatus !== "active") {
-      return fail(403, "account_inactive", "This agency's Harbor Ops account isn't active.");
+      return fail(403, "account_inactive", "This agency's Harbor account isn't active.");
     }
     if (!leadsOn || !websiteLeadsOn) {
       return fail(403, "feature_disabled", "Website lead capture is switched off for this agency.");

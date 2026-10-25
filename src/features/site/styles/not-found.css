@@ -1,0 +1,45 @@
+/* =========================================================================
+   Harbor — "This page isn't here." (404, the root error page, an unknown workspace)
+   Ported from the designer's 404.html and scoped under <div class="harbor-404">, so it can
+   share the app's root layout without leaking either way.
+   ========================================================================= */
+
+.harbor-404 {
+  --cream: #FDF9F2;
+  --deep: #19363A;
+  --teal: #215B5D;
+  --sand: #D4BE97;
+  --muted: #59645F;
+
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background: var(--cream);
+  color: var(--deep);
+  font-family: var(--font-urbanist), ui-sans-serif, sans-serif;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+}
+body:has(.harbor-404) { background: #FDF9F2; }   /* the overscroll behind the page, not the app's grey */
+
+/* globals.css styles headings app-wide; take them back for the page's own type */
+.harbor-404 :where(h1) { font-family: inherit; color: inherit; }
+
+.harbor-404 img { display: block; margin: 0 auto; width: min(260px, 60vw); height: auto; }
+.harbor-404 h1 { margin: 40px 0 10px; font-size: clamp(28px, 4vw, 40px); font-weight: 600; line-height: 1.15; letter-spacing: -.03em; }
+.harbor-404 p { max-width: 32em; margin: 0 auto 32px; font-size: 17px; font-weight: 500; line-height: 1.5; color: var(--muted); }
+.harbor-404 .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.harbor-404 .go {
+  display: inline-flex; align-items: center; gap: 12px; height: 50px; padding: 0 24px 0 28px;
+  border: 0; border-radius: 999px; background: var(--deep); color: var(--cream);
+  font-family: inherit; font-size: 16px; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; transition: background .3s;
+}
+.harbor-404 .go:hover, .harbor-404 .go:focus-visible { background: var(--teal); }
+.harbor-404 .go:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.harbor-404 .go svg { width: 15px; height: 15px; color: var(--sand); }
+.harbor-404 .go--quiet { background: transparent; color: var(--deep); box-shadow: inset 0 0 0 1px rgba(25, 54, 58, .3); }
+.harbor-404 .go--quiet:hover, .harbor-404 .go--quiet:focus-visible { background: rgba(25, 54, 58, .07); }
+.harbor-404 .ref { flex-basis: 100%; margin: 28px auto 0; font-size: 13px; color: var(--muted); }   /* its own line under the buttons */
+.harbor-404 .ref code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--deep); }

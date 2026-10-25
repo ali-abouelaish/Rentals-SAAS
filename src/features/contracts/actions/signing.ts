@@ -102,7 +102,7 @@ async function resolveParties(
     parties.landlord = { error: "this contract is not linked to a unit" };
   }
 
-  // Guarantors are not modelled in Harbor Ops, so there is no contact to send
+  // Guarantors are not modelled in Harbor, so there is no contact to send
   // to. The editor doesn't offer the role; this catches a hand-edited template.
   parties.guarantor = {
     error: "guarantor signing is not supported yet — there is no guarantor record to send to",

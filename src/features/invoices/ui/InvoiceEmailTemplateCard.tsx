@@ -149,7 +149,7 @@ export function InvoiceEmailTemplateCard({
                 when you have one.
               </>
             ) : (
-              "Emails send from the shared Harbor Ops mailer."
+              "Emails send from the shared Harbor mailer."
             )}
           </p>
         </div>

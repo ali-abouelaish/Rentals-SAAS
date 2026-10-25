@@ -2,9 +2,9 @@
 //
 // A BoldSign "brand" carries the logo, colours, email display name and legal
 // disclaimer that recipients see. Each agency gets one, derived from the
-// branding it has already configured in Harbor Ops
+// branding it has already configured in Harbor
 // (src/lib/branding/agency-brand.ts), so there is no second place for an agency
-// to set up its look — change the logo in Harbor Ops and re-sync.
+// to set up its look — change the logo in Harbor and re-sync.
 //
 // Resolution at send time is deliberately forgiving: an agency with no brand
 // yet still sends, under the account default, rather than being blocked. A
@@ -110,7 +110,7 @@ function extensionFor(contentType: string): string {
 }
 
 /**
- * Create or update this agency's BoldSign brand from its Harbor Ops branding.
+ * Create or update this agency's BoldSign brand from its Harbor branding.
  *
  * Idempotent: an existing mapping is edited rather than duplicated, and a
  * re-sync with unchanged branding is skipped so this is cheap to call often.

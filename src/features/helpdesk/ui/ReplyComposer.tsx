@@ -131,7 +131,7 @@ export function ReplyComposer({ ticketId, side, currentStatus }: ReplyComposerPr
         </label>
         <p className="text-[11px] text-foreground-muted mb-1.5">
           {side === "agency"
-            ? "Harbor Ops Support is emailed straight away. Max 5000 characters."
+            ? "Harbor Support is emailed straight away. Max 5000 characters."
             : internal
               ? "Only super admins will see this. Max 5000 characters."
               : "The agency user who raised the ticket is emailed this reply. Max 5000 characters."}

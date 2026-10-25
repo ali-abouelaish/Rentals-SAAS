@@ -64,7 +64,7 @@ export function canSendOnBehalfOf(row: {
 }
 
 /**
- * Whether the agency's Harbor Ops branding has drifted from what was last
+ * Whether the agency's Harbor branding has drifted from what was last
  * pushed to BoldSign.
  *
  * The snapshot columns exist only for this. Without it every page load would

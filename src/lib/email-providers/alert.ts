@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { loadAgency } from "@/lib/email/agency-context";
 import { sendAgencyEmail } from "@/lib/email/agency-send";
+import { button, esc, harborEmail, note, paragraph, strong } from "@/lib/email/harbor";
 
 const PROVIDER_LABELS: Record<string, string> = {
   graph: "Microsoft 365",
@@ -51,11 +52,23 @@ export async function failEmailProvider(tenantId: string, reason: string): Promi
       agency,
       to: await resolveAlertRecipient(tenantId),
       subject: "Action needed: reconnect your email sending",
-      html: `<p>Your ${escapeHtml(label)} email connection for ${escapeHtml(agency.name)} has stopped working and needs attention.</p>
-<p>Your emails are still being delivered via the default Harbor Ops mailer in the meantime, but they will not send from your own address until you fix the connection.</p>
-<p><a href="${settingsUrl}">Review your email connection</a></p>
-<p style="color:#64748b;font-size:12px">Reason: ${escapeHtml(reason).slice(0, 200)}</p>`,
-      text: `Your ${label} email connection for ${agency.name} has stopped working and needs attention.\n\nYour emails are still being delivered via the default Harbor Ops mailer in the meantime, but they will not send from your own address until you fix the connection.\n\nReview: ${settingsUrl}\n\nReason: ${reason.slice(0, 200)}`,
+      html: harborEmail({
+        title: "Action needed: reconnect your email sending",
+        preheader: `Your ${label} connection stopped working. Mail is going out from Harbor until you fix it.`,
+        eyebrow: "Email sending",
+        headline: [`Your ${label} connection stopped working.`, "Mail is still going out."],
+        html:
+          paragraph(
+            `The ${esc(label)} email connection for ${strong(agency.name)} has stopped working and needs attention.`
+          ) +
+          paragraph(
+            "Your emails are still being delivered by the default Harbor mailer in the meantime, but they won’t send from your own address until you fix the connection."
+          ) +
+          button(settingsUrl, "Review your email connection") +
+          note(`Reason: ${esc(reason.slice(0, 200))}`),
+        footnote: "Sent to your agency contact email.",
+      }),
+      text: `Your ${label} email connection for ${agency.name} has stopped working and needs attention.\n\nYour emails are still being delivered via the default Harbor mailer in the meantime, but they will not send from your own address until you fix the connection.\n\nReview: ${settingsUrl}\n\nReason: ${reason.slice(0, 200)}`,
       templateKey: "provider_connection_alert",
     });
   } catch (err) {
@@ -73,8 +86,4 @@ async function resolveAlertRecipient(tenantId: string): Promise<string> {
   const contact = ((data?.contact_email as string | null) ?? "").trim();
   if (!contact) throw new Error(`Tenant ${tenantId} has no contact_email for alerting`);
   return contact;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

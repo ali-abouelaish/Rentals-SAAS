@@ -52,7 +52,7 @@ export function MyInvoicesCard({ invoices }: { invoices: MyInvoice[] }) {
         </div>
 
         <p className="text-xs text-foreground-secondary">
-          What Harbor Ops has charged your agency for paid integrations and envelope
+          What Harbor has charged your agency for paid integrations and envelope
           top-ups. No payment is taken automatically.
         </p>
 

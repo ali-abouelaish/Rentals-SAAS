@@ -13,7 +13,7 @@ import { formatPence } from "@/lib/envelopes/packs";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Harbor Ops' own P&L.
+ * Harbor's own P&L.
  *
  * Revenue is what agencies are billed (tenant_platform_invoices); expenses are
  * what it costs us to run (platform_expenses). Deliberately NOT the agency-facing
@@ -98,7 +98,7 @@ export default async function AdminFinancePage({
     <div className="space-y-5">
       <PageHeader
         title="Finance"
-        subtitle="What Harbor Ops earns against what it costs to run."
+        subtitle="What Harbor earns against what it costs to run."
         action={<ExpenseDialog />}
       />
 

@@ -68,7 +68,7 @@ const MODULE_OPTIONS: {
   {
     value: "pm_only",
     label: "Property Management",
-    subtitle: "Harbor Ops PM tools",
+    subtitle: "Harbor PM tools",
     icon: Building2,
     includes: [
       "Properties",

@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces } from "next/font/google";
 import { BrandingStyles } from "@/components/layout/BrandingStyles";
 import { getPortalBrandChrome } from "@/features/portal/data/branding";
+import { HARBOR_ICONS } from "@/features/site/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const { brandName, logoUrl } = await getPortalBrandChrome();
   // iOS ignores manifest icons for "Add to Home Screen"; the apple-touch-icon
   // is what it actually uses, so point both at the agency logo when there is one.
-  const icon = logoUrl ?? "/logo.png";
+  const icons = logoUrl ? { icon: logoUrl, apple: logoUrl } : HARBOR_ICONS;
 
   return {
     title: "Tenant portal",
     manifest: "/portal/manifest.webmanifest",
-    icons: { icon, apple: icon },
+    icons,
     appleWebApp: {
       capable: true,
       title: brandName,

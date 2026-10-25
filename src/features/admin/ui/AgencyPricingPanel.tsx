@@ -182,7 +182,7 @@ function ChargeDialog({
               id="charge-label"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Harbor Ops Professional"
+              placeholder="Harbor Professional"
               maxLength={120}
               aria-invalid={Boolean(errors.label)}
             />

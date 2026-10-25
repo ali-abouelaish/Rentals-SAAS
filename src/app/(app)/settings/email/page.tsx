@@ -19,7 +19,7 @@ export default async function EmailSettingsPage() {
         <h1 className="text-2xl font-bold text-foreground tracking-tight">Email Sending</h1>
         <p className="text-xs text-foreground-secondary">
           Connect your own mailbox to send tenant-facing emails from your agency&apos;s address.
-          When nothing is connected, emails send from the default Harbor Ops mailer.
+          When nothing is connected, emails send from the default Harbor mailer.
         </p>
       </div>
       {/* useSearchParams (for ?connected/?error toasts) requires a Suspense boundary. */}

@@ -1,10 +1,10 @@
 "use client";
 
-import "./harbor-landing.css";
-import "./harbor-error.css";
+import "@/features/site/styles/not-found.css";
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { PublicErrorShell } from "@/components/landing/PublicErrorShell";
+import { Arrow } from "@/features/site/ui/icons";
+import { NotFoundPanel } from "@/features/site/ui/NotFoundPanel";
 
 /**
  * Root error boundary. Catches anything thrown below the root layout that
@@ -27,38 +27,22 @@ export default function RootError({
   }, [error]);
 
   return (
-    <PublicErrorShell>
-      <span className="err-glyph" aria-hidden>
-        500
-      </span>
-
-      <span className="err-status">Error 500 · Something went wrong</span>
-
-      <h1>
-        Harbor Ops hit an <em>unexpected</em> error.
-      </h1>
-
-      <p className="lede">
-        This one is on us — the page failed to load rather than anything you did. Try
-        again; if it keeps happening, quote the reference below when you get in touch and
-        we can trace the exact failure.
-      </p>
-
-      <div className="err-ctas">
-        <button type="button" className="btn btn-primary btn-lg" onClick={reset}>
-          Try again
-        </button>
-        <a href="/" className="btn btn-secondary btn-lg">
-          Back to home
-        </a>
-      </div>
-
+    <NotFoundPanel
+      title="Something went wrong."
+      message="This one is on us: the page failed to load, not anything you did. Try again; if it keeps happening, quote the reference below when you get in touch."
+    >
+      <button type="button" className="go" onClick={reset}>
+        Try again
+        <Arrow />
+      </button>
+      <a className="go go--quiet" href="/">
+        Back to Harbor
+      </a>
       {error.digest ? (
-        <div className="err-ref">
-          <span className="k">Reference</span>
-          <span>{error.digest}</span>
-        </div>
+        <p className="ref">
+          Reference <code>{error.digest}</code>
+        </p>
       ) : null}
-    </PublicErrorShell>
+    </NotFoundPanel>
   );
 }

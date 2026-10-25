@@ -18,7 +18,7 @@ export type EmailMessage = {
   html: string;
   text: string;
   /** Override the From address. When omitted, the transport decides
-   *  (Resend pins Harbor Ops; custom transports use their configured from_address). */
+   *  (Resend pins Harbor; custom transports use their configured from_address). */
   from?: string;
   /** Override the Reply-To. When omitted, the Resend transport uses the agency contact_email. */
   replyTo?: string;

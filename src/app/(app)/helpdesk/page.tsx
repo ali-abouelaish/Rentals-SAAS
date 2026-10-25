@@ -24,7 +24,7 @@ export default async function HelpdeskRoute() {
   const header = (
     <PageHeader
       title="Contact Support"
-      subtitle="Raise a ticket with the Harbor Ops team and follow our replies here. Only you can see the tickets you raise."
+      subtitle="Raise a ticket with the Harbor team and follow our replies here. Only you can see the tickets you raise."
       action={<NewTicketDialog />}
     />
   );
@@ -74,7 +74,7 @@ export default async function HelpdeskRoute() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    {t.unread && <UnreadDot label="New reply from Harbor Ops" />}
+                    {t.unread && <UnreadDot label="New reply from Harbor" />}
                     <span className="text-xs font-mono text-foreground-muted">{t.reference}</span>
                     <TicketStatusBadge status={t.status} />
                     <TicketPriorityBadge priority={t.priority} />

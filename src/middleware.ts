@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseMiddlewareClient } from "./lib/supabase/middleware";
+import { getSharedCookieDomain } from "./lib/supabase/cookie-domain";
 import { getTenantIdBySlug, getUserTenant } from "./lib/tenant-slug-cache";
+import { getPortalDomain, getTenantFromHost } from "./lib/tenant-host";
+import { deletionHeaders, isSessionOnlyExpired, isSessionTokenCookie } from "./lib/auth/sessionPersistence";
+import { resolveWorkspaceUrl } from "./lib/auth/workspaceUrl";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -31,35 +35,12 @@ const PUBLIC_PATHS = [
   // Legal pages must be readable logged-out: Google's OAuth verification (and
   // anyone following the footer links) fetches them without a session.
   "/privacy",
-  "/terms"
+  "/terms",
+  // For search engines (src/app/robots.ts, src/app/sitemap.ts). .txt and .xml
+  // aren't in the matcher's static-file exclusions, so they need listing here.
+  "/robots.txt",
+  "/sitemap.xml"
 ];
-
-function getTenantFromHost(host: string | null): string | null {
-  if (!host) return null;
-  const hostname = host.split(":")[0].toLowerCase();
-
-  const portalRaw = process.env.APP_PORTAL_DOMAIN;
-  const portal = portalRaw
-    ? portalRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
-    : null;
-
-  if (portal) {
-    if (hostname === portal || hostname === `www.${portal}`) return null;
-    if (hostname.endsWith(`.${portal}`)) {
-      const sub = hostname.slice(0, -1 - portal.length);
-      if (!sub || sub === "www") return null;
-      return sub.split(".")[0] || null;
-    }
-    return null;
-  }
-
-  const parts = hostname.split(".");
-  if (parts.length > 2) {
-    const [first] = parts;
-    if (first && first !== "www") return first;
-  }
-  return null;
-}
 
 /**
  * Copy any Set-Cookie entries Supabase wrote on `from` onto `to`. We must do
@@ -78,9 +59,46 @@ function withAuthCookies(from: NextResponse, to: NextResponse): NextResponse {
 
 export async function middleware(request: NextRequest) {
   const host = request.headers.get("host");
+  const portal = getPortalDomain();
+
+  // One public address: www.harborops.co.uk → harborops.co.uk. GET/HEAD only,
+  // so nothing that posts to www (a webhook, a form) is bounced.
+  const hostname = (host ?? "").split(":")[0].toLowerCase();
+  if (portal && hostname === `www.${portal}` && (request.method === "GET" || request.method === "HEAD")) {
+    return NextResponse.redirect(
+      new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, `https://${portal}`),
+      308
+    );
+  }
+
   const tenantSlug = getTenantFromHost(host);
 
-  const { supabase, response } = createSupabaseMiddlewareClient(request);
+  // "Keep me signed in" was unticked for this session and the browser has been
+  // closed since: sign the request out before Supabase reads (or refreshes) the
+  // session. The cookies come off the request here, so server code in this
+  // request sees a signed-out visitor, and `finish` deletes them in the browser.
+  // See src/lib/auth/sessionPersistence.ts.
+  const expiredCookies = isSessionOnlyExpired(request.cookies.getAll())
+    ? request.cookies
+        .getAll()
+        .map((cookie) => cookie.name)
+        .filter(isSessionTokenCookie)
+    : [];
+  for (const name of expiredCookies) request.cookies.delete(name);
+  const finish = (res: NextResponse): NextResponse => {
+    if (expiredCookies.length > 0) {
+      const domain = getSharedCookieDomain();
+      const secure = process.env.NODE_ENV === "production";
+      // Raw headers, appended last: NextResponse.cookies holds one entry per
+      // name, but each cookie can exist twice (shared domain and host-only).
+      for (const name of expiredCookies) {
+        for (const header of deletionHeaders(name, domain, secure)) res.headers.append("set-cookie", header);
+      }
+    }
+    return res;
+  };
+
+  const { supabase, getResponse } = createSupabaseMiddlewareClient(request);
   // Use getSession() here (reads from cookie JWT, no network call unless token needs refresh).
   // Full getUser() validation happens inside requireUserProfile() in each server action/page,
   // so security is maintained where it matters. This avoids hitting Supabase auth rate limits
@@ -88,6 +106,8 @@ export async function middleware(request: NextRequest) {
   const {
     data: { session }
   } = await supabase.auth.getSession();
+  // Read only now: a token refresh inside getSession() replaces the response.
+  const response = getResponse();
 
   const { pathname } = request.nextUrl;
 
@@ -99,8 +119,7 @@ export async function middleware(request: NextRequest) {
     const callbackUrl = request.nextUrl.clone();
     callbackUrl.pathname = "/auth/callback";
     // Preserve an existing `next` param if Supabase passed it through; otherwise
-    // derive from `type`. Note: the onAuthStateChange PASSWORD_RECOVERY handler in
-    // /auth/callback is the authoritative redirect for recovery sessions.
+    // derive from `type`.
     const existingNext = request.nextUrl.searchParams.get("next");
     const resolvedNext =
       existingNext ??
@@ -110,7 +129,7 @@ export async function middleware(request: NextRequest) {
         ? "/invite/set-password"
         : "/me");
     callbackUrl.searchParams.set("next", resolvedNext);
-    return withAuthCookies(response, NextResponse.redirect(callbackUrl));
+    return finish(withAuthCookies(response, NextResponse.redirect(callbackUrl)));
   }
 
   // Validate the tenant subdomain against the DB before letting any request
@@ -123,7 +142,7 @@ export async function middleware(request: NextRequest) {
     if (!resolvedTenantId) {
       const notFoundUrl = request.nextUrl.clone();
       notFoundUrl.pathname = "/tenant-not-found";
-      return withAuthCookies(response, NextResponse.rewrite(notFoundUrl, { status: 404 }));
+      return finish(withAuthCookies(response, NextResponse.rewrite(notFoundUrl, { status: 404 })));
     }
 
     // If the slug is valid but the signed-in user belongs to a different
@@ -133,24 +152,39 @@ export async function middleware(request: NextRequest) {
     const sessionUser = session?.user;
     if (sessionUser && process.env.NODE_ENV !== "development") {
       const { tenantId: userTenantId, slug: userSlug } = await getUserTenant(sessionUser.id);
-      if (userTenantId && userSlug && userTenantId !== resolvedTenantId) {
-        const portalRaw = process.env.APP_PORTAL_DOMAIN;
-        const portal = portalRaw
-          ? portalRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
-          : null;
-        if (portal) {
-          const target = new URL(`https://${userSlug}.${portal}/dashboard`);
-          return withAuthCookies(response, NextResponse.redirect(target));
-        }
+      if (userTenantId && userSlug && userTenantId !== resolvedTenantId && portal) {
+        const target = new URL(`https://${userSlug}.${portal}/dashboard`);
+        return finish(withAuthCookies(response, NextResponse.redirect(target)));
       }
     }
   }
 
-  // On tenant subdomains, the root always redirects to login
+  const user = session?.user ?? null;
+
+  // Already signed in: the tenant root and /login go straight to the workspace.
+  // GET only, so the sign-in action's own POST to /login — and the page
+  // re-render it triggers — is never interrupted. Never with ?disabled=1:
+  // requireUserProfile sends disabled agents there with the session cookies
+  // still in place, and forwarding them on would loop.
+  if (
+    user &&
+    request.method === "GET" &&
+    ((tenantSlug && pathname === "/") || pathname === "/login") &&
+    !request.nextUrl.searchParams.has("disabled")
+  ) {
+    const target = await resolveWorkspaceUrl({
+      userId: user.id,
+      host,
+      next: request.nextUrl.searchParams.get("next"),
+    });
+    return finish(withAuthCookies(response, NextResponse.redirect(new URL(target, request.url))));
+  }
+
+  // On tenant subdomains, the root otherwise redirects to login
   if (tenantSlug && pathname === "/") {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    return withAuthCookies(response, NextResponse.redirect(loginUrl));
+    return finish(withAuthCookies(response, NextResponse.redirect(loginUrl)));
   }
 
   const isPublic = PUBLIC_PATHS.some(
@@ -158,11 +192,8 @@ export async function middleware(request: NextRequest) {
   );
   const isApiRoute = pathname.startsWith("/api/");
   // Apex-domain landing page: harborops.co.uk/ (no subdomain) renders the
-  // marketing page. Tenant subdomain roots still fall through to the
-  // tenantSlug redirect above.
+  // marketing page. Tenant subdomain roots are handled above.
   const isApexLanding = !tenantSlug && pathname === "/";
-
-  const user = session?.user ?? null;
 
   if (!user && !isPublic && !isApiRoute && !isApexLanding) {
     const redirectUrl = request.nextUrl.clone();
@@ -171,7 +202,7 @@ export async function middleware(request: NextRequest) {
     // (deep links like /landlords/<id> should survive the auth bounce).
     redirectUrl.search = "";
     redirectUrl.searchParams.set("next", pathname + request.nextUrl.search);
-    return withAuthCookies(response, NextResponse.redirect(redirectUrl));
+    return finish(withAuthCookies(response, NextResponse.redirect(redirectUrl)));
   }
 
   // Attach tenant slug so server components / API routes can read it via headers().get("x-tenant")
@@ -189,7 +220,7 @@ export async function middleware(request: NextRequest) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 
-  return response;
+  return finish(response);
 }
 
 export const config = {

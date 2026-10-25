@@ -1,4 +1,12 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { getDoorContext } from "@/features/auth/data/door";
+import { DoorShell } from "@/features/auth/ui/door/DoorShell";
+import { ArrowIcon } from "@/features/auth/ui/door/icons";
+import { Plate } from "@/features/auth/ui/door/Plate";
+
+export const metadata: Metadata = {
+  title: "Invitation problem",
+};
 
 const REASON_MESSAGES: Record<string, string> = {
   missing_token:
@@ -17,21 +25,21 @@ export default async function AuthErrorPage({
   const message =
     (reason && REASON_MESSAGES[reason]) ||
     "Something went wrong. Please try again or contact support.";
+  const { brandName } = await getDoorContext();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-surface-app px-6">
-      <div className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-surface-card p-8 shadow-lg">
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Invitation problem
-        </h1>
-        <p className="text-sm text-foreground-secondary">{message}</p>
-        <Link
-          href="/login"
-          className="inline-block w-full rounded-lg bg-brand px-4 py-2 text-center text-sm font-medium text-white hover:opacity-90"
-        >
-          Back to login
-        </Link>
-      </div>
-    </div>
+    <DoorShell knocker>
+      <Plate title="That link didn’t work." brandLine={brandName ? `Sign in to ${brandName}` : null}>
+        <div className="alert" role="alert">
+          <p>{message}</p>
+        </div>
+        <div className="plate__actions">
+          <a className="submit" href="/login">
+            <span className="submit__label">Back to sign in</span>
+            <ArrowIcon />
+          </a>
+        </div>
+      </Plate>
+    </DoorShell>
   );
 }

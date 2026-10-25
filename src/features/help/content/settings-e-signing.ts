@@ -49,7 +49,7 @@ Your logo, colour and agency name on the signing page and the email that carries
 
 A logo is required: the signing provider won't create a brand without one. If your account has no logo the button is disabled and the page says so.
 
-If you later change your logo, name or colour in Harbor Ops, this page will show **Branding out of date** — documents keep going out with the old version until you press **Update branding**. It doesn't re-apply by itself, so nothing changes on a live document without you asking.
+If you later change your logo, name or colour in Harbor, this page will show **Branding out of date** — documents keep going out with the old version until you press **Update branding**. It doesn't re-apply by itself, so nothing changes on a live document without you asking.
 
 ### Send from your own address
 

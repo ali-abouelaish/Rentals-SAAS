@@ -96,7 +96,7 @@ export function getESigningPlatformStatus(): ESigningPlatformStatus {
  * The agency's sending identity, plus the branding a sync would push.
  *
  * Returned together because the page always needs both: what BoldSign holds,
- * and what Harbor Ops would send it. Comparing the two is what produces the
+ * and what Harbor would send it. Comparing the two is what produces the
  * "your branding has changed" prompt, and the source is what explains why an
  * agency with no logo cannot provision at all.
  *

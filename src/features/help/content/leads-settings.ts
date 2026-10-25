@@ -35,5 +35,5 @@ Leads Settings controls where your leads come from. It is admin-only.
 - Name your form fields \`name\`, \`email\`, \`phone\` and \`message\`. Common names like \`your-name\` or \`Email\` are recognised too, and any other field is added to the lead's message.
 - An enquiry needs at least a valid email address or phone number; anything else missing is tolerated.
 - The same enquiry sent twice (a plugin retrying, or a double click) becomes one lead.
-- If Website enquiries doesn't appear here, website lead capture isn't enabled for your agency. Contact Harbor Ops support.`,
+- If Website enquiries doesn't appear here, website lead capture isn't enabled for your agency. Contact Harbor support.`,
 };

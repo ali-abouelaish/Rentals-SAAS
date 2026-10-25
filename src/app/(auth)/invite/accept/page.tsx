@@ -1,78 +1,39 @@
-"use client";
-
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import type { Metadata } from "next";
+import { getDoorContext } from "@/features/auth/data/door";
+import { DoorShell } from "@/features/auth/ui/door/DoorShell";
+import { Plate } from "@/features/auth/ui/door/Plate";
+import { InviteAccept } from "@/features/auth/ui/InviteAccept";
 
 export const dynamic = "force-dynamic";
 
-function InviteAcceptContent() {
-  const searchParams = useSearchParams();
-  const token_hash = searchParams.get("token_hash");
-  const type = searchParams.get("type") || "invite";
+export const metadata: Metadata = {
+  title: "Accept your invitation",
+};
 
-  const [loading, setLoading] = useState(false);
-
-  async function handleContinue() {
-    if (!token_hash) {
-      window.location.href = "/auth/error?reason=missing_token";
-      return;
-    }
-
-    setLoading(true);
-
-    const res = await fetch("/api/invite/complete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ token_hash, type }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      window.location.href = data.redirectTo || "/auth/error?reason=invalid_or_expired";
-      return;
-    }
-
-    window.location.href = data.redirectTo || "/invite/set-password";
-  }
+export default async function InviteAcceptPage({
+  searchParams,
+}: {
+  searchParams?: { token_hash?: string; type?: string; error?: string };
+}) {
+  const { brandName } = await getDoorContext();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-4">
-          You’ve been invited to HarborOps
-        </h1>
-
-        <p className="text-sm text-gray-600 mb-6">
-          Click below to accept your invitation and continue setting up your account.
-        </p>
-
-        <button
-          onClick={handleContinue}
-          disabled={loading}
-          className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white font-medium hover:bg-blue-700 disabled:opacity-60"
-        >
-          {loading ? "Processing..." : "Continue Invitation"}
-        </button>
-      </div>
-    </div>
+    <DoorShell knocker>
+      <Plate
+        title="You’ve been invited."
+        sub={
+          brandName
+            ? `Accept to join ${brandName}'s workspace, then choose a password.`
+            : "Accept to join your team’s workspace, then choose a password."
+        }
+        brandLine={brandName ? `Join ${brandName} on Harbor` : null}
+      >
+        <InviteAccept
+          tokenHash={searchParams?.token_hash ?? null}
+          type={searchParams?.type || "invite"}
+          initialError={searchParams?.error ? String(searchParams.error).slice(0, 200) : null}
+        />
+      </Plate>
+    </DoorShell>
   );
 }
-
-export default function InviteAcceptPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-          <p className="text-gray-600 text-sm">Loading invitation…</p>
-        </div>
-      }
-    >
-      <InviteAcceptContent />
-    </Suspense>
-  );
-}
-

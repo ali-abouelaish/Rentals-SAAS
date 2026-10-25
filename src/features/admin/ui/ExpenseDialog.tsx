@@ -224,7 +224,7 @@ export function ExpenseDialog({ expense }: { expense?: PlatformExpense }) {
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit expense" : "Add an expense"}</DialogTitle>
           <DialogDescription>
-            A cost of running Harbor Ops. Recorded once as a rule — it is counted
+            A cost of running Harbor. Recorded once as a rule — it is counted
             into every month it applies to, so a monthly subscription is entered
             once, not twelve times.
           </DialogDescription>

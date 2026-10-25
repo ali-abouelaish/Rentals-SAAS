@@ -5,10 +5,10 @@ export const helpdeskArticle: HelpArticle = {
   title: "Contact Support",
   route: "/helpdesk",
   match: "prefix",
-  summary: "Raise a support ticket with the Harbor Ops team and follow the reply thread.",
+  summary: "Raise a support ticket with the Harbor team and follow the reply thread.",
   content: `## What this page is for
 
-Contact Support is how you reach the Harbor Ops team from inside the app — for bugs, billing and account questions, feature requests, or "how do I…?" help. Every request becomes a ticket with a reference like **SUP-2026-000123**, a status, and a reply thread. Anyone on your team can raise tickets, and each person only sees the tickets they raised themselves.
+Contact Support is how you reach the Harbor team from inside the app — for bugs, billing and account questions, feature requests, or "how do I…?" help. Every request becomes a ticket with a reference like **SUP-2026-000123**, a status, and a reply thread. Anyone on your team can raise tickets, and each person only sees the tickets they raised themselves.
 
 ## Key tasks
 

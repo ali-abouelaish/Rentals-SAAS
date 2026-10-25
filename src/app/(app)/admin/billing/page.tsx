@@ -42,7 +42,7 @@ export default async function AdminBillingPage({
     <div className="space-y-5">
       <PageHeader
         title="Billing"
-        subtitle="What Harbor Ops charges each agency: paid integrations and envelope top-ups, gathered into one invoice per agency per month."
+        subtitle="What Harbor charges each agency: paid integrations and envelope top-ups, gathered into one invoice per agency per month."
       />
 
       {summary.unavailable && (

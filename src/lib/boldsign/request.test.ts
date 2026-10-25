@@ -65,7 +65,7 @@ describe("validateSendInput", () => {
 
 describe("toFormField", () => {
   it("passes coordinates through unflipped", () => {
-    // Harbor Ops and BoldSign both use a top-left origin (confirmed visually
+    // Harbor and BoldSign both use a top-left origin (confirmed visually
     // against the sandbox), so a y-flip here would be a bug.
     const field = toFormField({
       type: "Signature",

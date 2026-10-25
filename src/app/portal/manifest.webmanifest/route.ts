@@ -4,6 +4,7 @@ import {
   PORTAL_BACKGROUND_COLOR,
   getPortalBrandChrome,
 } from "@/features/portal/data/branding";
+import { HARBOR_MANIFEST_ICONS } from "@/features/site/brand";
 
 // The manifest is per-tenant (it reads the x-tenant subdomain header), so it
 // can't be generated at build time. This is a plain route handler rather than
@@ -11,14 +12,6 @@ import {
 // statically export the latter and fails the build even with force-dynamic.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-/** Fallback icon shipped in /public — dimensions declared honestly so Chrome's
- *  installability check can validate it. */
-const FALLBACK_ICON = {
-  src: "/logo.png",
-  sizes: "796x774",
-  type: "image/png",
-} as const;
 
 export async function GET() {
   const { brandName, logoUrl, themeColor } = await getPortalBrandChrome();
@@ -38,9 +31,10 @@ export async function GET() {
     orientation: "portrait",
     theme_color: themeColor,
     background_color: PORTAL_BACKGROUND_COLOR,
+    // Harbor's icons back up the agency logo, and stand in for it until there is one.
     icons: logoUrl
-      ? [{ src: logoUrl, sizes: "any", purpose: "any" }, FALLBACK_ICON]
-      : [FALLBACK_ICON],
+      ? [{ src: logoUrl, sizes: "any", purpose: "any" }, ...HARBOR_MANIFEST_ICONS]
+      : HARBOR_MANIFEST_ICONS,
   };
 
   return NextResponse.json(manifest, {

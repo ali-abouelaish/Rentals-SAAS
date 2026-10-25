@@ -26,7 +26,8 @@ No test framework is configured.
 
 ### Routing
 
-- `src/app/(auth)/` — Public auth pages (login, signup, invite, reset)
+- `src/app/(site)/` — The public website on the bare domain (homepage, `/privacy`, `/terms`). Ported from a designer's static site: code in `src/features/site/`, scoped CSS under `.harbor-home` / `.harbor-legal`, images in `public/site/`
+- `src/app/(auth)/` — Public auth pages, all drawn on the "front door" (login, signup = demo request, forgot/reset password, invite, OAuth consent, auth callback); door UI in `src/features/auth/ui/door/`, scoped under `.harbor-door`
 - `src/app/(app)/` — Protected app pages (dashboard, clients, rentals, invoices, agents, bonuses, earnings, admin)
 - `src/app/api/` — API routes
 - `middleware.ts` — Extracts tenant from subdomain (`{slug}.harborops.co.uk`) and sets `x-tenant` header; enforces auth on all non-public paths
@@ -102,6 +103,7 @@ Required in `.env.local`:
 | `MICROSOFT_TENANT_ID` | Optional Azure AD tenant id for a single-tenant app (defaults to `common`) |
 | `GOOGLE_SEND_REDIRECT_URI` | Optional. Gmail send-transport OAuth callback (`https://<host>/api/email/gmail/callback`); when unset it is derived from `GOOGLE_REDIRECT_URI`'s host, so the lead-sync keys (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`) cover both. The callback URL must still be added to the OAuth client's Authorized redirect URIs, with the `gmail.send` scope on the consent screen |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account key for landlord listing spreadsheets; needs the Sheets **and** Drive APIs enabled. Optional for Sheets (public sheets read credential-free); **required** for Drive room-photo import. Resolution order: this var → `GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON` → `GOOGLE_SERVICE_ACCOUNT_FILE` (path) → `./service_account.json` (gitignored, the usual setup). Base64-encode if using an env var |
+| `QUICK_LINK_SSO_SECRET` | 32-byte hex master key (`openssl rand -hex 32`) for dashboard Useful Resources website sign-in. Each pinned site's secret is derived from it, so changing it breaks every agency's website sign-in until their developers paste in the new secrets. Spec: `docs/website-sign-in.md` |
 | `PORTAL_TOKEN_SECRET` | HMAC secret for renter portal magic-link + session tokens (`openssl rand -hex 32`) |
 | `CRON_SECRET` | Bearer secret for `/api/cron/*` (shared; also used by `mydeposits-poll`) |
 | `BOLDSIGN_API_KEY` | BoldSign e-signing API key (verify with `npm run boldsign:probe`) |
@@ -113,6 +115,7 @@ Required in `.env.local`:
 | `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | Build-time source-map upload (Organization Auth Token). Build machine only, in `.env.local` or the gitignored `.env.sentry-build-plugin`. Without the token the build skips the upload and still succeeds |
 | `SENTRY_ENVIRONMENT` | Optional server-side environment tag (defaults to `production`); set `local` for a local `npm start` smoke test |
 | `PLATFORM_SUPPORT_EMAIL` | Harbor Ops support inbox; receives new-ticket and agency-reply notifications from `/helpdesk`. Tickets still save when unset — only the email is skipped |
+| `PLATFORM_SALES_EMAIL` | Harbor Ops sales inbox (info@harborops.co.uk); receives each demo request from the website's `/signup`, reply-to the requester. Requests still save (Super admin › Demo Requests) when unset — only the team email is skipped |
 
 For `create:superuser`: also set `DEV_SUPERUSER_EMAIL`, `DEV_SUPERUSER_PASSWORD`, and optionally `DEV_TENANT_NAME`.
 

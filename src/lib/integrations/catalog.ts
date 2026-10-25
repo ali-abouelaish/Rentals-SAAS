@@ -138,7 +138,7 @@ export const INTEGRATIONS: Integration[] = [
     setupOwner: "agency",
     setupHref: "/settings/e-signing",
     setupNote:
-      "Nothing to set up — the Send for signature button appears on contracts and works orders straight away. Documents currently go out under the default Harbor Ops identity; per-agency branding is in progress.",
+      "Nothing to set up — the Send for signature button appears on contracts and works orders straight away. Documents currently go out under the default Harbor identity; per-agency branding is in progress.",
   },
   {
     key: "mydeposits",
@@ -148,7 +148,7 @@ export const INTEGRATIONS: Integration[] = [
     category: "deposits",
     availability: "available",
     summary:
-      "Protect tenancy deposits with mydeposits without leaving Harbor Ops, and keep certificates against the tenancy.",
+      "Protect tenancy deposits with mydeposits without leaving Harbor, and keep certificates against the tenancy.",
     benefits: [
       "Secure a deposit from the tenancy record",
       "Protection certificates tracked and downloadable",
@@ -215,11 +215,11 @@ export const INTEGRATIONS: Integration[] = [
     category: "communication",
     availability: "available",
     summary:
-      "Send tenant and landlord emails from your agency's real address instead of the shared Harbor Ops mailer.",
+      "Send tenant and landlord emails from your agency's real address instead of the shared Harbor mailer.",
     benefits: [
       "Connect Microsoft 365, Gmail, or any SMTP server",
       "Replies land in your own inbox",
-      "Automatic fallback to the Harbor Ops mailer if your provider fails",
+      "Automatic fallback to the Harbor mailer if your provider fails",
       "Delivery health checked daily",
     ],
     featureKeys: [],

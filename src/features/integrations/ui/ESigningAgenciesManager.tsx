@@ -173,8 +173,8 @@ export function ESigningAgenciesManager({ agencies }: { agencies: ESigningAgency
                       !row.hasLogo && !row.brandId
                         ? "This agency has no logo, and the provider requires one to create a brand."
                         : row.brandId
-                          ? "Re-reads this agency's Harbor Ops branding and pushes it."
-                          : "Creates this agency's brand from its Harbor Ops branding. Emails nobody."
+                          ? "Re-reads this agency's Harbor branding and pushes it."
+                          : "Creates this agency's brand from its Harbor branding. Emails nobody."
                     }
                   >
                     <span className="inline-block">

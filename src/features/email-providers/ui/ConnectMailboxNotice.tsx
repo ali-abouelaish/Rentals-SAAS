@@ -44,8 +44,8 @@ export async function ConnectMailboxNotice({
           </p>
           <p className="mt-0.5">
             {provider.status === "error"
-              ? `Emails are falling back to the shared Harbor Ops mailer${provider.lastError ? ` (${provider.lastError})` : ""}. `
-              : "Emails send from the shared Harbor Ops mailer until it's verified. "}
+              ? `Emails are falling back to the shared Harbor mailer${provider.lastError ? ` (${provider.lastError})` : ""}. `
+              : "Emails send from the shared Harbor mailer until it's verified. "}
             <Link href="/settings/email" className="underline font-medium hover:text-foreground">
               Fix it in Settings → Email Sending
             </Link>
@@ -62,7 +62,7 @@ export async function ConnectMailboxNotice({
       <Mail className="h-4 w-4 text-foreground-secondary mt-0.5 shrink-0" />
       <div className="text-xs text-foreground-secondary">
         <p className="text-sm font-medium text-foreground">
-          Emails currently send from the shared Harbor Ops mailer
+          Emails currently send from the shared Harbor mailer
         </p>
         <p className="mt-0.5">
           {emailKinds} will come from{" "}

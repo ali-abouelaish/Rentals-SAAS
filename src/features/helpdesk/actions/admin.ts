@@ -21,7 +21,7 @@ import {
 // RLS policy for any of this by design (see the migration header).
 
 /** The name agencies see on our replies. Individual admin names stay internal. */
-const PLATFORM_AUTHOR_NAME = "Harbor Ops Support";
+const PLATFORM_AUTHOR_NAME = "Harbor Support";
 
 const TICKET_COLUMNS = "id, tenant_id, reference, subject, status, created_by_name, created_by_email";
 

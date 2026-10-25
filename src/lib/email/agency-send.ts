@@ -27,12 +27,12 @@ export type SendAgencyEmailResult = { providerId: string };
  * per-agency custom provider.
  *
  * Reserved for system→agency mail that must not depend on the agency's own
- * mailbox: Harbor Ops notifications (notify-agency/creation/marketing-claim)
+ * mailbox: Harbor notifications (notify-agency/creation/marketing-claim)
  * and, critically, the "your email provider failed" alert in
  * email-providers/alert.ts. Everything tenant-facing (outbox drain, reminders,
  * portal invites, form links) goes through sendEmail(), which resolves the
  * agency's connected transport and falls back to Resend. From is pinned to the
- * central Harbor Ops mailer; reply-to is the agency's contact_email — refuses
+ * central Harbor mailer; reply-to is the agency's contact_email — refuses
  * to send if unset. Every attempt is recorded in email_log.
  */
 export async function sendAgencyEmail({

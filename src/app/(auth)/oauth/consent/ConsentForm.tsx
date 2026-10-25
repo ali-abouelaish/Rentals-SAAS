@@ -5,28 +5,32 @@ import {
   decideOAuthConsent,
   type OAuthConsentState
 } from "@/features/auth/actions/oauth-consent";
+import { ArrowIcon } from "@/features/auth/ui/door/icons";
 
 function DecisionButtons({ clientName }: { clientName: string }) {
   const { pending } = useFormStatus();
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="plate__actions">
       <button
         type="submit"
         name="decision"
         value="approve"
-        className="btn btn-primary"
+        className="submit"
         disabled={pending}
+        aria-busy={pending}
       >
-        {pending ? "Working…" : `Allow ${clientName} access`}
+        <span className="spin" aria-hidden="true" />
+        <span className="submit__label">{pending ? "Working…" : `Allow ${clientName} access`}</span>
+        <ArrowIcon />
       </button>
       <button
         type="submit"
         name="decision"
         value="deny"
-        className="btn btn-secondary"
+        className="submit submit--quiet"
         disabled={pending}
       >
-        Don&apos;t allow
+        <span className="submit__label">Don&apos;t allow</span>
       </button>
     </div>
   );
@@ -46,9 +50,13 @@ export function ConsentForm({
   return (
     <form action={formAction}>
       <input type="hidden" name="authorization_id" value={authorizationId} />
-      {state?.error ? <div className="alert err">{state.error}</div> : null}
+      {state?.error ? (
+        <div className="alert" role="alert">
+          <p>{state.error}</p>
+        </div>
+      ) : null}
       <DecisionButtons clientName={clientName} />
-      <p className="hint" style={{ marginTop: 10 }}>
+      <p className="plate__note">
         Only allow applications you recognise. Choosing &ldquo;Don&apos;t
         allow&rdquo; sends you back without sharing anything.
       </p>

@@ -29,7 +29,7 @@ Contract Templates let you upload your tenancy agreement PDFs once, mark the dyn
 - Bind rent, deposit and tenancy dates to **Contract terms**, not to the unit's listing prices — the contract terms are what the agent confirms at generation, so the PDF always matches the contract record.
 - Fields that share a manual key are asked for once and print the same value (e.g. the tenant's name on every page). Give a field its own key if it should be filled in separately.
 - Names and addresses in other alphabets' Latin forms (e.g. Polish, Romanian, Turkish) print normally; scripts such as Chinese or Arabic can't be printed yet and are flagged after generation.
-- Contract documents are private: links open through Harbor Ops for signed-in admins only, so they can't be forwarded or opened by anyone outside your agency.
+- Contract documents are private: links open through Harbor for signed-in admins only, so they can't be forwarded or opened by anyone outside your agency.
 - A template that has been used for contracts can't be deleted — untick **Active** to retire it instead.
 - Marked fields are auto-stamped from booking and tenant data, keeping generated contracts consistent.
 - **Signature fields.** In the field panel, set **Field type** to *Signature*, *Initials*, or *Date signed* to place an e-signature box instead of a merge field. Choose **Who signs this** — Tenant or Landlord — and each party gets their own signing link showing only their own boxes. These boxes stay blank on the generated PDF; they are filled in when the contract is sent for signature from the contract's Document tab. Boxes are placed where they were when the PDF was generated, so later template edits don't move them on contracts already generated.

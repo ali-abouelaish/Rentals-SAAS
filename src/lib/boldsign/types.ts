@@ -1,7 +1,7 @@
-// Harbor Ops' own vocabulary for e-signing. The rest of the app speaks these
+// Harbor's own vocabulary for e-signing. The rest of the app speaks these
 // types; only src/lib/boldsign/ knows about the SDK's models.
 
-/** The Harbor Ops record a signature request was raised from. */
+/** The Harbor record a signature request was raised from. */
 export type BoldSignEntityType = "contract" | "work_order" | "owner_statement";
 
 /** Mirrors the CHECK on public.boldsign_documents.status. */
@@ -25,7 +25,7 @@ export type SignatureFieldType = "Signature" | "Initial" | "DateSigned";
  * A field box on the document.
  *
  * Coordinates are in PDF points with the origin at the page's TOP-LEFT, which
- * is how Harbor Ops already stores contract_template_fields — so a signature
+ * is how Harbor already stores contract_template_fields — so a signature
  * box placed in the existing template editor maps straight through. The page
  * number is 1-based (contract_template_fields.page_index is 0-based; convert at
  * the boundary).

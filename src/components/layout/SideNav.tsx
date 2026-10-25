@@ -170,7 +170,7 @@ function SideNavInner({ profile, branding, moduleConfig, entitlements }: SideNav
       </div>
       <div className="flex flex-col min-w-0">
         <span className="text-sm font-bold tracking-tight text-white truncate">
-          Harbor Ops
+          Harbor
         </span>
         <span className="text-[11px] text-sidebar-text">Super Admin</span>
       </div>

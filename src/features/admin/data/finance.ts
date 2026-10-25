@@ -14,7 +14,7 @@ import {
 } from "@/lib/finance/platformExpenses";
 
 /**
- * The platform P&L: what Harbor Ops earns against what it costs to run.
+ * The platform P&L: what Harbor earns against what it costs to run.
  *
  * Revenue comes from `tenant_platform_invoices` and is reported on two bases,
  * because for this business they differ materially and each answers a different

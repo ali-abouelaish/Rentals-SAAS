@@ -7,7 +7,7 @@ import type { EmailMessage, Transport, TransportResult } from "./types";
  * The system-default transport: sends via central Resend, exactly as
  * sendAgencyEmail always has.
  *
- * From is pinned to the central Harbor Ops mailer (per-agency display name and
+ * From is pinned to the central Harbor mailer (per-agency display name and
  * custom-domain sending remain paused). Reply-to is the agency's contact_email
  * unless the message overrides it — refuses to send if unset.
  */
@@ -22,7 +22,7 @@ export class ResendTransport implements Transport {
       throw new Error("EMAIL_FROM_DOMAIN is not set");
     }
 
-    const from = message.from ?? `Harbor Ops <noreply@${fallbackDomain}>`;
+    const from = message.from ?? `Harbor <noreply@${fallbackDomain}>`;
     const replyTo = message.replyTo ?? (await loadAgencyContactEmail(this.agency.id));
 
     const headers: Record<string, string> = {};

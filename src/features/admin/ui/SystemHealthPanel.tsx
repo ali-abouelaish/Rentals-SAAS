@@ -213,7 +213,7 @@ export function SystemHealthPanel({ health }: { health: SystemHealth }) {
             </h2>
             <p className="text-xs text-foreground-secondary">
               These agencies send through their own mailbox and that connection is not
-              working. Sends fall back to the Harbor Ops mailer, so email still goes out —
+              working. Sends fall back to the Harbor mailer, so email still goes out —
               but from the wrong address.
             </p>
             <div className="space-y-2">

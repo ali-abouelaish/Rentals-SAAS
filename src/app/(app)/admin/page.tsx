@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Building2,
+  CalendarCheck,
   CircleDollarSign,
   Clock,
   FileText,
@@ -187,6 +188,28 @@ export default async function AdminOverviewPage() {
     }
   ];
 
+  const { demoRequests } = overview;
+  const websiteTiles: StatTile[] = [
+    {
+      label: "New demo requests",
+      value: demoRequests ? String(demoRequests.new) : "—",
+      helper: "Nobody has replied yet",
+      icon: CalendarCheck,
+      href: "/admin/demo-requests?status=new",
+      emphasis: demoRequests && demoRequests.new > 0 ? "warning" : undefined,
+      tooltip:
+        "Requests from the website's Request a demo page still marked New. The website promises a person replies within 48 hours."
+    },
+    {
+      label: "Demo requests, 7 days",
+      value: demoRequests ? String(demoRequests.lastWeek) : "—",
+      helper: "Whatever their status now",
+      icon: Activity,
+      href: "/admin/demo-requests?status=all",
+      tooltip: "Every demo or Enterprise quote request that arrived in the last seven days."
+    }
+  ];
+
   const healthTiles: StatTile[] = [
     {
       label: "Job failures 24h",
@@ -300,6 +323,13 @@ export default async function AdminOverviewPage() {
           </CardContent>
         </Card>
       )}
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">
+          Website
+        </h2>
+        <StatGrid tiles={websiteTiles} />
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">

@@ -17,7 +17,7 @@ export const DEFAULT_BRANDING: AgencyBranding = {
   logo_url: null,
   primary_color: "#0F172A",
   accent_color: "#3B82F6",
-  from_display_name: "Harbor Ops",
+  from_display_name: "Harbor",
   reply_to_email: "",
   footer_address: "",
   custom_domain: null,

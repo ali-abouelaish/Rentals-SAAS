@@ -1,5 +1,5 @@
 /**
- * Harbor Ops' own operating costs: categories, and how a cost lands on a month.
+ * Harbor's own operating costs: categories, and how a cost lands on a month.
  *
  * Dependency-free on purpose — no `server-only`, no database client — so it
  * loads under `node --test` and can be imported from a client component. Same

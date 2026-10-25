@@ -152,7 +152,7 @@ export function SendingIdentityCard({
 
         {identity?.brandingIsStale && (
           <p className="mt-2 rounded bg-surface-inset p-2 text-[11px] text-foreground-secondary leading-relaxed">
-            You&apos;ve changed your logo, name or colour in Harbor Ops since this
+            You&apos;ve changed your logo, name or colour in Harbor since this
             was last applied. Documents are still going out with the old version
             until you update it.
           </p>
@@ -175,7 +175,7 @@ export function SendingIdentityCard({
               missingLogo && !hasBrand
                 ? "A logo is required before branding can be applied."
                 : hasBrand
-                  ? "Pushes your current Harbor Ops branding to the signing provider."
+                  ? "Pushes your current Harbor branding to the signing provider."
                   : "Applies your logo, colour and agency name to every document you send for signature."
             }
           >
@@ -196,7 +196,7 @@ export function SendingIdentityCard({
           </Tooltip>
           <p className="mt-1 text-[11px] text-foreground-muted">
             {hasBrand
-              ? "Re-reads your Harbor Ops branding and applies it."
+              ? "Re-reads your Harbor branding and applies it."
               : "Taken from the branding already set up on your account — nothing new to fill in."}
           </p>
         </div>

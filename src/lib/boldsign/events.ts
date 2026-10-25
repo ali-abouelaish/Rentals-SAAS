@@ -147,7 +147,7 @@ export async function processBoldSignEvent(params: {
   if (lookupError) return { ok: false, error: lookupError.message };
 
   if (!document) {
-    // Sent from another system, or from a Harbor Ops instance pointed at the
+    // Sent from another system, or from a Harbor instance pointed at the
     // same BoldSign account. Nothing to update; the raw event is still stored.
     console.warn("[boldsign] event for an unknown document", { boldSignDocumentId, eventType });
     return { ok: true, outcome: "unknown_document" };

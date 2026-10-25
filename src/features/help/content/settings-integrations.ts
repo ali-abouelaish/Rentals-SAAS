@@ -9,7 +9,7 @@ export const settingsIntegrationsArticle: HelpArticle = {
     "Turn integrations like e-signing and deposit protection on for your agency, and see what they cost.",
   content: `## What this page is for
 
-Integrations connect Harbor Ops to the outside services your agency uses — e-signing, deposit protection schemes, your own email provider, and more as they arrive. Everything is opt-in: you turn on what you need, when you need it.
+Integrations connect Harbor to the outside services your agency uses — e-signing, deposit protection schemes, your own email provider, and more as they arrive. Everything is opt-in: you turn on what you need, when you need it.
 
 ## Turning one on
 
@@ -38,7 +38,7 @@ You can reactivate at any time. Billing restarts from the following month.
 
 - **E-signing** — the *Send for signature* button on contracts and works orders. Includes 20 envelopes a month (one per document sent); extra packs are bought on the [E-signing settings](/settings/e-signing) page and billed the same way. Without it, that button is replaced by a prompt to activate. It works the moment you turn it on; [E-signing settings](/settings/e-signing) shows the connection status, what recipients see on a document, and everything you've sent.
 - **Deposit protection (mydeposits, TDS, DPS)** — the scheme's tab under Deposits, and the ability to protect a deposit from a tenancy.
-- **Send from your own mailbox** — included in your plan at no extra cost. Connects Microsoft 365, Gmail or SMTP so emails come from your agency's address instead of the shared Harbor Ops mailer.
+- **Send from your own mailbox** — included in your plan at no extra cost. Connects Microsoft 365, Gmail or SMTP so emails come from your agency's address instead of the shared Harbor mailer.
 
 ## Tips
 

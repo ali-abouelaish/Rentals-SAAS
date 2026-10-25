@@ -24,6 +24,6 @@ Billing Profiles hold the details that appear on your invoices — company name 
 - Required fields include the company name, account holder, account number, and sort code.
 - The billing profile's **sender email** is used as the reply-to address on invoice emails, so landlord replies reach your accounts inbox.
 - The invoice email supports simple formatting: \`# Heading\` for the title, \`## Heading\` for a section, \`- item\` for bullets and \`**bold**\`. Your logo, colours and an invoice details panel are added automatically. Staff can still tweak the wording for a single send.
-- To send invoices from your own Outlook / Gmail address instead of the shared Harbor Ops mailer, connect a mailbox in [Email Sending](/settings/email).
+- To send invoices from your own Outlook / Gmail address instead of the shared Harbor mailer, connect a mailbox in [Email Sending](/settings/email).
 - This page is admin-only.`,
 };

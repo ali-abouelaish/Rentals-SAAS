@@ -1,93 +1,93 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getTenantFromHost } from "@/lib/tenant";
+import { getSharedCookieDomain } from "@/lib/supabase/cookie-domain";
+import { safeNextPath } from "@/lib/auth/safeNext";
+import { sessionIdFromAccessToken, sessionPersistenceCookies } from "@/lib/auth/sessionPersistence";
+import { resolveWorkspaceUrl } from "@/lib/auth/workspaceUrl";
+import { forgotPasswordSchema, loginSchema } from "../domain/schemas";
 
-export async function signInWithEmail(
-  _prevState: { error?: string } | undefined,
-  formData: FormData
-) {
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
+const signInInput = loginSchema.extend({ next: z.string().max(2048).nullish() });
 
-  // Optional post-login destination (e.g. a landlord deep link). Only accept a
-  // same-site absolute path — reject protocol-relative (`//host`) and
-  // backslash tricks (`/\host`) to avoid open redirects.
-  const nextRaw = String(formData.get("next") ?? "");
-  const nextPath = /^\/[^/\\]/.test(nextRaw) ? nextRaw : null;
+export type SignInResult =
+  | { ok: true; redirectTo: string }
+  | {
+      ok: false;
+      error: string;
+      /** "credentials": the form offers a password reset beside the message. */
+      kind?: "credentials";
+      fields?: Partial<Record<"email" | "password", string>>;
+    };
+
+/** The "Keep me signed in" markers (src/lib/auth/sessionPersistence.ts), on the shared cookie domain. */
+function writePersistenceMarkers(keepSignedIn: boolean, sessionId: string | null) {
+  const store = cookies();
+  const cookieList = sessionPersistenceCookies({
+    keepSignedIn,
+    sessionId,
+    domain: getSharedCookieDomain(),
+    secure: process.env.NODE_ENV === "production",
+  });
+  for (const cookie of cookieList) store.set(cookie.name, cookie.value, cookie.options);
+}
+
+function signInError(error: { message?: string; status?: number; code?: string }): SignInResult {
+  const message = (error.message ?? "").toLowerCase();
+  if (error.code === "invalid_credentials" || message.includes("invalid login credentials")) {
+    return { ok: false, kind: "credentials", error: "That email and password don’t match." };
+  }
+  if (error.code === "email_not_confirmed" || message.includes("email not confirmed")) {
+    return { ok: false, error: "Confirm your email address first: the link is in your inbox." };
+  }
+  if (error.status === 429 || message.includes("rate limit")) {
+    return { ok: false, error: "Too many attempts. Wait a few minutes, then try again." };
+  }
+  return { ok: false, error: error.message || "Sign-in didn’t work. Try again." };
+}
+
+/**
+ * Sign in with email and password. Returns where to go rather than redirecting, so the door can
+ * swing open first; the browser then navigates there itself (often to the agency's own subdomain,
+ * where the shared session cookie signs them straight in).
+ */
+export async function signInWithEmail(input: unknown): Promise<SignInResult> {
+  const parsed = signInInput.safeParse(input);
+  if (!parsed.success) {
+    const fields = parsed.error.flatten().fieldErrors;
+    return {
+      ok: false,
+      error: "Check the highlighted fields.",
+      fields: { email: fields.email?.[0], password: fields.password?.[0] },
+    };
+  }
+  const { email, password, stay_signed_in } = parsed.data;
+  // Optional post-login destination (e.g. a landlord deep link): only a path on this site.
+  const next = safeNextPath(parsed.data.next);
 
   const supabase = createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
-  const headersList = headers();
-  const host = headersList.get("host") ?? "";
-  const currentTenantFromHost = host ? getTenantFromHost(host) : null;
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-  if (error) {
-    return { error: error.message || "Invalid email or password." };
-  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return signInError(error);
 
   const userId = data.user?.id;
-  if (userId) {
-    const { data: agentProfile } = await supabase
-      .from("agent_profiles")
-      .select("is_disabled")
-      .eq("user_id", userId)
-      .maybeSingle();
+  if (!userId) return { ok: false, error: "Sign-in didn’t work. Try again." };
 
-    if (agentProfile?.is_disabled) {
-      await supabase.auth.signOut();
-      return { error: "This account has been disabled. Contact your admin." };
-    }
+  const { data: agentProfile } = await supabase
+    .from("agent_profiles")
+    .select("is_disabled")
+    .eq("user_id", userId)
+    .maybeSingle();
 
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("role, tenant_id")
-      .eq("id", userId)
-      .single();
-
-    const role = (profile?.role ?? "").toLowerCase();
-    const tenantId = profile?.tenant_id as string | undefined;
-
-    if (role === "super_admin") {
-      redirect("/admin");
-    }
-
-    // Only perform cross-domain slug redirect outside of development.
-    if (process.env.NODE_ENV !== "development" && tenantId) {
-      const { data: tenant } = await admin
-        .from("tenants")
-        .select("slug")
-        .eq("id", tenantId)
-        .maybeSingle();
-
-      const slug = tenant?.slug as string | undefined;
-      const portalDomainEnv = process.env.APP_PORTAL_DOMAIN;
-
-      if (slug && portalDomainEnv) {
-        const baseDomain = portalDomainEnv.replace(/^https?:\/\//, "").replace(/\/$/, "");
-        const targetHost = `${slug}.${baseDomain}`;
-
-        // If we're already on the correct tenant subdomain, honor the deep
-        // link (or fall back to the dashboard).
-        if (currentTenantFromHost === slug) {
-          redirect(nextPath ?? "/dashboard");
-        }
-
-        const targetUrl = new URL(`https://${targetHost}`);
-        targetUrl.pathname = nextPath ?? "/dashboard";
-        redirect(targetUrl.toString());
-      }
-    }
+  if (agentProfile?.is_disabled) {
+    await supabase.auth.signOut();
+    writePersistenceMarkers(true, null);
+    return { ok: false, error: "This account has been disabled. Contact your admin." };
   }
 
-  redirect(nextPath ?? "/dashboard");
+  writePersistenceMarkers(stay_signed_in, sessionIdFromAccessToken(data.session?.access_token));
+  return { ok: true, redirectTo: await resolveWorkspaceUrl({ userId, host: headers().get("host"), next }) };
 }
 
 export async function signUpWithEmail(formData: FormData) {
@@ -109,16 +109,30 @@ export async function signUpWithEmail(formData: FormData) {
 export async function signOut() {
   const supabase = createSupabaseServerClient();
   await supabase.auth.signOut();
+  writePersistenceMarkers(true, null);
   redirect("/login");
 }
 
-export async function requestPasswordResetForSignedOut(
-  _prevState: { ok?: boolean; error?: string; message?: string },
-  formData: FormData
-) {
-  const email = String(formData.get("email") ?? "").trim();
-  if (!email) {
-    return { error: "Email is required." };
+/**
+ * "Not you? Switch account": sign out, then show the sign-in form with the same destination. (A
+ * plain link to /login wouldn't do: middleware forwards signed-in visitors past it.)
+ */
+export async function switchAccount(next: string) {
+  const supabase = createSupabaseServerClient();
+  await supabase.auth.signOut();
+  writePersistenceMarkers(true, null);
+  const path = safeNextPath(next);
+  redirect(path ? `/login?next=${encodeURIComponent(path)}` : "/login");
+}
+
+export type PasswordResetResult =
+  | { ok: true }
+  | { ok: false; error: string; fields?: Partial<Record<"email", string>> };
+
+export async function requestPasswordResetForSignedOut(input: unknown): Promise<PasswordResetResult> {
+  const parsed = forgotPasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Check the highlighted field.", fields: { email: parsed.error.flatten().fieldErrors.email?.[0] } };
   }
 
   const supabase = createSupabaseServerClient();
@@ -129,16 +143,17 @@ export async function requestPasswordResetForSignedOut(
     process.env.NEXT_PUBLIC_APP_URL ??
     "http://localhost:3000";
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${origin}/auth/callback?next=/reset-password`
   });
 
   if (error) {
-    return { error: error.message };
+    const message = error.message.toLowerCase();
+    if (error.status === 429 || message.includes("rate limit")) {
+      return { ok: false, error: "Too many requests. Wait a few minutes, then try again." };
+    }
+    return { ok: false, error: error.message };
   }
 
-  return {
-    ok: true,
-    message: "If this email exists, a reset link has been sent."
-  };
+  return { ok: true };
 }

@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Confirmation popup shown after a public form is submitted — demo requests,
- * business-card enquiries and lead registrations all land here.
+ * Confirmation popup shown after an agency's public form is submitted —
+ * business-card enquiries and lead registrations land here. (Harbor's own demo
+ * request has its own "Request received" card on the front door.)
  *
  * Styled from the global tokens in globals.css rather than any surface's own
  * stylesheet, because Radix portals the content to document.body: scoped CSS
- * (e.g. the landing's `.harbor-landing` tree) does not reach it. Surfaces that
- * need to stay on-brand pass `contentStyle` to override the type stack.
+ * on the page does not reach it. Surfaces that need to stay on-brand pass
+ * `contentStyle` to override the type stack.
  */
 export function ThankYouDialog({
   open,
@@ -38,7 +39,7 @@ export function ThankYouDialog({
   actionLabel?: string;
   /**
    * Overrides the dismiss button's styling. Tenant surfaces leave this unset
-   * so the button stays on the agency's secondary colour; the Harbor Ops
+   * so the button stays on the agency's secondary colour; the Harbor
    * marketing site passes its monochrome treatment instead, since nothing
    * there is tenant-branded.
    */

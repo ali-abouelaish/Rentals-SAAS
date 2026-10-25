@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
-import { ExternalLink, GripVertical, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, GripVertical, KeyRound, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -22,7 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -31,68 +30,34 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  addQuickLink,
-  updateQuickLink,
   deleteQuickLink,
   reorderQuickLinks,
 } from "@/features/quick-links/actions/quickLinks";
 import type { QuickLink } from "@/features/quick-links/data/queries";
-
-// ── Submit button helper ──────────────────────────────────────────
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" variant="secondary" size="sm" disabled={pending}>
-      {pending ? "Saving…" : label}
-    </Button>
-  );
-}
+import { QuickLinkForm, type SavedQuickLink } from "./QuickLinkForm";
+import { SiteSignInDialog, type SiteSignInTarget } from "./SiteSignInDialog";
 
 // ── Add link form ─────────────────────────────────────────────────
-function AddLinkForm() {
-  const [state, action] = useFormState(addQuickLink, {});
-  const [key, setKey] = useState(0);
-
+function AddLinkForm({ onSaved }: { onSaved: (saved: SavedQuickLink) => void }) {
   return (
-    <form
-      key={key}
-      action={async (fd) => {
-        const result = await action(fd);
-        if (!(result as { error?: string } | undefined)?.error) setKey((k) => k + 1);
-      }}
-      className="space-y-3 pt-4 border-t border-border"
-    >
+    <div className="space-y-3 pt-4 border-t border-border">
       <p className="text-sm font-medium text-foreground">Add a new link</p>
-      <div>
-        <label className="text-xs font-medium text-foreground-secondary mb-1 block">
-          Title
-        </label>
-        <Input name="title" placeholder="e.g. Rightmove" required />
-      </div>
-      <div>
-        <label className="text-xs font-medium text-foreground-secondary mb-1 block">
-          URL
-        </label>
-        <Input name="url" placeholder="https://example.com" type="url" required />
-      </div>
-      <div>
-        <label className="text-xs font-medium text-foreground-secondary mb-1 block">
-          Description <span className="text-foreground-muted">(optional)</span>
-        </label>
-        <Input name="description" placeholder="Short description" />
-      </div>
-      {state?.error && (
-        <p className="text-xs text-error">{state.error}</p>
-      )}
-      <SubmitButton label="Add link" />
-    </form>
+      <QuickLinkForm onSaved={onSaved} />
+    </div>
   );
 }
 
 // ── Sortable link row ─────────────────────────────────────────────
-function SortableLinkRow({ link }: { link: QuickLink }) {
+function SortableLinkRow({
+  link,
+  onSaved,
+  onSetup,
+}: {
+  link: QuickLink;
+  onSaved: (saved: SavedQuickLink) => void;
+  onSetup: (link: SiteSignInTarget) => void;
+}) {
   const [editing, setEditing] = useState(false);
-  const [state, action] = useFormState(updateQuickLink, {});
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: link.id });
 
@@ -105,49 +70,16 @@ function SortableLinkRow({ link }: { link: QuickLink }) {
 
   if (editing) {
     return (
-      <form
-        ref={setNodeRef}
-        style={style}
-        action={async (fd) => {
-          const result = await action(fd);
-          if (!(result as { error?: string } | undefined)?.error) setEditing(false);
-        }}
-        className="space-y-2 p-3 rounded-xl bg-surface-inset"
-      >
-        <input type="hidden" name="id" value={link.id} />
-        <div>
-          <label className="text-xs font-medium text-foreground-secondary mb-1 block">
-            Title
-          </label>
-          <Input name="title" defaultValue={link.title} required />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-foreground-secondary mb-1 block">
-            URL
-          </label>
-          <Input name="url" defaultValue={link.url} type="url" required />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-foreground-secondary mb-1 block">
-            Description <span className="text-foreground-muted">(optional)</span>
-          </label>
-          <Input name="description" defaultValue={link.description ?? ""} />
-        </div>
-        {state?.error && (
-          <p className="text-xs text-error">{state.error}</p>
-        )}
-        <div className="flex gap-2">
-          <SubmitButton label="Save" />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setEditing(false)}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+      <div ref={setNodeRef} style={style} className="p-3 rounded-xl bg-surface-inset">
+        <QuickLinkForm
+          link={link}
+          onSaved={(saved) => {
+            setEditing(false);
+            onSaved(saved);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
     );
   }
 
@@ -177,6 +109,19 @@ function SortableLinkRow({ link }: { link: QuickLink }) {
         <p className="text-xs text-foreground-muted truncate">{link.url}</p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        {link.sso_enabled && (
+          <Tooltip content="Get the secret and the sign-in handler your web developer adds to the website.">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onSetup(link)}
+              aria-label={`Website sign-in setup for ${link.title}`}
+            >
+              <KeyRound className="h-3.5 w-3.5" />
+            </Button>
+          </Tooltip>
+        )}
         <Button
           type="button"
           variant="ghost"
@@ -207,11 +152,12 @@ function ManageDialog({ links }: { links: QuickLink[] }) {
   // Local copy so a drag reorders instantly; the server action persists in the
   // background and revalidation feeds the saved order back through `links`.
   const [items, setItems] = useState(links);
+  const [setupLink, setSetupLink] = useState<SiteSignInTarget | null>(null);
 
   // Only resync when the server data actually changes (add/edit/delete/reorder)
   // — `links` is a fresh array on every parent render, so we compare content.
   const signature = links
-    .map((l) => `${l.id}:${l.title}:${l.url}:${l.description ?? ""}`)
+    .map((l) => `${l.id}:${l.title}:${l.url}:${l.description ?? ""}:${l.sso_enabled}:${l.sso_callback_url ?? ""}`)
     .join("|");
   useEffect(() => {
     setItems(links);
@@ -246,6 +192,12 @@ function ManageDialog({ links }: { links: QuickLink[] }) {
     });
   };
 
+  // Switching sign-in on goes straight to its setup, since the site can't
+  // accept sign-ins until the developer has the secret.
+  const handleSaved = (saved: SavedQuickLink) => {
+    if (saved.signInJustEnabled) setSetupLink(saved);
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -276,7 +228,7 @@ function ManageDialog({ links }: { links: QuickLink[] }) {
               >
                 <div className="space-y-1">
                   {items.map((link) => (
-                    <SortableLinkRow key={link.id} link={link} />
+                    <SortableLinkRow key={link.id} link={link} onSaved={handleSaved} onSetup={setSetupLink} />
                   ))}
                 </div>
               </SortableContext>
@@ -288,7 +240,8 @@ function ManageDialog({ links }: { links: QuickLink[] }) {
           </p>
         )}
 
-        <AddLinkForm />
+        <AddLinkForm onSaved={handleSaved} />
+        <SiteSignInDialog link={setupLink} onOpenChange={(open) => !open && setSetupLink(null)} />
       </DialogContent>
     </Dialog>
   );
@@ -324,7 +277,8 @@ function LinkFavicon({ url }: { url: string }) {
 function LinkCard({ link }: { link: QuickLink }) {
   return (
     <a
-      href={link.url}
+      // Sign-in links go via Harbor, which signs the person in on the way.
+      href={link.sso_enabled ? `/api/quick-links/${link.id}/launch` : link.url}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex flex-col gap-3 rounded-xl bg-surface-inset p-4 transition-all duration-base hover:shadow-md hover:-translate-y-0.5 hover:bg-surface-highlight"
@@ -341,6 +295,14 @@ function LinkCard({ link }: { link: QuickLink }) {
           <p className="text-xs text-foreground-muted mt-0.5 line-clamp-2">
             {link.description}
           </p>
+        )}
+        {link.sso_enabled && (
+          <Tooltip content="Opens with you already signed in, using your Harbor account.">
+            <span className="mt-1.5 inline-flex items-center gap-1 text-xs text-brand">
+              <KeyRound className="h-3 w-3" strokeWidth={2} />
+              Signs you in
+            </span>
+          </Tooltip>
         )}
       </div>
     </a>

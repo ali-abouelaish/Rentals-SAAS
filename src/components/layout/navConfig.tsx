@@ -196,6 +196,8 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/health", label: "System Health", icon: HeartPulse },
       { href: "/admin/activity", label: "Activity Log", icon: ScrollText },
       { href: "/admin/support", label: "Support Tickets", icon: LifeBuoy },
+      // Prospects from the public website's Request a demo page — not agencies yet.
+      { href: "/admin/demo-requests", label: "Demo Requests", icon: CalendarCheck },
     ],
   },
   {

@@ -433,7 +433,7 @@ function BankAccountEditor({
         <label className="block text-sm font-medium text-foreground mb-1.5">Account holder name</label>
         <input
           {...register("account_holder_name")}
-          placeholder="Harbor Ops Ltd"
+          placeholder="Harbor Lettings Ltd"
           className={cn(inputCls, errors.account_holder_name ? "border-red-400" : "border-border")}
         />
         {errors.account_holder_name && (

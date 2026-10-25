@@ -54,7 +54,7 @@ export default function AppError({
 
           <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-foreground-secondary">
             {isStaleBuild
-              ? "Harbor Ops was updated while this tab was open, so the page is running against an older version. Reload to pick up the latest one — your data is unaffected."
+              ? "Harbor was updated while this tab was open, so the page is running against an older version. Reload to pick up the latest one — your data is unaffected."
               : "We couldn't load this page. Nothing you entered has been lost, and no changes were saved. Try again, or head back to the dashboard."}
           </p>
 

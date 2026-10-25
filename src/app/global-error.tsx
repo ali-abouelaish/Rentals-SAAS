@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import * as Sentry from "@sentry/nextjs";
 
 /**
@@ -8,8 +8,33 @@ import * as Sentry from "@sentry/nextjs";
  * render its own <html>/<body> — and it cannot rely on globals.css, the
  * next/font variables or any component that reads them, because none of that
  * is mounted at this point. Everything here is therefore inline and
- * self-contained on purpose. Only active in production builds.
+ * self-contained on purpose: it is the website's error card (error.tsx,
+ * styled by not-found.css) redrawn in inline styles, in the system font where
+ * Urbanist isn't available. Only active in production builds.
  */
+
+const CREAM = "#FDF9F2";
+const DEEP = "#19363A";
+const SAND = "#D4BE97";
+const MUTED = "#59645F";
+
+/** not-found.css's `.go` pill button. */
+const pill: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 12,
+  height: 50,
+  padding: "0 24px 0 28px",
+  border: 0,
+  borderRadius: 999,
+  fontFamily: "inherit",
+  fontSize: 16,
+  fontWeight: 600,
+  lineHeight: 1,
+  textDecoration: "none",
+  cursor: "pointer",
+};
+
 export default function GlobalError({
   error,
   reset,
@@ -23,118 +48,98 @@ export default function GlobalError({
     Sentry.captureException(error);
   }, [error]);
 
-  const sans =
-    "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-  const mono = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-
   return (
     <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "48px 24px",
-          background: "#fafaf8",
-          color: "#111111",
-          fontFamily: sans,
-          fontSize: 15,
-          lineHeight: 1.5,
-          WebkitFontSmoothing: "antialiased",
-        }}
-      >
-        <main style={{ maxWidth: 520, width: "100%" }}>
-          <div
-            style={{
-              fontFamily: mono,
-              fontSize: 11,
-              fontWeight: 500,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              color: "#6b7280",
-            }}
-          >
-            Error 500 · Application error
-          </div>
-
-          <h1
-            style={{
-              margin: "20px 0 16px",
-              fontSize: 32,
-              fontWeight: 500,
-              letterSpacing: "-0.035em",
-              lineHeight: 1.1,
-            }}
-          >
-            Harbor Ops failed to start.
-          </h1>
-
-          <p style={{ margin: 0, color: "#4a4a4a", lineHeight: 1.55 }}>
-            Something went wrong before the page could render. Reloading usually clears
-            it. If it doesn&apos;t, quote the reference below to support and we can trace
-            the exact failure.
-          </p>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 32 }}>
-            <button
-              type="button"
-              onClick={reset}
+      <body style={{ margin: 0, background: CREAM }}>
+        {/* With no layout there's no metadata either, so no viewport tag: phones would draw the
+            page 980px wide. React lifts these two into <head>. */}
+        <title>Something went wrong</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <main
+          style={{
+            boxSizing: "border-box",
+            minHeight: "100vh",
+            display: "grid",
+            placeItems: "center",
+            padding: "32px 16px",
+            color: DEEP,
+            fontFamily:
+              "Urbanist, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            textAlign: "center",
+            WebkitFontSmoothing: "antialiased",
+          }}
+        >
+          <div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/site/brand/harbor-logo-teal.svg"
+              alt="Harbor"
+              width={260}
+              height={64}
+              style={{ display: "block", margin: "0 auto", width: "min(260px, 60vw)", height: "auto" }}
+            />
+            <h1
               style={{
-                padding: "13px 22px",
-                fontFamily: "inherit",
-                fontSize: 15,
+                margin: "40px 0 10px",
+                fontSize: "clamp(28px, 4vw, 40px)",
+                fontWeight: 600,
+                lineHeight: 1.15,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              Something went wrong.
+            </h1>
+            <p
+              style={{
+                maxWidth: "32em",
+                margin: "0 auto 32px",
+                fontSize: 17,
                 fontWeight: 500,
-                lineHeight: 1,
-                color: "#ffffff",
-                background: "#111111",
-                border: "1px solid transparent",
-                borderRadius: 8,
-                cursor: "pointer",
+                lineHeight: 1.5,
+                color: MUTED,
               }}
             >
-              Try again
-            </button>
-            <a
-              href="/"
-              style={{
-                padding: "13px 22px",
-                fontSize: 15,
-                fontWeight: 500,
-                lineHeight: 1,
-                color: "#111111",
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
-                borderRadius: 8,
-                textDecoration: "none",
-              }}
-            >
-              Back to home
-            </a>
-          </div>
+              This one is on us: the page failed to load, not anything you did. Try again; if it keeps
+              happening, quote the reference below when you get in touch.
+            </p>
 
-          {error.digest ? (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                marginTop: 24,
-                padding: "6px 10px",
-                border: "1px solid #e5e7eb",
-                borderRadius: 6,
-                background: "#ffffff",
-                fontFamily: mono,
-                fontSize: 11,
-                color: "#4a4a4a",
-                wordBreak: "break-all",
-              }}
-            >
-              <span style={{ color: "#9ca3af", letterSpacing: "0.08em" }}>REFERENCE</span>
-              <span>{error.digest}</span>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
+              <button type="button" onClick={reset} style={{ ...pill, background: DEEP, color: CREAM }}>
+                Try again
+                <svg viewBox="0 0 16 16" width={15} height={15} aria-hidden="true" style={{ color: SAND }}>
+                  <path d="M1 8h13M9 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                </svg>
+              </button>
+              <a
+                href="/"
+                style={{
+                  ...pill,
+                  background: "transparent",
+                  color: DEEP,
+                  boxShadow: "inset 0 0 0 1px rgba(25, 54, 58, 0.3)",
+                }}
+              >
+                Back to Harbor
+              </a>
+              {error.digest ? (
+                <p
+                  style={{
+                    flexBasis: "100%",
+                    margin: "28px auto 0",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    lineHeight: 1.5,
+                    color: MUTED,
+                  }}
+                >
+                  Reference{" "}
+                  <code style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", color: DEEP }}>
+                    {error.digest}
+                  </code>
+                </p>
+              ) : null}
             </div>
-          ) : null}
+          </div>
         </main>
       </body>
     </html>

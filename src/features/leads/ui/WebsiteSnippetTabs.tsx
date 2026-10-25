@@ -73,7 +73,7 @@ export function WebsiteSnippetTabs({ apiBaseUrl, plaintext }: { apiBaseUrl: stri
           <p className="text-sm text-foreground-secondary">
             Send a JSON <code>POST</code> to <code>{s.endpoint}</code> with the key in an{" "}
             <code>Authorization: Bearer</code> header. Include your own <code>external_id</code> for each
-            submission so a retry never creates a duplicate. Your developer can ask Harbor Ops support for
+            submission so a retry never creates a duplicate. Your developer can ask Harbor support for
             the full API reference.
           </p>
           <CodeBlock code={s.curl} />

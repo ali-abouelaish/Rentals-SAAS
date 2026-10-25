@@ -171,7 +171,7 @@ export function EmailProviderManager({
                 variant="destructive"
                 size="sm"
                 onClick={() => setConfirming(true)}
-                title="Remove the connection and revert to the default Harbor Ops mailer"
+                title="Remove the connection and revert to the default Harbor mailer"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Disconnect
@@ -214,7 +214,7 @@ export function EmailProviderManager({
           <h2 className="text-base font-semibold text-foreground">Connect your mailbox</h2>
           <p className="text-xs text-foreground-secondary">
             Choose how to send your agency&apos;s emails. Until you connect one, emails send from the
-            default Harbor Ops mailer.
+            default Harbor mailer.
           </p>
         </div>
       </div>

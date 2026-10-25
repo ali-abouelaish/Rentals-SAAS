@@ -29,7 +29,7 @@ Invoices is your billing centre. It lists every invoice with its status — **Dr
 ## Tips
 
 - **No landlord email?** When you click Send and the landlord has no email on file, you are asked to add one. It is saved to the landlord's record so future invoices go straight through — or cancel and send later.
-- **Send from your own address.** Invoices go out through your agency's connected mailbox (Microsoft 365, Gmail or SMTP) when an admin has set one up in [Email Sending](/settings/email). Otherwise they come from the shared Harbor Ops mailer, with replies going to your billing profile's sender email.
+- **Send from your own address.** Invoices go out through your agency's connected mailbox (Microsoft 365, Gmail or SMTP) when an admin has set one up in [Email Sending](/settings/email). Otherwise they come from the shared Harbor mailer, with replies going to your billing profile's sender email.
 - **Change the default wording.** Admins edit the invoice email on the [Billing](/settings/billing-profiles) page. Merge fields such as \`{{invoice_number}}\`, \`{{balance_due}}\`, \`{{due_date}}\`, \`{{landlord_name}}\` and \`{{billing_company}}\` are filled in for each invoice. Edits made in the send dialog apply to that one email only.
 - Invoices use your **Billing Profiles** (sender details, bank info, logo) — set those up under [Billing Profiles](/settings/billing-profiles).
 - Agents see and send their own invoices; admins see and manage all.`,

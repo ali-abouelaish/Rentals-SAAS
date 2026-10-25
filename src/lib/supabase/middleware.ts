@@ -40,5 +40,8 @@ export function createSupabaseMiddlewareClient(request: NextRequest) {
     }
   );
 
-  return { supabase, response };
+  // `response` is replaced inside setAll when Supabase refreshes the session, so hand out a getter
+  // and call it after getSession(). A destructured `response` is the first object, without the
+  // refreshed cookies — which then never reached the browser.
+  return { supabase, getResponse: () => response };
 }

@@ -292,7 +292,7 @@ export function CreatePropertyManagerDialog({ onCreated }: CreatePropertyManager
             <input
               {...register("company_name")}
               className={inputCls}
-              placeholder="e.g. Harbor Ops Management"
+              placeholder="e.g. Harbor Management"
             />
           </Field>
 
@@ -542,7 +542,7 @@ export function EditPropertyManagerDialog({ manager, onUpdated }: EditPropertyMa
             <input
               {...register("company_name")}
               className={inputCls}
-              placeholder="e.g. Harbor Ops Management"
+              placeholder="e.g. Harbor Management"
             />
           </Field>
 

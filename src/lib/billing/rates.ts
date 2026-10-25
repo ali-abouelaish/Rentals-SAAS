@@ -9,7 +9,7 @@
 /**
  * VAT, in basis points. 2000 = 20%.
  *
- * Zero until Harbor Ops is VAT registered. It is stamped onto each invoice at
+ * Zero until Harbor is VAT registered. It is stamped onto each invoice at
  * generation rather than read at display time, so raising it here changes only
  * invoices generated afterwards — history keeps the rate it was billed at.
  */
@@ -224,7 +224,7 @@ export type PlatformChargeInput = {
  * still bills it, because the agency had the month.
  *
  * A zero amount raises no line — it is neither a charge nor a discount, and an
- * invoice reading "Harbor Ops Professional £0" invites a question nobody wants.
+ * invoice reading "Harbor Professional £0" invites a question nobody wants.
  */
 export function chargeBillable(
   charge: PlatformChargeInput,

@@ -1,95 +1,28 @@
-"use client";
+import type { Metadata } from "next";
+import { getDoorContext } from "@/features/auth/data/door";
+import { DoorShell } from "@/features/auth/ui/door/DoorShell";
+import { Plate } from "@/features/auth/ui/door/Plate";
+import { NewPasswordForm } from "@/features/auth/ui/NewPasswordForm";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+export const dynamic = "force-dynamic";
 
-export default function InviteSetPasswordPage() {
-  const router = useRouter();
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+export const metadata: Metadata = {
+  title: "Set your password",
+};
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    setIsPending(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    setIsPending(false);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-
-    setSuccess("Account activated. Redirecting to your dashboard...");
-    setTimeout(() => {
-      router.replace("/dashboard");
-    }, 1000);
-  };
+/** The last step of accepting an invite: the invite link has already signed the person in. */
+export default async function InviteSetPasswordPage() {
+  const { brandName } = await getDoorContext();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-app px-6">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-surface-card p-8 shadow-lg"
+    <DoorShell knocker>
+      <Plate
+        title="Set your password."
+        sub="Choose a password to activate your account."
+        brandLine={brandName ? `Join ${brandName} on Harbor` : null}
       >
-        <div>
-          <h1 className="font-heading text-2xl font-semibold text-foreground">
-            Set your password
-          </h1>
-          <p className="text-sm text-foreground-secondary">
-            Choose a password to activate your account.
-          </p>
-        </div>
-
-        <Input
-          type="password"
-          placeholder="New password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={isPending}
-        />
-        <Input
-          type="password"
-          placeholder="Confirm password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          disabled={isPending}
-        />
-
-        {error && <p className="text-sm text-error">{error}</p>}
-        {success && <p className="text-sm text-success">{success}</p>}
-
-        <Button type="submit" className="w-full" disabled={isPending}>
-          {isPending ? "Activating..." : "Activate account"}
-        </Button>
-
-        <p className="text-xs text-foreground-muted text-center">
-          Already activated?{" "}
-          <Link href="/login" className="text-brand hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </form>
-    </div>
+        <NewPasswordForm mode="invite" />
+      </Plate>
+    </DoorShell>
   );
 }
