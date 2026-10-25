@@ -377,7 +377,15 @@ body:has(.harbor-door) { background: #0C1D1F; }   /* the overscroll behind the d
   .harbor-door .card__rule { display: none; }
   .harbor-door .card__fields { padding-top: 4px; }
   .harbor-door .card textarea.input { height: 88px; min-height: 0; }
-  .harbor-door .card__back img { object-fit: contain; }   /* a tall card keeps the whole picture */
+  /* A tall card turned over would be a long strip of paper. Its picture side is a postcard instead, in the
+     middle of where the card was (the card itself goes clear), and that is what motion.ts posts. */
+  .harbor-door .card.is-sealed { background: transparent; box-shadow: none; }
+  .harbor-door .card.is-sealed::before { opacity: 0; }
+  .harbor-door .card__back {
+    inset: 50% 0 auto; transform: translateY(-50%);
+    box-shadow: 0 1px 2px rgba(3, 12, 13, .35), 0 30px 56px -16px rgba(3, 12, 13, .72);
+  }
+  .harbor-door .card__back img { height: auto; }
 }
 @media (max-width: 640px) {
   .harbor-door .door__top { padding-top: 10px; font-size: 14px; }

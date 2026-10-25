@@ -117,11 +117,15 @@ export async function postCard(card: HTMLElement, box: HTMLElement): Promise<voi
   }).finished;
   await wait(280);
 
+  // What goes through is the picture side: the whole card on a wide screen, a postcard in the middle
+  // of a tall one (see door.css, Phones). The card scales about its top centre (transform-origin 50% 0).
   const c = card.getBoundingClientRect();
+  const v = (card.querySelector(".card__back") ?? card).getBoundingClientRect();
   const b = box.getBoundingClientRect();
-  const s = (b.width * 0.7 * 0.9) / c.width; // the slot is 70% of the plate's width
-  const dx = b.left + b.width * 0.482 - (c.left + c.width / 2);
-  const dy = b.top + b.height * 0.27 - (c.top + c.height * s); // card's bottom edge on the slot's top edge
+  const ox = c.left + c.width / 2;
+  const s = (b.width * 0.7 * 0.9) / v.width; // the slot is 70% of the plate's width
+  const dx = b.left + b.width * 0.482 - ox - s * (v.left + v.width / 2 - ox);
+  const dy = b.top + b.height * 0.27 - c.top - s * (v.bottom - c.top); // postcard's bottom edge on the slot's top edge
   const at = `translate(${dx}px, ${dy}px) scale(${s})`;
   await card.animate([{ transform: "none" }, { transform: at }], {
     duration: 950,
@@ -133,8 +137,9 @@ export async function postCard(card: HTMLElement, box: HTMLElement): Promise<voi
   await wait(230);
   await card.animate(
     [
-      { transform: at, clipPath: "inset(0 0 0 0)" },
-      { transform: `translate(${dx}px, ${dy + c.height * s}px) scale(${s})`, clipPath: "inset(0 0 100% 0)" },
+      // clip-path is in the card's own (unscaled) pixels: hide the postcard from the bottom up as it drops
+      { transform: at, clipPath: `inset(0 0 ${c.height - (v.bottom - c.top)}px 0)` },
+      { transform: `translate(${dx}px, ${dy + v.height * s}px) scale(${s})`, clipPath: `inset(0 0 ${c.height - (v.top - c.top)}px 0)` },
     ],
     { duration: 700, easing: "cubic-bezier(.45,0,.75,.4)", fill: "forwards" }
   ).finished;
